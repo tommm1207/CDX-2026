@@ -2,7 +2,7 @@
  * @license
  * SPDX-License-Identifier: Apache-2.0
  */
-import { useState, useEffect, FormEvent, MouseEvent, ChangeEvent } from 'react';
+import { useState, useEffect, FormEvent, MouseEvent, ChangeEvent, useRef } from 'react';
 import { utils, writeFile } from 'xlsx';
 import { 
   LayoutDashboard, 
@@ -1815,11 +1815,99 @@ const Warehouses = ({ user }: { user: Employee }) => {
     </div>
   );
 };
+const CustomCombobox = ({ 
+  label, 
+  value, 
+  onChange, 
+  options, 
+  placeholder, 
+  required = false 
+}: { 
+  label: string, 
+  value: string, 
+  onChange: (val: string) => void, 
+  options: any[], 
+  placeholder: string,
+  required?: boolean
+}) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const [filteredOptions, setFilteredOptions] = useState(options);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    setFilteredOptions(
+      options.filter(opt => (opt.name || '').toLowerCase().includes((value || '').toLowerCase()))
+    );
+  }, [value, options]);
+
+  useEffect(() => {
+    const handleClickOutside = (event: any) => {
+      if (containerRef.current && !containerRef.current.contains(event.target)) {
+        setIsOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  return (
+    <div className="space-y-1 relative" ref={containerRef}>
+      <label className="text-[10px] font-bold text-gray-400 uppercase">{label}</label>
+      <div className="relative">
+        <input
+          type="text"
+          required={required}
+          value={value}
+          onChange={(e) => {
+            onChange(e.target.value);
+            setIsOpen(true);
+          }}
+          onFocus={() => setIsOpen(true)}
+          placeholder={placeholder}
+          className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20 pr-10"
+        />
+        <div className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none">
+          <ChevronDown size={16} />
+        </div>
+      </div>
+      
+      <AnimatePresence>
+        {isOpen && filteredOptions.length > 0 && (
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            className="absolute z-[110] left-0 right-0 mt-1 bg-white rounded-xl shadow-xl border border-gray-100 max-h-48 overflow-y-auto"
+          >
+            {filteredOptions.map((opt, idx) => (
+              <button
+                key={opt.id || idx}
+                type="button"
+                onClick={() => {
+                  onChange(opt.name);
+                  setIsOpen(false);
+                }}
+                className="w-full text-left px-4 py-2 text-sm hover:bg-gray-50 transition-colors border-b border-gray-50 last:border-0"
+              >
+                {opt.name}
+              </button>
+            ))}
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+};
+
 const Costs = ({ user }: { user: Employee }) => {
   const [showModal, setShowModal] = useState(false);
+  const [showDetailModal, setShowDetailModal] = useState(false);
+  const [selectedCost, setSelectedCost] = useState<any>(null);
   const [costs, setCosts] = useState<any[]>([]);
   const [materials, setMaterials] = useState<any[]>([]);
   const [warehouses, setWarehouses] = useState<any[]>([]);
+  const [costTypes, setCostTypes] = useState<any[]>([]);
+  const [units, setUnits] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
@@ -1829,11 +1917,9 @@ const Costs = ({ user }: { user: Employee }) => {
     date: new Date().toISOString().split('T')[0],
     cost_type: '',
     content: '',
-    material_id: '',
-    warehouse_id: '',
+    warehouse_name: '',
     quantity: 0,
     unit: '',
-    unit_price: 0,
     total_amount: 0,
     notes: ''
   };
@@ -1844,22 +1930,19 @@ const Costs = ({ user }: { user: Employee }) => {
     fetchCosts();
     fetchMaterials();
     fetchWarehouses();
+    fetchCostTypes();
+    fetchUnits();
   }, []);
 
   const fetchCosts = async () => {
     setLoading(true);
-    // Chỉ lấy dữ liệu từ bảng costs và users (đã có)
     const { data, error } = await supabase
       .from('costs')
-      .select('*, users(full_name)')
+      .select('*, users(full_name), warehouses(name), materials(name)')
       .order('date', { ascending: false });
     
-    if (error) {
-      console.error('Error fetching costs:', error);
-    }
-    if (data) {
-      setCosts(data);
-    }
+    if (error) console.error('Error fetching costs:', error);
+    if (data) setCosts(data);
     setLoading(false);
   };
 
@@ -1873,52 +1956,100 @@ const Costs = ({ user }: { user: Employee }) => {
     if (data) setWarehouses(data);
   };
 
-  useEffect(() => {
-    const total = (formData.quantity || 0) * (formData.unit_price || 0);
-    if (total !== formData.total_amount) {
-      setFormData(prev => ({ ...prev, total_amount: total }));
+  const fetchCostTypes = async () => {
+    // Lấy các loại chi phí duy nhất từ bảng costs
+    const { data } = await supabase.from('costs').select('cost_type');
+    if (data) {
+      const uniqueTypes = Array.from(new Set(data.map(item => item.cost_type)))
+        .filter(Boolean)
+        .map((name, index) => ({ id: index, name }));
+      setCostTypes(uniqueTypes);
     }
-  }, [formData.quantity, formData.unit_price]);
+  };
+
+  const fetchUnits = async () => {
+    // Lấy các đơn vị tính duy nhất từ bảng costs
+    const { data } = await supabase.from('costs').select('unit');
+    if (data) {
+      const uniqueUnits = Array.from(new Set(data.map(item => item.unit)))
+        .filter(Boolean)
+        .map((name, index) => ({ id: index, name }));
+      setUnits(uniqueUnits);
+    }
+  };
+
+  const ensureValueExists = async (table: string, name: string, currentList: any[], fetchFn: () => void) => {
+    if (!name) return null;
+    
+    // Nếu là bảng costs thì không cần lưu vào bảng danh mục riêng
+    if (table === 'costs') return null;
+
+    const existing = currentList.find(item => item.name.toLowerCase() === name.toLowerCase());
+    if (existing) return existing.id;
+
+    // Auto-save new value for warehouses and materials
+    const { data, error } = await supabase.from(table).insert([{ name }]).select();
+    if (!error && data && data[0]) {
+      fetchFn();
+      return data[0].id;
+    }
+    return null;
+  };
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setSubmitting(true);
 
-    const costCode = `${user.id.toUpperCase()}-${formData.date.split('-').reverse().join('').slice(0, 4)}${formData.date.split('-')[0].slice(-2)}`;
-    // Correction: user example cdx001-040326 for 4/3/26
-    const dateObj = new Date(formData.date);
-    const d = String(dateObj.getDate()).padStart(2, '0');
-    const m = String(dateObj.getMonth() + 1).padStart(2, '0');
-    const y = String(dateObj.getFullYear()).slice(-2);
-    const finalCode = `${user.id.toUpperCase()}-${d}${m}${y}`;
+    try {
+      // Resolve warehouse_id
+      const warehouse_id = await ensureValueExists('warehouses', formData.warehouse_name, warehouses, fetchWarehouses);
+      
+      // Resolve content/material
+      const material_id = await ensureValueExists('materials', formData.content, materials, fetchMaterials);
 
-    const payload = {
-      ...formData,
-      cost_code: finalCode,
-      employee_id: user.id,
-      material_id: formData.material_id || null,
-      warehouse_id: formData.warehouse_id || null
-    };
+      const dateObj = new Date(formData.date);
+      const d = String(dateObj.getDate()).padStart(2, '0');
+      const m = String(dateObj.getMonth() + 1).padStart(2, '0');
+      const y = String(dateObj.getFullYear()).slice(-2);
+      const finalCode = `${user.id.toUpperCase()}-${d}${m}${y}`;
 
-    let error;
-    if (isEditing && editingId) {
-      const { error: err } = await supabase.from('costs').update(payload).eq('id', editingId);
-      error = err;
-    } else {
-      const { error: err } = await supabase.from('costs').insert([payload]);
-      error = err;
-    }
+      const payload: any = {
+        date: formData.date,
+        cost_code: finalCode,
+        employee_id: user.id,
+        cost_type: formData.cost_type,
+        content: formData.content,
+        warehouse_id: warehouse_id,
+        material_id: material_id,
+        quantity: formData.quantity,
+        unit: formData.unit,
+        total_amount: formData.total_amount,
+        notes: formData.notes
+      };
 
-    if (error) {
-      alert('Lỗi: ' + error.message);
-    } else {
+      let error;
+      if (isEditing && editingId) {
+        const { error: err } = await supabase.from('costs').update(payload).eq('id', editingId);
+        error = err;
+      } else {
+        const { error: err } = await supabase.from('costs').insert([payload]);
+        error = err;
+      }
+
+      if (error) throw error;
+
       setShowModal(false);
       setFormData(initialFormState);
       setIsEditing(false);
       setEditingId(null);
       fetchCosts();
+      fetchCostTypes();
+      fetchUnits();
+    } catch (err: any) {
+      alert('Lỗi: ' + err.message);
+    } finally {
+      setSubmitting(false);
     }
-    setSubmitting(false);
   };
 
   const handleEdit = (item: any) => {
@@ -1926,17 +2057,16 @@ const Costs = ({ user }: { user: Employee }) => {
       date: item.date,
       cost_type: item.cost_type,
       content: item.content || '',
-      material_id: item.material_id || '',
-      warehouse_id: item.warehouse_id || '',
+      warehouse_name: item.warehouses?.name || '',
       quantity: item.quantity,
       unit: item.unit || '',
-      unit_price: item.unit_price,
       total_amount: item.total_amount,
       notes: item.notes || ''
     });
     setEditingId(item.id);
     setIsEditing(true);
     setShowModal(true);
+    setShowDetailModal(false);
   };
 
   const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -2044,43 +2174,40 @@ const Costs = ({ user }: { user: Employee }) => {
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="bg-primary text-white">
-                <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider border-r border-white/10">Mã chi phí</th>
-                <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider border-r border-white/10">Ngày chi phí</th>
-                <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider border-r border-white/10">Người lập phiếu</th>
-                <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider border-r border-white/10">Nội dung</th>
-                <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider border-r border-white/10">Vật tư / Kho</th>
-                <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider border-r border-white/10 text-right">Tổng số tiền</th>
-                <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-center">Thao tác</th>
+                <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider border-r border-white/10">Ngày chi</th>
+                <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider border-r border-white/10">Tên kho</th>
+                <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider border-r border-white/10">Loại chi phí</th>
+                <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider border-r border-white/10">Nội dung chi</th>
+                <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider border-r border-white/10 text-center">SL</th>
+                <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider border-r border-white/10 text-center">ĐVT</th>
+                <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider border-r border-white/10 text-right">Số tiền</th>
+                <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider border-r border-white/10">Ghi chú</th>
+                <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider">Người chi</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
               {loading ? (
-                <tr><td colSpan={7} className="px-4 py-8 text-center text-gray-400 italic">Đang tải dữ liệu...</td></tr>
+                <tr><td colSpan={9} className="px-4 py-8 text-center text-gray-400 italic">Đang tải dữ liệu...</td></tr>
               ) : costs.length === 0 ? (
-                <tr><td colSpan={7} className="px-4 py-8 text-center text-gray-400 italic">Chưa có dữ liệu chi phí</td></tr>
+                <tr><td colSpan={9} className="px-4 py-8 text-center text-gray-400 italic">Chưa có dữ liệu chi phí</td></tr>
               ) : (
                 costs.map((item) => (
-                  <tr key={item.id} className="hover:bg-gray-50 transition-colors group">
-                    <td className="px-4 py-3 text-xs font-bold text-gray-700">{item.cost_code}</td>
+                  <tr 
+                    key={item.id} 
+                    onClick={() => { setSelectedCost(item); setShowDetailModal(true); }}
+                    className="hover:bg-gray-50 transition-colors cursor-pointer group"
+                  >
                     <td className="px-4 py-3 text-xs text-gray-600">{new Date(item.date).toLocaleDateString('vi-VN')}</td>
-                    <td className="px-4 py-3 text-xs text-gray-600">{item.users?.full_name}</td>
-                    <td className="px-4 py-3 text-xs text-gray-600">
-                      <div className="font-medium text-gray-800">{item.cost_type}</div>
-                      <div className="text-[10px] text-gray-400 truncate max-w-[200px]">{item.content}</div>
-                    </td>
-                    <td className="px-4 py-3 text-xs text-gray-600">
-                      {item.materials?.name && <div className="flex items-center gap-1 text-primary font-medium"><Package size={12} /> {item.materials.name}</div>}
-                      {item.warehouses?.name && <div className="flex items-center gap-1 text-orange-600"><Warehouse size={12} /> {item.warehouses.name}</div>}
-                    </td>
+                    <td className="px-4 py-3 text-xs text-gray-600 font-medium">{item.warehouses?.name || 'N/A'}</td>
+                    <td className="px-4 py-3 text-xs text-gray-600">{item.cost_type}</td>
+                    <td className="px-4 py-3 text-xs text-gray-600">{item.content}</td>
+                    <td className="px-4 py-3 text-xs text-gray-600 text-center">{item.quantity}</td>
+                    <td className="px-4 py-3 text-xs text-gray-600 text-center">{item.unit}</td>
                     <td className="px-4 py-3 text-xs font-bold text-primary text-right">
                       {item.total_amount.toLocaleString('vi-VN')}
                     </td>
-                    <td className="px-4 py-3 text-center">
-                      <div className="flex items-center justify-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <button onClick={() => handleEdit(item)} className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"><Edit size={14} /></button>
-                        <button onClick={() => handleDeleteClick(item.id)} className="p-1.5 text-red-600 hover:bg-red-50 rounded-lg transition-colors"><Trash2 size={14} /></button>
-                      </div>
-                    </td>
+                    <td className="px-4 py-3 text-xs text-gray-400 italic truncate max-w-[150px]">{item.notes}</td>
+                    <td className="px-4 py-3 text-xs text-gray-600">{item.users?.full_name}</td>
                   </tr>
                 ))
               )}
@@ -2088,6 +2215,78 @@ const Costs = ({ user }: { user: Employee }) => {
           </table>
         </div>
       </div>
+
+      {/* Detail Modal */}
+      <AnimatePresence>
+        {showDetailModal && selectedCost && (
+          <div className="fixed inset-0 z-[120] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="bg-white rounded-3xl shadow-2xl w-full max-w-lg overflow-hidden"
+            >
+              <div className="bg-primary p-6 text-white flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-white/20 rounded-xl"><Wallet size={24} /></div>
+                  <h3 className="font-bold text-lg">Chi tiết chi phí</h3>
+                </div>
+                <button onClick={() => setShowDetailModal(false)} className="p-2 hover:bg-white/10 rounded-full transition-colors"><X size={20} /></button>
+              </div>
+              <div className="p-6 space-y-4">
+                <div className="grid grid-cols-2 gap-4 text-sm">
+                  <div>
+                    <p className="text-[10px] font-bold text-gray-400 uppercase">Ngày chi</p>
+                    <p className="font-medium">{new Date(selectedCost.date).toLocaleDateString('vi-VN')}</p>
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-bold text-gray-400 uppercase">Người chi</p>
+                    <p className="font-medium">{selectedCost.users?.full_name}</p>
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-bold text-gray-400 uppercase">Kho</p>
+                    <p className="font-medium">{selectedCost.warehouses?.name}</p>
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-bold text-gray-400 uppercase">Loại chi phí</p>
+                    <p className="font-medium">{selectedCost.cost_type}</p>
+                  </div>
+                  <div className="col-span-2">
+                    <p className="text-[10px] font-bold text-gray-400 uppercase">Nội dung</p>
+                    <p className="font-medium">{selectedCost.content}</p>
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-bold text-gray-400 uppercase">Số lượng</p>
+                    <p className="font-medium">{selectedCost.quantity} {selectedCost.unit}</p>
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-bold text-gray-400 uppercase">Số tiền</p>
+                    <p className="font-bold text-primary text-lg">{selectedCost.total_amount.toLocaleString('vi-VN')}đ</p>
+                  </div>
+                  <div className="col-span-2">
+                    <p className="text-[10px] font-bold text-gray-400 uppercase">Ghi chú</p>
+                    <p className="text-gray-600 italic">{selectedCost.notes || 'Không có ghi chú'}</p>
+                  </div>
+                </div>
+                <div className="flex gap-3 pt-4 border-t border-gray-100">
+                  <button 
+                    onClick={() => handleEdit(selectedCost)}
+                    className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl bg-blue-50 text-blue-600 font-bold hover:bg-blue-100 transition-colors"
+                  >
+                    <Edit size={18} /> Sửa
+                  </button>
+                  <button 
+                    onClick={() => { setShowDetailModal(false); handleDeleteClick(selectedCost.id); }}
+                    className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl bg-red-50 text-red-600 font-bold hover:bg-red-100 transition-colors"
+                  >
+                    <Trash2 size={18} /> Xóa
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
 
       {/* Delete Confirmation Modal */}
       <AnimatePresence>
@@ -2176,58 +2375,32 @@ const Costs = ({ user }: { user: Employee }) => {
                       </div>
                     </div>
 
-                    <div className="space-y-1">
-                      <label className="text-[10px] font-bold text-gray-400 uppercase">Loại chi phí *</label>
-                      <select 
-                        required
-                        value={formData.cost_type}
-                        onChange={(e) => setFormData({...formData, cost_type: e.target.value})}
-                        className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20"
-                      >
-                        <option value="">-- Chọn loại chi phí --</option>
-                        <option value="Vật tư">Vật tư</option>
-                        <option value="Xăng dầu">Xăng dầu</option>
-                        <option value="Ăn uống">Ăn uống</option>
-                        <option value="Vận chuyển">Vận chuyển</option>
-                        <option value="Khác">Khác</option>
-                      </select>
-                    </div>
+                    <CustomCombobox 
+                      label="Loại chi phí *"
+                      value={formData.cost_type}
+                      onChange={(val) => setFormData({...formData, cost_type: val})}
+                      options={costTypes}
+                      placeholder="Chọn hoặc nhập mới..."
+                      required
+                    />
 
-                    <div className="space-y-1">
-                      <label className="text-[10px] font-bold text-gray-400 uppercase">Nội dung</label>
-                      <input 
-                        type="text" 
-                        placeholder="Mô tả khoản chi..."
-                        value={formData.content}
-                        onChange={(e) => setFormData({...formData, content: e.target.value})}
-                        className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20" 
-                      />
-                    </div>
+                    <CustomCombobox 
+                      label="Tên kho *"
+                      value={formData.warehouse_name}
+                      onChange={(val) => setFormData({...formData, warehouse_name: val})}
+                      options={warehouses}
+                      placeholder="Chọn hoặc nhập mới..."
+                      required
+                    />
 
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="space-y-1">
-                        <label className="text-[10px] font-bold text-gray-400 uppercase">Vật tư (nếu có)</label>
-                        <select 
-                          value={formData.material_id}
-                          onChange={(e) => setFormData({...formData, material_id: e.target.value})}
-                          className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20"
-                        >
-                          <option value="">-- Không chọn --</option>
-                          {materials.map(m => <option key={m.id} value={m.id}>{m.name}</option>)}
-                        </select>
-                      </div>
-                      <div className="space-y-1">
-                        <label className="text-[10px] font-bold text-gray-400 uppercase">Kho (nếu có)</label>
-                        <select 
-                          value={formData.warehouse_id}
-                          onChange={(e) => setFormData({...formData, warehouse_id: e.target.value})}
-                          className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20"
-                        >
-                          <option value="">-- Không chọn --</option>
-                          {warehouses.map(w => <option key={w.id} value={w.id}>{w.name}</option>)}
-                        </select>
-                      </div>
-                    </div>
+                    <CustomCombobox 
+                      label="Nội dung chi *"
+                      value={formData.content}
+                      onChange={(val) => setFormData({...formData, content: val})}
+                      options={materials}
+                      placeholder="Chọn hoặc nhập mới..."
+                      required
+                    />
                   </div>
 
                   <div className="space-y-4">
@@ -2241,43 +2414,23 @@ const Costs = ({ user }: { user: Employee }) => {
                           className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20" 
                         />
                       </div>
-                      <div className="space-y-1">
-                        <label className="text-[10px] font-bold text-gray-400 uppercase">ĐVT</label>
-                        <select 
-                          value={formData.unit}
-                          onChange={(e) => setFormData({...formData, unit: e.target.value})}
-                          className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20"
-                        >
-                          <option value="">-- Chọn --</option>
-                          <option value="Cái">Cái</option>
-                          <option value="Bộ">Bộ</option>
-                          <option value="Kg">Kg</option>
-                          <option value="Lít">Lít</option>
-                          <option value="M">M</option>
-                          <option value="Thùng">Thùng</option>
-                          <option value="Chuyến">Chuyến</option>
-                          <option value="Lần">Lần</option>
-                        </select>
-                      </div>
-                    </div>
-
-                    <div className="space-y-1">
-                      <label className="text-[10px] font-bold text-gray-400 uppercase">Đơn giá</label>
-                      <input 
-                        type="number" 
-                        value={formData.unit_price}
-                        onChange={(e) => setFormData({...formData, unit_price: parseFloat(e.target.value) || 0})}
-                        className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20" 
+                      <CustomCombobox 
+                        label="Đơn vị tính"
+                        value={formData.unit}
+                        onChange={(val) => setFormData({...formData, unit: val})}
+                        options={units}
+                        placeholder="Chọn/Nhập..."
                       />
                     </div>
 
                     <div className="space-y-1">
-                      <label className="text-[10px] font-bold text-gray-400 uppercase">Thành tiền (VNĐ) *</label>
+                      <label className="text-[10px] font-bold text-gray-400 uppercase">Số tiền *</label>
                       <input 
                         type="number" 
-                        readOnly
+                        required
                         value={formData.total_amount}
-                        className="w-full px-4 py-2 rounded-xl border border-gray-100 bg-gray-50 text-sm font-bold text-primary outline-none" 
+                        onChange={(e) => setFormData({...formData, total_amount: parseFloat(e.target.value) || 0})}
+                        className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20 font-bold text-primary" 
                       />
                     </div>
 

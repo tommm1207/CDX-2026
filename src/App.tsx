@@ -2,7 +2,7 @@
  * @license
  * SPDX-License-Identifier: Apache-2.0
  */
-import { useState, useEffect, FormEvent, MouseEvent, ChangeEvent, useRef } from 'react';
+import { useState, useEffect, FormEvent, MouseEvent, ChangeEvent, useRef, useMemo, useCallback } from 'react';
 import { utils, writeFile } from 'xlsx';
 import { 
   LayoutDashboard, 
@@ -478,9 +478,9 @@ const MaterialGroups = ({ user }: { user: Employee }) => {
               initial={{ opacity: 0, scale: 0.95, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 20 }}
-              className="bg-white rounded-3xl shadow-2xl w-full max-w-md overflow-hidden"
+              className="bg-white rounded-3xl shadow-2xl w-full max-w-md"
             >
-              <div className="bg-primary p-6 text-white flex items-center justify-between">
+              <div className="bg-primary p-6 text-white flex items-center justify-between rounded-t-3xl">
                 <div className="flex items-center gap-3">
                   <div className="p-2 bg-white/20 rounded-xl"><Layers size={24} /></div>
                   <div>
@@ -538,9 +538,9 @@ const MaterialGroups = ({ user }: { user: Employee }) => {
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
-              className="bg-white rounded-3xl shadow-2xl w-full max-w-5xl max-h-[90vh] overflow-hidden flex flex-col"
+              className="bg-white rounded-3xl shadow-2xl w-full max-w-5xl max-h-[90vh] flex flex-col"
             >
-              <div className="p-6 border-b border-gray-100 flex items-center justify-between">
+              <div className="p-6 border-b border-gray-100 flex items-center justify-between rounded-t-3xl">
                 <div className="text-center flex-1">
                   <h3 className="text-xl font-bold text-primary uppercase tracking-widest">Chi tiết nhóm vật tư</h3>
                 </div>
@@ -648,9 +648,9 @@ const MaterialGroups = ({ user }: { user: Employee }) => {
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
-              className="bg-white rounded-3xl shadow-2xl w-full max-w-2xl overflow-hidden"
+              className="bg-white rounded-3xl shadow-2xl w-full max-w-2xl"
             >
-              <div className="bg-blue-600 p-6 text-white flex items-center justify-between">
+              <div className="bg-blue-600 p-6 text-white flex items-center justify-between rounded-t-3xl">
                 <div className="flex items-center gap-3">
                   <div className="p-2 bg-white/20 rounded-xl"><Package size={24} /></div>
                   <div>
@@ -794,9 +794,9 @@ const MaterialGroups = ({ user }: { user: Employee }) => {
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
-              className="bg-white rounded-3xl shadow-2xl w-full max-w-3xl overflow-hidden flex flex-col"
+              className="bg-white rounded-3xl shadow-2xl w-full max-w-3xl flex flex-col"
             >
-              <div className="p-6 border-b border-gray-100 flex items-center justify-between">
+              <div className="p-6 border-b border-gray-100 flex items-center justify-between rounded-t-3xl">
                 <div className="text-center flex-1">
                   <h3 className="text-xl font-bold text-primary uppercase tracking-widest">Chi tiết danh mục vật tư</h3>
                 </div>
@@ -939,11 +939,40 @@ const Materials = ({ user }: { user: Employee }) => {
     e.preventDefault();
     setSubmitting(true);
     try {
+      // Resolve group_id if it's a name
+      let finalGroupId = formData.group_id;
+      const groupByName = groups.find(g => g.name === formData.group_id);
+      if (groupByName) {
+        finalGroupId = groupByName.id;
+      } else if (formData.group_id && !groups.find(g => g.id === formData.group_id)) {
+        // Create new group
+        const { data: newGroup, error: groupErr } = await supabase.from('material_groups').insert([{ name: formData.group_id }]).select();
+        if (!groupErr && newGroup) {
+          finalGroupId = newGroup[0].id;
+          fetchGroups();
+        }
+      }
+
+      // Resolve warehouse_id
+      let finalWarehouseId = formData.warehouse_id;
+      const warehouseByName = warehouses.find(w => w.name === formData.warehouse_id);
+      if (warehouseByName) {
+        finalWarehouseId = warehouseByName.id;
+      } else if (formData.warehouse_id && !warehouses.find(w => w.id === formData.warehouse_id)) {
+        const { data: newWh, error: whErr } = await supabase.from('warehouses').insert([{ name: formData.warehouse_id }]).select();
+        if (!whErr && newWh) {
+          finalWarehouseId = newWh[0].id;
+          fetchWarehouses();
+        }
+      }
+
+      const payload = { ...formData, group_id: finalGroupId, warehouse_id: finalWarehouseId };
+
       if (isEditing) {
-        const { error } = await supabase.from('materials').update(formData).eq('id', formData.id);
+        const { error } = await supabase.from('materials').update(payload).eq('id', formData.id);
         if (error) throw error;
       } else {
-        const { error } = await supabase.from('materials').insert([formData]);
+        const { error } = await supabase.from('materials').insert([payload]);
         if (error) throw error;
       }
       setShowModal(false);
@@ -1140,9 +1169,9 @@ const Materials = ({ user }: { user: Employee }) => {
               initial={{ opacity: 0, scale: 0.95, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 20 }}
-              className="bg-white rounded-3xl shadow-2xl w-full max-w-2xl overflow-hidden"
+              className="bg-white rounded-3xl shadow-2xl w-full max-w-2xl"
             >
-              <div className="bg-primary p-6 text-white flex items-center justify-between">
+              <div className="bg-primary p-6 text-white flex items-center justify-between rounded-t-3xl">
                 <div className="flex items-center gap-3">
                   <div className="p-2 bg-white/20 rounded-xl"><Package size={24} /></div>
                   <div>
@@ -1153,97 +1182,78 @@ const Materials = ({ user }: { user: Employee }) => {
                 <button onClick={() => setShowModal(false)} className="p-2 hover:bg-white/10 rounded-full transition-colors"><X size={20} /></button>
               </div>
 
-              <form onSubmit={handleSubmit} className="p-6 grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-1">
-                  <label className="text-[10px] font-bold text-gray-400 uppercase">Mã vật tư (ID) *</label>
-                  <div className="relative">
+              <form onSubmit={handleSubmit} className="p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-4">
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-gray-400 uppercase">Mã vật tư (ID) *</label>
                     <input 
-                      list="material-ids"
                       required
                       type="text" 
-                      placeholder="Nhập mới hoặc chọn mã cũ"
+                      placeholder="Ví dụ: VT001"
                       value={formData.id}
-                      onChange={(e) => {
-                        const val = e.target.value;
-                        setFormData({...formData, id: val});
-                        const existing = materials.find(m => m.id === val);
-                        if (existing) {
-                          setFormData({
-                            ...existing,
-                            material_groups: undefined // Remove join data
-                          });
-                        }
-                      }}
+                      onChange={(e) => setFormData({...formData, id: e.target.value})}
                       className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20" 
                     />
-                    <datalist id="material-ids">
-                      {uniqueMaterialIds.map(id => <option key={id} value={id} />)}
-                    </datalist>
                   </div>
-                </div>
-                <div className="space-y-1">
-                  <label className="text-[10px] font-bold text-gray-400 uppercase">Tên vật tư *</label>
-                  <input 
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-gray-400 uppercase">Tên vật tư *</label>
+                    <input 
+                      required
+                      type="text" 
+                      placeholder="Ví dụ: Tôn kẽm 0.4mm"
+                      value={formData.name}
+                      onChange={(e) => setFormData({...formData, name: e.target.value})}
+                      className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20" 
+                    />
+                  </div>
+                  
+                  <CustomCombobox 
+                    label="Nhóm vật tư *"
+                    value={groups.find(g => g.id === formData.group_id)?.name || formData.group_id}
+                    onChange={(val) => setFormData({...formData, group_id: val})}
+                    options={groups}
+                    placeholder="Chọn hoặc nhập mới..."
                     required
-                    type="text" 
-                    placeholder="Ví dụ: Tôn kẽm 0.4mm"
-                    value={formData.name}
-                    onChange={(e) => setFormData({...formData, name: e.target.value})}
-                    className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20" 
+                  />
+
+                  <CustomCombobox 
+                    label="Kho lưu trữ"
+                    value={warehouses.find(w => w.id === formData.warehouse_id)?.name || formData.warehouse_id}
+                    onChange={(val) => setFormData({...formData, warehouse_id: val})}
+                    options={warehouses}
+                    placeholder="Chọn hoặc nhập mới..."
                   />
                 </div>
-                <div className="space-y-1">
-                  <label className="text-[10px] font-bold text-gray-400 uppercase">Nhóm vật tư *</label>
-                  <select 
-                    required
-                    value={formData.group_id}
-                    onChange={(e) => setFormData({...formData, group_id: e.target.value})}
-                    className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20"
-                  >
-                    <option value="">-- Chọn nhóm --</option>
-                    {groups.map(g => <option key={g.id} value={g.id}>{g.name}</option>)}
-                  </select>
-                </div>
-                <div className="space-y-1">
-                  <label className="text-[10px] font-bold text-gray-400 uppercase">Kho lưu trữ</label>
-                  <select 
-                    value={formData.warehouse_id}
-                    onChange={(e) => setFormData({...formData, warehouse_id: e.target.value})}
-                    className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20"
-                  >
-                    <option value="">-- Chọn kho --</option>
-                    {warehouses.map(w => <option key={w.id} value={w.id}>{w.name}</option>)}
-                  </select>
-                </div>
-                <div className="space-y-1">
-                  <label className="text-[10px] font-bold text-gray-400 uppercase">Đơn vị tính</label>
-                  <input 
-                    type="text" 
-                    placeholder="Ví dụ: Cái, Mét, Kg..."
+
+                <div className="space-y-4">
+                  <CustomCombobox 
+                    label="Đơn vị tính"
                     value={formData.unit}
-                    onChange={(e) => setFormData({...formData, unit: e.target.value})}
-                    className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20" 
+                    onChange={(val) => setFormData({...formData, unit: val})}
+                    options={Array.from(new Set(materials.map(m => m.unit))).filter(Boolean).map((u, i) => ({ id: i, name: u }))}
+                    placeholder="Chọn hoặc nhập mới..."
                   />
-                </div>
-                <div className="col-span-1 md:col-span-2 space-y-1">
-                  <label className="text-[10px] font-bold text-gray-400 uppercase">Quy cách / Kích thước</label>
-                  <input 
-                    type="text" 
-                    placeholder="Ví dụ: 1200mm x 2400mm"
-                    value={formData.specification}
-                    onChange={(e) => setFormData({...formData, specification: e.target.value})}
-                    className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20" 
-                  />
-                </div>
-                <div className="col-span-1 md:col-span-2 space-y-1">
-                  <label className="text-[10px] font-bold text-gray-400 uppercase">Mô tả chi tiết</label>
-                  <textarea 
-                    rows={2}
-                    placeholder="Thông tin thêm về vật tư..."
-                    value={formData.description}
-                    onChange={(e) => setFormData({...formData, description: e.target.value})}
-                    className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20 resize-none" 
-                  />
+
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-gray-400 uppercase">Quy cách / Kích thước</label>
+                    <input 
+                      type="text" 
+                      placeholder="Ví dụ: 1200mm x 2400mm"
+                      value={formData.specification}
+                      onChange={(e) => setFormData({...formData, specification: e.target.value})}
+                      className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20" 
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-gray-400 uppercase">Mô tả chi tiết</label>
+                    <textarea 
+                      rows={3}
+                      placeholder="Thông tin thêm về vật tư..."
+                      value={formData.description}
+                      onChange={(e) => setFormData({...formData, description: e.target.value})}
+                      className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20 resize-none" 
+                    />
+                  </div>
                 </div>
                 <div className="col-span-1 md:col-span-2 space-y-3">
                   <label className="text-[10px] font-bold text-gray-400 uppercase">Hình ảnh vật tư</label>
@@ -1307,9 +1317,9 @@ const Materials = ({ user }: { user: Employee }) => {
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
-              className="bg-white rounded-3xl shadow-2xl w-full max-w-3xl overflow-hidden flex flex-col"
+              className="bg-white rounded-3xl shadow-2xl w-full max-w-3xl flex flex-col"
             >
-              <div className="p-6 border-b border-gray-100 flex items-center justify-between">
+              <div className="p-6 border-b border-gray-100 flex items-center justify-between rounded-t-3xl">
                 <div className="text-center flex-1">
                   <h3 className="text-xl font-bold text-primary uppercase tracking-widest">Chi tiết vật tư</h3>
                 </div>
@@ -1698,9 +1708,9 @@ const Warehouses = ({ user }: { user: Employee }) => {
               initial={{ opacity: 0, scale: 0.95, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 20 }}
-              className="bg-white rounded-3xl shadow-2xl w-full max-w-2xl overflow-hidden my-8"
+              className="bg-white rounded-3xl shadow-2xl w-full max-w-2xl my-8"
             >
-              <div className="bg-primary p-6 text-white flex items-center justify-between">
+              <div className="bg-primary p-6 text-white flex items-center justify-between rounded-t-3xl">
                 <div className="flex items-center gap-3">
                   <div className="p-2 bg-white/20 rounded-xl"><Warehouse size={24} /></div>
                   <div>
@@ -1831,18 +1841,16 @@ const CustomCombobox = ({
   required?: boolean
 }) => {
   const [isOpen, setIsOpen] = useState(false);
-  const [filteredOptions, setFilteredOptions] = useState(options);
   const containerRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    setFilteredOptions(
-      options.filter(opt => (opt.name || '').toLowerCase().includes((value || '').toLowerCase()))
-    );
+  const filteredOptions = useMemo(() => {
+    const search = (value || '').toLowerCase();
+    return options.filter(opt => (opt.name || '').toLowerCase().includes(search));
   }, [value, options]);
 
   useEffect(() => {
-    const handleClickOutside = (event: any) => {
-      if (containerRef.current && !containerRef.current.contains(event.target)) {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
         setIsOpen(false);
       }
     };
@@ -1851,8 +1859,8 @@ const CustomCombobox = ({
   }, []);
 
   return (
-    <div className="space-y-1 relative" ref={containerRef}>
-      <label className="text-[10px] font-bold text-gray-400 uppercase">{label}</label>
+    <div className={`space-y-1 relative ${isOpen ? 'z-[200]' : 'z-10'}`} ref={containerRef}>
+      {label && <label className="text-[10px] font-bold text-gray-400 uppercase">{label}</label>}
       <div className="relative">
         <input
           type="text"
@@ -1860,25 +1868,29 @@ const CustomCombobox = ({
           value={value}
           onChange={(e) => {
             onChange(e.target.value);
-            setIsOpen(true);
+            if (!isOpen) setIsOpen(true);
           }}
           onFocus={() => setIsOpen(true)}
           placeholder={placeholder}
-          className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20 pr-10"
+          className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20 pr-10 bg-white transition-all"
         />
-        <div className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none">
-          <ChevronDown size={16} />
-        </div>
+        <button
+          type="button"
+          onClick={() => setIsOpen(!isOpen)}
+          className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
+        >
+          <ChevronDown size={16} className={`transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`} />
+        </button>
       </div>
       
       <AnimatePresence>
         {isOpen && filteredOptions.length > 0 && (
-          <motion.div
-            initial={{ opacity: 0, y: -10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -10 }}
-            className="absolute z-[110] left-0 right-0 mt-1 bg-white rounded-xl shadow-xl border border-gray-100 max-h-48 overflow-y-auto"
-          >
+            <motion.div
+              initial={{ opacity: 0, y: -5 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -5 }}
+              className="absolute left-0 right-0 mt-1 bg-white rounded-xl shadow-2xl border border-gray-100 max-h-40 overflow-y-auto py-1 z-[210] custom-scrollbar"
+            >
             {filteredOptions.map((opt, idx) => (
               <button
                 key={opt.id || idx}
@@ -1887,9 +1899,10 @@ const CustomCombobox = ({
                   onChange(opt.name);
                   setIsOpen(false);
                 }}
-                className="w-full text-left px-4 py-2 text-sm hover:bg-gray-50 transition-colors border-b border-gray-50 last:border-0"
+                className="w-full text-left px-4 py-2.5 text-sm hover:bg-primary/5 hover:text-primary transition-colors border-b border-gray-50 last:border-0 flex items-center justify-between group"
               >
-                {opt.name}
+                <span>{opt.name}</span>
+                <Plus size={12} className="opacity-0 group-hover:opacity-100 text-primary/40" />
               </button>
             ))}
           </motion.div>
@@ -2224,9 +2237,9 @@ const Costs = ({ user }: { user: Employee }) => {
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
-              className="bg-white rounded-3xl shadow-2xl w-full max-w-lg overflow-hidden"
+              className="bg-white rounded-3xl shadow-2xl w-full max-w-lg"
             >
-              <div className="bg-primary p-6 text-white flex items-center justify-between">
+              <div className="bg-primary p-6 text-white flex items-center justify-between rounded-t-3xl">
                 <div className="flex items-center gap-3">
                   <div className="p-2 bg-white/20 rounded-xl"><Wallet size={24} /></div>
                   <h3 className="font-bold text-lg">Chi tiết chi phí</h3>
@@ -2330,9 +2343,9 @@ const Costs = ({ user }: { user: Employee }) => {
               initial={{ opacity: 0, scale: 0.95, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 20 }}
-              className="bg-white rounded-3xl shadow-2xl w-full max-w-2xl overflow-hidden"
+              className="bg-white rounded-3xl shadow-2xl w-full max-w-2xl"
             >
-              <div className="bg-primary p-6 text-white flex items-center justify-between">
+              <div className="bg-primary p-6 text-white flex items-center justify-between rounded-t-3xl">
                 <div className="flex items-center gap-3">
                   <div className="p-2 bg-white/20 rounded-xl"><Wallet size={24} /></div>
                   <div>
@@ -2909,9 +2922,9 @@ const HRRecords = ({ user }: { user: Employee }) => {
               initial={{ opacity: 0, scale: 0.95, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 20 }}
-              className="bg-white rounded-3xl shadow-2xl w-full max-w-4xl overflow-hidden relative z-10 my-8"
+              className="bg-white rounded-3xl shadow-2xl w-full max-w-4xl relative z-10 my-8"
             >
-              <div className="bg-primary p-4 flex items-center justify-between text-white">
+              <div className="bg-primary p-4 flex items-center justify-between text-white rounded-t-3xl">
                 <h3 className="font-bold">{isEditing ? 'Cập Nhật Nhân Sự' : 'Thêm Mới Nhân Sự'}</h3>
                 <button onClick={() => setShowModal(false)} className="hover:bg-white/20 p-1 rounded-full"><X size={20} /></button>
               </div>
@@ -3376,9 +3389,9 @@ const Attendance = ({ user }: { user: Employee }) => {
               initial={{ opacity: 0, scale: 0.95, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 20 }}
-              className="bg-white rounded-3xl shadow-2xl w-full max-w-2xl overflow-hidden relative z-10"
+              className="bg-white rounded-3xl shadow-2xl w-full max-w-2xl relative z-10"
             >
-              <div className="bg-primary p-4 flex items-center justify-between text-white">
+              <div className="bg-primary p-4 flex items-center justify-between text-white rounded-t-3xl">
                 <h3 className="font-bold">{isEditing ? 'Cập Nhật Chấm Công' : 'Thêm Mới Chấm Công'}</h3>
                 <button onClick={() => setShowModal(false)} className="hover:bg-white/20 p-1 rounded-full"><X size={20} /></button>
               </div>
@@ -3514,6 +3527,579 @@ const Attendance = ({ user }: { user: Employee }) => {
   );
 };
 
+// --- Stock Management Components ---
+
+const StockIn = ({ user }: { user: Employee }) => {
+  const [slips, setSlips] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [showModal, setShowModal] = useState(false);
+  const [warehouses, setWarehouses] = useState<any[]>([]);
+  const [materials, setMaterials] = useState<any[]>([]);
+  const [submitting, setSubmitting] = useState(false);
+
+  const initialFormState = {
+    date: new Date().toISOString().split('T')[0],
+    warehouse_id: '',
+    material_id: '',
+    quantity: 0,
+    unit_price: 0,
+    notes: ''
+  };
+
+  const [formData, setFormData] = useState(initialFormState);
+
+  useEffect(() => {
+    fetchSlips();
+    fetchWarehouses();
+    fetchMaterials();
+  }, []);
+
+  const fetchSlips = async () => {
+    setLoading(true);
+    const { data } = await supabase.from('stock_in').select('*, warehouses(name), materials(name)').order('created_at', { ascending: false });
+    if (data) setSlips(data);
+    setLoading(false);
+  };
+
+  const fetchWarehouses = async () => {
+    const { data } = await supabase.from('warehouses').select('*').order('name');
+    if (data) setWarehouses(data);
+  };
+
+  const fetchMaterials = async () => {
+    const { data } = await supabase.from('materials').select('*').order('name');
+    if (data) setMaterials(data);
+  };
+
+  const handleSubmit = async (e: FormEvent) => {
+    e.preventDefault();
+    setSubmitting(true);
+    try {
+      const wh = warehouses.find(w => w.name === formData.warehouse_id || w.id === formData.warehouse_id);
+      const mat = materials.find(m => m.name === formData.material_id || m.id === formData.material_id);
+      
+      const { error } = await supabase.from('stock_in').insert([{
+        ...formData,
+        warehouse_id: wh?.id || formData.warehouse_id,
+        material_id: mat?.id || formData.material_id,
+        employee_id: user.id,
+        total_amount: formData.quantity * formData.unit_price
+      }]);
+      if (error) throw error;
+      setShowModal(false);
+      fetchSlips();
+      setFormData(initialFormState);
+    } catch (err: any) {
+      alert('Lỗi: ' + err.message);
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <div className="p-4 md:p-6 space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-xl font-bold text-gray-800 flex items-center gap-2">
+            <ArrowDownCircle className="text-primary" /> Nhập kho
+          </h2>
+          <p className="text-xs text-gray-500 mt-1">Quản lý phiếu nhập vật tư vào kho</p>
+        </div>
+        <button 
+          onClick={() => setShowModal(true)}
+          className="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-xl text-sm font-bold hover:bg-primary-hover transition-colors shadow-lg shadow-primary/20"
+        >
+          <Plus size={18} /> Lập phiếu nhập
+        </button>
+      </div>
+
+      <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+        <table className="w-full text-left border-collapse">
+          <thead>
+            <tr className="bg-primary text-white">
+              <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider">Ngày</th>
+              <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider">Kho</th>
+              <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider">Vật tư</th>
+              <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-center">SL</th>
+              <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-right">Thành tiền</th>
+              <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider">Ghi chú</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-gray-100">
+            {loading ? (
+              <tr><td colSpan={6} className="px-4 py-8 text-center text-gray-400 italic">Đang tải...</td></tr>
+            ) : slips.length === 0 ? (
+              <tr><td colSpan={6} className="px-4 py-8 text-center text-gray-400 italic">Chưa có phiếu nhập nào</td></tr>
+            ) : (
+              slips.map((item) => (
+                <tr key={item.id} className="hover:bg-gray-50 transition-colors">
+                  <td className="px-4 py-3 text-xs text-gray-600">{new Date(item.date).toLocaleDateString('vi-VN')}</td>
+                  <td className="px-4 py-3 text-xs text-gray-600 font-medium">{item.warehouses?.name}</td>
+                  <td className="px-4 py-3 text-xs text-gray-600">{item.materials?.name}</td>
+                  <td className="px-4 py-3 text-xs text-gray-600 text-center font-bold">{item.quantity}</td>
+                  <td className="px-4 py-3 text-xs text-primary font-bold text-right">{(item.total_amount || 0).toLocaleString('vi-VN')}đ</td>
+                  <td className="px-4 py-3 text-xs text-gray-400 italic">{item.notes}</td>
+                </tr>
+              ))
+            )}
+          </tbody>
+        </table>
+      </div>
+
+      <AnimatePresence>
+        {showModal && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              className="bg-white rounded-3xl shadow-2xl w-full max-w-2xl"
+            >
+              <div className="bg-primary p-6 text-white flex items-center justify-between rounded-t-3xl">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-white/20 rounded-xl"><ArrowDownCircle size={24} /></div>
+                  <h3 className="font-bold text-lg">Lập phiếu nhập kho</h3>
+                </div>
+                <button onClick={() => setShowModal(false)} className="p-2 hover:bg-white/10 rounded-full transition-colors"><X size={20} /></button>
+              </div>
+
+              <form onSubmit={handleSubmit} className="p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-4">
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-gray-400 uppercase">Ngày nhập *</label>
+                    <input type="date" required value={formData.date} onChange={(e) => setFormData({...formData, date: e.target.value})} className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20" />
+                  </div>
+                  
+                  <CustomCombobox 
+                    label="Kho nhập *"
+                    value={warehouses.find(w => w.id === formData.warehouse_id)?.name || formData.warehouse_id}
+                    onChange={(val) => setFormData({...formData, warehouse_id: val})}
+                    options={warehouses}
+                    placeholder="Chọn kho..."
+                    required
+                  />
+
+                  <CustomCombobox 
+                    label="Vật tư *"
+                    value={materials.find(m => m.id === formData.material_id)?.name || formData.material_id}
+                    onChange={(val) => setFormData({...formData, material_id: val})}
+                    options={materials}
+                    placeholder="Chọn vật tư..."
+                    required
+                  />
+                </div>
+
+                <div className="space-y-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-bold text-gray-400 uppercase">Số lượng *</label>
+                      <input type="number" required value={formData.quantity} onChange={(e) => setFormData({...formData, quantity: Number(e.target.value)})} className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20" />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-bold text-gray-400 uppercase">Đơn giá</label>
+                      <input type="number" value={formData.unit_price} onChange={(e) => setFormData({...formData, unit_price: Number(e.target.value)})} className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20" />
+                    </div>
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-gray-400 uppercase">Ghi chú</label>
+                    <textarea rows={3} value={formData.notes} onChange={(e) => setFormData({...formData, notes: e.target.value})} className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20 resize-none" />
+                  </div>
+                </div>
+
+                <div className="md:col-span-2 flex justify-end gap-3 mt-4">
+                  <button type="button" onClick={() => setShowModal(false)} className="px-6 py-2 rounded-xl text-sm font-bold text-gray-500 hover:bg-gray-100 transition-colors">Hủy</button>
+                  <button type="submit" disabled={submitting} className="px-8 py-2 rounded-xl bg-primary text-white text-sm font-bold hover:bg-primary-hover transition-colors shadow-lg shadow-primary/20 disabled:opacity-50">
+                    {submitting ? 'Đang lưu...' : 'Lưu phiếu nhập'}
+                  </button>
+                </div>
+              </form>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+};
+
+const StockOut = ({ user }: { user: Employee }) => {
+  const [slips, setSlips] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [showModal, setShowModal] = useState(false);
+  const [warehouses, setWarehouses] = useState<any[]>([]);
+  const [materials, setMaterials] = useState<any[]>([]);
+  const [submitting, setSubmitting] = useState(false);
+
+  const initialFormState = {
+    date: new Date().toISOString().split('T')[0],
+    warehouse_id: '',
+    material_id: '',
+    quantity: 0,
+    notes: ''
+  };
+
+  const [formData, setFormData] = useState(initialFormState);
+
+  useEffect(() => {
+    fetchSlips();
+    fetchWarehouses();
+    fetchMaterials();
+  }, []);
+
+  const fetchSlips = async () => {
+    setLoading(true);
+    const { data } = await supabase.from('stock_out').select('*, warehouses(name), materials(name)').order('created_at', { ascending: false });
+    if (data) setSlips(data);
+    setLoading(false);
+  };
+
+  const fetchWarehouses = async () => {
+    const { data } = await supabase.from('warehouses').select('*').order('name');
+    if (data) setWarehouses(data);
+  };
+
+  const fetchMaterials = async () => {
+    const { data } = await supabase.from('materials').select('*').order('name');
+    if (data) setMaterials(data);
+  };
+
+  const handleSubmit = async (e: FormEvent) => {
+    e.preventDefault();
+    setSubmitting(true);
+    try {
+      const wh = warehouses.find(w => w.name === formData.warehouse_id || w.id === formData.warehouse_id);
+      const mat = materials.find(m => m.name === formData.material_id || m.id === formData.material_id);
+
+      const { error } = await supabase.from('stock_out').insert([{
+        ...formData,
+        warehouse_id: wh?.id || formData.warehouse_id,
+        material_id: mat?.id || formData.material_id,
+        employee_id: user.id
+      }]);
+      if (error) throw error;
+      setShowModal(false);
+      fetchSlips();
+      setFormData(initialFormState);
+    } catch (err: any) {
+      alert('Lỗi: ' + err.message);
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <div className="p-4 md:p-6 space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-xl font-bold text-gray-800 flex items-center gap-2">
+            <ArrowUpCircle className="text-red-500" /> Xuất kho
+          </h2>
+          <p className="text-xs text-gray-500 mt-1">Quản lý phiếu xuất vật tư khỏi kho</p>
+        </div>
+        <button 
+          onClick={() => setShowModal(true)}
+          className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-xl text-sm font-bold hover:bg-red-700 transition-colors shadow-lg shadow-red-600/20"
+        >
+          <Plus size={18} /> Lập phiếu xuất
+        </button>
+      </div>
+
+      <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+        <table className="w-full text-left border-collapse">
+          <thead>
+            <tr className="bg-red-600 text-white">
+              <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider">Ngày</th>
+              <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider">Kho</th>
+              <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider">Vật tư</th>
+              <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-center">SL</th>
+              <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider">Ghi chú</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-gray-100">
+            {loading ? (
+              <tr><td colSpan={5} className="px-4 py-8 text-center text-gray-400 italic">Đang tải...</td></tr>
+            ) : slips.length === 0 ? (
+              <tr><td colSpan={5} className="px-4 py-8 text-center text-gray-400 italic">Chưa có phiếu xuất nào</td></tr>
+            ) : (
+              slips.map((item) => (
+                <tr key={item.id} className="hover:bg-gray-50 transition-colors">
+                  <td className="px-4 py-3 text-xs text-gray-600">{new Date(item.date).toLocaleDateString('vi-VN')}</td>
+                  <td className="px-4 py-3 text-xs text-gray-600 font-medium">{item.warehouses?.name}</td>
+                  <td className="px-4 py-3 text-xs text-gray-600">{item.materials?.name}</td>
+                  <td className="px-4 py-3 text-xs text-red-600 text-center font-bold">-{item.quantity}</td>
+                  <td className="px-4 py-3 text-xs text-gray-400 italic">{item.notes}</td>
+                </tr>
+              ))
+            )}
+          </tbody>
+        </table>
+      </div>
+
+      <AnimatePresence>
+        {showModal && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              className="bg-white rounded-3xl shadow-2xl w-full max-w-2xl"
+            >
+              <div className="bg-red-600 p-6 text-white flex items-center justify-between rounded-t-3xl">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-white/20 rounded-xl"><ArrowUpCircle size={24} /></div>
+                  <h3 className="font-bold text-lg">Lập phiếu xuất kho</h3>
+                </div>
+                <button onClick={() => setShowModal(false)} className="p-2 hover:bg-white/10 rounded-full transition-colors"><X size={20} /></button>
+              </div>
+
+              <form onSubmit={handleSubmit} className="p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-4">
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-gray-400 uppercase">Ngày xuất *</label>
+                    <input type="date" required value={formData.date} onChange={(e) => setFormData({...formData, date: e.target.value})} className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-red-600/20" />
+                  </div>
+                  
+                  <CustomCombobox 
+                    label="Kho xuất *"
+                    value={warehouses.find(w => w.id === formData.warehouse_id)?.name || formData.warehouse_id}
+                    onChange={(val) => setFormData({...formData, warehouse_id: val})}
+                    options={warehouses}
+                    placeholder="Chọn kho..."
+                    required
+                  />
+
+                  <CustomCombobox 
+                    label="Vật tư *"
+                    value={materials.find(m => m.id === formData.material_id)?.name || formData.material_id}
+                    onChange={(val) => setFormData({...formData, material_id: val})}
+                    options={materials}
+                    placeholder="Chọn vật tư..."
+                    required
+                  />
+                </div>
+
+                <div className="space-y-4">
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-gray-400 uppercase">Số lượng xuất *</label>
+                    <input type="number" required value={formData.quantity} onChange={(e) => setFormData({...formData, quantity: Number(e.target.value)})} className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-red-600/20" />
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-gray-400 uppercase">Ghi chú / Mục đích xuất</label>
+                    <textarea rows={4} value={formData.notes} onChange={(e) => setFormData({...formData, notes: e.target.value})} className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-red-600/20 resize-none" />
+                  </div>
+                </div>
+
+                <div className="md:col-span-2 flex justify-end gap-3 mt-4">
+                  <button type="button" onClick={() => setShowModal(false)} className="px-6 py-2 rounded-xl text-sm font-bold text-gray-500 hover:bg-gray-100 transition-colors">Hủy</button>
+                  <button type="submit" disabled={submitting} className="px-8 py-2 rounded-xl bg-red-600 text-white text-sm font-bold hover:bg-red-700 transition-colors shadow-lg shadow-red-600/20 disabled:opacity-50">
+                    {submitting ? 'Đang lưu...' : 'Lưu phiếu xuất'}
+                  </button>
+                </div>
+              </form>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+};
+
+const Transfer = ({ user }: { user: Employee }) => {
+  const [slips, setSlips] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [showModal, setShowModal] = useState(false);
+  const [warehouses, setWarehouses] = useState<any[]>([]);
+  const [materials, setMaterials] = useState<any[]>([]);
+  const [submitting, setSubmitting] = useState(false);
+
+  const initialFormState = {
+    date: new Date().toISOString().split('T')[0],
+    from_warehouse_id: '',
+    to_warehouse_id: '',
+    material_id: '',
+    quantity: 0,
+    notes: ''
+  };
+
+  const [formData, setFormData] = useState(initialFormState);
+
+  useEffect(() => {
+    fetchSlips();
+    fetchWarehouses();
+    fetchMaterials();
+  }, []);
+
+  const fetchSlips = async () => {
+    setLoading(true);
+    const { data } = await supabase.from('transfers').select('*, from_wh:warehouses!from_warehouse_id(name), to_wh:warehouses!to_warehouse_id(name), materials(name)').order('created_at', { ascending: false });
+    if (data) setSlips(data);
+    setLoading(false);
+  };
+
+  const fetchWarehouses = async () => {
+    const { data } = await supabase.from('warehouses').select('*').order('name');
+    if (data) setWarehouses(data);
+  };
+
+  const fetchMaterials = async () => {
+    const { data } = await supabase.from('materials').select('*').order('name');
+    if (data) setMaterials(data);
+  };
+
+  const handleSubmit = async (e: FormEvent) => {
+    e.preventDefault();
+    setSubmitting(true);
+    try {
+      const fromWh = warehouses.find(w => w.name === formData.from_warehouse_id || w.id === formData.from_warehouse_id);
+      const toWh = warehouses.find(w => w.name === formData.to_warehouse_id || w.id === formData.to_warehouse_id);
+      const mat = materials.find(m => m.name === formData.material_id || m.id === formData.material_id);
+
+      const { error } = await supabase.from('transfers').insert([{
+        ...formData,
+        from_warehouse_id: fromWh?.id || formData.from_warehouse_id,
+        to_warehouse_id: toWh?.id || formData.to_warehouse_id,
+        material_id: mat?.id || formData.material_id,
+        employee_id: user.id
+      }]);
+      if (error) throw error;
+      setShowModal(false);
+      fetchSlips();
+      setFormData(initialFormState);
+    } catch (err: any) {
+      alert('Lỗi: ' + err.message);
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <div className="p-4 md:p-6 space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-xl font-bold text-gray-800 flex items-center gap-2">
+            <ArrowLeftRight className="text-orange-500" /> Luân chuyển kho
+          </h2>
+          <p className="text-xs text-gray-500 mt-1">Điều chuyển vật tư giữa các kho</p>
+        </div>
+        <button 
+          onClick={() => setShowModal(true)}
+          className="flex items-center gap-2 px-4 py-2 bg-orange-500 text-white rounded-xl text-sm font-bold hover:bg-orange-600 transition-colors shadow-lg shadow-orange-500/20"
+        >
+          <Plus size={18} /> Lập phiếu chuyển
+        </button>
+      </div>
+
+      <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+        <table className="w-full text-left border-collapse">
+          <thead>
+            <tr className="bg-orange-500 text-white">
+              <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider">Ngày</th>
+              <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider">Từ kho</th>
+              <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider">Đến kho</th>
+              <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider">Vật tư</th>
+              <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-center">SL</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-gray-100">
+            {loading ? (
+              <tr><td colSpan={5} className="px-4 py-8 text-center text-gray-400 italic">Đang tải...</td></tr>
+            ) : slips.length === 0 ? (
+              <tr><td colSpan={5} className="px-4 py-8 text-center text-gray-400 italic">Chưa có phiếu chuyển nào</td></tr>
+            ) : (
+              slips.map((item) => (
+                <tr key={item.id} className="hover:bg-gray-50 transition-colors">
+                  <td className="px-4 py-3 text-xs text-gray-600">{new Date(item.date).toLocaleDateString('vi-VN')}</td>
+                  <td className="px-4 py-3 text-xs text-gray-600">{item.from_wh?.name}</td>
+                  <td className="px-4 py-3 text-xs text-gray-600">{item.to_wh?.name}</td>
+                  <td className="px-4 py-3 text-xs text-gray-600 font-medium">{item.materials?.name}</td>
+                  <td className="px-4 py-3 text-xs text-orange-600 text-center font-bold">{item.quantity}</td>
+                </tr>
+              ))
+            )}
+          </tbody>
+        </table>
+      </div>
+
+      <AnimatePresence>
+        {showModal && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              className="bg-white rounded-3xl shadow-2xl w-full max-w-2xl"
+            >
+              <div className="bg-orange-500 p-6 text-white flex items-center justify-between rounded-t-3xl">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-white/20 rounded-xl"><ArrowLeftRight size={24} /></div>
+                  <h3 className="font-bold text-lg">Phiếu điều chuyển kho</h3>
+                </div>
+                <button onClick={() => setShowModal(false)} className="p-2 hover:bg-white/10 rounded-full transition-colors"><X size={20} /></button>
+              </div>
+
+              <form onSubmit={handleSubmit} className="p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-4">
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-gray-400 uppercase">Ngày chuyển *</label>
+                    <input type="date" required value={formData.date} onChange={(e) => setFormData({...formData, date: e.target.value})} className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-orange-500/20" />
+                  </div>
+                  
+                  <CustomCombobox 
+                    label="Từ kho *"
+                    value={warehouses.find(w => w.id === formData.from_warehouse_id)?.name || formData.from_warehouse_id}
+                    onChange={(val) => setFormData({...formData, from_warehouse_id: val})}
+                    options={warehouses}
+                    placeholder="Chọn kho nguồn..."
+                    required
+                  />
+
+                  <CustomCombobox 
+                    label="Đến kho *"
+                    value={warehouses.find(w => w.id === formData.to_warehouse_id)?.name || formData.to_warehouse_id}
+                    onChange={(val) => setFormData({...formData, to_warehouse_id: val})}
+                    options={warehouses}
+                    placeholder="Chọn kho đích..."
+                    required
+                  />
+                </div>
+
+                <div className="space-y-4">
+                  <CustomCombobox 
+                    label="Vật tư điều chuyển *"
+                    value={materials.find(m => m.id === formData.material_id)?.name || formData.material_id}
+                    onChange={(val) => setFormData({...formData, material_id: val})}
+                    options={materials}
+                    placeholder="Chọn vật tư..."
+                    required
+                  />
+
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-gray-400 uppercase">Số lượng chuyển *</label>
+                    <input type="number" required value={formData.quantity} onChange={(e) => setFormData({...formData, quantity: Number(e.target.value)})} className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-orange-500/20" />
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-gray-400 uppercase">Ghi chú</label>
+                    <textarea rows={2} value={formData.notes} onChange={(e) => setFormData({...formData, notes: e.target.value})} className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-orange-500/20 resize-none" />
+                  </div>
+                </div>
+
+                <div className="md:col-span-2 flex justify-end gap-3 mt-4">
+                  <button type="button" onClick={() => setShowModal(false)} className="px-6 py-2 rounded-xl text-sm font-bold text-gray-500 hover:bg-gray-100 transition-colors">Hủy</button>
+                  <button type="submit" disabled={submitting} className="px-8 py-2 rounded-xl bg-orange-500 text-white text-sm font-bold hover:bg-orange-600 transition-colors shadow-lg shadow-orange-500/20 disabled:opacity-50">
+                    {submitting ? 'Đang lưu...' : 'Lưu phiếu chuyển'}
+                  </button>
+                </div>
+              </form>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+};
+
 // --- Main App ---
 
 export default function App() {
@@ -3591,6 +4177,9 @@ export default function App() {
       case 'costs': return <Costs user={user} />;
       case 'warehouses': return <Warehouses user={user} />;
       case 'materials': return <Materials user={user} />;
+      case 'stock-in': return <StockIn user={user} />;
+      case 'stock-out': return <StockOut user={user} />;
+      case 'transfer': return <Transfer user={user} />;
       case 'cost-report': return <Placeholder title="Báo cáo chi phí" />;
       case 'cost-filter': return <Placeholder title="Lọc chi phí" />;
       case 'payroll-report': return <Placeholder title="Báo cáo lương" />;

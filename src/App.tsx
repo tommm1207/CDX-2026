@@ -3463,18 +3463,25 @@ export default function App() {
     <div className="min-h-screen bg-[#F8F9FA] flex flex-col font-sans">
       {/* Header */}
       <header className="bg-primary text-white h-14 flex items-center justify-between px-4 sticky top-0 z-50 shadow-md">
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-2">
           <button 
-            onClick={() => {
-              setIsSidebarOpen(!isSidebarOpen);
-              if (currentPage !== 'dashboard') setCurrentPage('dashboard');
-            }} 
+            onClick={() => setIsSidebarOpen(!isSidebarOpen)} 
             className="flex items-center gap-2 hover:bg-white/10 p-1.5 rounded-xl transition-all active:scale-95"
           >
             <div className="w-8 h-8 bg-white rounded-md flex items-center justify-center p-1 shadow-sm">
               <img src={LOGO_URL} alt="Logo" className="w-full h-full object-contain" referrerPolicy="no-referrer" />
             </div>
             <h1 className="font-bold text-sm tracking-wide hidden sm:block">QUẢN LÝ KHO CDX</h1>
+          </button>
+          
+          <div className="h-6 w-px bg-white/20 mx-1 hidden sm:block" />
+          
+          <button 
+            onClick={() => setCurrentPage('dashboard')}
+            className="hover:bg-white/10 p-2 rounded-xl transition-colors flex items-center gap-2 group"
+            title="Về trang chủ"
+          >
+            <Home size={20} className="group-hover:scale-110 transition-transform" />
           </button>
         </div>
 

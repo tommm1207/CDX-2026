@@ -158,7 +158,7 @@ const SidebarItem = ({ icon: Icon, label, active, onClick, badge }: any) => (
   </button>
 );
 
-const MaterialGroups = ({ user }: { user: Employee }) => {
+const MaterialGroups = ({ user, onBack }: { user: Employee, onBack?: () => void }) => {
   const [showModal, setShowModal] = useState(false);
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [showMaterialModal, setShowMaterialModal] = useState(false);
@@ -355,6 +355,7 @@ const MaterialGroups = ({ user }: { user: Employee }) => {
 
   return (
     <div className="p-4 md:p-6 space-y-6">
+      <PageBreadcrumb title="Nhóm vật tư" onBack={onBack} />
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-xl font-bold text-gray-800 flex items-center gap-2">
@@ -470,17 +471,16 @@ const MaterialGroups = ({ user }: { user: Employee }) => {
         )}
       </AnimatePresence>
 
-      {/* Group Edit Modal */}
       <AnimatePresence>
         {showModal && (
-          <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
+          <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm overflow-y-auto">
             <motion.div 
               initial={{ opacity: 0, scale: 0.95, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 20 }}
-              className="bg-white rounded-3xl shadow-2xl w-full max-w-md"
+              className="bg-white rounded-3xl shadow-2xl w-full max-w-md max-h-[90vh] flex flex-col my-8"
             >
-              <div className="bg-primary p-6 text-white flex items-center justify-between rounded-t-3xl">
+              <div className="bg-primary p-6 text-white flex items-center justify-between rounded-t-3xl flex-shrink-0">
                 <div className="flex items-center gap-3">
                   <div className="p-2 bg-white/20 rounded-xl"><Layers size={24} /></div>
                   <div>
@@ -491,40 +491,42 @@ const MaterialGroups = ({ user }: { user: Employee }) => {
                 <button onClick={() => setShowModal(false)} className="p-2 hover:bg-white/10 rounded-full transition-colors"><X size={20} /></button>
               </div>
 
-              <form onSubmit={handleSubmit} className="p-6 space-y-4">
-                <div className="space-y-1">
-                  <label className="text-[10px] font-bold text-gray-400 uppercase">Tên nhóm vật tư *</label>
-                  <input 
-                    required
-                    type="text" 
-                    placeholder="Ví dụ: Tôn, sắt, thép..."
-                    value={formData.name}
-                    onChange={(e) => setFormData({...formData, name: e.target.value})}
-                    className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20" 
-                  />
-                </div>
-                <div className="space-y-1">
-                  <label className="text-[10px] font-bold text-gray-400 uppercase">Ghi chú</label>
-                  <textarea 
-                    rows={3}
-                    placeholder="Thông tin thêm về nhóm này..."
-                    value={formData.notes}
-                    onChange={(e) => setFormData({...formData, notes: e.target.value})}
-                    className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20 resize-none" 
-                  />
-                </div>
+              <div className="flex-1 overflow-y-auto custom-scrollbar">
+                <form onSubmit={handleSubmit} className="p-6 space-y-4">
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-gray-400 uppercase">Tên nhóm vật tư *</label>
+                    <input 
+                      required
+                      type="text" 
+                      placeholder="Ví dụ: Tôn, sắt, thép..."
+                      value={formData.name}
+                      onChange={(e) => setFormData({...formData, name: e.target.value})}
+                      className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20" 
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-gray-400 uppercase">Ghi chú</label>
+                    <textarea 
+                      rows={3}
+                      placeholder="Thông tin thêm về nhóm này..."
+                      value={formData.notes}
+                      onChange={(e) => setFormData({...formData, notes: e.target.value})}
+                      className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20 resize-none" 
+                    />
+                  </div>
 
-                <div className="mt-8 flex justify-end gap-3">
-                  <button type="button" onClick={() => setShowModal(false)} className="px-6 py-2 rounded-xl text-sm font-bold text-gray-500 hover:bg-gray-100 transition-colors">Hủy</button>
-                  <button 
-                    type="submit" 
-                    disabled={submitting}
-                    className="px-6 py-2 rounded-xl text-sm font-bold bg-primary text-white hover:bg-primary-hover transition-colors shadow-lg shadow-primary/20 disabled:opacity-50"
-                  >
-                    {submitting ? 'Đang lưu...' : 'Lưu dữ liệu'}
-                  </button>
-                </div>
-              </form>
+                  <div className="mt-8 flex justify-end gap-3 flex-shrink-0">
+                    <button type="button" onClick={() => setShowModal(false)} className="px-6 py-2 rounded-xl text-sm font-bold text-gray-500 hover:bg-gray-100 transition-colors">Hủy</button>
+                    <button 
+                      type="submit" 
+                      disabled={submitting}
+                      className="px-6 py-2 rounded-xl text-sm font-bold bg-primary text-white hover:bg-primary-hover transition-colors shadow-lg shadow-primary/20 disabled:opacity-50"
+                    >
+                      {submitting ? 'Đang lưu...' : 'Lưu dữ liệu'}
+                    </button>
+                  </div>
+                </form>
+              </div>
             </motion.div>
           </div>
         )}
@@ -640,17 +642,16 @@ const MaterialGroups = ({ user }: { user: Employee }) => {
         )}
       </AnimatePresence>
 
-      {/* Material Add/Edit Modal */}
       <AnimatePresence>
         {showMaterialModal && (
-          <div className="fixed inset-0 z-[130] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
+          <div className="fixed inset-0 z-[130] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm overflow-y-auto">
             <motion.div 
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.95 }}
-              className="bg-white rounded-3xl shadow-2xl w-full max-w-2xl"
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              className="bg-white rounded-3xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col my-8"
             >
-              <div className="bg-blue-600 p-6 text-white flex items-center justify-between rounded-t-3xl">
+              <div className="bg-blue-600 p-6 text-white flex items-center justify-between rounded-t-3xl flex-shrink-0">
                 <div className="flex items-center gap-3">
                   <div className="p-2 bg-white/20 rounded-xl"><Package size={24} /></div>
                   <div>
@@ -661,7 +662,8 @@ const MaterialGroups = ({ user }: { user: Employee }) => {
                 <button onClick={() => setShowMaterialModal(false)} className="p-2 hover:bg-white/10 rounded-full transition-colors"><X size={20} /></button>
               </div>
 
-              <form onSubmit={handleMaterialSubmit} className="p-6 grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="flex-1 overflow-y-auto custom-scrollbar">
+                <form onSubmit={handleMaterialSubmit} className="p-6 grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-1">
                   <label className="text-[10px] font-bold text-gray-400 uppercase">Mã vật tư (ID) *</label>
                   <div className="relative">
@@ -781,10 +783,11 @@ const MaterialGroups = ({ user }: { user: Employee }) => {
                   </button>
                 </div>
               </form>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
+            </div>
+          </motion.div>
+        </div>
+      )}
+    </AnimatePresence>
 
       {/* Material Detail Modal (The Eye) */}
       <AnimatePresence>
@@ -871,7 +874,7 @@ const MaterialGroups = ({ user }: { user: Employee }) => {
   );
 };
 
-const Materials = ({ user }: { user: Employee }) => {
+const Materials = ({ user, onBack }: { user: Employee, onBack?: () => void }) => {
   const [materials, setMaterials] = useState<any[]>([]);
   const [groups, setGroups] = useState<any[]>([]);
   const [warehouses, setWarehouses] = useState<any[]>([]);
@@ -1032,6 +1035,7 @@ const Materials = ({ user }: { user: Employee }) => {
 
   return (
     <div className="p-4 md:p-6 space-y-6">
+      <PageBreadcrumb title="Danh mục Vật tư" onBack={onBack} />
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-xl font-bold text-gray-800 flex items-center gap-2">
@@ -1161,17 +1165,16 @@ const Materials = ({ user }: { user: Employee }) => {
         )}
       </AnimatePresence>
 
-      {/* Add/Edit Modal */}
       <AnimatePresence>
         {showModal && (
-          <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
+          <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm overflow-y-auto">
             <motion.div 
               initial={{ opacity: 0, scale: 0.95, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 20 }}
-              className="bg-white rounded-3xl shadow-2xl w-full max-w-2xl"
+              className="bg-white rounded-3xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col my-8"
             >
-              <div className="bg-primary p-6 text-white flex items-center justify-between rounded-t-3xl">
+              <div className="bg-primary p-6 text-white flex items-center justify-between rounded-t-3xl flex-shrink-0">
                 <div className="flex items-center gap-3">
                   <div className="p-2 bg-white/20 rounded-xl"><Package size={24} /></div>
                   <div>
@@ -1182,128 +1185,132 @@ const Materials = ({ user }: { user: Employee }) => {
                 <button onClick={() => setShowModal(false)} className="p-2 hover:bg-white/10 rounded-full transition-colors"><X size={20} /></button>
               </div>
 
-              <form onSubmit={handleSubmit} className="p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="space-y-4">
-                  <div className="space-y-1">
-                    <label className="text-[10px] font-bold text-gray-400 uppercase">Mã vật tư (ID) *</label>
-                    <input 
-                      required
-                      type="text" 
-                      placeholder="Ví dụ: VT001"
-                      value={formData.id}
-                      onChange={(e) => setFormData({...formData, id: e.target.value})}
-                      className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20" 
-                    />
-                  </div>
-                  <div className="space-y-1">
-                    <label className="text-[10px] font-bold text-gray-400 uppercase">Tên vật tư *</label>
-                    <input 
-                      required
-                      type="text" 
-                      placeholder="Ví dụ: Tôn kẽm 0.4mm"
-                      value={formData.name}
-                      onChange={(e) => setFormData({...formData, name: e.target.value})}
-                      className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20" 
-                    />
-                  </div>
-                  
-                  <CustomCombobox 
-                    label="Nhóm vật tư *"
-                    value={groups.find(g => g.id === formData.group_id)?.name || formData.group_id}
-                    onChange={(val) => setFormData({...formData, group_id: val})}
-                    options={groups}
-                    placeholder="Chọn hoặc nhập mới..."
-                    required
-                  />
-
-                  <CustomCombobox 
-                    label="Kho lưu trữ"
-                    value={warehouses.find(w => w.id === formData.warehouse_id)?.name || formData.warehouse_id}
-                    onChange={(val) => setFormData({...formData, warehouse_id: val})}
-                    options={warehouses}
-                    placeholder="Chọn hoặc nhập mới..."
-                  />
-                </div>
-
-                <div className="space-y-4">
-                  <CustomCombobox 
-                    label="Đơn vị tính"
-                    value={formData.unit}
-                    onChange={(val) => setFormData({...formData, unit: val})}
-                    options={Array.from(new Set(materials.map(m => m.unit))).filter(Boolean).map((u, i) => ({ id: i, name: u }))}
-                    placeholder="Chọn hoặc nhập mới..."
-                  />
-
-                  <div className="space-y-1">
-                    <label className="text-[10px] font-bold text-gray-400 uppercase">Quy cách / Kích thước</label>
-                    <input 
-                      type="text" 
-                      placeholder="Ví dụ: 1200mm x 2400mm"
-                      value={formData.specification}
-                      onChange={(e) => setFormData({...formData, specification: e.target.value})}
-                      className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20" 
-                    />
-                  </div>
-                  <div className="space-y-1">
-                    <label className="text-[10px] font-bold text-gray-400 uppercase">Mô tả chi tiết</label>
-                    <textarea 
-                      rows={3}
-                      placeholder="Thông tin thêm về vật tư..."
-                      value={formData.description}
-                      onChange={(e) => setFormData({...formData, description: e.target.value})}
-                      className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20 resize-none" 
-                    />
-                  </div>
-                </div>
-                <div className="col-span-1 md:col-span-2 space-y-3">
-                  <label className="text-[10px] font-bold text-gray-400 uppercase">Hình ảnh vật tư</label>
-                  <div className="flex items-center gap-4">
-                    <div className="w-20 h-20 rounded-2xl bg-gray-50 border-2 border-dashed border-gray-200 flex items-center justify-center overflow-hidden group relative">
-                      {formData.image_url ? (
-                        <>
-                          <img src={formData.image_url} alt="Preview" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
-                          <button 
-                            type="button"
-                            onClick={() => setFormData({...formData, image_url: ''})}
-                            className="absolute inset-0 bg-black/40 text-white opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center"
-                          >
-                            <X size={16} />
-                          </button>
-                        </>
-                      ) : (
-                        <ImageIcon className="text-gray-300" size={24} />
-                      )}
-                    </div>
-                    <div className="flex-1 space-y-2">
-                      <input 
-                        type="file" 
-                        id="material-image"
-                        accept="image/*"
-                        onChange={handleImageUpload}
-                        className="hidden"
+              <div className="flex-1 overflow-y-auto custom-scrollbar">
+                <form onSubmit={handleSubmit} className="p-6">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="space-y-4">
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-bold text-gray-400 uppercase">Mã vật tư (ID) *</label>
+                        <input 
+                          required
+                          type="text" 
+                          placeholder="Ví dụ: VT001"
+                          value={formData.id}
+                          onChange={(e) => setFormData({...formData, id: e.target.value})}
+                          className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20" 
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-bold text-gray-400 uppercase">Tên vật tư *</label>
+                        <input 
+                          required
+                          type="text" 
+                          placeholder="Ví dụ: Tôn kẽm 0.4mm"
+                          value={formData.name}
+                          onChange={(e) => setFormData({...formData, name: e.target.value})}
+                          className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20" 
+                        />
+                      </div>
+                      
+                      <CustomCombobox 
+                        label="Nhóm vật tư *"
+                        value={groups.find(g => g.id === formData.group_id)?.name || formData.group_id}
+                        onChange={(val) => setFormData({...formData, group_id: val})}
+                        options={groups}
+                        placeholder="Chọn hoặc nhập mới..."
+                        required
                       />
-                      <label 
-                        htmlFor="material-image"
-                        className="inline-flex items-center gap-2 px-4 py-2 bg-gray-100 text-gray-600 rounded-xl text-xs font-bold hover:bg-gray-200 cursor-pointer transition-colors"
-                      >
-                        <ImageIcon size={14} /> Tải ảnh từ máy
-                      </label>
-                      <p className="text-[10px] text-gray-400 italic">Dung lượng tối đa 2MB. Hỗ trợ JPG, PNG.</p>
+
+                      <CustomCombobox 
+                        label="Kho lưu trữ"
+                        value={warehouses.find(w => w.id === formData.warehouse_id)?.name || formData.warehouse_id}
+                        onChange={(val) => setFormData({...formData, warehouse_id: val})}
+                        options={warehouses}
+                        placeholder="Chọn hoặc nhập mới..."
+                      />
+                    </div>
+
+                    <div className="space-y-4">
+                      <CustomCombobox 
+                        label="Đơn vị tính"
+                        value={formData.unit}
+                        onChange={(val) => setFormData({...formData, unit: val})}
+                        options={Array.from(new Set(materials.map(m => m.unit))).filter(Boolean).map((u, i) => ({ id: i, name: u }))}
+                        placeholder="Chọn hoặc nhập mới..."
+                      />
+
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-bold text-gray-400 uppercase">Quy cách / Kích thước</label>
+                        <input 
+                          type="text" 
+                          placeholder="Ví dụ: 1200mm x 2400mm"
+                          value={formData.specification}
+                          onChange={(e) => setFormData({...formData, specification: e.target.value})}
+                          className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20" 
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-bold text-gray-400 uppercase">Mô tả chi tiết</label>
+                        <textarea 
+                          rows={3}
+                          placeholder="Thông tin thêm về vật tư..."
+                          value={formData.description}
+                          onChange={(e) => setFormData({...formData, description: e.target.value})}
+                          className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20 resize-none" 
+                        />
+                      </div>
+                    </div>
+                    <div className="col-span-1 md:col-span-2 space-y-3">
+                      <label className="text-[10px] font-bold text-gray-400 uppercase">Hình ảnh vật tư</label>
+                      <div className="flex items-center gap-4">
+                        <div className="w-20 h-20 rounded-2xl bg-gray-50 border-2 border-dashed border-gray-200 flex items-center justify-center overflow-hidden group relative">
+                          {formData.image_url ? (
+                            <>
+                              <img src={formData.image_url} alt="Preview" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                              <button 
+                                type="button"
+                                onClick={() => setFormData({...formData, image_url: ''})}
+                                className="absolute inset-0 bg-black/40 text-white opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center"
+                              >
+                                <X size={16} />
+                              </button>
+                            </>
+                          ) : (
+                            <ImageIcon className="text-gray-300" size={24} />
+                          )}
+                        </div>
+                        <div className="flex-1 space-y-2">
+                          <input 
+                            type="file" 
+                            id="material-image"
+                            accept="image/*"
+                            onChange={handleImageUpload}
+                            className="hidden"
+                          />
+                          <label 
+                            htmlFor="material-image"
+                            className="inline-flex items-center gap-2 px-4 py-2 bg-gray-100 text-gray-600 rounded-xl text-xs font-bold hover:bg-gray-200 cursor-pointer transition-colors"
+                          >
+                            <ImageIcon size={14} /> Tải ảnh từ máy
+                          </label>
+                          <p className="text-[10px] text-gray-400 italic">Dung lượng tối đa 2MB. Hỗ trợ JPG, PNG.</p>
+                        </div>
+                      </div>
                     </div>
                   </div>
-                </div>
 
-                <div className="col-span-1 md:col-span-2 mt-6 flex justify-end gap-3">
-                  <button type="button" onClick={() => setShowModal(false)} className="px-6 py-2 rounded-xl text-sm font-bold text-gray-500 hover:bg-gray-100 transition-colors">Hủy</button>
-                  <button 
-                    type="submit" 
-                    disabled={submitting}
-                    className="px-6 py-2 rounded-xl text-sm font-bold bg-primary text-white hover:bg-primary-hover transition-colors shadow-lg shadow-primary/20 disabled:opacity-50"
-                  >
-                    {submitting ? 'Đang lưu...' : 'Lưu dữ liệu'}
-                  </button>
-                </div>
-              </form>
+                  <div className="mt-8 flex justify-end gap-3 flex-shrink-0">
+                    <button type="button" onClick={() => setShowModal(false)} className="px-6 py-2 rounded-xl text-sm font-bold text-gray-500 hover:bg-gray-100 transition-colors">Hủy</button>
+                    <button 
+                      type="submit" 
+                      disabled={submitting}
+                      className="px-6 py-2 rounded-xl text-sm font-bold bg-primary text-white hover:bg-primary-hover transition-colors shadow-lg shadow-primary/20 disabled:opacity-50"
+                    >
+                      {submitting ? 'Đang lưu...' : 'Lưu dữ liệu'}
+                    </button>
+                  </div>
+                </form>
+              </div>
             </motion.div>
           </div>
         )}
@@ -1404,19 +1411,48 @@ const Materials = ({ user }: { user: Employee }) => {
   );
 };
 
-const Placeholder = ({ title }: { title: string }) => (
-  <div className="p-12 flex flex-col items-center justify-center text-gray-400 gap-4 bg-white rounded-2xl border border-dashed border-gray-200 m-6">
-    <div className="p-4 bg-gray-50 rounded-full">
-      <Settings size={48} className="animate-spin-slow" />
-    </div>
-    <div className="text-center">
-      <h3 className="text-lg font-bold text-gray-700">{title}</h3>
-      <p className="text-sm">Tính năng này đang được phát triển...</p>
+const Placeholder = ({ title, onBack }: { title: string, onBack?: () => void }) => (
+  <div className="p-4 md:p-6 space-y-6">
+    <PageBreadcrumb title={title} onBack={onBack} />
+    <div className="p-12 flex flex-col items-center justify-center text-gray-400 gap-4 bg-white rounded-2xl border border-dashed border-gray-200">
+      <div className="p-4 bg-gray-50 rounded-full">
+        <Settings size={48} className="animate-spin-slow" />
+      </div>
+      <div className="text-center">
+        <h3 className="text-lg font-bold text-gray-700">{title}</h3>
+        <p className="text-sm">Tính năng này đang được phát triển...</p>
+      </div>
     </div>
   </div>
 );
 
-const Trash = ({ onNavigate }: { onNavigate: (page: string) => void }) => {
+const PageBreadcrumb = ({ title, onBack }: { title: string, onBack?: () => void }) => {
+  if (!onBack) return null;
+  return (
+    <motion.div 
+      initial={{ opacity: 0, x: -10 }}
+      animate={{ opacity: 1, x: 0 }}
+      className="flex items-center gap-3 mb-6"
+    >
+      <button 
+        onClick={onBack} 
+        className="flex items-center justify-center w-9 h-9 rounded-xl bg-white border border-gray-200 text-gray-500 hover:text-primary hover:border-primary/30 hover:bg-primary/5 transition-all group shadow-sm active:scale-95"
+        title="Quay lại"
+      >
+        <ArrowLeft size={18} className="group-hover:-translate-x-0.5 transition-transform" />
+      </button>
+      <div className="flex flex-col">
+        <div className="flex items-center gap-2 text-[10px] font-bold text-gray-400 uppercase tracking-widest leading-none mb-1">
+          <span>Hệ thống</span>
+          <ChevronRight size={10} />
+        </div>
+        <h2 className="text-lg font-bold text-gray-800 leading-none">{title}</h2>
+      </div>
+    </motion.div>
+  );
+};
+
+const Trash = ({ onNavigate, onBack }: { onNavigate: (page: string) => void, onBack: () => void }) => {
   const trashItems = [
     { id: 'deleted-materials', label: 'Danh sách vật tư xóa', icon: Package, color: 'bg-red-50 text-red-600' },
     { id: 'deleted-warehouses', label: 'Danh sách kho xóa', icon: Warehouse, color: 'bg-orange-50 text-orange-600' },
@@ -1425,11 +1461,7 @@ const Trash = ({ onNavigate }: { onNavigate: (page: string) => void }) => {
 
   return (
     <div className="p-4 md:p-6 space-y-6">
-      <div className="flex items-center gap-2 text-gray-500 text-sm mb-4">
-        <button onClick={() => onNavigate('dashboard')} className="hover:text-primary transition-colors">Home</button>
-        <ChevronRight size={14} />
-        <span className="font-medium text-gray-900">Thùng rác</span>
-      </div>
+      <PageBreadcrumb title="Thùng rác" onBack={onBack} />
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
         {trashItems.map((item) => (
@@ -1453,7 +1485,7 @@ const Trash = ({ onNavigate }: { onNavigate: (page: string) => void }) => {
   );
 };
 
-const Warehouses = ({ user }: { user: Employee }) => {
+const Warehouses = ({ user, onBack }: { user: Employee, onBack?: () => void }) => {
   const [showModal, setShowModal] = useState(false);
   const [warehouses, setWarehouses] = useState<any[]>([]);
   const [employees, setEmployees] = useState<Employee[]>([]);
@@ -1574,6 +1606,7 @@ const Warehouses = ({ user }: { user: Employee }) => {
 
   return (
     <div className="p-4 md:p-6 space-y-6">
+      <PageBreadcrumb title="Danh sách Kho" onBack={onBack} />
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-xl font-bold text-gray-800 flex items-center gap-2">
@@ -1700,7 +1733,6 @@ const Warehouses = ({ user }: { user: Employee }) => {
         )}
       </AnimatePresence>
 
-      {/* Modal */}
       <AnimatePresence>
         {showModal && (
           <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm overflow-y-auto">
@@ -1708,9 +1740,9 @@ const Warehouses = ({ user }: { user: Employee }) => {
               initial={{ opacity: 0, scale: 0.95, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 20 }}
-              className="bg-white rounded-3xl shadow-2xl w-full max-w-2xl my-8"
+              className="bg-white rounded-3xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col my-8"
             >
-              <div className="bg-primary p-6 text-white flex items-center justify-between rounded-t-3xl">
+              <div className="bg-primary p-6 text-white flex items-center justify-between rounded-t-3xl flex-shrink-0">
                 <div className="flex items-center gap-3">
                   <div className="p-2 bg-white/20 rounded-xl"><Warehouse size={24} /></div>
                   <div>
@@ -1721,103 +1753,105 @@ const Warehouses = ({ user }: { user: Employee }) => {
                 <button onClick={() => setShowModal(false)} className="p-2 hover:bg-white/10 rounded-full transition-colors"><X size={20} /></button>
               </div>
 
-              <form onSubmit={handleSubmit} className="p-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="space-y-4">
-                    <div className="space-y-1">
-                      <label className="text-[10px] font-bold text-gray-400 uppercase">Mã kho (ID) *</label>
-                      <input 
-                        required
-                        type="text" 
-                        disabled={isEditing}
-                        placeholder="Ví dụ: KHO_CDX_01"
-                        value={formData.id}
-                        onChange={(e) => setFormData({...formData, id: e.target.value})}
-                        className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20 disabled:bg-gray-50" 
-                      />
-                    </div>
-                    <div className="space-y-1">
-                      <label className="text-[10px] font-bold text-gray-400 uppercase">Tên kho *</label>
-                      <input 
-                        required
-                        type="text" 
-                        placeholder="Nhập tên kho..."
-                        value={formData.name}
-                        onChange={(e) => setFormData({...formData, name: e.target.value})}
-                        className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20" 
-                      />
-                    </div>
-                    <div className="space-y-1">
-                      <label className="text-[10px] font-bold text-gray-400 uppercase">Địa chỉ</label>
-                      <input 
-                        type="text" 
-                        placeholder="Địa chỉ cụ thể..."
-                        value={formData.address}
-                        onChange={(e) => setFormData({...formData, address: e.target.value})}
-                        className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20" 
-                      />
-                    </div>
-                    <div className="space-y-1">
-                      <label className="text-[10px] font-bold text-gray-400 uppercase">Nhân viên phụ trách</label>
-                      <select 
-                        value={formData.manager_id}
-                        onChange={(e) => setFormData({...formData, manager_id: e.target.value})}
-                        className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20"
-                      >
-                        <option value="">-- Chọn nhân sự --</option>
-                        {employees.map(emp => <option key={emp.id} value={emp.id}>{emp.full_name} ({emp.id})</option>)}
-                      </select>
-                    </div>
-                  </div>
-
-                  <div className="space-y-4">
-                    <div className="space-y-1">
-                      <label className="text-[10px] font-bold text-gray-400 uppercase">Tọa độ / Link Google Maps</label>
-                      <div className="relative">
-                        <MapPin size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+              <div className="flex-1 overflow-y-auto custom-scrollbar">
+                <form onSubmit={handleSubmit} className="p-6">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="space-y-4">
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-bold text-gray-400 uppercase">Mã kho (ID) *</label>
+                        <input 
+                          required
+                          type="text" 
+                          disabled={isEditing}
+                          placeholder="Ví dụ: KHO_CDX_01"
+                          value={formData.id}
+                          onChange={(e) => setFormData({...formData, id: e.target.value})}
+                          className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20 disabled:bg-gray-50" 
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-bold text-gray-400 uppercase">Tên kho *</label>
+                        <input 
+                          required
+                          type="text" 
+                          placeholder="Nhập tên kho..."
+                          value={formData.name}
+                          onChange={(e) => setFormData({...formData, name: e.target.value})}
+                          className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20" 
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-bold text-gray-400 uppercase">Địa chỉ</label>
                         <input 
                           type="text" 
-                          placeholder="10.43, 106.59 hoặc dán link..."
-                          value={formData.coordinates}
-                          onChange={(e) => setFormData({...formData, coordinates: e.target.value})}
-                          className="w-full pl-10 pr-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20" 
+                          placeholder="Địa chỉ cụ thể..."
+                          value={formData.address}
+                          onChange={(e) => setFormData({...formData, address: e.target.value})}
+                          className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20" 
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-bold text-gray-400 uppercase">Nhân viên phụ trách</label>
+                        <select 
+                          value={formData.manager_id}
+                          onChange={(e) => setFormData({...formData, manager_id: e.target.value})}
+                          className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20"
+                        >
+                          <option value="">-- Chọn nhân sự --</option>
+                          {employees.map(emp => <option key={emp.id} value={emp.id}>{emp.full_name} ({emp.id})</option>)}
+                        </select>
+                      </div>
+                    </div>
+
+                    <div className="space-y-4">
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-bold text-gray-400 uppercase">Tọa độ / Link Google Maps</label>
+                        <div className="relative">
+                          <MapPin size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                          <input 
+                            type="text" 
+                            placeholder="10.43, 106.59 hoặc dán link..."
+                            value={formData.coordinates}
+                            onChange={(e) => setFormData({...formData, coordinates: e.target.value})}
+                            className="w-full pl-10 pr-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20" 
+                          />
+                        </div>
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-bold text-gray-400 uppercase">Ghi chú</label>
+                        <textarea 
+                          rows={3}
+                          placeholder="Thông tin thêm..."
+                          value={formData.notes}
+                          onChange={(e) => setFormData({...formData, notes: e.target.value})}
+                          className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20 resize-none" 
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-bold text-gray-400 uppercase">Sức chứa</label>
+                        <input 
+                          type="text" 
+                          placeholder="Ví dụ: 1000 tấn"
+                          value={formData.capacity}
+                          onChange={(e) => setFormData({...formData, capacity: e.target.value})}
+                          className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20" 
                         />
                       </div>
                     </div>
-                    <div className="space-y-1">
-                      <label className="text-[10px] font-bold text-gray-400 uppercase">Ghi chú</label>
-                      <textarea 
-                        rows={3}
-                        placeholder="Thông tin thêm..."
-                        value={formData.notes}
-                        onChange={(e) => setFormData({...formData, notes: e.target.value})}
-                        className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20 resize-none" 
-                      />
-                    </div>
-                    <div className="space-y-1">
-                      <label className="text-[10px] font-bold text-gray-400 uppercase">Sức chứa</label>
-                      <input 
-                        type="text" 
-                        placeholder="Ví dụ: 1000 tấn"
-                        value={formData.capacity}
-                        onChange={(e) => setFormData({...formData, capacity: e.target.value})}
-                        className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20" 
-                      />
-                    </div>
                   </div>
-                </div>
 
-                <div className="mt-8 flex justify-end gap-3">
-                  <button type="button" onClick={() => setShowModal(false)} className="px-8 py-2.5 rounded-xl text-sm font-bold text-gray-500 hover:bg-gray-100 transition-colors">Hủy</button>
-                  <button 
-                    type="submit" 
-                    disabled={submitting}
-                    className="px-8 py-2.5 rounded-xl text-sm font-bold bg-primary text-white hover:bg-primary-hover transition-colors shadow-lg shadow-primary/20 disabled:opacity-50"
-                  >
-                    {submitting ? 'Đang lưu...' : 'Lưu dữ liệu'}
-                  </button>
-                </div>
-              </form>
+                  <div className="mt-8 flex justify-end gap-3 flex-shrink-0">
+                    <button type="button" onClick={() => setShowModal(false)} className="px-8 py-2.5 rounded-xl text-sm font-bold text-gray-500 hover:bg-gray-100 transition-colors">Hủy</button>
+                    <button 
+                      type="submit" 
+                      disabled={submitting}
+                      className="px-8 py-2.5 rounded-xl text-sm font-bold bg-primary text-white hover:bg-primary-hover transition-colors shadow-lg shadow-primary/20 disabled:opacity-50"
+                    >
+                      {submitting ? 'Đang lưu...' : 'Lưu dữ liệu'}
+                    </button>
+                  </div>
+                </form>
+              </div>
             </motion.div>
           </div>
         )}
@@ -1912,7 +1946,7 @@ const CustomCombobox = ({
   );
 };
 
-const Costs = ({ user }: { user: Employee }) => {
+const Costs = ({ user, onBack }: { user: Employee, onBack?: () => void }) => {
   const [showModal, setShowModal] = useState(false);
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [selectedCost, setSelectedCost] = useState<any>(null);
@@ -2126,6 +2160,7 @@ const Costs = ({ user }: { user: Employee }) => {
 
   return (
     <div className="p-4 md:p-6 space-y-6">
+      <PageBreadcrumb title="Quản lý Chi phí" onBack={onBack} />
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h2 className="text-xl font-bold text-gray-800 flex items-center gap-2">
@@ -2338,14 +2373,14 @@ const Costs = ({ user }: { user: Employee }) => {
       {/* Modal */}
       <AnimatePresence>
         {showModal && (
-          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm overflow-y-auto">
             <motion.div 
               initial={{ opacity: 0, scale: 0.95, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 20 }}
-              className="bg-white rounded-3xl shadow-2xl w-full max-w-2xl"
+              className="bg-white rounded-3xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col"
             >
-              <div className="bg-primary p-6 text-white flex items-center justify-between rounded-t-3xl">
+              <div className="bg-primary p-6 text-white flex items-center justify-between rounded-t-3xl flex-shrink-0">
                 <div className="flex items-center gap-3">
                   <div className="p-2 bg-white/20 rounded-xl"><Wallet size={24} /></div>
                   <div>
@@ -2356,121 +2391,123 @@ const Costs = ({ user }: { user: Employee }) => {
                 <button onClick={() => setShowModal(false)} className="p-2 hover:bg-white/10 rounded-full transition-colors"><X size={20} /></button>
               </div>
 
-              <form onSubmit={handleSubmit} className="p-6">
-                <div className="bg-blue-50 p-4 rounded-2xl mb-6 flex items-start gap-3 border border-blue-100">
-                  <Info size={18} className="text-blue-600 mt-0.5" />
-                  <p className="text-xs text-blue-700 leading-relaxed">
-                    Hệ thống tự động tạo/gom phiếu theo <strong>ngày + người lập</strong>. Thành tiền = SL × Đơn giá.
-                  </p>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="space-y-4">
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="space-y-1">
-                        <label className="text-[10px] font-bold text-gray-400 uppercase">Ngày chi *</label>
-                        <input 
-                          type="date" 
-                          required
-                          value={formData.date}
-                          onChange={(e) => setFormData({...formData, date: e.target.value})}
-                          className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20" 
-                        />
-                      </div>
-                      <div className="space-y-1">
-                        <label className="text-[10px] font-bold text-gray-400 uppercase">Người lập</label>
-                        <input 
-                          type="text" 
-                          readOnly
-                          value={user.full_name}
-                          className="w-full px-4 py-2 rounded-xl border border-gray-100 bg-gray-50 text-sm text-gray-500 outline-none" 
-                        />
-                      </div>
-                    </div>
-
-                    <CustomCombobox 
-                      label="Loại chi phí *"
-                      value={formData.cost_type}
-                      onChange={(val) => setFormData({...formData, cost_type: val})}
-                      options={costTypes}
-                      placeholder="Chọn hoặc nhập mới..."
-                      required
-                    />
-
-                    <CustomCombobox 
-                      label="Tên kho *"
-                      value={formData.warehouse_name}
-                      onChange={(val) => setFormData({...formData, warehouse_name: val})}
-                      options={warehouses}
-                      placeholder="Chọn hoặc nhập mới..."
-                      required
-                    />
-
-                    <CustomCombobox 
-                      label="Nội dung chi *"
-                      value={formData.content}
-                      onChange={(val) => setFormData({...formData, content: val})}
-                      options={materials}
-                      placeholder="Chọn hoặc nhập mới..."
-                      required
-                    />
+              <div className="flex-1 overflow-y-auto p-6 custom-scrollbar">
+                <form onSubmit={handleSubmit}>
+                  <div className="bg-blue-50 p-4 rounded-2xl mb-6 flex items-start gap-3 border border-blue-100">
+                    <Info size={18} className="text-blue-600 mt-0.5" />
+                    <p className="text-xs text-blue-700 leading-relaxed">
+                      Hệ thống tự động tạo/gom phiếu theo <strong>ngày + người lập</strong>. Thành tiền = SL × Đơn giá.
+                    </p>
                   </div>
 
-                  <div className="space-y-4">
-                    <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="space-y-4">
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-1">
+                          <label className="text-[10px] font-bold text-gray-400 uppercase">Ngày chi *</label>
+                          <input 
+                            type="date" 
+                            required
+                            value={formData.date}
+                            onChange={(e) => setFormData({...formData, date: e.target.value})}
+                            className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20" 
+                          />
+                        </div>
+                        <div className="space-y-1">
+                          <label className="text-[10px] font-bold text-gray-400 uppercase">Người lập</label>
+                          <input 
+                            type="text" 
+                            readOnly
+                            value={user.full_name}
+                            className="w-full px-4 py-2 rounded-xl border border-gray-100 bg-gray-50 text-sm text-gray-500 outline-none" 
+                          />
+                        </div>
+                      </div>
+
+                      <CustomCombobox 
+                        label="Loại chi phí *"
+                        value={formData.cost_type}
+                        onChange={(val) => setFormData({...formData, cost_type: val})}
+                        options={costTypes}
+                        placeholder="Chọn hoặc nhập mới..."
+                        required
+                      />
+
+                      <CustomCombobox 
+                        label="Tên kho *"
+                        value={formData.warehouse_name}
+                        onChange={(val) => setFormData({...formData, warehouse_name: val})}
+                        options={warehouses}
+                        placeholder="Chọn hoặc nhập mới..."
+                        required
+                      />
+
+                      <CustomCombobox 
+                        label="Nội dung chi *"
+                        value={formData.content}
+                        onChange={(val) => setFormData({...formData, content: val})}
+                        options={materials}
+                        placeholder="Chọn hoặc nhập mới..."
+                        required
+                      />
+                    </div>
+
+                    <div className="space-y-4">
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-1">
+                          <label className="text-[10px] font-bold text-gray-400 uppercase">Số lượng</label>
+                          <input 
+                            type="number" 
+                            value={formData.quantity}
+                            onChange={(e) => setFormData({...formData, quantity: parseFloat(e.target.value) || 0})}
+                            className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20" 
+                          />
+                        </div>
+                        <CustomCombobox 
+                          label="Đơn vị tính"
+                          value={formData.unit}
+                          onChange={(val) => setFormData({...formData, unit: val})}
+                          options={units}
+                          placeholder="Chọn/Nhập..."
+                        />
+                      </div>
+
                       <div className="space-y-1">
-                        <label className="text-[10px] font-bold text-gray-400 uppercase">Số lượng</label>
+                        <label className="text-[10px] font-bold text-gray-400 uppercase">Số tiền *</label>
                         <input 
                           type="number" 
-                          value={formData.quantity}
-                          onChange={(e) => setFormData({...formData, quantity: parseFloat(e.target.value) || 0})}
-                          className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20" 
+                          required
+                          value={formData.total_amount}
+                          onChange={(e) => setFormData({...formData, total_amount: parseFloat(e.target.value) || 0})}
+                          className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20 font-bold text-primary" 
                         />
                       </div>
-                      <CustomCombobox 
-                        label="Đơn vị tính"
-                        value={formData.unit}
-                        onChange={(val) => setFormData({...formData, unit: val})}
-                        options={units}
-                        placeholder="Chọn/Nhập..."
-                      />
-                    </div>
 
-                    <div className="space-y-1">
-                      <label className="text-[10px] font-bold text-gray-400 uppercase">Số tiền *</label>
-                      <input 
-                        type="number" 
-                        required
-                        value={formData.total_amount}
-                        onChange={(e) => setFormData({...formData, total_amount: parseFloat(e.target.value) || 0})}
-                        className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20 font-bold text-primary" 
-                      />
-                    </div>
-
-                    <div className="space-y-1">
-                      <label className="text-[10px] font-bold text-gray-400 uppercase">Ghi chú</label>
-                      <textarea 
-                        rows={3}
-                        placeholder="Ghi chú thêm..."
-                        value={formData.notes}
-                        onChange={(e) => setFormData({...formData, notes: e.target.value})}
-                        className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20 resize-none" 
-                      />
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-bold text-gray-400 uppercase">Ghi chú</label>
+                        <textarea 
+                          rows={3}
+                          placeholder="Ghi chú thêm..."
+                          value={formData.notes}
+                          onChange={(e) => setFormData({...formData, notes: e.target.value})}
+                          className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20 resize-none" 
+                        />
+                      </div>
                     </div>
                   </div>
-                </div>
 
-                <div className="mt-8 flex justify-end gap-3">
-                  <button type="button" onClick={() => setShowModal(false)} className="px-8 py-2.5 rounded-xl text-sm font-bold text-gray-500 hover:bg-gray-100 transition-colors">Hủy</button>
-                  <button 
-                    type="submit" 
-                    disabled={submitting}
-                    className="px-8 py-2.5 rounded-xl text-sm font-bold bg-primary text-white hover:bg-primary-hover transition-colors shadow-lg shadow-primary/20 disabled:opacity-50"
-                  >
-                    {submitting ? 'Đang lưu...' : 'Lưu chi phí'}
-                  </button>
-                </div>
-              </form>
+                  <div className="mt-8 flex justify-end gap-3">
+                    <button type="button" onClick={() => setShowModal(false)} className="px-8 py-2.5 rounded-xl text-sm font-bold text-gray-500 hover:bg-gray-100 transition-colors">Hủy</button>
+                    <button 
+                      type="submit" 
+                      disabled={submitting}
+                      className="px-8 py-2.5 rounded-xl text-sm font-bold bg-primary text-white hover:bg-primary-hover transition-colors shadow-lg shadow-primary/20 disabled:opacity-50"
+                    >
+                      {submitting ? 'Đang lưu...' : 'Lưu chi phí'}
+                    </button>
+                  </div>
+                </form>
+              </div>
             </motion.div>
           </div>
         )}
@@ -2640,7 +2677,7 @@ const Dashboard = ({ user, onNavigate }: { user: Employee, onNavigate: (page: st
   );
 };
 
-const HRRecords = ({ user }: { user: Employee }) => {
+const HRRecords = ({ user, onBack }: { user: Employee, onBack?: () => void }) => {
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -2766,6 +2803,7 @@ const HRRecords = ({ user }: { user: Employee }) => {
 
   return (
     <div className="p-4 md:p-6 space-y-6">
+      <PageBreadcrumb title="Hồ sơ Nhân sự" onBack={onBack} />
       <div className="flex items-center justify-between">
         <h2 className="text-lg font-bold text-gray-800 flex items-center gap-2">
           <Users size={20} className="text-primary" /> Hồ sơ Nhân sự
@@ -2910,215 +2948,210 @@ const HRRecords = ({ user }: { user: Employee }) => {
 
       <AnimatePresence>
         {showModal && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 overflow-y-auto">
-            <motion.div 
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              onClick={() => setShowModal(false)}
-              className="fixed inset-0 bg-black/40 backdrop-blur-sm"
-            />
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm overflow-y-auto">
             <motion.div 
               initial={{ opacity: 0, scale: 0.95, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 20 }}
-              className="bg-white rounded-3xl shadow-2xl w-full max-w-4xl relative z-10 my-8"
+              className="bg-white rounded-3xl shadow-2xl w-full max-w-4xl relative z-10 my-8 max-h-[90vh] flex flex-col"
             >
-              <div className="bg-primary p-4 flex items-center justify-between text-white rounded-t-3xl">
+              <div className="bg-primary p-4 flex items-center justify-between text-white rounded-t-3xl flex-shrink-0">
                 <h3 className="font-bold">{isEditing ? 'Cập Nhật Nhân Sự' : 'Thêm Mới Nhân Sự'}</h3>
                 <button onClick={() => setShowModal(false)} className="hover:bg-white/20 p-1 rounded-full"><X size={20} /></button>
               </div>
               
-              <form onSubmit={handleSubmit}>
-                <div className="p-6 max-h-[75vh] overflow-y-auto">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div className="space-y-1">
-                      <label className="text-[10px] font-bold text-gray-400 uppercase">Mã nhân viên (ID)</label>
-                      <input 
-                        required
-                        type="text" 
-                        disabled={isEditing}
-                        value={formData.id}
-                        onChange={(e) => setFormData({...formData, id: e.target.value})}
-                        className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20 disabled:bg-gray-50" 
-                      />
-                    </div>
-                    <div className="space-y-1">
-                      <label className="text-[10px] font-bold text-gray-400 uppercase">Họ và tên</label>
-                      <input 
-                        required
-                        type="text" 
-                        value={formData.full_name}
-                        onChange={(e) => setFormData({...formData, full_name: e.target.value})}
-                        className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20" 
-                      />
-                    </div>
-                    <div className="space-y-1">
-                      <label className="text-[10px] font-bold text-gray-400 uppercase">Email</label>
-                      <input 
-                        type="email" 
-                        value={formData.email}
-                        onChange={(e) => setFormData({...formData, email: e.target.value})}
-                        className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20" 
-                      />
-                    </div>
-                    <div className="space-y-1">
-                      <label className="text-[10px] font-bold text-gray-400 uppercase">Số điện thoại</label>
-                      <input 
-                        type="text" 
-                        value={formData.phone}
-                        onChange={(e) => setFormData({...formData, phone: e.target.value})}
-                        className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20" 
-                      />
-                    </div>
-                    <div className="space-y-1">
-                      <label className="text-[10px] font-bold text-gray-400 uppercase">CMND / CCCD</label>
-                      <input 
-                        type="text" 
-                        value={formData.id_card}
-                        onChange={(e) => setFormData({...formData, id_card: e.target.value})}
-                        className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20" 
-                      />
-                    </div>
-                    <div className="space-y-1">
-                      <label className="text-[10px] font-bold text-gray-400 uppercase">Ngày sinh</label>
-                      <input 
-                        type="date" 
-                        value={formData.dob}
-                        onChange={(e) => setFormData({...formData, dob: e.target.value})}
-                        className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20" 
-                      />
-                    </div>
-                    <div className="space-y-1">
-                      <label className="text-[10px] font-bold text-gray-400 uppercase">Ngày vào làm</label>
-                      <input 
-                        type="date" 
-                        value={formData.join_date}
-                        onChange={(e) => setFormData({...formData, join_date: e.target.value})}
-                        className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20" 
-                      />
-                    </div>
-                    <div className="space-y-1">
-                      <label className="text-[10px] font-bold text-gray-400 uppercase">Mã số thuế</label>
-                      <input 
-                        type="text" 
-                        value={formData.tax_id}
-                        onChange={(e) => setFormData({...formData, tax_id: e.target.value})}
-                        className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20" 
-                      />
-                    </div>
-                    <div className="space-y-1">
-                      <label className="text-[10px] font-bold text-gray-400 uppercase">Mật khẩu ứng dụng</label>
-                      <input 
-                        required
-                        type="text" 
-                        value={formData.app_pass}
-                        onChange={(e) => setFormData({...formData, app_pass: e.target.value})}
-                        className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20" 
-                      />
-                    </div>
-                    <div className="space-y-1">
-                      <label className="text-[10px] font-bold text-gray-400 uppercase">Bộ phận</label>
-                      <input 
-                        type="text" 
-                        value={formData.department}
-                        onChange={(e) => setFormData({...formData, department: e.target.value})}
-                        className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20" 
-                      />
-                    </div>
-                    <div className="space-y-1">
-                      <label className="text-[10px] font-bold text-gray-400 uppercase">Chức vụ</label>
-                      <input 
-                        type="text" 
-                        value={formData.position}
-                        onChange={(e) => setFormData({...formData, position: e.target.value})}
-                        className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20" 
-                      />
-                    </div>
-                    <div className="space-y-1">
-                      <label className="text-[10px] font-bold text-gray-400 uppercase">Có tính lương</label>
-                      <select 
-                        value={formData.has_salary ? 'true' : 'false'}
-                        onChange={(e) => setFormData({...formData, has_salary: e.target.value === 'true'})}
-                        className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20"
-                      >
-                        <option value="false">Không</option>
-                        <option value="true">Có</option>
-                      </select>
-                    </div>
-                    <div className="space-y-1">
-                      <label className="text-[10px] font-bold text-gray-400 uppercase">Phân quyền</label>
-                      <select 
-                        value={formData.role}
-                        onChange={(e) => setFormData({...formData, role: e.target.value})}
-                        className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20"
-                      >
-                        <option value="User">User</option>
-                        <option value="Admin">Admin</option>
-                        <option value="Admin App">Admin App</option>
-                      </select>
-                    </div>
-                    <div className="space-y-1">
-                      <label className="text-[10px] font-bold text-gray-400 uppercase">Quyền xem dữ liệu</label>
-                      <input 
-                        type="text" 
-                        value={formData.data_view_permission}
-                        onChange={(e) => setFormData({...formData, data_view_permission: e.target.value})}
-                        className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20" 
-                      />
-                    </div>
-                    <div className="space-y-1">
-                      <label className="text-[10px] font-bold text-gray-400 uppercase">Ảnh cá nhân (URL)</label>
-                      <input 
-                        type="text" 
-                        value={formData.avatar_url}
-                        onChange={(e) => setFormData({...formData, avatar_url: e.target.value})}
-                        className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20" 
-                      />
-                    </div>
-                    <div className="space-y-1">
-                      <label className="text-[10px] font-bold text-gray-400 uppercase">Ngày nghỉ việc</label>
-                      <input 
-                        type="date" 
-                        value={formData.resign_date}
-                        onChange={(e) => setFormData({...formData, resign_date: e.target.value})}
-                        className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20" 
-                      />
-                    </div>
-                    <div className="space-y-1">
-                      <label className="text-[10px] font-bold text-gray-400 uppercase">Ngân sách đầu kỳ</label>
-                      <input 
-                        type="number" 
-                        value={formData.initial_budget}
-                        onChange={(e) => setFormData({...formData, initial_budget: parseFloat(e.target.value)})}
-                        className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20" 
-                      />
-                    </div>
-                    <div className="space-y-1">
-                      <label className="text-[10px] font-bold text-gray-400 uppercase">Trạng thái</label>
-                      <select 
-                        value={formData.status}
-                        onChange={(e) => setFormData({...formData, status: e.target.value})}
-                        className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20"
-                      >
-                        <option value="Đang làm việc">Đang làm việc</option>
-                        <option value="Nghỉ việc">Nghỉ việc</option>
-                      </select>
+              <div className="flex-1 overflow-y-auto custom-scrollbar">
+                <form onSubmit={handleSubmit}>
+                  <div className="p-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-bold text-gray-400 uppercase">Mã nhân viên (ID)</label>
+                        <input 
+                          required
+                          type="text" 
+                          disabled={isEditing}
+                          value={formData.id}
+                          onChange={(e) => setFormData({...formData, id: e.target.value})}
+                          className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20 disabled:bg-gray-50" 
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-bold text-gray-400 uppercase">Họ và tên</label>
+                        <input 
+                          required
+                          type="text" 
+                          value={formData.full_name}
+                          onChange={(e) => setFormData({...formData, full_name: e.target.value})}
+                          className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20" 
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-bold text-gray-400 uppercase">Email</label>
+                        <input 
+                          type="email" 
+                          value={formData.email}
+                          onChange={(e) => setFormData({...formData, email: e.target.value})}
+                          className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20" 
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-bold text-gray-400 uppercase">Số điện thoại</label>
+                        <input 
+                          type="text" 
+                          value={formData.phone}
+                          onChange={(e) => setFormData({...formData, phone: e.target.value})}
+                          className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20" 
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-bold text-gray-400 uppercase">CMND / CCCD</label>
+                        <input 
+                          type="text" 
+                          value={formData.id_card}
+                          onChange={(e) => setFormData({...formData, id_card: e.target.value})}
+                          className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20" 
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-bold text-gray-400 uppercase">Ngày sinh</label>
+                        <input 
+                          type="date" 
+                          value={formData.dob}
+                          onChange={(e) => setFormData({...formData, dob: e.target.value})}
+                          className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20" 
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-bold text-gray-400 uppercase">Ngày vào làm</label>
+                        <input 
+                          type="date" 
+                          value={formData.join_date}
+                          onChange={(e) => setFormData({...formData, join_date: e.target.value})}
+                          className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20" 
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-bold text-gray-400 uppercase">Mã số thuế</label>
+                        <input 
+                          type="text" 
+                          value={formData.tax_id}
+                          onChange={(e) => setFormData({...formData, tax_id: e.target.value})}
+                          className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20" 
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-bold text-gray-400 uppercase">Mật khẩu ứng dụng</label>
+                        <input 
+                          required
+                          type="text" 
+                          value={formData.app_pass}
+                          onChange={(e) => setFormData({...formData, app_pass: e.target.value})}
+                          className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20" 
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-bold text-gray-400 uppercase">Bộ phận</label>
+                        <input 
+                          type="text" 
+                          value={formData.department}
+                          onChange={(e) => setFormData({...formData, department: e.target.value})}
+                          className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20" 
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-bold text-gray-400 uppercase">Chức vụ</label>
+                        <input 
+                          type="text" 
+                          value={formData.position}
+                          onChange={(e) => setFormData({...formData, position: e.target.value})}
+                          className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20" 
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-bold text-gray-400 uppercase">Có tính lương</label>
+                        <select 
+                          value={formData.has_salary ? 'true' : 'false'}
+                          onChange={(e) => setFormData({...formData, has_salary: e.target.value === 'true'})}
+                          className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20"
+                        >
+                          <option value="false">Không</option>
+                          <option value="true">Có</option>
+                        </select>
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-bold text-gray-400 uppercase">Phân quyền</label>
+                        <select 
+                          value={formData.role}
+                          onChange={(e) => setFormData({...formData, role: e.target.value})}
+                          className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20"
+                        >
+                          <option value="User">User</option>
+                          <option value="Admin">Admin</option>
+                          <option value="Admin App">Admin App</option>
+                        </select>
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-bold text-gray-400 uppercase">Quyền xem dữ liệu</label>
+                        <input 
+                          type="text" 
+                          value={formData.data_view_permission}
+                          onChange={(e) => setFormData({...formData, data_view_permission: e.target.value})}
+                          className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20" 
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-bold text-gray-400 uppercase">Ảnh cá nhân (URL)</label>
+                        <input 
+                          type="text" 
+                          value={formData.avatar_url}
+                          onChange={(e) => setFormData({...formData, avatar_url: e.target.value})}
+                          className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20" 
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-bold text-gray-400 uppercase">Ngày nghỉ việc</label>
+                        <input 
+                          type="date" 
+                          value={formData.resign_date}
+                          onChange={(e) => setFormData({...formData, resign_date: e.target.value})}
+                          className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20" 
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-bold text-gray-400 uppercase">Ngân sách đầu kỳ</label>
+                        <input 
+                          type="number" 
+                          value={formData.initial_budget}
+                          onChange={(e) => setFormData({...formData, initial_budget: parseFloat(e.target.value)})}
+                          className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20" 
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-bold text-gray-400 uppercase">Trạng thái</label>
+                        <select 
+                          value={formData.status}
+                          onChange={(e) => setFormData({...formData, status: e.target.value})}
+                          className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20"
+                        >
+                          <option value="Đang làm việc">Đang làm việc</option>
+                          <option value="Nghỉ việc">Nghỉ việc</option>
+                        </select>
+                      </div>
                     </div>
                   </div>
-                </div>
 
-                <div className="p-6 bg-gray-50 flex justify-end gap-3">
-                  <button type="button" onClick={() => setShowModal(false)} className="px-6 py-2 rounded-xl text-sm font-bold text-gray-500 hover:bg-gray-200 transition-colors">Hủy bỏ</button>
-                  <button 
-                    type="submit" 
-                    disabled={submitting}
-                    className="px-6 py-2 rounded-xl text-sm font-bold bg-primary text-white hover:bg-primary-hover transition-colors disabled:opacity-50"
-                  >
-                    {submitting ? 'Đang lưu...' : 'Lưu dữ liệu'}
-                  </button>
-                </div>
-              </form>
+                  <div className="p-6 bg-gray-50 flex justify-end gap-3 flex-shrink-0">
+                    <button type="button" onClick={() => setShowModal(false)} className="px-6 py-2 rounded-xl text-sm font-bold text-gray-500 hover:bg-gray-200 transition-colors">Hủy bỏ</button>
+                    <button 
+                      type="submit" 
+                      disabled={submitting}
+                      className="px-6 py-2 rounded-xl text-sm font-bold bg-primary text-white hover:bg-primary-hover transition-colors disabled:opacity-50"
+                    >
+                      {submitting ? 'Đang lưu...' : 'Lưu dữ liệu'}
+                    </button>
+                  </div>
+                </form>
+              </div>
             </motion.div>
           </div>
         )}
@@ -3127,7 +3160,7 @@ const HRRecords = ({ user }: { user: Employee }) => {
   );
 };
 
-const Attendance = ({ user }: { user: Employee }) => {
+const Attendance = ({ user, onBack }: { user: Employee, onBack?: () => void }) => {
   const [showModal, setShowModal] = useState(false);
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [attendanceList, setAttendanceList] = useState<any[]>([]);
@@ -3256,6 +3289,7 @@ const Attendance = ({ user }: { user: Employee }) => {
 
   return (
     <div className="p-4 md:p-6 space-y-6">
+      <PageBreadcrumb title="Bảng Chấm công" onBack={onBack} />
       <div className="flex items-center justify-between">
         <h2 className="text-lg font-bold text-gray-800 flex items-center gap-2">
           <CalendarCheck size={20} className="text-primary" /> Bảng Chấm công
@@ -3377,7 +3411,7 @@ const Attendance = ({ user }: { user: Employee }) => {
 
       <AnimatePresence>
         {showModal && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
             <motion.div 
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
@@ -3529,7 +3563,7 @@ const Attendance = ({ user }: { user: Employee }) => {
 
 // --- Stock Management Components ---
 
-const StockIn = ({ user }: { user: Employee }) => {
+const StockIn = ({ user, onBack }: { user: Employee, onBack?: () => void }) => {
   const [slips, setSlips] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
@@ -3598,6 +3632,7 @@ const StockIn = ({ user }: { user: Employee }) => {
 
   return (
     <div className="p-4 md:p-6 space-y-6">
+      <PageBreadcrumb title="Nhập kho" onBack={onBack} />
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-xl font-bold text-gray-800 flex items-center gap-2">
@@ -3648,14 +3683,14 @@ const StockIn = ({ user }: { user: Employee }) => {
 
       <AnimatePresence>
         {showModal && (
-          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm overflow-y-auto">
             <motion.div 
               initial={{ opacity: 0, scale: 0.95, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 20 }}
-              className="bg-white rounded-3xl shadow-2xl w-full max-w-2xl"
+              className="bg-white rounded-3xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col"
             >
-              <div className="bg-primary p-6 text-white flex items-center justify-between rounded-t-3xl">
+              <div className="bg-primary p-6 text-white flex items-center justify-between rounded-t-3xl flex-shrink-0">
                 <div className="flex items-center gap-3">
                   <div className="p-2 bg-white/20 rounded-xl"><ArrowDownCircle size={24} /></div>
                   <h3 className="font-bold text-lg">Lập phiếu nhập kho</h3>
@@ -3663,57 +3698,59 @@ const StockIn = ({ user }: { user: Employee }) => {
                 <button onClick={() => setShowModal(false)} className="p-2 hover:bg-white/10 rounded-full transition-colors"><X size={20} /></button>
               </div>
 
-              <form onSubmit={handleSubmit} className="p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="space-y-4">
-                  <div className="space-y-1">
-                    <label className="text-[10px] font-bold text-gray-400 uppercase">Ngày nhập *</label>
-                    <input type="date" required value={formData.date} onChange={(e) => setFormData({...formData, date: e.target.value})} className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20" />
-                  </div>
-                  
-                  <CustomCombobox 
-                    label="Kho nhập *"
-                    value={warehouses.find(w => w.id === formData.warehouse_id)?.name || formData.warehouse_id}
-                    onChange={(val) => setFormData({...formData, warehouse_id: val})}
-                    options={warehouses}
-                    placeholder="Chọn kho..."
-                    required
-                  />
-
-                  <CustomCombobox 
-                    label="Vật tư *"
-                    value={materials.find(m => m.id === formData.material_id)?.name || formData.material_id}
-                    onChange={(val) => setFormData({...formData, material_id: val})}
-                    options={materials}
-                    placeholder="Chọn vật tư..."
-                    required
-                  />
-                </div>
-
-                <div className="space-y-4">
-                  <div className="grid grid-cols-2 gap-4">
+              <div className="flex-1 overflow-y-auto p-6 custom-scrollbar">
+                <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="space-y-4">
                     <div className="space-y-1">
-                      <label className="text-[10px] font-bold text-gray-400 uppercase">Số lượng *</label>
-                      <input type="number" required value={formData.quantity} onChange={(e) => setFormData({...formData, quantity: Number(e.target.value)})} className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20" />
+                      <label className="text-[10px] font-bold text-gray-400 uppercase">Ngày nhập *</label>
+                      <input type="date" required value={formData.date} onChange={(e) => setFormData({...formData, date: e.target.value})} className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20" />
                     </div>
+                    
+                    <CustomCombobox 
+                      label="Kho nhập *"
+                      value={warehouses.find(w => w.id === formData.warehouse_id)?.name || formData.warehouse_id}
+                      onChange={(val) => setFormData({...formData, warehouse_id: val})}
+                      options={warehouses}
+                      placeholder="Chọn kho..."
+                      required
+                    />
+
+                    <CustomCombobox 
+                      label="Vật tư *"
+                      value={materials.find(m => m.id === formData.material_id)?.name || formData.material_id}
+                      onChange={(val) => setFormData({...formData, material_id: val})}
+                      options={materials}
+                      placeholder="Chọn vật tư..."
+                      required
+                    />
+                  </div>
+
+                  <div className="space-y-4">
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-bold text-gray-400 uppercase">Số lượng *</label>
+                        <input type="number" required value={formData.quantity} onChange={(e) => setFormData({...formData, quantity: Number(e.target.value)})} className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20" />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-bold text-gray-400 uppercase">Đơn giá</label>
+                        <input type="number" value={formData.unit_price} onChange={(e) => setFormData({...formData, unit_price: Number(e.target.value)})} className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20" />
+                      </div>
+                    </div>
+
                     <div className="space-y-1">
-                      <label className="text-[10px] font-bold text-gray-400 uppercase">Đơn giá</label>
-                      <input type="number" value={formData.unit_price} onChange={(e) => setFormData({...formData, unit_price: Number(e.target.value)})} className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20" />
+                      <label className="text-[10px] font-bold text-gray-400 uppercase">Ghi chú</label>
+                      <textarea rows={3} value={formData.notes} onChange={(e) => setFormData({...formData, notes: e.target.value})} className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20 resize-none" />
                     </div>
                   </div>
 
-                  <div className="space-y-1">
-                    <label className="text-[10px] font-bold text-gray-400 uppercase">Ghi chú</label>
-                    <textarea rows={3} value={formData.notes} onChange={(e) => setFormData({...formData, notes: e.target.value})} className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20 resize-none" />
+                  <div className="md:col-span-2 flex justify-end gap-3 mt-4">
+                    <button type="button" onClick={() => setShowModal(false)} className="px-6 py-2 rounded-xl text-sm font-bold text-gray-500 hover:bg-gray-100 transition-colors">Hủy</button>
+                    <button type="submit" disabled={submitting} className="px-8 py-2 rounded-xl bg-primary text-white text-sm font-bold hover:bg-primary-hover transition-colors shadow-lg shadow-primary/20 disabled:opacity-50">
+                      {submitting ? 'Đang lưu...' : 'Lưu phiếu nhập'}
+                    </button>
                   </div>
-                </div>
-
-                <div className="md:col-span-2 flex justify-end gap-3 mt-4">
-                  <button type="button" onClick={() => setShowModal(false)} className="px-6 py-2 rounded-xl text-sm font-bold text-gray-500 hover:bg-gray-100 transition-colors">Hủy</button>
-                  <button type="submit" disabled={submitting} className="px-8 py-2 rounded-xl bg-primary text-white text-sm font-bold hover:bg-primary-hover transition-colors shadow-lg shadow-primary/20 disabled:opacity-50">
-                    {submitting ? 'Đang lưu...' : 'Lưu phiếu nhập'}
-                  </button>
-                </div>
-              </form>
+                </form>
+              </div>
             </motion.div>
           </div>
         )}
@@ -3722,7 +3759,7 @@ const StockIn = ({ user }: { user: Employee }) => {
   );
 };
 
-const StockOut = ({ user }: { user: Employee }) => {
+const StockOut = ({ user, onBack }: { user: Employee, onBack?: () => void }) => {
   const [slips, setSlips] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
@@ -3789,6 +3826,7 @@ const StockOut = ({ user }: { user: Employee }) => {
 
   return (
     <div className="p-4 md:p-6 space-y-6">
+      <PageBreadcrumb title="Xuất kho" onBack={onBack} />
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-xl font-bold text-gray-800 flex items-center gap-2">
@@ -3837,14 +3875,14 @@ const StockOut = ({ user }: { user: Employee }) => {
 
       <AnimatePresence>
         {showModal && (
-          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm overflow-y-auto">
             <motion.div 
               initial={{ opacity: 0, scale: 0.95, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 20 }}
-              className="bg-white rounded-3xl shadow-2xl w-full max-w-2xl"
+              className="bg-white rounded-3xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col"
             >
-              <div className="bg-red-600 p-6 text-white flex items-center justify-between rounded-t-3xl">
+              <div className="bg-red-600 p-6 text-white flex items-center justify-between rounded-t-3xl flex-shrink-0">
                 <div className="flex items-center gap-3">
                   <div className="p-2 bg-white/20 rounded-xl"><ArrowUpCircle size={24} /></div>
                   <h3 className="font-bold text-lg">Lập phiếu xuất kho</h3>
@@ -3852,51 +3890,53 @@ const StockOut = ({ user }: { user: Employee }) => {
                 <button onClick={() => setShowModal(false)} className="p-2 hover:bg-white/10 rounded-full transition-colors"><X size={20} /></button>
               </div>
 
-              <form onSubmit={handleSubmit} className="p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="space-y-4">
-                  <div className="space-y-1">
-                    <label className="text-[10px] font-bold text-gray-400 uppercase">Ngày xuất *</label>
-                    <input type="date" required value={formData.date} onChange={(e) => setFormData({...formData, date: e.target.value})} className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-red-600/20" />
-                  </div>
-                  
-                  <CustomCombobox 
-                    label="Kho xuất *"
-                    value={warehouses.find(w => w.id === formData.warehouse_id)?.name || formData.warehouse_id}
-                    onChange={(val) => setFormData({...formData, warehouse_id: val})}
-                    options={warehouses}
-                    placeholder="Chọn kho..."
-                    required
-                  />
+              <div className="flex-1 overflow-y-auto p-6 custom-scrollbar">
+                <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="space-y-4">
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-bold text-gray-400 uppercase">Ngày xuất *</label>
+                      <input type="date" required value={formData.date} onChange={(e) => setFormData({...formData, date: e.target.value})} className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-red-600/20" />
+                    </div>
+                    
+                    <CustomCombobox 
+                      label="Kho xuất *"
+                      value={warehouses.find(w => w.id === formData.warehouse_id)?.name || formData.warehouse_id}
+                      onChange={(val) => setFormData({...formData, warehouse_id: val})}
+                      options={warehouses}
+                      placeholder="Chọn kho..."
+                      required
+                    />
 
-                  <CustomCombobox 
-                    label="Vật tư *"
-                    value={materials.find(m => m.id === formData.material_id)?.name || formData.material_id}
-                    onChange={(val) => setFormData({...formData, material_id: val})}
-                    options={materials}
-                    placeholder="Chọn vật tư..."
-                    required
-                  />
-                </div>
-
-                <div className="space-y-4">
-                  <div className="space-y-1">
-                    <label className="text-[10px] font-bold text-gray-400 uppercase">Số lượng xuất *</label>
-                    <input type="number" required value={formData.quantity} onChange={(e) => setFormData({...formData, quantity: Number(e.target.value)})} className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-red-600/20" />
+                    <CustomCombobox 
+                      label="Vật tư *"
+                      value={materials.find(m => m.id === formData.material_id)?.name || formData.material_id}
+                      onChange={(val) => setFormData({...formData, material_id: val})}
+                      options={materials}
+                      placeholder="Chọn vật tư..."
+                      required
+                    />
                   </div>
 
-                  <div className="space-y-1">
-                    <label className="text-[10px] font-bold text-gray-400 uppercase">Ghi chú / Mục đích xuất</label>
-                    <textarea rows={4} value={formData.notes} onChange={(e) => setFormData({...formData, notes: e.target.value})} className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-red-600/20 resize-none" />
-                  </div>
-                </div>
+                  <div className="space-y-4">
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-bold text-gray-400 uppercase">Số lượng xuất *</label>
+                      <input type="number" required value={formData.quantity} onChange={(e) => setFormData({...formData, quantity: Number(e.target.value)})} className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-red-600/20" />
+                    </div>
 
-                <div className="md:col-span-2 flex justify-end gap-3 mt-4">
-                  <button type="button" onClick={() => setShowModal(false)} className="px-6 py-2 rounded-xl text-sm font-bold text-gray-500 hover:bg-gray-100 transition-colors">Hủy</button>
-                  <button type="submit" disabled={submitting} className="px-8 py-2 rounded-xl bg-red-600 text-white text-sm font-bold hover:bg-red-700 transition-colors shadow-lg shadow-red-600/20 disabled:opacity-50">
-                    {submitting ? 'Đang lưu...' : 'Lưu phiếu xuất'}
-                  </button>
-                </div>
-              </form>
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-bold text-gray-400 uppercase">Ghi chú / Mục đích xuất</label>
+                      <textarea rows={4} value={formData.notes} onChange={(e) => setFormData({...formData, notes: e.target.value})} className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-red-600/20 resize-none" />
+                    </div>
+                  </div>
+
+                  <div className="md:col-span-2 flex justify-end gap-3 mt-4">
+                    <button type="button" onClick={() => setShowModal(false)} className="px-6 py-2 rounded-xl text-sm font-bold text-gray-500 hover:bg-gray-100 transition-colors">Hủy</button>
+                    <button type="submit" disabled={submitting} className="px-8 py-2 rounded-xl bg-red-600 text-white text-sm font-bold hover:bg-red-700 transition-colors shadow-lg shadow-red-600/20 disabled:opacity-50">
+                      {submitting ? 'Đang lưu...' : 'Lưu phiếu xuất'}
+                    </button>
+                  </div>
+                </form>
+              </div>
             </motion.div>
           </div>
         )}
@@ -3905,7 +3945,7 @@ const StockOut = ({ user }: { user: Employee }) => {
   );
 };
 
-const Transfer = ({ user }: { user: Employee }) => {
+const Transfer = ({ user, onBack }: { user: Employee, onBack?: () => void }) => {
   const [slips, setSlips] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
@@ -3975,6 +4015,7 @@ const Transfer = ({ user }: { user: Employee }) => {
 
   return (
     <div className="p-4 md:p-6 space-y-6">
+      <PageBreadcrumb title="Luân chuyển kho" onBack={onBack} />
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-xl font-bold text-gray-800 flex items-center gap-2">
@@ -4023,14 +4064,14 @@ const Transfer = ({ user }: { user: Employee }) => {
 
       <AnimatePresence>
         {showModal && (
-          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm overflow-y-auto">
             <motion.div 
               initial={{ opacity: 0, scale: 0.95, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 20 }}
-              className="bg-white rounded-3xl shadow-2xl w-full max-w-2xl"
+              className="bg-white rounded-3xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col"
             >
-              <div className="bg-orange-500 p-6 text-white flex items-center justify-between rounded-t-3xl">
+              <div className="bg-orange-500 p-6 text-white flex items-center justify-between rounded-t-3xl flex-shrink-0">
                 <div className="flex items-center gap-3">
                   <div className="p-2 bg-white/20 rounded-xl"><ArrowLeftRight size={24} /></div>
                   <h3 className="font-bold text-lg">Phiếu điều chuyển kho</h3>
@@ -4038,60 +4079,62 @@ const Transfer = ({ user }: { user: Employee }) => {
                 <button onClick={() => setShowModal(false)} className="p-2 hover:bg-white/10 rounded-full transition-colors"><X size={20} /></button>
               </div>
 
-              <form onSubmit={handleSubmit} className="p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="space-y-4">
-                  <div className="space-y-1">
-                    <label className="text-[10px] font-bold text-gray-400 uppercase">Ngày chuyển *</label>
-                    <input type="date" required value={formData.date} onChange={(e) => setFormData({...formData, date: e.target.value})} className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-orange-500/20" />
-                  </div>
-                  
-                  <CustomCombobox 
-                    label="Từ kho *"
-                    value={warehouses.find(w => w.id === formData.from_warehouse_id)?.name || formData.from_warehouse_id}
-                    onChange={(val) => setFormData({...formData, from_warehouse_id: val})}
-                    options={warehouses}
-                    placeholder="Chọn kho nguồn..."
-                    required
-                  />
+              <div className="flex-1 overflow-y-auto p-6 custom-scrollbar">
+                <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="space-y-4">
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-bold text-gray-400 uppercase">Ngày chuyển *</label>
+                      <input type="date" required value={formData.date} onChange={(e) => setFormData({...formData, date: e.target.value})} className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-orange-500/20" />
+                    </div>
+                    
+                    <CustomCombobox 
+                      label="Từ kho *"
+                      value={warehouses.find(w => w.id === formData.from_warehouse_id)?.name || formData.from_warehouse_id}
+                      onChange={(val) => setFormData({...formData, from_warehouse_id: val})}
+                      options={warehouses}
+                      placeholder="Chọn kho nguồn..."
+                      required
+                    />
 
-                  <CustomCombobox 
-                    label="Đến kho *"
-                    value={warehouses.find(w => w.id === formData.to_warehouse_id)?.name || formData.to_warehouse_id}
-                    onChange={(val) => setFormData({...formData, to_warehouse_id: val})}
-                    options={warehouses}
-                    placeholder="Chọn kho đích..."
-                    required
-                  />
-                </div>
-
-                <div className="space-y-4">
-                  <CustomCombobox 
-                    label="Vật tư điều chuyển *"
-                    value={materials.find(m => m.id === formData.material_id)?.name || formData.material_id}
-                    onChange={(val) => setFormData({...formData, material_id: val})}
-                    options={materials}
-                    placeholder="Chọn vật tư..."
-                    required
-                  />
-
-                  <div className="space-y-1">
-                    <label className="text-[10px] font-bold text-gray-400 uppercase">Số lượng chuyển *</label>
-                    <input type="number" required value={formData.quantity} onChange={(e) => setFormData({...formData, quantity: Number(e.target.value)})} className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-orange-500/20" />
+                    <CustomCombobox 
+                      label="Đến kho *"
+                      value={warehouses.find(w => w.id === formData.to_warehouse_id)?.name || formData.to_warehouse_id}
+                      onChange={(val) => setFormData({...formData, to_warehouse_id: val})}
+                      options={warehouses}
+                      placeholder="Chọn kho đích..."
+                      required
+                    />
                   </div>
 
-                  <div className="space-y-1">
-                    <label className="text-[10px] font-bold text-gray-400 uppercase">Ghi chú</label>
-                    <textarea rows={2} value={formData.notes} onChange={(e) => setFormData({...formData, notes: e.target.value})} className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-orange-500/20 resize-none" />
-                  </div>
-                </div>
+                  <div className="space-y-4">
+                    <CustomCombobox 
+                      label="Vật tư điều chuyển *"
+                      value={materials.find(m => m.id === formData.material_id)?.name || formData.material_id}
+                      onChange={(val) => setFormData({...formData, material_id: val})}
+                      options={materials}
+                      placeholder="Chọn vật tư..."
+                      required
+                    />
 
-                <div className="md:col-span-2 flex justify-end gap-3 mt-4">
-                  <button type="button" onClick={() => setShowModal(false)} className="px-6 py-2 rounded-xl text-sm font-bold text-gray-500 hover:bg-gray-100 transition-colors">Hủy</button>
-                  <button type="submit" disabled={submitting} className="px-8 py-2 rounded-xl bg-orange-500 text-white text-sm font-bold hover:bg-orange-600 transition-colors shadow-lg shadow-orange-500/20 disabled:opacity-50">
-                    {submitting ? 'Đang lưu...' : 'Lưu phiếu chuyển'}
-                  </button>
-                </div>
-              </form>
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-bold text-gray-400 uppercase">Số lượng chuyển *</label>
+                      <input type="number" required value={formData.quantity} onChange={(e) => setFormData({...formData, quantity: Number(e.target.value)})} className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-orange-500/20" />
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-bold text-gray-400 uppercase">Ghi chú</label>
+                      <textarea rows={3} value={formData.notes} onChange={(e) => setFormData({...formData, notes: e.target.value})} className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-orange-500/20 resize-none" />
+                    </div>
+                  </div>
+
+                  <div className="md:col-span-2 flex justify-end gap-3 mt-4">
+                    <button type="button" onClick={() => setShowModal(false)} className="px-6 py-2 rounded-xl text-sm font-bold text-gray-500 hover:bg-gray-100 transition-colors">Hủy</button>
+                    <button type="submit" disabled={submitting} className="px-8 py-2 rounded-xl bg-orange-500 text-white text-sm font-bold hover:bg-orange-600 transition-colors shadow-lg shadow-orange-500/20 disabled:opacity-50">
+                      {submitting ? 'Đang lưu...' : 'Lưu phiếu chuyển'}
+                    </button>
+                  </div>
+                </form>
+              </div>
             </motion.div>
           </div>
         )}
@@ -4116,17 +4159,17 @@ const BottomNav = ({ currentPage, onNavigate, user }: { currentPage: string, onN
   });
 
   return (
-    <div className="lg:hidden fixed bottom-6 left-4 right-4 bg-white border border-gray-100 flex items-center justify-around py-3 px-1 z-[60] shadow-[0_10px_30px_rgba(0,0,0,0.1)] rounded-2xl">
+    <div className="lg:hidden fixed bottom-5 left-1/2 -translate-x-1/2 w-[92%] max-w-md bg-white/90 backdrop-blur-md border border-gray-100 flex items-center justify-around py-2 px-2 z-40 shadow-[0_8px_25px_rgba(0,0,0,0.1)] rounded-full">
       {navItems.map((item) => (
         <button
           key={item.id}
           onClick={() => onNavigate(item.id)}
-          className={`flex flex-col items-center gap-1 flex-1 transition-all ${
-            currentPage === item.id ? 'text-primary scale-110' : 'text-gray-400'
+          className={`flex flex-col items-center gap-0.5 flex-1 transition-all ${
+            currentPage === item.id ? 'text-primary scale-105' : 'text-gray-400'
           }`}
         >
-          <item.icon size={22} className={currentPage === item.id ? 'text-primary' : 'text-gray-400'} />
-          <span className="text-[10px] font-bold uppercase tracking-tighter">{item.label}</span>
+          <item.icon size={20} className={currentPage === item.id ? 'text-primary' : 'text-gray-400'} />
+          <span className="text-[8px] font-bold uppercase tracking-tighter">{item.label}</span>
         </button>
       ))}
     </div>
@@ -4138,8 +4181,26 @@ const BottomNav = ({ currentPage, onNavigate, user }: { currentPage: string, onN
 export default function App() {
   const [user, setUser] = useState<Employee | null>(null);
   const [currentPage, setCurrentPage] = useState('dashboard');
+  const [navigationHistory, setNavigationHistory] = useState<string[]>([]);
   const [isSidebarOpen, setIsSidebarOpen] = useState(window.innerWidth >= 1024);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
+
+  const navigateTo = (page: string) => {
+    if (page !== currentPage) {
+      setNavigationHistory(prev => [...prev, currentPage]);
+      setCurrentPage(page);
+    }
+  };
+
+  const goBack = () => {
+    if (navigationHistory.length > 0) {
+      const prevPage = navigationHistory[navigationHistory.length - 1];
+      setNavigationHistory(prev => prev.slice(0, -1));
+      setCurrentPage(prevPage);
+    } else {
+      setCurrentPage('dashboard');
+    }
+  };
 
   useEffect(() => {
     const handleResize = () => {
@@ -4216,31 +4277,36 @@ export default function App() {
 
   const renderContent = () => {
     switch (currentPage) {
-      case 'dashboard': return <Dashboard user={user} onNavigate={setCurrentPage} />;
-      case 'hr-records': return <HRRecords user={user} />;
-      case 'attendance': return <Attendance user={user} />;
-      case 'costs': return <Costs user={user} />;
-      case 'warehouses': return <Warehouses user={user} />;
-      case 'materials': return <Materials user={user} />;
-      case 'stock-in': return <StockIn user={user} />;
-      case 'stock-out': return <StockOut user={user} />;
-      case 'transfer': return <Transfer user={user} />;
-      case 'cost-report': return <Placeholder title="Báo cáo chi phí" />;
-      case 'cost-filter': return <Placeholder title="Lọc chi phí" />;
-      case 'payroll-report': return <Placeholder title="Báo cáo lương" />;
-      case 'salary-calculation': return <Placeholder title="Tính lương" />;
-      case 'trash': return <Trash onNavigate={setCurrentPage} />;
-      case 'deleted-materials': return <Placeholder title="Danh sách vật tư xóa" />;
-      case 'deleted-warehouses': return <Placeholder title="Danh sách kho xóa" />;
-      case 'deleted-slips': return <Placeholder title="Phiếu nhập xuất đã xóa" />;
-      case 'material-groups': return <MaterialGroups user={user} />;
+      case 'dashboard': return <Dashboard user={user} onNavigate={navigateTo} />;
+      case 'hr-records': return <HRRecords user={user} onBack={goBack} />;
+      case 'attendance': return <Attendance user={user} onBack={goBack} />;
+      case 'costs': return <Costs user={user} onBack={goBack} />;
+      case 'warehouses': return <Warehouses user={user} onBack={goBack} />;
+      case 'materials': return <Materials user={user} onBack={goBack} />;
+      case 'stock-in': return <StockIn user={user} onBack={goBack} />;
+      case 'stock-out': return <StockOut user={user} onBack={goBack} />;
+      case 'transfer': return <Transfer user={user} onBack={goBack} />;
+      case 'cost-report': return <Placeholder title="Báo cáo chi phí" onBack={goBack} />;
+      case 'cost-filter': return <Placeholder title="Lọc chi phí" onBack={goBack} />;
+      case 'payroll-report': return <Placeholder title="Báo cáo lương" onBack={goBack} />;
+      case 'salary-calculation': return <Placeholder title="Tính lương" onBack={goBack} />;
+      case 'advances': return <Placeholder title="Tạm ứng & phụ cấp" onBack={goBack} />;
+      case 'payroll': return <Placeholder title="Tổng hợp lương/tháng" onBack={goBack} />;
+      case 'salary-settings': return <Placeholder title="Cài đặt lương" onBack={goBack} />;
+      case 'partners': return <Placeholder title="Khách hàng & nhà cung cấp" onBack={goBack} />;
+      case 'inventory-report': return <Placeholder title="Báo cáo nhập xuất tồn" onBack={goBack} />;
+      case 'trash': return <Trash onNavigate={navigateTo} onBack={goBack} />;
+      case 'deleted-materials': return <Placeholder title="Danh sách vật tư xóa" onBack={goBack} />;
+      case 'deleted-warehouses': return <Placeholder title="Danh sách kho xóa" onBack={goBack} />;
+      case 'deleted-slips': return <Placeholder title="Phiếu nhập xuất đã xóa" onBack={goBack} />;
+      case 'material-groups': return <MaterialGroups user={user} onBack={goBack} />;
       default: return (
-        <div className="p-12 flex flex-col items-center justify-center text-gray-400 gap-4">
-          <div className="p-6 bg-gray-100 rounded-full"><Package size={48} /></div>
-          <p className="text-lg font-medium italic">Tính năng "{currentPage}" đang được phát triển...</p>
-          <button onClick={() => setCurrentPage('dashboard')} className="text-primary font-bold flex items-center gap-2 hover:underline">
-            <Home size={18} /> Quay lại trang chủ
-          </button>
+        <div className="p-4 md:p-6 space-y-6">
+          <PageBreadcrumb title={currentPage} onBack={goBack} />
+          <div className="p-12 flex flex-col items-center justify-center text-gray-400 gap-4 bg-white rounded-2xl border border-dashed border-gray-200">
+            <div className="p-6 bg-gray-100 rounded-full"><Package size={48} /></div>
+            <p className="text-lg font-medium italic">Tính năng "{currentPage}" đang được phát triển...</p>
+          </div>
         </div>
       );
     }
@@ -4249,7 +4315,7 @@ export default function App() {
   return (
     <div className="min-h-screen bg-[#F8F9FA] flex flex-col font-sans">
       {/* Header */}
-      <header className="bg-primary text-white h-14 flex items-center justify-between px-4 sticky top-0 z-50 shadow-md">
+      <header className="bg-primary text-white h-14 flex items-center justify-between px-4 sticky top-0 z-30 shadow-md">
         <div className="flex items-center gap-2">
           <button 
             onClick={() => setIsSidebarOpen(!isSidebarOpen)} 
@@ -4264,7 +4330,7 @@ export default function App() {
           <div className="h-6 w-px bg-white/20 mx-1 hidden sm:block" />
           
           <button 
-            onClick={() => setCurrentPage('dashboard')}
+            onClick={() => navigateTo('dashboard')}
             className="hover:bg-white/10 p-2 rounded-xl transition-colors flex items-center gap-2 group"
             title="Về trang chủ"
           >
@@ -4308,7 +4374,7 @@ export default function App() {
                   <div className="p-2">
                     <button 
                       onClick={() => {
-                        setCurrentPage('hr-records');
+                        navigateTo('hr-records');
                         setIsUserMenuOpen(false);
                       }}
                       className="w-full flex items-center gap-3 px-3 py-2 rounded-xl text-sm hover:bg-gray-50 transition-colors"
@@ -4341,7 +4407,7 @@ export default function App() {
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               onClick={() => setIsSidebarOpen(false)}
-              className="fixed inset-0 bg-black/20 backdrop-blur-sm z-40 lg:hidden"
+              className="fixed top-14 inset-x-0 bottom-0 bg-black/20 backdrop-blur-sm z-40 lg:hidden"
             />
           )}
         </AnimatePresence>
@@ -4354,7 +4420,7 @@ export default function App() {
               animate={{ x: 0, opacity: 1 }}
               exit={{ x: -280, opacity: 0 }}
               transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-              className="bg-white border-r border-gray-200 overflow-y-auto flex-shrink-0 z-50 fixed lg:relative h-[calc(100vh-3.5rem)] w-[280px] shadow-2xl lg:shadow-none"
+              className="bg-white border-r border-gray-200 overflow-y-auto flex-shrink-0 z-40 fixed lg:relative top-14 lg:top-0 h-[calc(100vh-3.5rem)] w-[280px] shadow-2xl lg:shadow-none"
             >
               <div className="p-4 space-y-6">
                 <div className="flex items-center justify-between px-2">
@@ -4367,7 +4433,7 @@ export default function App() {
                     label="Trang chủ" 
                     active={currentPage === 'dashboard'} 
                     onClick={() => {
-                      setCurrentPage('dashboard');
+                      navigateTo('dashboard');
                       if (window.innerWidth < 1024) setIsSidebarOpen(false);
                     }} 
                   />
@@ -4382,7 +4448,7 @@ export default function App() {
                           label={item.label} 
                           active={currentPage === item.id} 
                           onClick={() => {
-                            setCurrentPage(item.id);
+                            navigateTo(item.id);
                             if (window.innerWidth < 1024) setIsSidebarOpen(false);
                           }} 
                         />
@@ -4396,7 +4462,7 @@ export default function App() {
         </AnimatePresence>
 
         {/* Main Content */}
-        <main className="flex-1 overflow-y-auto relative bg-[#F8F9FA] pb-28 lg:pb-0">
+        <main className="flex-1 overflow-y-auto relative bg-[#F8F9FA] pb-24 lg:pb-0">
           {renderContent()}
           
           <footer className="p-4 text-center text-[10px] text-gray-400 border-t border-gray-100 mt-auto">
@@ -4404,7 +4470,7 @@ export default function App() {
           </footer>
         </main>
       </div>
-      <BottomNav currentPage={currentPage} onNavigate={setCurrentPage} user={user} />
+      <BottomNav currentPage={currentPage} onNavigate={navigateTo} user={user} />
     </div>
   );
 }

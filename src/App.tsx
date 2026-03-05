@@ -4100,13 +4100,58 @@ const Transfer = ({ user }: { user: Employee }) => {
   );
 };
 
+const BottomNav = ({ currentPage, onNavigate, user }: { currentPage: string, onNavigate: (page: string) => void, user: Employee }) => {
+  const navItems = [
+    { id: 'dashboard', label: 'Trang chủ', icon: Home },
+    { id: 'stock-in', label: 'Nhập kho', icon: ArrowDownCircle },
+    { id: 'stock-out', label: 'Xuất kho', icon: ArrowUpCircle },
+    { id: 'attendance', label: 'Chấm công', icon: CalendarCheck },
+    { id: 'hr-records', label: 'Hồ sơ', icon: UserCircle },
+  ].filter(item => {
+    if (user.role === 'User') {
+      const allowed = ['dashboard', 'stock-in', 'stock-out', 'attendance'];
+      return allowed.includes(item.id);
+    }
+    return true;
+  });
+
+  return (
+    <div className="lg:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-100 flex items-center justify-around py-2 px-1 z-[60] shadow-[0_-4px_10px_rgba(0,0,0,0.05)] pb-safe">
+      {navItems.map((item) => (
+        <button
+          key={item.id}
+          onClick={() => onNavigate(item.id)}
+          className={`flex flex-col items-center gap-1 flex-1 transition-all ${
+            currentPage === item.id ? 'text-primary scale-110' : 'text-gray-400'
+          }`}
+        >
+          <item.icon size={20} className={currentPage === item.id ? 'text-primary' : 'text-gray-400'} />
+          <span className="text-[9px] font-bold uppercase tracking-tighter">{item.label}</span>
+        </button>
+      ))}
+    </div>
+  );
+};
+
 // --- Main App ---
 
 export default function App() {
   const [user, setUser] = useState<Employee | null>(null);
   const [currentPage, setCurrentPage] = useState('dashboard');
-  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(window.innerWidth >= 1024);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
+
+  useEffect(() => {
+    const handleResize = () => {
+      if (window.innerWidth >= 1024) {
+        setIsSidebarOpen(true);
+      } else {
+        setIsSidebarOpen(false);
+      }
+    };
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   if (!user) {
     return <LoginPage onLogin={setUser} />;
@@ -4351,7 +4396,7 @@ export default function App() {
         </AnimatePresence>
 
         {/* Main Content */}
-        <main className="flex-1 overflow-y-auto relative bg-[#F8F9FA]">
+        <main className="flex-1 overflow-y-auto relative bg-[#F8F9FA] pb-16 lg:pb-0">
           {renderContent()}
           
           <footer className="p-4 text-center text-[10px] text-gray-400 border-t border-gray-100 mt-auto">
@@ -4359,6 +4404,7 @@ export default function App() {
           </footer>
         </main>
       </div>
+      <BottomNav currentPage={currentPage} onNavigate={setCurrentPage} user={user} />
     </div>
   );
 }

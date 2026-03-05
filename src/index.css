@@ -6,6 +6,10 @@
   --color-primary-light: #E8F1E5;
 }
 
+@utility pb-safe {
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
 .custom-scrollbar::-webkit-scrollbar {
   width: 4px;
 }

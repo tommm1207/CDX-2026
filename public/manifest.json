@@ -1,0 +1,23 @@
+{
+  "name": "Quản Lý Thi Công CDX",
+  "short_name": "CDX Management",
+  "description": "Hệ thống Quản lý Kho & Nhân sự CDX",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#2D5A27",
+  "theme_color": "#2D5A27",
+  "icons": [
+    {
+      "src": "/logo.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/logo.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

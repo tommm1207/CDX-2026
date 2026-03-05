@@ -4116,7 +4116,7 @@ const BottomNav = ({ currentPage, onNavigate, user }: { currentPage: string, onN
   });
 
   return (
-    <div className="lg:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-100 flex items-center justify-around py-2 px-1 z-[60] shadow-[0_-4px_10px_rgba(0,0,0,0.05)] pb-safe">
+    <div className="lg:hidden fixed bottom-6 left-4 right-4 bg-white border border-gray-100 flex items-center justify-around py-3 px-1 z-[60] shadow-[0_10px_30px_rgba(0,0,0,0.1)] rounded-2xl">
       {navItems.map((item) => (
         <button
           key={item.id}
@@ -4125,8 +4125,8 @@ const BottomNav = ({ currentPage, onNavigate, user }: { currentPage: string, onN
             currentPage === item.id ? 'text-primary scale-110' : 'text-gray-400'
           }`}
         >
-          <item.icon size={20} className={currentPage === item.id ? 'text-primary' : 'text-gray-400'} />
-          <span className="text-[9px] font-bold uppercase tracking-tighter">{item.label}</span>
+          <item.icon size={22} className={currentPage === item.id ? 'text-primary' : 'text-gray-400'} />
+          <span className="text-[10px] font-bold uppercase tracking-tighter">{item.label}</span>
         </button>
       ))}
     </div>
@@ -4396,7 +4396,7 @@ export default function App() {
         </AnimatePresence>
 
         {/* Main Content */}
-        <main className="flex-1 overflow-y-auto relative bg-[#F8F9FA] pb-16 lg:pb-0">
+        <main className="flex-1 overflow-y-auto relative bg-[#F8F9FA] pb-28 lg:pb-0">
           {renderContent()}
           
           <footer className="p-4 text-center text-[10px] text-gray-400 border-t border-gray-100 mt-auto">

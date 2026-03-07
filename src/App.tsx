@@ -27,6 +27,7 @@ import {
   Layers, 
   Handshake,
   Plus,
+  Minus,
   PlusCircle,
   Search,
   Edit,
@@ -53,6 +54,8 @@ import {
   Download,
   Printer,
   User,
+  ClipboardCheck,
+  Check,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { supabase } from './supabaseClient';
@@ -63,7 +66,28 @@ const LOGO_URL = "/logo.png"; // Đường dẫn đến file logo trong thư m�
 
 // --- Global Helper Functions ---
 const formatCurrency = (amount: number) => {
-  return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(amount);
+  return new Intl.NumberFormat('vi-VN', { 
+    style: 'currency', 
+    currency: 'VND',
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 2
+  }).format(amount);
+};
+
+const formatNumber = (val: number | string) => {
+  if (val === undefined || val === null || val === '') return '';
+  const num = typeof val === 'number' ? val : parseFloat(val.toString().replace(/\./g, '').replace(',', '.'));
+  if (isNaN(num)) return '';
+  return num.toLocaleString('vi-VN', {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 2
+  });
+};
+
+const parseNumber = (val: string) => {
+  if (!val) return 0;
+  const cleanVal = val.replace(/\./g, '').replace(',', '.');
+  return parseFloat(cleanVal) || 0;
 };
 
 const formatDate = (dateStr: string) => {
@@ -3624,13 +3648,13 @@ const DetailItem = ({ label, value, color = "text-gray-700", className = "" }: {
   </div>
 );
 
-const Dashboard = ({ user, onNavigate }: { user: Employee, onNavigate: (page: string) => void }) => {
+const Dashboard = ({ user, onNavigate }: { user: Employee, onNavigate: (page: string, params?: any) => void }) => {
   const [counts, setCounts] = useState({
     employees: 0,
     materials: 0,
     warehouses: 0,
     slips: 0,
-    costs: 0
+    pendingSlips: 0
   });
   const [loading, setLoading] = useState(true);
 
@@ -3652,14 +3676,20 @@ const Dashboard = ({ user, onNavigate }: { user: Employee, onNavigate: (page: st
         const { count: soCount } = await supabase.from('stock_out').select('*', { count: 'exact', head: true });
         const { count: trCount } = await supabase.from('transfers').select('*', { count: 'exact', head: true });
         const { count: adjCount } = await supabase.from('adjustments').select('*', { count: 'exact', head: true });
-        const { count: costCount } = await supabase.from('costs').select('*', { count: 'exact', head: true });
+        
+        // Fetch Pending Slips (Chờ duyệt)
+        const [siP, soP, trP] = await Promise.all([
+          supabase.from('stock_in').select('*', { count: 'exact', head: true }).eq('status', 'Chờ duyệt'),
+          supabase.from('stock_out').select('*', { count: 'exact', head: true }).eq('status', 'Chờ duyệt'),
+          supabase.from('transfers').select('*', { count: 'exact', head: true }).eq('status', 'Chờ duyệt')
+        ]);
         
         setCounts({
           employees: empCount || 0,
           materials: matCount || 0,
           warehouses: whCount || 0,
           slips: (siCount || 0) + (soCount || 0) + (trCount || 0) + (adjCount || 0),
-          costs: costCount || 0
+          pendingSlips: (siP.count || 0) + (soP.count || 0) + (trP.count || 0)
         });
       } catch (error) {
         console.error('Error fetching dashboard counts:', error);
@@ -3670,11 +3700,11 @@ const Dashboard = ({ user, onNavigate }: { user: Employee, onNavigate: (page: st
     fetchCounts();
   }, []);
 
-  const stats = [
+  const stats: any[] = [
     { label: 'NHÂN SỰ', value: counts.employees, icon: Users, color: 'bg-blue-50 text-blue-600', page: 'hr-records' },
     { label: 'VẬT TƯ', value: counts.materials, icon: Package, color: 'bg-green-50 text-green-600', page: 'materials' },
     { label: 'KHO BÃI', value: counts.warehouses, icon: Warehouse, color: 'bg-orange-50 text-orange-600', page: 'warehouses' },
-    { label: 'CHI PHÍ', value: counts.costs, icon: Wallet, color: 'bg-purple-50 text-purple-600', page: 'costs' },
+    { label: 'PHIẾU DUYỆT', value: counts.pendingSlips, icon: ClipboardCheck, color: 'bg-purple-50 text-purple-600', page: 'pending-approvals' },
   ];
 
   const sections = [
@@ -3745,7 +3775,7 @@ const Dashboard = ({ user, onNavigate }: { user: Employee, onNavigate: (page: st
             <motion.div 
               key={idx}
               whileHover={{ scale: 1.02 }}
-              onClick={() => onNavigate(stat.page)}
+              onClick={() => onNavigate(stat.page, stat.params)}
               className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex items-center justify-between cursor-pointer"
             >
               <div>
@@ -3782,6 +3812,146 @@ const Dashboard = ({ user, onNavigate }: { user: Employee, onNavigate: (page: st
           </div>
         </div>
       ))}
+    </div>
+  );
+};
+
+const PendingApprovals = ({ user, onBack, onNavigate }: { user: Employee, onBack: () => void, onNavigate: (page: string, params?: any) => void }) => {
+  const [pendingSlips, setPendingSlips] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetchPendingSlips();
+  }, []);
+
+  const fetchPendingSlips = async () => {
+    setLoading(true);
+    try {
+      const [si, so, tr] = await Promise.all([
+        supabase.from('stock_in').select('*, warehouses(name), materials(name, unit)').eq('status', 'Chờ duyệt'),
+        supabase.from('stock_out').select('*, warehouses(name), materials(name, unit)').eq('status', 'Chờ duyệt'),
+        supabase.from('transfers').select('*, from_wh:warehouses!from_warehouse_id(name), to_wh:warehouses!to_warehouse_id(name), materials(name, unit)').eq('status', 'Chờ duyệt')
+      ]);
+
+      const siData = (si.data || []).map(item => ({ ...item, type: 'Nhập kho', table: 'stock_in' }));
+      const soData = (so.data || []).map(item => ({ ...item, type: 'Xuất kho', table: 'stock_out' }));
+      const trData = (tr.data || []).map(item => ({ ...item, type: 'Luân chuyển', table: 'transfers' }));
+
+      setPendingSlips([...siData, ...soData, ...trData].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()));
+    } catch (err: any) {
+      console.error('Error fetching pending slips:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleApprove = async (id: string, status: string, table: string) => {
+    try {
+      const { error } = await supabase.from(table).update({ status }).eq('id', id);
+      if (error) throw error;
+      fetchPendingSlips();
+    } catch (err: any) {
+      alert('Lỗi: ' + err.message);
+    }
+  };
+
+  return (
+    <div className="p-4 md:p-6 space-y-6 pb-44">
+      <PageBreadcrumb title="Phiếu chờ duyệt" onBack={onBack} />
+
+      <div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
+        <div className="p-6 border-b border-gray-100">
+          <h3 className="text-lg font-bold text-gray-800 flex items-center gap-2">
+            <ClipboardCheck className="text-primary" /> Danh sách phiếu chờ duyệt
+          </h3>
+          <p className="text-xs text-gray-500 mt-1">Tổng hợp tất cả các phiếu đang chờ Admin phê duyệt</p>
+        </div>
+
+        <div className="overflow-x-auto">
+          <table className="w-full text-left border-collapse">
+            <thead>
+              <tr className="bg-gray-50/50">
+                <th className="px-6 py-4 text-[10px] font-bold text-gray-400 uppercase tracking-wider">Loại phiếu</th>
+                <th className="px-6 py-4 text-[10px] font-bold text-gray-400 uppercase tracking-wider">Ngày / Mã</th>
+                <th className="px-6 py-4 text-[10px] font-bold text-gray-400 uppercase tracking-wider">Vật tư / Kho</th>
+                <th className="px-6 py-4 text-[10px] font-bold text-gray-400 uppercase tracking-wider text-right">Số lượng / Đơn giá</th>
+                <th className="px-6 py-4 text-[10px] font-bold text-gray-400 uppercase tracking-wider text-right">Thành tiền</th>
+                <th className="px-6 py-4 text-[10px] font-bold text-gray-400 uppercase tracking-wider text-center">Thao tác</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-50">
+              {loading ? (
+                <tr>
+                  <td colSpan={6} className="px-6 py-12 text-center text-gray-400 italic">Đang tải dữ liệu...</td>
+                </tr>
+              ) : pendingSlips.length === 0 ? (
+                <tr>
+                  <td colSpan={6} className="px-6 py-12 text-center text-gray-400 italic">Không có phiếu nào đang chờ duyệt</td>
+                </tr>
+              ) : (
+                pendingSlips.map((slip) => (
+                  <tr key={slip.id} className="hover:bg-gray-50/50 transition-colors">
+                    <td className="px-6 py-4">
+                      <span className={`px-2 py-1 rounded-lg text-[10px] font-bold ${
+                        slip.type === 'Nhập kho' ? 'bg-blue-50 text-blue-600' :
+                        slip.type === 'Xuất kho' ? 'bg-orange-50 text-orange-600' :
+                        'bg-purple-50 text-purple-600'
+                      }`}>
+                        {slip.type}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4">
+                      <div className="text-sm font-bold text-gray-800">{formatDate(slip.date)}</div>
+                      <div className="text-[10px] text-gray-400 font-mono">{slip.import_code || slip.export_code || slip.transfer_code || slip.id.slice(0, 8)}</div>
+                    </td>
+                    <td className="px-6 py-4">
+                      <div className="text-sm font-medium text-gray-800">{slip.materials?.name}</div>
+                      <div className="text-[10px] text-primary font-bold">
+                        {slip.type === 'Luân chuyển' 
+                          ? `${slip.from_wh?.name} → ${slip.to_wh?.name}`
+                          : slip.warehouses?.name
+                        }
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 text-right">
+                      <div className="text-sm font-bold text-red-600">{formatNumber(slip.quantity)} {slip.unit || slip.materials?.unit}</div>
+                      {slip.unit_price && <div className="text-[10px] text-gray-400">{formatCurrency(slip.unit_price)}</div>}
+                    </td>
+                    <td className="px-6 py-4 text-right">
+                      <div className="text-sm font-bold text-primary">{slip.total_amount ? formatCurrency(slip.total_amount) : '-'}</div>
+                    </td>
+                    <td className="px-6 py-4">
+                      <div className="flex items-center justify-center gap-2">
+                        <button 
+                          onClick={() => handleApprove(slip.id, 'Đã duyệt', slip.table)}
+                          className="p-2 bg-green-50 text-green-600 rounded-lg hover:bg-green-100 transition-colors"
+                          title="Duyệt phiếu"
+                        >
+                          <Check size={18} />
+                        </button>
+                        <button 
+                          onClick={() => handleApprove(slip.id, 'Từ chối', slip.table)}
+                          className="p-2 bg-red-50 text-red-600 rounded-lg hover:bg-red-100 transition-colors"
+                          title="Từ chối"
+                        >
+                          <X size={18} />
+                        </button>
+                        <button 
+                          onClick={() => onNavigate(slip.table === 'stock_in' ? 'stock-in' : slip.table === 'stock_out' ? 'stock-out' : 'transfer')}
+                          className="p-2 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition-colors"
+                          title="Xem chi tiết"
+                        >
+                          <Eye size={18} />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
     </div>
   );
 };
@@ -4672,13 +4842,19 @@ const Attendance = ({ user, onBack }: { user: Employee, onBack?: () => void }) =
 
 // --- Stock Management Components ---
 
-const StockIn = ({ user, onBack }: { user: Employee, onBack?: () => void }) => {
+const StockIn = ({ user, onBack, initialStatus }: { user: Employee, onBack?: () => void, initialStatus?: string }) => {
   const [slips, setSlips] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
+  const [showDetailModal, setShowDetailModal] = useState(false);
+  const [selectedSlip, setSelectedSlip] = useState<any>(null);
   const [warehouses, setWarehouses] = useState<any[]>([]);
   const [materials, setMaterials] = useState<any[]>([]);
   const [submitting, setSubmitting] = useState(false);
+  const [statusFilter, setStatusFilter] = useState(initialStatus || 'Tất cả');
+  const [materialHistory, setMaterialHistory] = useState<any[]>([]);
+  const [loadingHistory, setLoadingHistory] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
 
   const initialFormState = {
     date: new Date().toISOString().split('T')[0],
@@ -4686,7 +4862,10 @@ const StockIn = ({ user, onBack }: { user: Employee, onBack?: () => void }) => {
     material_id: '',
     quantity: 0,
     unit_price: 0,
-    notes: ''
+    unit: '',
+    notes: '',
+    import_code: `NK-${new Date().getFullYear().toString().slice(-2)}${(new Date().getMonth() + 1).toString().padStart(2, '0')}${new Date().getDate().toString().padStart(2, '0')}-${Math.floor(1000 + Math.random() * 9000)}`,
+    status: 'Chờ duyệt'
   };
 
   const [formData, setFormData] = useState(initialFormState);
@@ -4699,10 +4878,20 @@ const StockIn = ({ user, onBack }: { user: Employee, onBack?: () => void }) => {
 
   const fetchSlips = async () => {
     setLoading(true);
-    const { data } = await supabase.from('stock_in').select('*, warehouses(name), materials(name)').order('created_at', { ascending: false });
+    let query = supabase.from('stock_in').select('*, warehouses(name), materials(name, unit)').order('created_at', { ascending: false });
+    
+    if (statusFilter !== 'Tất cả') {
+      query = query.eq('status', statusFilter);
+    }
+    
+    const { data } = await query;
     if (data) setSlips(data);
     setLoading(false);
   };
+
+  useEffect(() => {
+    fetchSlips();
+  }, [statusFilter]);
 
   const fetchWarehouses = async () => {
     const { data } = await supabase.from('warehouses').select('*').order('name');
@@ -4721,14 +4910,24 @@ const StockIn = ({ user, onBack }: { user: Employee, onBack?: () => void }) => {
       const wh = warehouses.find(w => w.name === formData.warehouse_id || w.id === formData.warehouse_id);
       const mat = materials.find(m => m.name === formData.material_id || m.id === formData.material_id);
       
-      const { error } = await supabase.from('stock_in').insert([{
+      const payload = {
         ...formData,
         warehouse_id: wh?.id || formData.warehouse_id,
         material_id: mat?.id || formData.material_id,
         employee_id: user.id,
-        total_amount: formData.quantity * formData.unit_price
-      }]);
-      if (error) throw error;
+        total_amount: formData.quantity * formData.unit_price,
+        unit: formData.unit || mat?.unit || '',
+        status: 'Chờ duyệt'
+      };
+
+      if (isEditing && selectedSlip) {
+        const { error } = await supabase.from('stock_in').update(payload).eq('id', selectedSlip.id);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase.from('stock_in').insert([payload]);
+        if (error) throw error;
+      }
+      
       setShowModal(false);
       fetchSlips();
       setFormData(initialFormState);
@@ -4739,18 +4938,85 @@ const StockIn = ({ user, onBack }: { user: Employee, onBack?: () => void }) => {
     }
   };
 
+  const handleRowClick = async (slip: any) => {
+    setSelectedSlip(slip);
+    setShowDetailModal(true);
+    
+    // Fetch material history
+    setLoadingHistory(true);
+    try {
+      const { data } = await supabase
+        .from('stock_in')
+        .select('*, warehouses(name)')
+        .eq('material_id', slip.material_id)
+        .eq('status', 'Đã duyệt')
+        .order('date', { ascending: false })
+        .limit(5);
+      setMaterialHistory(data || []);
+    } catch (err) {
+      console.error('Error fetching history:', err);
+    } finally {
+      setLoadingHistory(false);
+    }
+  };
+
+  const handleEdit = () => {
+    setFormData({
+      date: selectedSlip.date,
+      warehouse_id: selectedSlip.warehouse_id,
+      material_id: selectedSlip.material_id,
+      quantity: selectedSlip.quantity,
+      unit_price: selectedSlip.unit_price,
+      unit: selectedSlip.unit,
+      notes: selectedSlip.notes,
+      import_code: selectedSlip.import_code,
+      status: 'Chờ duyệt'
+    });
+    setIsEditing(true);
+    setShowDetailModal(false);
+    setShowModal(true);
+  };
+
+  const handleApprove = async (id: string, status: string) => {
+    try {
+      const { error } = await supabase.from('stock_in').update({ status }).eq('id', id);
+      if (error) throw error;
+      fetchSlips();
+      setShowDetailModal(false);
+    } catch (err: any) {
+      alert('Lỗi: ' + err.message);
+    }
+  };
+
   return (
     <div className="p-4 md:p-6 space-y-6 pb-44">
       <PageBreadcrumb title="Nhập kho" onBack={onBack} />
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-xl font-bold text-gray-800 flex items-center gap-2">
-            <ArrowDownCircle className="text-primary" /> Nhập kho
-          </h2>
-          <p className="text-xs text-gray-500 mt-1">Quản lý phiếu nhập vật tư vào kho</p>
+      
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div className="flex items-center gap-2 overflow-x-auto pb-2 md:pb-0 no-scrollbar">
+          {['Tất cả', 'Chờ duyệt', 'Đã duyệt', 'Từ chối'].map((status) => (
+            <button
+              key={status}
+              onClick={() => setStatusFilter(status)}
+              className={`px-4 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all ${
+                statusFilter === status 
+                  ? 'bg-primary text-white shadow-lg shadow-primary/20' 
+                  : 'bg-white text-gray-500 hover:bg-gray-50 border border-gray-100'
+              }`}
+            >
+              {status}
+            </button>
+          ))}
         </div>
         <button 
-          onClick={() => setShowModal(true)}
+          onClick={() => {
+            setFormData({
+              ...initialFormState,
+              import_code: `NK-${new Date().getFullYear().toString().slice(-2)}${(new Date().getMonth() + 1).toString().padStart(2, '0')}${new Date().getDate().toString().padStart(2, '0')}-${Math.floor(1000 + Math.random() * 9000)}`
+            });
+            setIsEditing(false);
+            setShowModal(true);
+          }}
           className="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-xl text-sm font-bold hover:bg-primary-hover transition-colors shadow-lg shadow-primary/20"
         >
           <Plus size={18} /> Lập phiếu nhập
@@ -4758,37 +5024,160 @@ const StockIn = ({ user, onBack }: { user: Employee, onBack?: () => void }) => {
       </div>
 
       <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-        <table className="w-full text-left border-collapse">
-          <thead>
-            <tr className="bg-primary text-white">
-              <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider">Ngày</th>
-              <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider">Kho</th>
-              <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider">Vật tư</th>
-              <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-center">SL</th>
-              <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-right">Thành tiền</th>
-              <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider">Ghi chú</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-100">
-            {loading ? (
-              <tr><td colSpan={6} className="px-4 py-8 text-center text-gray-400 italic">Đang tải...</td></tr>
-            ) : slips.length === 0 ? (
-              <tr><td colSpan={6} className="px-4 py-8 text-center text-gray-400 italic">Chưa có phiếu nhập nào</td></tr>
-            ) : (
-              slips.map((item) => (
-                <tr key={item.id} className="hover:bg-gray-50 transition-colors">
-                  <td className="px-4 py-3 text-xs text-gray-600">{new Date(item.date).toLocaleDateString('vi-VN')}</td>
-                  <td className="px-4 py-3 text-xs text-gray-600 font-medium">{item.warehouses?.name}</td>
-                  <td className="px-4 py-3 text-xs text-gray-600">{item.materials?.name}</td>
-                  <td className="px-4 py-3 text-xs text-gray-600 text-center font-bold">{item.quantity}</td>
-                  <td className="px-4 py-3 text-xs text-primary font-bold text-right">{(item.total_amount || 0).toLocaleString('vi-VN')}đ</td>
-                  <td className="px-4 py-3 text-xs text-gray-400 italic">{item.notes}</td>
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
+        <div className="overflow-x-auto">
+          <table className="w-full text-left border-collapse">
+            <thead>
+              <tr className="bg-primary text-white">
+                <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider border-r border-white/10">Ngày</th>
+                <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider border-r border-white/10">Phê duyệt</th>
+                <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider border-r border-white/10">Thành tiền</th>
+                <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider border-r border-white/10">Diễn giải</th>
+                <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider">Mã nhập xuất</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-100">
+              {loading ? (
+                <tr><td colSpan={5} className="px-4 py-8 text-center text-gray-400 italic">Đang tải...</td></tr>
+              ) : slips.length === 0 ? (
+                <tr><td colSpan={5} className="px-4 py-8 text-center text-gray-400 italic">Chưa có phiếu nhập nào</td></tr>
+              ) : (
+                slips.map((item) => (
+                  <tr 
+                    key={item.id} 
+                    onClick={() => handleRowClick(item)}
+                    className="hover:bg-gray-50 transition-colors cursor-pointer group"
+                  >
+                    <td className="px-4 py-3 text-xs text-gray-600">{formatDate(item.date)}</td>
+                    <td className="px-4 py-3 text-xs">
+                      <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                        item.status === 'Đã duyệt' ? 'bg-green-100 text-green-600' : 
+                        item.status === 'Từ chối' ? 'bg-red-100 text-red-600' : 
+                        'bg-yellow-100 text-yellow-600'
+                      }`}>
+                        {item.status || 'Chờ duyệt'}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 text-xs text-primary font-bold">{formatCurrency(item.total_amount || 0)}</td>
+                    <td className="px-4 py-3 text-xs text-gray-600 truncate max-w-[200px]">{item.notes || '-'}</td>
+                    <td className="px-4 py-3 text-xs text-gray-800 font-bold flex items-center justify-between">
+                      {item.import_code || '-'}
+                      <ChevronRight size={14} className="text-gray-300 group-hover:text-primary transition-colors" />
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
       </div>
+
+      {/* Detail Modal */}
+      <AnimatePresence>
+        {showDetailModal && selectedSlip && (
+          <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="bg-white rounded-3xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col"
+            >
+              <div className="p-6 border-b border-gray-100 flex items-center justify-between">
+                <h3 className="text-lg font-bold text-gray-800">Chi tiết vật tư nhập</h3>
+                <button onClick={() => setShowDetailModal(false)} className="p-2 hover:bg-gray-100 rounded-full transition-colors"><X size={20} /></button>
+              </div>
+              
+              <div className="flex-1 overflow-y-auto p-8 space-y-6">
+                <div className="flex flex-col items-center gap-4 mb-8">
+                  <div className="w-16 h-16 bg-primary/10 text-primary rounded-full flex items-center justify-center">
+                    <Navigation size={32} />
+                  </div>
+                  <p className="text-xs text-gray-400 uppercase font-bold tracking-widest">Xem lịch sử vật tư</p>
+                </div>
+
+                <div className="grid grid-cols-1 gap-6">
+                  <div className="flex justify-between items-center border-b border-gray-50 pb-3">
+                    <span className="text-xs text-gray-400 font-bold uppercase">Ngày</span>
+                    <span className="text-sm font-medium text-gray-800">{formatDate(selectedSlip.date)}</span>
+                  </div>
+                  <div className="flex justify-between items-center border-b border-gray-50 pb-3">
+                    <span className="text-xs text-gray-400 font-bold uppercase">Số lượng nhập</span>
+                    <span className="text-sm font-bold text-red-600">{formatNumber(selectedSlip.quantity)}</span>
+                  </div>
+                  <div className="flex justify-between items-center border-b border-gray-50 pb-3">
+                    <span className="text-xs text-gray-400 font-bold uppercase">Đơn vị tính</span>
+                    <span className="text-sm font-medium text-gray-800">{selectedSlip.unit || selectedSlip.materials?.unit || '-'}</span>
+                  </div>
+                  <div className="flex justify-between items-center border-b border-gray-50 pb-3">
+                    <span className="text-xs text-gray-400 font-bold uppercase">Đơn giá</span>
+                    <span className="text-sm font-medium text-gray-800">{formatCurrency(selectedSlip.unit_price || 0)}</span>
+                  </div>
+                  <div className="flex justify-between items-center border-b border-gray-50 pb-3">
+                    <span className="text-xs text-gray-400 font-bold uppercase">Thành tiền</span>
+                    <span className="text-sm font-bold text-red-600">{formatCurrency(selectedSlip.total_amount || 0)}</span>
+                  </div>
+                  <div className="flex flex-col gap-1 border-b border-gray-50 pb-3">
+                    <span className="text-xs text-gray-400 font-bold uppercase">Thành tiền bằng chữ</span>
+                    <span className="text-sm font-medium text-blue-600 italic">{numberToWords(selectedSlip.total_amount || 0)}</span>
+                  </div>
+                  <div className="flex flex-col gap-1 border-b border-gray-50 pb-3">
+                    <span className="text-xs text-gray-400 font-bold uppercase">Diễn giải</span>
+                    <span className="text-sm font-medium text-gray-800">{selectedSlip.notes || '-'}</span>
+                  </div>
+                  <div className="flex flex-col gap-3 border-b border-gray-50 pb-3">
+                    <span className="text-xs text-gray-400 font-bold uppercase">Lịch sử nhập gần đây</span>
+                    {loadingHistory ? (
+                      <p className="text-xs text-gray-400 italic">Đang tải lịch sử...</p>
+                    ) : materialHistory.length === 0 ? (
+                      <p className="text-xs text-gray-400 italic">Chưa có lịch sử nhập</p>
+                    ) : (
+                      <div className="space-y-2">
+                        {materialHistory.map((h, i) => (
+                          <div key={i} className="flex justify-between items-center text-[11px] bg-gray-50 p-2 rounded-lg">
+                            <span className="text-gray-500">{formatDate(h.date)}</span>
+                            <span className="font-bold text-primary">{formatNumber(h.quantity)} {h.unit}</span>
+                            <span className="text-gray-400">{h.warehouses?.name}</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              <div className="p-6 bg-gray-50 border-t border-gray-100 flex justify-end gap-3 rounded-b-3xl">
+                <button 
+                  onClick={handleEdit}
+                  className="px-6 py-2 bg-blue-100 text-blue-600 rounded-xl text-sm font-bold hover:bg-blue-200 transition-colors flex items-center gap-2"
+                >
+                  <Edit size={16} /> Sửa phiếu
+                </button>
+                {user.role === 'Admin' && selectedSlip.status === 'Chờ duyệt' && (
+                  <>
+                    <button 
+                      onClick={() => handleApprove(selectedSlip.id, 'Từ chối')}
+                      className="px-6 py-2 bg-red-100 text-red-600 rounded-xl text-sm font-bold hover:bg-red-200 transition-colors"
+                    >
+                      Từ chối
+                    </button>
+                    <button 
+                      onClick={() => handleApprove(selectedSlip.id, 'Đã duyệt')}
+                      className="px-6 py-2 bg-green-600 text-white rounded-xl text-sm font-bold hover:bg-green-700 transition-colors"
+                    >
+                      Duyệt phiếu
+                    </button>
+                  </>
+                )}
+                <button 
+                  onClick={() => setShowDetailModal(false)}
+                  className="px-6 py-2 bg-gray-500 text-white rounded-xl text-sm font-bold hover:bg-gray-600 transition-colors"
+                >
+                  Đóng
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
 
       <AnimatePresence>
         {showModal && (
@@ -4802,7 +5191,7 @@ const StockIn = ({ user, onBack }: { user: Employee, onBack?: () => void }) => {
               <div className="bg-primary p-6 text-white flex items-center justify-between rounded-t-3xl flex-shrink-0">
                 <div className="flex items-center gap-3">
                   <div className="p-2 bg-white/20 rounded-xl"><ArrowDownCircle size={24} /></div>
-                  <h3 className="font-bold text-lg">Lập phiếu nhập kho</h3>
+                  <h3 className="font-bold text-lg">{isEditing ? 'Sửa phiếu nhập kho' : 'Lập phiếu nhập kho'}</h3>
                 </div>
                 <button onClick={() => setShowModal(false)} className="p-2 hover:bg-white/10 rounded-full transition-colors"><X size={20} /></button>
               </div>
@@ -4816,7 +5205,47 @@ const StockIn = ({ user, onBack }: { user: Employee, onBack?: () => void }) => {
                     </div>
                     
                     <CustomCombobox 
-                      label="Kho nhập *"
+                      label="Tên vật tư nhập *"
+                      value={materials.find(m => m.id === formData.material_id)?.name || formData.material_id}
+                      onChange={(val) => {
+                        const mat = materials.find(m => m.id === val || m.name === val);
+                        setFormData({
+                          ...formData, 
+                          material_id: mat?.id || val,
+                          unit: mat?.unit || formData.unit
+                        });
+                      }}
+                      options={materials}
+                      placeholder="Chọn vật tư..."
+                      required
+                    />
+
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-bold text-gray-400 uppercase">Số lượng nhập *</label>
+                      <div className="flex items-center gap-2">
+                        <button type="button" onClick={() => setFormData({...formData, quantity: Math.max(0, formData.quantity - 1)})} className="p-2 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"><Minus size={14} /></button>
+                        <input 
+                          type="text" 
+                          required 
+                          value={formatNumber(formData.quantity)} 
+                          onChange={(e) => setFormData({...formData, quantity: parseNumber(e.target.value)})} 
+                          className="flex-1 px-4 py-2 rounded-xl border border-gray-200 text-sm text-center outline-none focus:ring-2 focus:ring-primary/20" 
+                        />
+                        <button type="button" onClick={() => setFormData({...formData, quantity: formData.quantity + 1})} className="p-2 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"><Plus size={14} /></button>
+                      </div>
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-bold text-gray-400 uppercase">Thành tiền</label>
+                      <div className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm text-center bg-gray-50 outline-none font-bold text-primary">
+                        {formatCurrency(formData.quantity * formData.unit_price)}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="space-y-4">
+                    <CustomCombobox 
+                      label="Tên kho nhập *"
                       value={warehouses.find(w => w.id === formData.warehouse_id)?.name || formData.warehouse_id}
                       onChange={(val) => setFormData({...formData, warehouse_id: val})}
                       options={warehouses}
@@ -4824,38 +5253,35 @@ const StockIn = ({ user, onBack }: { user: Employee, onBack?: () => void }) => {
                       required
                     />
 
-                    <CustomCombobox 
-                      label="Vật tư *"
-                      value={materials.find(m => m.id === formData.material_id)?.name || formData.material_id}
-                      onChange={(val) => setFormData({...formData, material_id: val})}
-                      options={materials}
-                      placeholder="Chọn vật tư..."
-                      required
-                    />
-                  </div>
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-bold text-gray-400 uppercase">Đơn vị tính</label>
+                      <input type="text" value={formData.unit} onChange={(e) => setFormData({...formData, unit: e.target.value})} className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20" />
+                    </div>
 
-                  <div className="space-y-4">
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="space-y-1">
-                        <label className="text-[10px] font-bold text-gray-400 uppercase">Số lượng *</label>
-                        <input type="number" required value={formData.quantity} onChange={(e) => setFormData({...formData, quantity: Number(e.target.value)})} className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20" />
-                      </div>
-                      <div className="space-y-1">
-                        <label className="text-[10px] font-bold text-gray-400 uppercase">Đơn giá</label>
-                        <input type="number" value={formData.unit_price} onChange={(e) => setFormData({...formData, unit_price: Number(e.target.value)})} className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20" />
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-bold text-gray-400 uppercase">Đơn giá</label>
+                      <div className="flex items-center gap-2">
+                        <button type="button" onClick={() => setFormData({...formData, unit_price: Math.max(0, formData.unit_price - 1000)})} className="p-2 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"><Minus size={14} /></button>
+                        <input 
+                          type="text" 
+                          value={formatNumber(formData.unit_price)} 
+                          onChange={(e) => setFormData({...formData, unit_price: parseNumber(e.target.value)})} 
+                          className="flex-1 px-4 py-2 rounded-xl border border-gray-200 text-sm text-center outline-none focus:ring-2 focus:ring-primary/20" 
+                        />
+                        <button type="button" onClick={() => setFormData({...formData, unit_price: formData.unit_price + 1000})} className="p-2 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"><Plus size={14} /></button>
                       </div>
                     </div>
 
                     <div className="space-y-1">
-                      <label className="text-[10px] font-bold text-gray-400 uppercase">Ghi chú</label>
-                      <textarea rows={3} value={formData.notes} onChange={(e) => setFormData({...formData, notes: e.target.value})} className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20 resize-none" />
+                      <label className="text-[10px] font-bold text-gray-400 uppercase">Diễn giải</label>
+                      <textarea rows={2} value={formData.notes} onChange={(e) => setFormData({...formData, notes: e.target.value})} className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20 resize-none" />
                     </div>
                   </div>
 
                   <div className="md:col-span-2 flex justify-end gap-3 mt-4">
-                    <button type="button" onClick={() => setShowModal(false)} className="px-6 py-2 rounded-xl text-sm font-bold text-gray-500 hover:bg-gray-100 transition-colors">Hủy</button>
+                    <button type="button" onClick={() => setShowModal(false)} className="px-6 py-2 rounded-xl text-sm font-bold text-gray-500 hover:bg-gray-100 transition-colors">Hủy lệnh</button>
                     <button type="submit" disabled={submitting} className="px-8 py-2 rounded-xl bg-primary text-white text-sm font-bold hover:bg-primary-hover transition-colors shadow-lg shadow-primary/20 disabled:opacity-50">
-                      {submitting ? 'Đang lưu...' : 'Lưu phiếu nhập'}
+                      {submitting ? 'Đang lưu...' : 'Lưu'}
                     </button>
                   </div>
                 </form>
@@ -5252,16 +5678,16 @@ const Transfer = ({ user, onBack }: { user: Employee, onBack?: () => void }) => 
   );
 };
 
-const BottomNav = ({ currentPage, onNavigate, user }: { currentPage: string, onNavigate: (page: string) => void, user: Employee }) => {
+const BottomNav = ({ currentPage, onNavigate, user, pendingCount }: { currentPage: string, onNavigate: (page: string) => void, user: Employee, pendingCount: number }) => {
   const navItems = [
     { id: 'dashboard', label: 'Trang chủ', icon: Home },
     { id: 'stock-in', label: 'Nhập kho', icon: ArrowDownCircle },
     { id: 'stock-out', label: 'Xuất kho', icon: ArrowUpCircle },
-    { id: 'cost-report', label: 'Báo cáo chi', icon: FileText },
+    { id: 'pending-approvals', label: 'Phiếu duyệt', icon: ClipboardCheck, badge: pendingCount },
     { id: 'attendance', label: 'Chấm công', icon: CalendarCheck },
   ].filter(item => {
     if (user.role === 'User') {
-      const allowed = ['dashboard', 'stock-in', 'stock-out', 'attendance', 'cost-report'];
+      const allowed = ['dashboard', 'stock-in', 'stock-out', 'attendance', 'pending-approvals'];
       return allowed.includes(item.id);
     }
     return true;
@@ -5273,12 +5699,17 @@ const BottomNav = ({ currentPage, onNavigate, user }: { currentPage: string, onN
         <button
           key={item.id}
           onClick={() => onNavigate(item.id)}
-          className={`flex flex-col items-center gap-0.5 flex-1 transition-all ${
+          className={`flex flex-col items-center gap-0.5 flex-1 transition-all relative ${
             currentPage === item.id ? 'text-primary scale-105' : 'text-gray-400'
           }`}
         >
           <item.icon size={20} className={currentPage === item.id ? 'text-primary' : 'text-gray-400'} />
           <span className="text-[8px] font-bold uppercase tracking-tighter">{item.label}</span>
+          {item.badge && item.badge > 0 && (
+            <span className="absolute -top-1 right-1/4 bg-red-500 text-white text-[8px] font-bold w-4 h-4 rounded-full flex items-center justify-center animate-pulse">
+              {item.badge > 99 ? '99+' : item.badge}
+            </span>
+          )}
         </button>
       ))}
     </div>
@@ -5290,14 +5721,38 @@ const BottomNav = ({ currentPage, onNavigate, user }: { currentPage: string, onN
 export default function App() {
   const [user, setUser] = useState<Employee | null>(null);
   const [currentPage, setCurrentPage] = useState('dashboard');
+  const [pageParams, setPageParams] = useState<any>(null);
   const [navigationHistory, setNavigationHistory] = useState<string[]>([]);
   const [isSidebarOpen, setIsSidebarOpen] = useState(window.innerWidth >= 1024);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
+  const [pendingCount, setPendingCount] = useState(0);
 
-  const navigateTo = (page: string) => {
-    if (page !== currentPage) {
+  const fetchPendingCount = useCallback(async () => {
+    try {
+      const [si, so, tr] = await Promise.all([
+        supabase.from('stock_in').select('*', { count: 'exact', head: true }).eq('status', 'Chờ duyệt'),
+        supabase.from('stock_out').select('*', { count: 'exact', head: true }).eq('status', 'Chờ duyệt'),
+        supabase.from('transfers').select('*', { count: 'exact', head: true }).eq('status', 'Chờ duyệt')
+      ]);
+      setPendingCount((si.count || 0) + (so.count || 0) + (tr.count || 0));
+    } catch (err) {
+      console.error('Error fetching pending count:', err);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (user) {
+      fetchPendingCount();
+      const interval = setInterval(fetchPendingCount, 30000); // Refresh every 30s
+      return () => clearInterval(interval);
+    }
+  }, [user, fetchPendingCount]);
+
+  const navigateTo = (page: string, params: any = null) => {
+    if (page !== currentPage || params !== pageParams) {
       setNavigationHistory(prev => [...prev, currentPage]);
       setCurrentPage(page);
+      setPageParams(params);
     }
   };
 
@@ -5332,7 +5787,7 @@ export default function App() {
       title: 'QUẢN LÝ TÀI CHÍNH',
       items: [
         { id: 'costs', label: 'Chi phí', icon: Wallet },
-        { id: 'cost-report', label: 'Báo cáo chi phí', icon: FileText },
+        { id: 'pending-approvals', label: 'Phiếu duyệt', icon: ClipboardCheck, badge: pendingCount },
         { id: 'cost-filter', label: 'Lọc chi phí', icon: Filter },
       ]
     },
@@ -5376,12 +5831,12 @@ export default function App() {
   const filteredMenuGroups = menuGroups.map(group => ({
     ...group,
     items: group.items.filter(item => {
-    if (user.role === 'User') {
-      const allowed = ['stock-in', 'stock-out', 'transfer', 'inventory-report', 'attendance', 'cost-report'];
-      return allowed.includes(item.id);
-    }
+      if (user.role === 'User') {
+        const allowed = ['stock-in', 'stock-out', 'transfer', 'inventory-report', 'attendance', 'pending-approvals'];
+        return allowed.includes(item.id);
+      }
       return true;
-    })
+    }).map(item => item.id === 'pending-approvals' ? { ...item, badge: pendingCount } : item)
   })).filter(group => group.items.length > 0);
 
   const renderContent = () => {
@@ -5392,7 +5847,8 @@ export default function App() {
       case 'costs': return <Costs user={user} onBack={goBack} />;
       case 'warehouses': return <Warehouses user={user} onBack={goBack} />;
       case 'materials': return <Materials user={user} onBack={goBack} />;
-      case 'stock-in': return <StockIn user={user} onBack={goBack} />;
+      case 'stock-in': return <StockIn user={user} onBack={goBack} initialStatus={pageParams?.status} />;
+      case 'pending-approvals': return <PendingApprovals user={user} onBack={goBack} onNavigate={navigateTo} />;
       case 'stock-out': return <StockOut user={user} onBack={goBack} />;
       case 'transfer': return <Transfer user={user} onBack={goBack} />;
       case 'cost-report': return <CostReport user={user} onBack={goBack} />;
@@ -5556,6 +6012,7 @@ export default function App() {
                           icon={item.icon} 
                           label={item.label} 
                           active={currentPage === item.id} 
+                          badge={item.badge}
                           onClick={() => {
                             navigateTo(item.id);
                             if (window.innerWidth < 1024) setIsSidebarOpen(false);
@@ -5579,7 +6036,7 @@ export default function App() {
           </footer>
         </main>
       </div>
-      <BottomNav currentPage={currentPage} onNavigate={navigateTo} user={user} />
+      <BottomNav currentPage={currentPage} onNavigate={navigateTo} user={user} pendingCount={pendingCount} />
     </div>
   );
 }

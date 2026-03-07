@@ -354,7 +354,7 @@ const MaterialGroups = ({ user, onBack }: { user: Employee, onBack?: () => void 
   );
 
   return (
-    <div className="p-4 md:p-6 space-y-6">
+    <div className="p-4 md:p-6 space-y-6 pb-44">
       <PageBreadcrumb title="Nhóm vật tư" onBack={onBack} />
       <div className="flex items-center justify-between">
         <div>
@@ -1034,7 +1034,7 @@ const Materials = ({ user, onBack }: { user: Employee, onBack?: () => void }) =>
   const uniqueMaterialIds = Array.from(new Set(materials.map(m => m.id)));
 
   return (
-    <div className="p-4 md:p-6 space-y-6">
+    <div className="p-4 md:p-6 space-y-6 pb-44">
       <PageBreadcrumb title="Danh mục Vật tư" onBack={onBack} />
       <div className="flex items-center justify-between">
         <div>
@@ -1412,7 +1412,7 @@ const Materials = ({ user, onBack }: { user: Employee, onBack?: () => void }) =>
 };
 
 const Placeholder = ({ title, onBack }: { title: string, onBack?: () => void }) => (
-  <div className="p-4 md:p-6 space-y-6">
+  <div className="p-4 md:p-6 space-y-6 pb-44">
     <PageBreadcrumb title={title} onBack={onBack} />
     <div className="p-12 flex flex-col items-center justify-center text-gray-400 gap-4 bg-white rounded-2xl border border-dashed border-gray-200">
       <div className="p-4 bg-gray-50 rounded-full">
@@ -1460,7 +1460,7 @@ const Trash = ({ onNavigate, onBack }: { onNavigate: (page: string) => void, onB
   ];
 
   return (
-    <div className="p-4 md:p-6 space-y-6">
+    <div className="p-4 md:p-6 space-y-6 pb-44">
       <PageBreadcrumb title="Thùng rác" onBack={onBack} />
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -1605,7 +1605,7 @@ const Warehouses = ({ user, onBack }: { user: Employee, onBack?: () => void }) =
   };
 
   return (
-    <div className="p-4 md:p-6 space-y-6">
+    <div className="p-4 md:p-6 space-y-6 pb-44">
       <PageBreadcrumb title="Danh sách Kho" onBack={onBack} />
       <div className="flex items-center justify-between">
         <div>
@@ -2159,7 +2159,7 @@ const Costs = ({ user, onBack }: { user: Employee, onBack?: () => void }) => {
   };
 
   return (
-    <div className="p-4 md:p-6 space-y-6">
+    <div className="p-4 md:p-6 space-y-6 pb-44">
       <PageBreadcrumb title="Quản lý Chi phí" onBack={onBack} />
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
@@ -2626,7 +2626,7 @@ const Dashboard = ({ user, onNavigate }: { user: Employee, onNavigate: (page: st
   })).filter(section => section.items.length > 0);
 
   return (
-    <div className="p-4 md:p-6 space-y-8">
+    <div className="p-4 md:p-6 space-y-8 pb-44">
       <div>
         <h2 className="text-xs font-bold text-primary mb-4 flex items-center gap-2">
           <LayoutDashboard size={16} /> TỔNG QUAN
@@ -2802,7 +2802,7 @@ const HRRecords = ({ user, onBack }: { user: Employee, onBack?: () => void }) =>
   );
 
   return (
-    <div className="p-4 md:p-6 space-y-6">
+    <div className="p-4 md:p-6 space-y-6 pb-44">
       <PageBreadcrumb title="Hồ sơ Nhân sự" onBack={onBack} />
       <div className="flex items-center justify-between">
         <h2 className="text-lg font-bold text-gray-800 flex items-center gap-2">
@@ -3288,7 +3288,7 @@ const Attendance = ({ user, onBack }: { user: Employee, onBack?: () => void }) =
   };
 
   return (
-    <div className="p-4 md:p-6 space-y-6">
+    <div className="p-4 md:p-6 space-y-6 pb-44">
       <PageBreadcrumb title="Bảng Chấm công" onBack={onBack} />
       <div className="flex items-center justify-between">
         <h2 className="text-lg font-bold text-gray-800 flex items-center gap-2">
@@ -3631,7 +3631,7 @@ const StockIn = ({ user, onBack }: { user: Employee, onBack?: () => void }) => {
   };
 
   return (
-    <div className="p-4 md:p-6 space-y-6">
+    <div className="p-4 md:p-6 space-y-6 pb-44">
       <PageBreadcrumb title="Nhập kho" onBack={onBack} />
       <div className="flex items-center justify-between">
         <div>
@@ -3825,7 +3825,7 @@ const StockOut = ({ user, onBack }: { user: Employee, onBack?: () => void }) => 
   };
 
   return (
-    <div className="p-4 md:p-6 space-y-6">
+    <div className="p-4 md:p-6 space-y-6 pb-44">
       <PageBreadcrumb title="Xuất kho" onBack={onBack} />
       <div className="flex items-center justify-between">
         <div>
@@ -4014,7 +4014,7 @@ const Transfer = ({ user, onBack }: { user: Employee, onBack?: () => void }) => 
   };
 
   return (
-    <div className="p-4 md:p-6 space-y-6">
+    <div className="p-4 md:p-6 space-y-6 pb-44">
       <PageBreadcrumb title="Luân chuyển kho" onBack={onBack} />
       <div className="flex items-center justify-between">
         <div>
@@ -4422,7 +4422,7 @@ export default function App() {
               transition={{ type: 'spring', damping: 25, stiffness: 200 }}
               className="bg-white border-r border-gray-200 overflow-y-auto flex-shrink-0 z-40 fixed lg:relative top-14 lg:top-0 h-[calc(100vh-3.5rem)] w-[280px] shadow-2xl lg:shadow-none"
             >
-              <div className="p-4 space-y-6">
+              <div className="p-4 space-y-6 pb-44 lg:pb-4">
                 <div className="flex items-center justify-between px-2">
                   <h2 className="text-xs font-bold text-gray-400 tracking-widest uppercase">Menu</h2>
                 </div>
@@ -4462,7 +4462,7 @@ export default function App() {
         </AnimatePresence>
 
         {/* Main Content */}
-        <main className="flex-1 overflow-y-auto relative bg-[#F8F9FA] pb-24 lg:pb-0">
+        <main className="flex-1 overflow-y-auto relative bg-[#F8F9FA] pb-44 lg:pb-0">
           {renderContent()}
           
           <footer className="p-4 text-center text-[10px] text-gray-400 border-t border-gray-100 mt-auto">

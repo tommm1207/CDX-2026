@@ -10,36 +10,36 @@ export default defineConfig(({mode}) => {
     plugins: [
       react(), 
       tailwindcss(),
-      VitePWA({
-        registerType: 'autoUpdate',
-        includeAssets: ['logo.png'],
-        manifest: {
-          name: 'Quản Lý Thi Công CDX',
-          short_name: 'CDX Admin',
-          description: 'Hệ thống Quản lý Kho & Nhân sự CDX',
-          theme_color: '#059669',
-          background_color: '#ffffff',
-          display: 'standalone',
-          icons: [
-            {
-              src: 'logo.png',
-              sizes: '192x192',
-              type: 'image/png'
-            },
-            {
-              src: 'logo.png',
-              sizes: '512x512',
-              type: 'image/png'
-            },
-            {
-              src: 'logo.png',
-              sizes: '512x512',
-              type: 'image/png',
-              purpose: 'any maskable'
-            }
-          ]
-        }
-      })
+      // VitePWA({
+      //   registerType: 'autoUpdate',
+      //   includeAssets: ['logo.png'],
+      //   manifest: {
+      //     name: 'Quản Lý Thi Công CDX',
+      //     short_name: 'CDX Admin',
+      //     description: 'Hệ thống Quản lý Kho & Nhân sự CDX',
+      //     theme_color: '#059669',
+      //     background_color: '#ffffff',
+      //     display: 'standalone',
+      //     icons: [
+      //       {
+      //         src: 'logo.png',
+      //         sizes: '192x192',
+      //         type: 'image/png'
+      //       },
+      //       {
+      //         src: 'logo.png',
+      //         sizes: '512x512',
+      //         type: 'image/png'
+      //       },
+      //       {
+      //         src: 'logo.png',
+      //         sizes: '512x512',
+      //         type: 'image/png',
+      //         purpose: 'any maskable'
+      //       }
+      //     ]
+      //   }
+      // })
     ],
     define: {
       'process.env.GEMINI_API_KEY': JSON.stringify(env.GEMINI_API_KEY),

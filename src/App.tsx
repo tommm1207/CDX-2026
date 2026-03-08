@@ -27,6 +27,7 @@ import {
   Layers, 
   Handshake,
   Plus,
+  RefreshCw,
   Minus,
   PlusCircle,
   Search,
@@ -43,6 +44,7 @@ import {
   FileText,
   Save,
   ArrowLeft,
+  ArrowRight,
   ChevronRight,
   Filter,
   Calculator,
@@ -230,7 +232,7 @@ const LoginPage = ({ onLogin }: { onLogin: (user: Employee) => void }) => {
 const SidebarItem = ({ icon: Icon, label, active, onClick, badge }: any) => (
   <button 
     onClick={onClick}
-    className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-xl transition-all duration-200 group ${
+    className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-xl transition-all duration-200 group relative ${
       active 
         ? 'bg-primary-light text-primary font-semibold' 
         : 'text-gray-500 hover:bg-gray-50 hover:text-gray-900'
@@ -238,7 +240,11 @@ const SidebarItem = ({ icon: Icon, label, active, onClick, badge }: any) => (
   >
     <Icon size={20} className={active ? 'text-primary' : 'text-gray-400 group-hover:text-gray-600'} />
     <span className="text-sm flex-1 text-left">{label}</span>
-    {badge && <span className="bg-red-500 text-white text-[10px] px-1.5 py-0.5 rounded-full">{badge}</span>}
+    {badge !== undefined && badge > 0 && (
+      <span className="bg-red-600 text-white text-[10px] font-black px-2 py-0.5 rounded-full shadow-md shadow-red-500/20 border border-white/50">
+        {badge}
+      </span>
+    )}
   </button>
 );
 
@@ -3657,6 +3663,9 @@ const Dashboard = ({ user, onNavigate }: { user: Employee, onNavigate: (page: st
     pendingSlips: 0
   });
   const [loading, setLoading] = useState(true);
+  const [hasClockedIn, setHasClockedIn] = useState(false);
+
+  const [inventory, setInventory] = useState<any[]>([]);
 
   useEffect(() => {
     const fetchCounts = async () => {
@@ -3665,19 +3674,18 @@ const Dashboard = ({ user, onNavigate }: { user: Employee, onNavigate: (page: st
         // Fetch Employees
         const { count: empCount } = await supabase.from('users').select('*', { count: 'exact', head: true });
         
-        // Fetch Materials (Vật tư link với danh mục vật tư)
+        // Fetch Materials
         const { count: matCount } = await supabase.from('materials').select('*', { count: 'exact', head: true });
         
-        // Fetch Warehouses (Kho link với danh sách kho)
+        // Fetch Warehouses
         const { count: whCount } = await supabase.from('warehouses').select('*', { count: 'exact', head: true });
         
-        // Fetch Slips (Phiếu NX link với các phiếu báo cáo kho)
+        // Fetch Slips
         const { count: siCount } = await supabase.from('stock_in').select('*', { count: 'exact', head: true });
         const { count: soCount } = await supabase.from('stock_out').select('*', { count: 'exact', head: true });
         const { count: trCount } = await supabase.from('transfers').select('*', { count: 'exact', head: true });
-        const { count: adjCount } = await supabase.from('adjustments').select('*', { count: 'exact', head: true });
         
-        // Fetch Pending Slips (Chờ duyệt)
+        // Fetch Pending Slips
         const [siP, soP, trP] = await Promise.all([
           supabase.from('stock_in').select('*', { count: 'exact', head: true }).eq('status', 'Chờ duyệt'),
           supabase.from('stock_out').select('*', { count: 'exact', head: true }).eq('status', 'Chờ duyệt'),
@@ -3688,23 +3696,57 @@ const Dashboard = ({ user, onNavigate }: { user: Employee, onNavigate: (page: st
           employees: empCount || 0,
           materials: matCount || 0,
           warehouses: whCount || 0,
-          slips: (siCount || 0) + (soCount || 0) + (trCount || 0) + (adjCount || 0),
+          slips: (siCount || 0) + (soCount || 0) + (trCount || 0),
           pendingSlips: (siP.count || 0) + (soP.count || 0) + (trP.count || 0)
         });
+
+        // Fetch Inventory Data for Quick View
+        const { data: materials } = await supabase.from('materials').select('id, name, unit').limit(10);
+        if (materials) {
+          const [si, so, tr_out, tr_in] = await Promise.all([
+            supabase.from('stock_in').select('material_id, quantity').eq('status', 'Đã duyệt'),
+            supabase.from('stock_out').select('material_id, quantity').eq('status', 'Đã duyệt'),
+            supabase.from('transfers').select('material_id, quantity').eq('status', 'Đã duyệt'),
+            supabase.from('transfers').select('material_id, quantity').eq('status', 'Đã duyệt')
+          ]);
+
+          const invData = materials.map(mat => {
+            const matIn = (si.data || []).filter(i => i.material_id === mat.id).reduce((s, i) => s + i.quantity, 0);
+            const matOut = (so.data || []).filter(i => i.material_id === mat.id).reduce((s, i) => s + i.quantity, 0);
+            const matTrOut = (tr_out.data || []).filter(i => i.material_id === mat.id).reduce((s, i) => s + i.quantity, 0);
+            const matTrIn = (tr_in.data || []).filter(i => i.material_id === mat.id).reduce((s, i) => s + i.quantity, 0);
+            return { ...mat, balance: (matIn + matTrIn) - (matOut + matTrOut) };
+          });
+          setInventory(invData);
+        }
+
+        // Check attendance
+        const today = new Date().toISOString().split('T')[0];
+        const { data: attData } = await supabase.from('attendance').select('*').eq('employee_id', user.id).eq('date', today).maybeSingle();
+        setHasClockedIn(!!attData);
+
       } catch (error) {
-        console.error('Error fetching dashboard counts:', error);
+        console.error('Error fetching dashboard data:', error);
       } finally {
         setLoading(false);
       }
     };
     fetchCounts();
-  }, []);
+  }, [user.id]);
 
   const stats: any[] = [
     { label: 'NHÂN SỰ', value: counts.employees, icon: Users, color: 'bg-blue-50 text-blue-600', page: 'hr-records' },
     { label: 'VẬT TƯ', value: counts.materials, icon: Package, color: 'bg-green-50 text-green-600', page: 'materials' },
     { label: 'KHO BÃI', value: counts.warehouses, icon: Warehouse, color: 'bg-orange-50 text-orange-600', page: 'warehouses' },
-    { label: 'PHIẾU DUYỆT', value: counts.pendingSlips, icon: ClipboardCheck, color: 'bg-purple-50 text-purple-600', page: 'pending-approvals' },
+    (user.role === 'Admin' || user.role === 'Admin App')
+      ? { label: 'PHIẾU DUYỆT', value: counts.pendingSlips, icon: ClipboardCheck, color: 'bg-purple-50 text-purple-600', page: 'pending-approvals' }
+      : { 
+          label: 'CHẤM CÔNG', 
+          value: hasClockedIn ? 'ĐÃ CHẤM' : 'CHƯA CHẤM', 
+          icon: CalendarCheck, 
+          color: hasClockedIn ? 'bg-green-50 text-green-600' : 'bg-red-50 text-red-600', 
+          page: 'attendance' 
+        },
   ];
 
   const sections = [
@@ -3722,7 +3764,7 @@ const Dashboard = ({ user, onNavigate }: { user: Employee, onNavigate: (page: st
         { label: 'Nhập kho', icon: ArrowDownCircle, page: 'stock-in' },
         { label: 'Xuất kho', icon: ArrowUpCircle, page: 'stock-out' },
         { label: 'Luân chuyển kho', icon: ArrowLeftRight, page: 'transfer' },
-        { label: 'Báo cáo nhập xuất tồn', icon: BarChart3, page: 'inventory-report' },
+        { label: 'Kiểm tra tồn kho', icon: BarChart3, page: 'inventory-report' },
         { label: 'Danh sách kho', icon: Warehouse, page: 'warehouses' },
         { label: 'Thư viện vật tư', icon: Settings, page: 'materials' },
       ]
@@ -3757,7 +3799,7 @@ const Dashboard = ({ user, onNavigate }: { user: Employee, onNavigate: (page: st
     ...section,
     items: section.items.filter(item => {
       if (user.role === 'User') {
-        const allowed = ['stock-in', 'stock-out', 'transfer', 'inventory-report', 'attendance', 'cost-report'];
+        const allowed = ['stock-in', 'stock-out', 'transfer', 'attendance', 'cost-report'];
         return allowed.includes(item.page);
       }
       return true;
@@ -3792,7 +3834,7 @@ const Dashboard = ({ user, onNavigate }: { user: Employee, onNavigate: (page: st
 
       {filteredSections.map((section, sIdx) => (
         <div key={sIdx}>
-          <h2 className="text-xs font-bold text-primary mb-4 flex items-center gap-2">
+          <h2 className="text-xs font-bold text-primary mb-4 flex items-center gap-2 uppercase tracking-wider">
             <Boxes size={16} /> {section.title}
           </h2>
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
@@ -3812,11 +3854,59 @@ const Dashboard = ({ user, onNavigate }: { user: Employee, onNavigate: (page: st
           </div>
         </div>
       ))}
+
+      {/* Quick Inventory Section */}
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <h2 className="text-xs font-bold text-primary flex items-center gap-2 uppercase tracking-wider">
+            <Package size={16} /> TỒN KHO NHANH
+          </h2>
+          <button 
+            onClick={() => onNavigate('inventory-report')}
+            className="text-[10px] font-bold text-primary hover:underline flex items-center gap-1"
+          >
+            Xem tất cả <ArrowRight size={12} />
+          </button>
+        </div>
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse">
+              <thead>
+                <tr className="bg-gray-50/50">
+                  <th className="px-6 py-3 text-[10px] font-bold text-gray-400 uppercase tracking-wider">Vật tư</th>
+                  <th className="px-6 py-3 text-[10px] font-bold text-gray-400 uppercase tracking-wider text-right">Tồn kho</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-50">
+                {loading ? (
+                  <tr><td colSpan={2} className="px-6 py-8 text-center text-gray-400 italic text-xs">Đang tải...</td></tr>
+                ) : inventory.length === 0 ? (
+                  <tr><td colSpan={2} className="px-6 py-8 text-center text-gray-400 italic text-xs">Chưa có dữ liệu tồn kho</td></tr>
+                ) : (
+                  inventory.map((item) => (
+                    <tr key={item.id} className="hover:bg-gray-50/50 transition-colors">
+                      <td className="px-6 py-3">
+                        <div className="text-xs font-bold text-gray-800">{item.name}</div>
+                        <div className="text-[9px] text-gray-400">{item.unit}</div>
+                      </td>
+                      <td className="px-6 py-3 text-right">
+                        <span className={`text-xs font-bold ${item.balance <= 5 ? 'text-red-600' : 'text-green-600'}`}>
+                          {formatNumber(item.balance)}
+                        </span>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
     </div>
   );
 };
 
-const PendingApprovals = ({ user, onBack, onNavigate }: { user: Employee, onBack: () => void, onNavigate: (page: string, params?: any) => void }) => {
+const PendingApprovals = ({ user, onBack, onNavigate, onRefreshCount }: { user: Employee, onBack: () => void, onNavigate: (page: string, params?: any) => void, onRefreshCount?: () => void }) => {
   const [pendingSlips, setPendingSlips] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -3833,9 +3923,24 @@ const PendingApprovals = ({ user, onBack, onNavigate }: { user: Employee, onBack
         supabase.from('transfers').select('*, from_wh:warehouses!from_warehouse_id(name), to_wh:warehouses!to_warehouse_id(name), materials(name, unit)').eq('status', 'Chờ duyệt')
       ]);
 
-      const siData = (si.data || []).map(item => ({ ...item, type: 'Nhập kho', table: 'stock_in' }));
-      const soData = (so.data || []).map(item => ({ ...item, type: 'Xuất kho', table: 'stock_out' }));
-      const trData = (tr.data || []).map(item => ({ ...item, type: 'Luân chuyển', table: 'transfers' }));
+      const siData = (si.data || []).map(item => ({ 
+        ...item, 
+        type: 'Nhập kho', 
+        table: 'stock_in',
+        isEdit: item.notes?.startsWith('[SỬA]')
+      }));
+      const soData = (so.data || []).map(item => ({ 
+        ...item, 
+        type: 'Xuất kho', 
+        table: 'stock_out',
+        isEdit: item.notes?.startsWith('[SỬA]')
+      }));
+      const trData = (tr.data || []).map(item => ({ 
+        ...item, 
+        type: 'Luân chuyển', 
+        table: 'transfers',
+        isEdit: item.notes?.startsWith('[SỬA]')
+      }));
 
       setPendingSlips([...siData, ...soData, ...trData].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()));
     } catch (err: any) {
@@ -3847,9 +3952,12 @@ const PendingApprovals = ({ user, onBack, onNavigate }: { user: Employee, onBack
 
   const handleApprove = async (id: string, status: string, table: string) => {
     try {
-      const { error } = await supabase.from(table).update({ status }).eq('id', id);
+      // Nếu từ chối thì chuyển sang trạng thái Đã xóa để vào thùng rác
+      const finalStatus = status === 'Từ chối' ? 'Đã xóa' : status;
+      const { error } = await supabase.from(table).update({ status: finalStatus }).eq('id', id);
       if (error) throw error;
       fetchPendingSlips();
+      if (onRefreshCount) onRefreshCount();
     } catch (err: any) {
       alert('Lỗi: ' + err.message);
     }
@@ -3892,13 +4000,20 @@ const PendingApprovals = ({ user, onBack, onNavigate }: { user: Employee, onBack
                 pendingSlips.map((slip) => (
                   <tr key={slip.id} className="hover:bg-gray-50/50 transition-colors">
                     <td className="px-6 py-4">
-                      <span className={`px-2 py-1 rounded-lg text-[10px] font-bold ${
-                        slip.type === 'Nhập kho' ? 'bg-blue-50 text-blue-600' :
-                        slip.type === 'Xuất kho' ? 'bg-orange-50 text-orange-600' :
-                        'bg-purple-50 text-purple-600'
-                      }`}>
-                        {slip.type}
-                      </span>
+                      <div className="flex flex-col gap-1">
+                        <span className={`px-2 py-1 rounded-lg text-[10px] font-bold w-fit ${
+                          slip.type === 'Nhập kho' ? 'bg-blue-50 text-blue-600' :
+                          slip.type === 'Xuất kho' ? 'bg-orange-50 text-orange-600' :
+                          'bg-purple-50 text-purple-600'
+                        }`}>
+                          {slip.type}
+                        </span>
+                        <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-md w-fit ${
+                          slip.isEdit ? 'bg-amber-100 text-amber-700' : 'bg-green-100 text-green-700'
+                        }`}>
+                          {slip.isEdit ? 'SỬA PHIẾU' : 'NHẬP MỚI'}
+                        </span>
+                      </div>
                     </td>
                     <td className="px-6 py-4">
                       <div className="text-sm font-bold text-gray-800">{formatDate(slip.date)}</div>
@@ -4318,16 +4433,18 @@ const HRRecords = ({ user, onBack }: { user: Employee, onBack?: () => void }) =>
                           className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20" 
                         />
                       </div>
-                      <div className="space-y-1">
-                        <label className="text-[10px] font-bold text-gray-400 uppercase">Mật khẩu ứng dụng</label>
-                        <input 
-                          required
-                          type="text" 
-                          value={formData.app_pass}
-                          onChange={(e) => setFormData({...formData, app_pass: e.target.value})}
-                          className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20" 
-                        />
-                      </div>
+                      {user.role === 'Admin App' && (
+                        <div className="space-y-1">
+                          <label className="text-[10px] font-bold text-gray-400 uppercase">Mật khẩu ứng dụng</label>
+                          <input 
+                            required
+                            type="text" 
+                            value={formData.app_pass}
+                            onChange={(e) => setFormData({...formData, app_pass: e.target.value})}
+                            className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20" 
+                          />
+                        </div>
+                      )}
                       <div className="space-y-1">
                         <label className="text-[10px] font-bold text-gray-400 uppercase">Bộ phận</label>
                         <input 
@@ -4513,6 +4630,10 @@ const Attendance = ({ user, onBack }: { user: Employee, onBack?: () => void }) =
 
   const confirmDelete = async () => {
     if (!itemToDelete) return;
+    if (user.role !== 'Admin' && user.role !== 'Admin App') {
+      alert('Bạn không có quyền xóa dữ liệu chấm công');
+      return;
+    }
     try {
       const { error } = await supabase.from('attendance').delete().eq('id', itemToDelete);
       if (error) throw error;
@@ -4526,6 +4647,10 @@ const Attendance = ({ user, onBack }: { user: Employee, onBack?: () => void }) =
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
+    if (user.role !== 'Admin' && user.role !== 'Admin App') {
+      alert('Bạn không có quyền thực hiện thao tác này');
+      return;
+    }
     setSubmitting(true);
     try {
       if (isEditing && editingId) {
@@ -4573,17 +4698,19 @@ const Attendance = ({ user, onBack }: { user: Employee, onBack?: () => void }) =
         <h2 className="text-lg font-bold text-gray-800 flex items-center gap-2">
           <CalendarCheck size={20} className="text-primary" /> Bảng Chấm công
         </h2>
-        <button 
-          onClick={() => {
-            setFormData(initialFormState);
-            setIsEditing(false);
-            setEditingId(null);
-            setShowModal(true);
-          }}
-          className="bg-primary text-white px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 hover:bg-primary-hover transition-colors"
-        >
-          <Plus size={18} /> Thêm mới
-        </button>
+        {(user.role === 'Admin' || user.role === 'Admin App') && (
+          <button 
+            onClick={() => {
+              setFormData(initialFormState);
+              setIsEditing(false);
+              setEditingId(null);
+              setShowModal(true);
+            }}
+            className="bg-primary text-white px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 hover:bg-primary-hover transition-colors"
+          >
+            <Plus size={18} /> Thêm mới
+          </button>
+        )}
       </div>
 
       <div className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100">
@@ -4613,7 +4740,7 @@ const Attendance = ({ user, onBack }: { user: Employee, onBack?: () => void }) =
                 <th className="p-3">Kho làm việc</th>
                 <th className="p-3">Nội dung</th>
                 <th className="p-3">Tổng tiền</th>
-                <th className="p-3 last:rounded-tr-lg">Thao tác</th>
+                {(user.role === 'Admin' || user.role === 'Admin App') && <th className="p-3 last:rounded-tr-lg">Thao tác</th>}
               </tr>
             </thead>
             <tbody className="text-xs text-gray-600">
@@ -4631,22 +4758,24 @@ const Attendance = ({ user, onBack }: { user: Employee, onBack?: () => void }) =
                   <td className="p-3">{item.workplace}</td>
                   <td className="p-3">{item.work_content}</td>
                   <td className="p-3 font-bold text-primary">{item.daily_total_pay?.toLocaleString()}đ</td>
-                  <td className="p-3">
-                    <div className="flex gap-2">
-                      <button 
-                        onClick={() => handleEdit(item)}
-                        className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                      >
-                        <Edit size={14} />
-                      </button>
-                      <button 
-                        onClick={() => handleDeleteClick(item.id)}
-                        className="p-1.5 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                      >
-                        <Trash2 size={14} />
-                      </button>
-                    </div>
-                  </td>
+                  {(user.role === 'Admin' || user.role === 'Admin App') && (
+                    <td className="p-3">
+                      <div className="flex gap-2">
+                        <button 
+                          onClick={() => handleEdit(item)}
+                          className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                        >
+                          <Edit size={14} />
+                        </button>
+                        <button 
+                          onClick={() => handleDeleteClick(item.id)}
+                          className="p-1.5 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      </div>
+                    </td>
+                  )}
                 </tr>
               ))}
             </tbody>
@@ -4917,7 +5046,8 @@ const StockIn = ({ user, onBack, initialStatus }: { user: Employee, onBack?: () 
         employee_id: user.id,
         total_amount: formData.quantity * formData.unit_price,
         unit: formData.unit || mat?.unit || '',
-        status: 'Chờ duyệt'
+        status: 'Chờ duyệt',
+        notes: isEditing ? `[SỬA] ${formData.notes}` : formData.notes
       };
 
       if (isEditing && selectedSlip) {
@@ -5151,7 +5281,7 @@ const StockIn = ({ user, onBack, initialStatus }: { user: Employee, onBack?: () 
                 >
                   <Edit size={16} /> Sửa phiếu
                 </button>
-                {user.role === 'Admin' && selectedSlip.status === 'Chờ duyệt' && (
+                {(user.role === 'Admin' || user.role === 'Admin App') && selectedSlip.status === 'Chờ duyệt' && (
                   <>
                     <button 
                       onClick={() => handleApprove(selectedSlip.id, 'Từ chối')}
@@ -5298,16 +5428,20 @@ const StockOut = ({ user, onBack }: { user: Employee, onBack?: () => void }) => 
   const [slips, setSlips] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
+  const [showDetailModal, setShowDetailModal] = useState(false);
+  const [selectedSlip, setSelectedSlip] = useState<any>(null);
   const [warehouses, setWarehouses] = useState<any[]>([]);
   const [materials, setMaterials] = useState<any[]>([]);
   const [submitting, setSubmitting] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
 
   const initialFormState = {
     date: new Date().toISOString().split('T')[0],
     warehouse_id: '',
     material_id: '',
     quantity: 0,
-    notes: ''
+    notes: '',
+    status: 'Chờ duyệt'
   };
 
   const [formData, setFormData] = useState(initialFormState);
@@ -5320,7 +5454,7 @@ const StockOut = ({ user, onBack }: { user: Employee, onBack?: () => void }) => 
 
   const fetchSlips = async () => {
     setLoading(true);
-    const { data } = await supabase.from('stock_out').select('*, warehouses(name), materials(name)').order('created_at', { ascending: false });
+    const { data } = await supabase.from('stock_out').select('*, warehouses(name), materials(name, unit)').order('created_at', { ascending: false });
     if (data) setSlips(data);
     setLoading(false);
   };
@@ -5342,21 +5476,51 @@ const StockOut = ({ user, onBack }: { user: Employee, onBack?: () => void }) => 
       const wh = warehouses.find(w => w.name === formData.warehouse_id || w.id === formData.warehouse_id);
       const mat = materials.find(m => m.name === formData.material_id || m.id === formData.material_id);
 
-      const { error } = await supabase.from('stock_out').insert([{
+      const payload = {
         ...formData,
         warehouse_id: wh?.id || formData.warehouse_id,
         material_id: mat?.id || formData.material_id,
-        employee_id: user.id
-      }]);
-      if (error) throw error;
+        employee_id: user.id,
+        status: 'Chờ duyệt',
+        notes: isEditing ? `[SỬA] ${formData.notes}` : formData.notes
+      };
+
+      if (isEditing && selectedSlip) {
+        const { error } = await supabase.from('stock_out').update(payload).eq('id', selectedSlip.id);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase.from('stock_out').insert([payload]);
+        if (error) throw error;
+      }
+
       setShowModal(false);
       fetchSlips();
       setFormData(initialFormState);
+      setIsEditing(false);
     } catch (err: any) {
       alert('Lỗi: ' + err.message);
     } finally {
       setSubmitting(false);
     }
+  };
+
+  const handleRowClick = (slip: any) => {
+    setSelectedSlip(slip);
+    setShowDetailModal(true);
+  };
+
+  const handleEdit = () => {
+    setFormData({
+      date: selectedSlip.date,
+      warehouse_id: selectedSlip.warehouse_id,
+      material_id: selectedSlip.material_id,
+      quantity: selectedSlip.quantity,
+      notes: selectedSlip.notes?.replace('[SỬA] ', '') || '',
+      status: 'Chờ duyệt'
+    });
+    setIsEditing(true);
+    setShowDetailModal(false);
+    setShowModal(true);
   };
 
   return (
@@ -5395,18 +5559,91 @@ const StockOut = ({ user, onBack }: { user: Employee, onBack?: () => void }) => 
               <tr><td colSpan={5} className="px-4 py-8 text-center text-gray-400 italic">Chưa có phiếu xuất nào</td></tr>
             ) : (
               slips.map((item) => (
-                <tr key={item.id} className="hover:bg-gray-50 transition-colors">
+                <tr key={item.id} onClick={() => handleRowClick(item)} className="hover:bg-gray-50 transition-colors cursor-pointer">
                   <td className="px-4 py-3 text-xs text-gray-600">{new Date(item.date).toLocaleDateString('vi-VN')}</td>
                   <td className="px-4 py-3 text-xs text-gray-600 font-medium">{item.warehouses?.name}</td>
                   <td className="px-4 py-3 text-xs text-gray-600">{item.materials?.name}</td>
                   <td className="px-4 py-3 text-xs text-red-600 text-center font-bold">-{item.quantity}</td>
-                  <td className="px-4 py-3 text-xs text-gray-400 italic">{item.notes}</td>
+                  <td className="px-4 py-3 text-xs">
+                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                      item.status === 'Đã duyệt' ? 'bg-green-100 text-green-600' :
+                      item.status === 'Từ chối' ? 'bg-red-100 text-red-600' : 'bg-amber-100 text-amber-600'
+                    }`}>
+                      {item.status || 'Chờ duyệt'}
+                    </span>
+                  </td>
                 </tr>
               ))
             )}
           </tbody>
         </table>
       </div>
+
+      <AnimatePresence>
+        {showDetailModal && selectedSlip && (
+          <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="bg-white rounded-3xl shadow-2xl w-full max-w-lg overflow-hidden"
+            >
+              <div className="bg-red-600 p-6 text-white flex items-center justify-between">
+                <h3 className="font-bold text-lg">Chi tiết phiếu xuất</h3>
+                <button onClick={() => setShowDetailModal(false)} className="p-2 hover:bg-white/10 rounded-full transition-colors"><X size={20} /></button>
+              </div>
+              <div className="p-6 space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <p className="text-[10px] font-bold text-gray-400 uppercase">Ngày xuất</p>
+                    <p className="text-sm font-bold text-gray-800">{formatDate(selectedSlip.date)}</p>
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-bold text-gray-400 uppercase">Trạng thái</p>
+                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                      selectedSlip.status === 'Đã duyệt' ? 'bg-green-100 text-green-600' :
+                      selectedSlip.status === 'Từ chối' ? 'bg-red-100 text-red-600' : 'bg-amber-100 text-amber-600'
+                    }`}>
+                      {selectedSlip.status || 'Chờ duyệt'}
+                    </span>
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-bold text-gray-400 uppercase">Kho xuất</p>
+                    <p className="text-sm font-bold text-gray-800">{selectedSlip.warehouses?.name}</p>
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-bold text-gray-400 uppercase">Vật tư</p>
+                    <p className="text-sm font-bold text-gray-800">{selectedSlip.materials?.name}</p>
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-bold text-gray-400 uppercase">Số lượng</p>
+                    <p className="text-sm font-bold text-red-600">-{formatNumber(selectedSlip.quantity)}</p>
+                  </div>
+                </div>
+                <div>
+                  <p className="text-[10px] font-bold text-gray-400 uppercase">Ghi chú</p>
+                  <p className="text-sm text-gray-600 italic">{selectedSlip.notes || 'Không có ghi chú'}</p>
+                </div>
+                
+                <div className="flex gap-3 pt-4 border-t border-gray-100">
+                  <button 
+                    onClick={handleEdit}
+                    className="flex-1 flex items-center justify-center gap-2 py-2 bg-blue-50 text-blue-600 rounded-xl text-sm font-bold hover:bg-blue-100 transition-colors"
+                  >
+                    <Edit size={18} /> Chỉnh sửa
+                  </button>
+                  <button 
+                    onClick={() => setShowDetailModal(false)}
+                    className="flex-1 py-2 bg-gray-100 text-gray-500 rounded-xl text-sm font-bold hover:bg-gray-200 transition-colors"
+                  >
+                    Đóng
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
 
       <AnimatePresence>
         {showModal && (
@@ -5484,9 +5721,13 @@ const Transfer = ({ user, onBack }: { user: Employee, onBack?: () => void }) => 
   const [slips, setSlips] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
+  const [showDetailModal, setShowDetailModal] = useState(false);
+  const [selectedSlip, setSelectedSlip] = useState<any>(null);
   const [warehouses, setWarehouses] = useState<any[]>([]);
   const [materials, setMaterials] = useState<any[]>([]);
   const [submitting, setSubmitting] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [availableStock, setAvailableStock] = useState<number | null>(null);
 
   const initialFormState = {
     date: new Date().toISOString().split('T')[0],
@@ -5494,7 +5735,8 @@ const Transfer = ({ user, onBack }: { user: Employee, onBack?: () => void }) => 
     to_warehouse_id: '',
     material_id: '',
     quantity: 0,
-    notes: ''
+    notes: '',
+    status: 'Chờ duyệt'
   };
 
   const [formData, setFormData] = useState(initialFormState);
@@ -5505,9 +5747,40 @@ const Transfer = ({ user, onBack }: { user: Employee, onBack?: () => void }) => 
     fetchMaterials();
   }, []);
 
+  useEffect(() => {
+    if (formData.from_warehouse_id && formData.material_id) {
+      checkStock();
+    } else {
+      setAvailableStock(null);
+    }
+  }, [formData.from_warehouse_id, formData.material_id]);
+
+  const checkStock = async () => {
+    try {
+      const fromWh = warehouses.find(w => w.name === formData.from_warehouse_id || w.id === formData.from_warehouse_id);
+      const mat = materials.find(m => m.name === formData.material_id || m.id === formData.material_id);
+      
+      if (!fromWh?.id || !mat?.id) return;
+
+      const [si, so, tr_out, tr_in] = await Promise.all([
+        supabase.from('stock_in').select('quantity').eq('warehouse_id', fromWh.id).eq('material_id', mat.id).eq('status', 'Đã duyệt'),
+        supabase.from('stock_out').select('quantity').eq('warehouse_id', fromWh.id).eq('material_id', mat.id).eq('status', 'Đã duyệt'),
+        supabase.from('transfers').select('quantity').eq('from_warehouse_id', fromWh.id).eq('material_id', mat.id).eq('status', 'Đã duyệt'),
+        supabase.from('transfers').select('quantity').eq('to_warehouse_id', fromWh.id).eq('material_id', mat.id).eq('status', 'Đã duyệt')
+      ]);
+
+      const totalIn = (si.data || []).reduce((sum, item) => sum + item.quantity, 0) + (tr_in.data || []).reduce((sum, item) => sum + item.quantity, 0);
+      const totalOut = (so.data || []).reduce((sum, item) => sum + item.quantity, 0) + (tr_out.data || []).reduce((sum, item) => sum + item.quantity, 0);
+      
+      setAvailableStock(totalIn - totalOut);
+    } catch (err) {
+      console.error('Error checking stock:', err);
+    }
+  };
+
   const fetchSlips = async () => {
     setLoading(true);
-    const { data } = await supabase.from('transfers').select('*, from_wh:warehouses!from_warehouse_id(name), to_wh:warehouses!to_warehouse_id(name), materials(name)').order('created_at', { ascending: false });
+    const { data } = await supabase.from('transfers').select('*, from_wh:warehouses!from_warehouse_id(name), to_wh:warehouses!to_warehouse_id(name), materials(name, unit)').neq('status', 'Đã xóa').order('created_at', { ascending: false });
     if (data) setSlips(data);
     setLoading(false);
   };
@@ -5524,27 +5797,74 @@ const Transfer = ({ user, onBack }: { user: Employee, onBack?: () => void }) => 
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
+    if (availableStock !== null && formData.quantity > availableStock) {
+      alert(`Số lượng chuyển (${formData.quantity}) vượt quá tồn kho hiện tại (${availableStock})`);
+      return;
+    }
     setSubmitting(true);
     try {
       const fromWh = warehouses.find(w => w.name === formData.from_warehouse_id || w.id === formData.from_warehouse_id);
       const toWh = warehouses.find(w => w.name === formData.to_warehouse_id || w.id === formData.to_warehouse_id);
       const mat = materials.find(m => m.name === formData.material_id || m.id === formData.material_id);
 
-      const { error } = await supabase.from('transfers').insert([{
+      const payload = {
         ...formData,
         from_warehouse_id: fromWh?.id || formData.from_warehouse_id,
         to_warehouse_id: toWh?.id || formData.to_warehouse_id,
         material_id: mat?.id || formData.material_id,
-        employee_id: user.id
-      }]);
-      if (error) throw error;
+        employee_id: user.id,
+        status: 'Chờ duyệt',
+        notes: isEditing ? `[SỬA] ${formData.notes}` : formData.notes
+      };
+
+      if (isEditing && selectedSlip) {
+        const { error } = await supabase.from('transfers').update(payload).eq('id', selectedSlip.id);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase.from('transfers').insert([payload]);
+        if (error) throw error;
+      }
+
       setShowModal(false);
       fetchSlips();
       setFormData(initialFormState);
+      setIsEditing(false);
     } catch (err: any) {
       alert('Lỗi: ' + err.message);
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  const handleRowClick = (slip: any) => {
+    setSelectedSlip(slip);
+    setShowDetailModal(true);
+  };
+
+  const handleEdit = () => {
+    setFormData({
+      date: selectedSlip.date,
+      from_warehouse_id: selectedSlip.from_warehouse_id,
+      to_warehouse_id: selectedSlip.to_warehouse_id,
+      material_id: selectedSlip.material_id,
+      quantity: selectedSlip.quantity,
+      notes: selectedSlip.notes?.replace('[SỬA] ', '') || '',
+      status: 'Chờ duyệt'
+    });
+    setIsEditing(true);
+    setShowDetailModal(false);
+    setShowModal(true);
+  };
+
+  const handleDelete = async () => {
+    if (!selectedSlip || !confirm('Bạn có chắc chắn muốn xóa phiếu này?')) return;
+    try {
+      const { error } = await supabase.from('transfers').update({ status: 'Đã xóa' }).eq('id', selectedSlip.id);
+      if (error) throw error;
+      setShowDetailModal(false);
+      fetchSlips();
+    } catch (err: any) {
+      alert('Lỗi: ' + err.message);
     }
   };
 
@@ -5584,18 +5904,102 @@ const Transfer = ({ user, onBack }: { user: Employee, onBack?: () => void }) => 
               <tr><td colSpan={5} className="px-4 py-8 text-center text-gray-400 italic">Chưa có phiếu chuyển nào</td></tr>
             ) : (
               slips.map((item) => (
-                <tr key={item.id} className="hover:bg-gray-50 transition-colors">
+                <tr key={item.id} onClick={() => handleRowClick(item)} className="hover:bg-gray-50 transition-colors cursor-pointer">
                   <td className="px-4 py-3 text-xs text-gray-600">{new Date(item.date).toLocaleDateString('vi-VN')}</td>
                   <td className="px-4 py-3 text-xs text-gray-600">{item.from_wh?.name}</td>
                   <td className="px-4 py-3 text-xs text-gray-600">{item.to_wh?.name}</td>
                   <td className="px-4 py-3 text-xs text-gray-600 font-medium">{item.materials?.name}</td>
                   <td className="px-4 py-3 text-xs text-orange-600 text-center font-bold">{item.quantity}</td>
+                  <td className="px-4 py-3 text-xs">
+                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                      item.status === 'Đã duyệt' ? 'bg-green-100 text-green-600' :
+                      item.status === 'Từ chối' ? 'bg-red-100 text-red-600' : 'bg-amber-100 text-amber-600'
+                    }`}>
+                      {item.status || 'Chờ duyệt'}
+                    </span>
+                  </td>
                 </tr>
               ))
             )}
           </tbody>
         </table>
       </div>
+
+      <AnimatePresence>
+        {showDetailModal && selectedSlip && (
+          <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="bg-white rounded-3xl shadow-2xl w-full max-w-lg overflow-hidden"
+            >
+              <div className="bg-orange-500 p-6 text-white flex items-center justify-between">
+                <h3 className="font-bold text-lg">Chi tiết phiếu điều chuyển</h3>
+                <button onClick={() => setShowDetailModal(false)} className="p-2 hover:bg-white/10 rounded-full transition-colors"><X size={20} /></button>
+              </div>
+              <div className="p-6 space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <p className="text-[10px] font-bold text-gray-400 uppercase">Ngày chuyển</p>
+                    <p className="text-sm font-bold text-gray-800">{formatDate(selectedSlip.date)}</p>
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-bold text-gray-400 uppercase">Trạng thái</p>
+                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                      selectedSlip.status === 'Đã duyệt' ? 'bg-green-100 text-green-600' :
+                      selectedSlip.status === 'Từ chối' ? 'bg-red-100 text-red-600' : 'bg-amber-100 text-amber-600'
+                    }`}>
+                      {selectedSlip.status || 'Chờ duyệt'}
+                    </span>
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-bold text-gray-400 uppercase">Từ kho</p>
+                    <p className="text-sm font-bold text-gray-800">{selectedSlip.from_wh?.name}</p>
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-bold text-gray-400 uppercase">Đến kho</p>
+                    <p className="text-sm font-bold text-gray-800">{selectedSlip.to_wh?.name}</p>
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-bold text-gray-400 uppercase">Vật tư</p>
+                    <p className="text-sm font-bold text-gray-800">{selectedSlip.materials?.name}</p>
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-bold text-gray-400 uppercase">Số lượng</p>
+                    <p className="text-sm font-bold text-orange-600">{formatNumber(selectedSlip.quantity)}</p>
+                  </div>
+                </div>
+                <div>
+                  <p className="text-[10px] font-bold text-gray-400 uppercase">Ghi chú</p>
+                  <p className="text-sm text-gray-600 italic">{selectedSlip.notes || 'Không có ghi chú'}</p>
+                </div>
+                
+                <div className="flex gap-3 pt-4 border-t border-gray-100">
+                  <button 
+                    onClick={handleEdit}
+                    className="flex-1 flex items-center justify-center gap-2 py-2 bg-blue-50 text-blue-600 rounded-xl text-sm font-bold hover:bg-blue-100 transition-colors"
+                  >
+                    <Edit size={18} /> Chỉnh sửa
+                  </button>
+                  <button 
+                    onClick={handleDelete}
+                    className="flex-1 flex items-center justify-center gap-2 py-2 bg-red-50 text-red-600 rounded-xl text-sm font-bold hover:bg-red-100 transition-colors"
+                  >
+                    <Trash2 size={18} /> Xóa phiếu
+                  </button>
+                  <button 
+                    onClick={() => setShowDetailModal(false)}
+                    className="flex-1 py-2 bg-gray-100 text-gray-500 rounded-xl text-sm font-bold hover:bg-gray-200 transition-colors"
+                  >
+                    Đóng
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
 
       <AnimatePresence>
         {showModal && (
@@ -5653,7 +6057,20 @@ const Transfer = ({ user, onBack }: { user: Employee, onBack?: () => void }) => 
 
                     <div className="space-y-1">
                       <label className="text-[10px] font-bold text-gray-400 uppercase">Số lượng chuyển *</label>
-                      <input type="number" required value={formData.quantity} onChange={(e) => setFormData({...formData, quantity: Number(e.target.value)})} className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-orange-500/20" />
+                      <div className="relative">
+                        <input 
+                          type="number" 
+                          required 
+                          value={formData.quantity} 
+                          onChange={(e) => setFormData({...formData, quantity: Number(e.target.value)})} 
+                          className={`w-full px-4 py-2 rounded-xl border ${availableStock !== null && formData.quantity > availableStock ? 'border-red-500 ring-2 ring-red-500/10' : 'border-gray-200'} text-sm outline-none focus:ring-2 focus:ring-orange-500/20`} 
+                        />
+                        {availableStock !== null && (
+                          <div className={`absolute -bottom-5 left-0 text-[10px] font-bold ${availableStock <= 0 ? 'text-red-500' : 'text-green-600'}`}>
+                            Tồn kho hiện tại: {formatNumber(availableStock)}
+                          </div>
+                        )}
+                      </div>
                     </div>
 
                     <div className="space-y-1">
@@ -5678,20 +6095,340 @@ const Transfer = ({ user, onBack }: { user: Employee, onBack?: () => void }) => 
   );
 };
 
-const BottomNav = ({ currentPage, onNavigate, user, pendingCount }: { currentPage: string, onNavigate: (page: string) => void, user: Employee, pendingCount: number }) => {
-  const navItems = [
-    { id: 'dashboard', label: 'Trang chủ', icon: Home },
-    { id: 'stock-in', label: 'Nhập kho', icon: ArrowDownCircle },
-    { id: 'stock-out', label: 'Xuất kho', icon: ArrowUpCircle },
-    { id: 'pending-approvals', label: 'Phiếu duyệt', icon: ClipboardCheck, badge: pendingCount },
-    { id: 'attendance', label: 'Chấm công', icon: CalendarCheck },
-  ].filter(item => {
-    if (user.role === 'User') {
-      const allowed = ['dashboard', 'stock-in', 'stock-out', 'attendance', 'pending-approvals'];
-      return allowed.includes(item.id);
+const InventoryReport = ({ user, onBack }: { user: Employee, onBack?: () => void }) => {
+  const [report, setReport] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [warehouses, setWarehouses] = useState<any[]>([]);
+  const [selectedWarehouse, setSelectedWarehouse] = useState<string>('');
+  const [viewMode, setViewMode] = useState<'material' | 'warehouse'>('material');
+
+  useEffect(() => {
+    fetchWarehouses();
+  }, []);
+
+  useEffect(() => {
+    fetchReport();
+  }, [selectedWarehouse, viewMode]);
+
+  const fetchWarehouses = async () => {
+    const { data } = await supabase.from('warehouses').select('*').order('name');
+    if (data) setWarehouses(data);
+  };
+
+  const fetchReport = async () => {
+    setLoading(true);
+    try {
+      const { data: materials } = await supabase.from('materials').select('*').order('name');
+      const { data: whs } = await supabase.from('warehouses').select('*').order('name');
+      if (!materials || !whs) return;
+
+      const [si, so, tr_out, tr_in] = await Promise.all([
+        supabase.from('stock_in').select('material_id, warehouse_id, quantity').eq('status', 'Đã duyệt'),
+        supabase.from('stock_out').select('material_id, warehouse_id, quantity').eq('status', 'Đã duyệt'),
+        supabase.from('transfers').select('material_id, from_warehouse_id, quantity').eq('status', 'Đã duyệt'),
+        supabase.from('transfers').select('material_id, to_warehouse_id, quantity').eq('status', 'Đã duyệt')
+      ]);
+
+      if (viewMode === 'material') {
+        const reportData = materials.map(mat => {
+          const filterByWh = (list: any[], key: string) => 
+            selectedWarehouse ? list.filter(item => item[key] === selectedWarehouse) : list;
+
+          const matIn = filterByWh(si.data || [], 'warehouse_id').filter(i => i.material_id === mat.id).reduce((s, i) => s + i.quantity, 0);
+          const matOut = filterByWh(so.data || [], 'warehouse_id').filter(i => i.material_id === mat.id).reduce((s, i) => s + i.quantity, 0);
+          const matTrOut = filterByWh(tr_out.data || [], 'from_warehouse_id').filter(i => i.material_id === mat.id).reduce((s, i) => s + i.quantity, 0);
+          const matTrIn = filterByWh(tr_in.data || [], 'to_warehouse_id').filter(i => i.material_id === mat.id).reduce((s, i) => s + i.quantity, 0);
+
+          const totalIn = matIn + matTrIn;
+          const totalOut = matOut + matTrOut;
+          const balance = totalIn - totalOut;
+
+          // Breakdown by warehouse
+          const breakdown = whs.map(wh => {
+            const whIn = (si.data || []).filter(i => i.warehouse_id === wh.id && i.material_id === mat.id).reduce((s, i) => s + i.quantity, 0);
+            const whOut = (so.data || []).filter(i => i.warehouse_id === wh.id && i.material_id === mat.id).reduce((s, i) => s + i.quantity, 0);
+            const whTrOut = (tr_out.data || []).filter(i => i.from_warehouse_id === wh.id && i.material_id === mat.id).reduce((s, i) => s + i.quantity, 0);
+            const whTrIn = (tr_in.data || []).filter(i => i.to_warehouse_id === wh.id && i.material_id === mat.id).reduce((s, i) => s + i.quantity, 0);
+            return { whName: wh.name, balance: (whIn + whTrIn) - (whOut + whTrOut) };
+          }).filter(b => b.balance !== 0);
+
+          return { ...mat, totalIn, totalOut, balance, breakdown };
+        }).filter(item => item.totalIn > 0 || item.totalOut > 0 || item.balance > 0);
+        setReport(reportData);
+      } else {
+        // Warehouse view
+        const reportData = whs.map(wh => {
+          const whMaterials = materials.map(mat => {
+            const whIn = (si.data || []).filter(i => i.warehouse_id === wh.id && i.material_id === mat.id).reduce((s, i) => s + i.quantity, 0);
+            const whOut = (so.data || []).filter(i => i.warehouse_id === wh.id && i.material_id === mat.id).reduce((s, i) => s + i.quantity, 0);
+            const whTrOut = (tr_out.data || []).filter(i => i.from_warehouse_id === wh.id && i.material_id === mat.id).reduce((s, i) => s + i.quantity, 0);
+            const whTrIn = (tr_in.data || []).filter(i => i.to_warehouse_id === wh.id && i.material_id === mat.id).reduce((s, i) => s + i.quantity, 0);
+            const balance = (whIn + whTrIn) - (whOut + whTrOut);
+            return balance !== 0 ? { ...mat, balance } : null;
+          }).filter(m => m !== null);
+
+          return { ...wh, materials: whMaterials };
+        }).filter(wh => wh.materials.length > 0);
+        setReport(reportData);
+      }
+    } catch (err) {
+      console.error('Error fetching report:', err);
+    } finally {
+      setLoading(false);
     }
-    return true;
-  });
+  };
+
+  return (
+    <div className="p-4 md:p-6 space-y-6 pb-44">
+      <PageBreadcrumb title="Kiểm tra tồn kho" onBack={onBack} />
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+          <h2 className="text-xl font-bold text-gray-800 flex items-center gap-2">
+            <BarChart3 className="text-primary" /> Kiểm tra tồn kho
+          </h2>
+          <p className="text-xs text-gray-500 mt-1">Xem chi tiết vật tư theo từng kho</p>
+        </div>
+        <div className="flex items-center gap-2 bg-gray-100 p-1 rounded-xl">
+          <button 
+            onClick={() => setViewMode('material')}
+            className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${viewMode === 'material' ? 'bg-white text-primary shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
+          >
+            Theo vật tư
+          </button>
+          <button 
+            onClick={() => setViewMode('warehouse')}
+            className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${viewMode === 'warehouse' ? 'bg-white text-primary shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
+          >
+            Theo kho
+          </button>
+        </div>
+      </div>
+
+      {viewMode === 'material' ? (
+        <div className="space-y-4">
+          <div className="w-full md:w-64">
+            <select 
+              value={selectedWarehouse} 
+              onChange={(e) => setSelectedWarehouse(e.target.value)}
+              className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20"
+            >
+              <option value="">Tất cả các kho</option>
+              {warehouses.map(wh => (
+                <option key={wh.id} value={wh.id}>{wh.name}</option>
+              ))}
+            </select>
+          </div>
+
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full text-left border-collapse min-w-[600px]">
+                <thead>
+                  <tr className="bg-gray-50 border-bottom border-gray-100">
+                    <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-wider text-gray-400">Vật tư / Phân bổ kho</th>
+                    <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-wider text-gray-400 text-center">ĐVT</th>
+                    <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-wider text-gray-400 text-right">Tổng nhập</th>
+                    <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-wider text-gray-400 text-right">Tổng xuất</th>
+                    <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-wider text-gray-400 text-right">Tồn kho</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100">
+                  {loading ? (
+                    <tr><td colSpan={5} className="px-6 py-12 text-center text-gray-400 italic">Đang tải...</td></tr>
+                  ) : report.length === 0 ? (
+                    <tr><td colSpan={5} className="px-6 py-12 text-center text-gray-400 italic">Không có dữ liệu</td></tr>
+                  ) : (
+                    report.map((item) => (
+                      <tr key={item.id} className="hover:bg-gray-50/50 transition-colors align-top">
+                        <td className="px-6 py-4">
+                          <div className="text-sm font-bold text-gray-800">{item.name}</div>
+                          <div className="mt-2 space-y-1">
+                            {item.breakdown.map((b: any, idx: number) => (
+                              <div key={idx} className="flex items-center gap-2 text-[10px]">
+                                <span className="text-gray-400">{b.whName}:</span>
+                                <span className="font-bold text-primary">{formatNumber(b.balance)}</span>
+                              </div>
+                            ))}
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 text-center text-xs text-gray-500">{item.unit}</td>
+                        <td className="px-6 py-4 text-right text-sm font-medium text-blue-600">+{formatNumber(item.totalIn)}</td>
+                        <td className="px-6 py-4 text-right text-sm font-medium text-orange-600">-{formatNumber(item.totalOut)}</td>
+                        <td className="px-6 py-4 text-right text-sm font-bold text-gray-900">
+                          <span className={`px-2 py-1 rounded-lg ${item.balance <= 5 ? 'bg-red-50 text-red-600' : 'bg-green-50 text-green-600'}`}>
+                            {formatNumber(item.balance)}
+                          </span>
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {loading ? (
+            <div className="md:col-span-2 py-12 text-center text-gray-400 italic">Đang tải...</div>
+          ) : report.length === 0 ? (
+            <div className="md:col-span-2 py-12 text-center text-gray-400 italic">Không có dữ liệu</div>
+          ) : (
+            report.map((wh) => (
+              <div key={wh.id} className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden flex flex-col">
+                <div className="bg-primary/5 p-4 border-b border-primary/10 flex items-center justify-between">
+                  <h3 className="font-bold text-gray-800 flex items-center gap-2">
+                    <Warehouse size={18} className="text-primary" /> {wh.name}
+                  </h3>
+                  <span className="text-[10px] font-bold bg-primary text-white px-2 py-0.5 rounded-full">
+                    {wh.materials.length} vật tư
+                  </span>
+                </div>
+                <div className="p-4 flex-1">
+                  <div className="space-y-3">
+                    {wh.materials.map((mat: any) => (
+                      <div key={mat.id} className="flex items-center justify-between text-sm border-b border-gray-50 pb-2 last:border-0">
+                        <div>
+                          <p className="font-medium text-gray-700">{mat.name}</p>
+                          <p className="text-[10px] text-gray-400">{mat.unit}</p>
+                        </div>
+                        <span className={`font-bold ${mat.balance <= 5 ? 'text-red-600' : 'text-primary'}`}>
+                          {formatNumber(mat.balance)}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+      )}
+    </div>
+  );
+};
+
+const DeletedSlips = ({ onBack }: { onBack: () => void }) => {
+  const [slips, setSlips] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetchDeletedSlips();
+  }, []);
+
+  const fetchDeletedSlips = async () => {
+    setLoading(true);
+    try {
+      const [si, so, tr] = await Promise.all([
+        supabase.from('stock_in').select('*, warehouses(name), materials(name)').eq('status', 'Đã xóa'),
+        supabase.from('stock_out').select('*, warehouses(name), materials(name)').eq('status', 'Đã xóa'),
+        supabase.from('transfers').select('*, from_wh:warehouses!from_warehouse_id(name), to_wh:warehouses!to_warehouse_id(name), materials(name)').eq('status', 'Đã xóa')
+      ]);
+
+      const allDeleted = [
+        ...(si.data || []).map(s => ({ ...s, type: 'Nhập kho', table: 'stock_in' })),
+        ...(so.data || []).map(s => ({ ...s, type: 'Xuất kho', table: 'stock_out' })),
+        ...(tr.data || []).map(s => ({ ...s, type: 'Luân chuyển', table: 'transfers' }))
+      ].sort((a, b) => new Date(b.updated_at || b.created_at).getTime() - new Date(a.updated_at || a.created_at).getTime());
+
+      setSlips(allDeleted);
+    } catch (err) {
+      console.error('Error fetching deleted slips:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleRestore = async (id: string, table: string) => {
+    if (!confirm('Bạn có muốn khôi phục phiếu này về trạng thái Chờ duyệt?')) return;
+    try {
+      const { error } = await supabase.from(table).update({ status: 'Chờ duyệt' }).eq('id', id);
+      if (error) throw error;
+      fetchDeletedSlips();
+    } catch (err: any) {
+      alert('Lỗi: ' + err.message);
+    }
+  };
+
+  return (
+    <div className="p-4 md:p-6 space-y-6 pb-44">
+      <PageBreadcrumb title="Phiếu đã xóa" onBack={onBack} />
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-xl font-bold text-gray-800 flex items-center gap-2">
+            <Archive className="text-blue-500" /> Phiếu nhập xuất đã xóa
+          </h2>
+          <p className="text-xs text-gray-500 mt-1">Danh sách các phiếu đã đưa vào thùng rác</p>
+        </div>
+      </div>
+
+      <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+        <table className="w-full text-left border-collapse">
+          <thead>
+            <tr className="bg-gray-50">
+              <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-gray-400">Loại</th>
+              <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-gray-400">Ngày</th>
+              <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-gray-400">Kho</th>
+              <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-gray-400">Vật tư</th>
+              <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-gray-400 text-center">SL</th>
+              <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-gray-400 text-right">Thao tác</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-gray-100">
+            {loading ? (
+              <tr><td colSpan={6} className="px-4 py-8 text-center text-gray-400 italic">Đang tải...</td></tr>
+            ) : slips.length === 0 ? (
+              <tr><td colSpan={6} className="px-4 py-8 text-center text-gray-400 italic">Thùng rác trống</td></tr>
+            ) : (
+              slips.map((item) => (
+                <tr key={`${item.table}-${item.id}`} className="hover:bg-gray-50/50 transition-colors">
+                  <td className="px-4 py-3">
+                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                      item.type === 'Nhập kho' ? 'bg-blue-100 text-blue-600' :
+                      item.type === 'Xuất kho' ? 'bg-red-100 text-red-600' : 'bg-orange-100 text-orange-600'
+                    }`}>
+                      {item.type}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3 text-xs text-gray-600">{formatDate(item.date)}</td>
+                  <td className="px-4 py-3 text-xs text-gray-600">
+                    {item.type === 'Luân chuyển' ? `${item.from_wh?.name} → ${item.to_wh?.name}` : item.warehouses?.name}
+                  </td>
+                  <td className="px-4 py-3 text-xs text-gray-800 font-medium">{item.materials?.name}</td>
+                  <td className="px-4 py-3 text-xs text-center font-bold text-gray-700">{formatNumber(item.quantity)}</td>
+                  <td className="px-4 py-3 text-right">
+                    <button 
+                      onClick={() => handleRestore(item.id, item.table)}
+                      className="p-2 bg-green-50 text-green-600 rounded-lg hover:bg-green-100 transition-colors"
+                      title="Khôi phục"
+                    >
+                      <RefreshCw size={16} />
+                    </button>
+                  </td>
+                </tr>
+              ))
+            )}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+};
+
+const BottomNav = ({ currentPage, onNavigate, user, pendingCount }: { currentPage: string, onNavigate: (page: string) => void, user: Employee, pendingCount: number }) => {
+  const navItems = (user.role === 'Admin' || user.role === 'Admin App')
+    ? [
+        { id: 'dashboard', label: 'Trang chủ', icon: Home },
+        { id: 'pending-approvals', label: 'Phiếu duyệt', icon: ClipboardCheck, badge: pendingCount },
+        { id: 'attendance', label: 'Chấm công', icon: CalendarCheck },
+        { id: 'hr-records', label: 'Nhân sự', icon: UserCircle },
+      ]
+    : [
+        { id: 'dashboard', label: 'Trang chủ', icon: Home },
+        { id: 'stock-in', label: 'Nhập kho', icon: ArrowDownCircle },
+        { id: 'stock-out', label: 'Xuất kho', icon: ArrowUpCircle },
+        { id: 'transfer', label: 'Luân chuyển', icon: ArrowLeftRight },
+        { id: 'cost-report', label: 'Báo cáo chi phí', icon: FileText },
+      ];
 
   return (
     <div className="lg:hidden fixed bottom-5 left-1/2 -translate-x-1/2 w-[92%] max-w-md bg-white/90 backdrop-blur-md border border-gray-100 flex items-center justify-around py-2 px-2 z-40 shadow-[0_8px_25px_rgba(0,0,0,0.1)] rounded-full">
@@ -5705,8 +6442,8 @@ const BottomNav = ({ currentPage, onNavigate, user, pendingCount }: { currentPag
         >
           <item.icon size={20} className={currentPage === item.id ? 'text-primary' : 'text-gray-400'} />
           <span className="text-[8px] font-bold uppercase tracking-tighter">{item.label}</span>
-          {item.badge && item.badge > 0 && (
-            <span className="absolute -top-1 right-1/4 bg-red-500 text-white text-[8px] font-bold w-4 h-4 rounded-full flex items-center justify-center animate-pulse">
+          {item.badge !== undefined && item.badge > 0 && (
+            <span className="absolute -top-1.5 right-1/4 bg-red-600 text-white text-[9px] font-black w-5 h-5 rounded-full flex items-center justify-center shadow-lg shadow-red-500/40 border-2 border-white animate-bounce">
               {item.badge > 99 ? '99+' : item.badge}
             </span>
           )}
@@ -5726,6 +6463,7 @@ export default function App() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(window.innerWidth >= 1024);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const [pendingCount, setPendingCount] = useState(0);
+  const [refreshKey, setRefreshKey] = useState(0);
 
   const fetchPendingCount = useCallback(async () => {
     try {
@@ -5787,6 +6525,7 @@ export default function App() {
       title: 'QUẢN LÝ TÀI CHÍNH',
       items: [
         { id: 'costs', label: 'Chi phí', icon: Wallet },
+        { id: 'cost-report', label: 'Báo cáo chi phí', icon: FileText },
         { id: 'pending-approvals', label: 'Phiếu duyệt', icon: ClipboardCheck, badge: pendingCount },
         { id: 'cost-filter', label: 'Lọc chi phí', icon: Filter },
       ]
@@ -5797,9 +6536,9 @@ export default function App() {
         { id: 'stock-in', label: 'Nhập kho', icon: ArrowDownCircle },
         { id: 'stock-out', label: 'Xuất kho', icon: ArrowUpCircle },
         { id: 'transfer', label: 'Luân chuyển kho', icon: ArrowLeftRight },
-        { id: 'inventory-report', label: 'Báo cáo nhập xuất tồn', icon: BarChart3 },
+        { id: 'inventory-report', label: 'Kiểm tra tồn kho', icon: BarChart3 },
         { id: 'warehouses', label: 'Danh sách kho', icon: Warehouse },
-        { id: 'materials', label: 'Thư viện vật tư', icon: Settings },
+        { id: 'materials', label: 'Thư viện vật tư', icon: Package },
       ]
     },
     {
@@ -5832,7 +6571,7 @@ export default function App() {
     ...group,
     items: group.items.filter(item => {
       if (user.role === 'User') {
-        const allowed = ['stock-in', 'stock-out', 'transfer', 'inventory-report', 'attendance', 'pending-approvals'];
+        const allowed = ['stock-in', 'stock-out', 'transfer', 'cost-report'];
         return allowed.includes(item.id);
       }
       return true;
@@ -5848,7 +6587,7 @@ export default function App() {
       case 'warehouses': return <Warehouses user={user} onBack={goBack} />;
       case 'materials': return <Materials user={user} onBack={goBack} />;
       case 'stock-in': return <StockIn user={user} onBack={goBack} initialStatus={pageParams?.status} />;
-      case 'pending-approvals': return <PendingApprovals user={user} onBack={goBack} onNavigate={navigateTo} />;
+      case 'pending-approvals': return <PendingApprovals user={user} onBack={goBack} onNavigate={navigateTo} onRefreshCount={fetchPendingCount} />;
       case 'stock-out': return <StockOut user={user} onBack={goBack} />;
       case 'transfer': return <Transfer user={user} onBack={goBack} />;
       case 'cost-report': return <CostReport user={user} onBack={goBack} />;
@@ -5859,11 +6598,11 @@ export default function App() {
       case 'payroll': return <Placeholder title="Tổng hợp lương/tháng" onBack={goBack} />;
       case 'salary-settings': return <Placeholder title="Cài đặt lương" onBack={goBack} />;
       case 'partners': return <Placeholder title="Khách hàng & nhà cung cấp" onBack={goBack} />;
-      case 'inventory-report': return <Placeholder title="Báo cáo nhập xuất tồn" onBack={goBack} />;
+      case 'inventory-report': return <InventoryReport user={user} onBack={goBack} />;
       case 'trash': return <Trash onNavigate={navigateTo} onBack={goBack} />;
       case 'deleted-materials': return <Placeholder title="Danh sách vật tư xóa" onBack={goBack} />;
       case 'deleted-warehouses': return <Placeholder title="Danh sách kho xóa" onBack={goBack} />;
-      case 'deleted-slips': return <Placeholder title="Phiếu nhập xuất đã xóa" onBack={goBack} />;
+      case 'deleted-slips': return <DeletedSlips onBack={goBack} />;
       case 'material-groups': return <MaterialGroups user={user} onBack={goBack} />;
       default: return (
         <div className="p-4 md:p-6 space-y-6">
@@ -5900,6 +6639,17 @@ export default function App() {
             title="Về trang chủ"
           >
             <Home size={20} className="group-hover:scale-110 transition-transform" />
+          </button>
+
+          <button 
+            onClick={() => {
+              fetchPendingCount();
+              setRefreshKey(prev => prev + 1);
+            }}
+            className="hover:bg-white/10 p-2 rounded-xl transition-colors flex items-center gap-2 group"
+            title="Tải lại dữ liệu"
+          >
+            <RefreshCw size={20} className="group-hover:rotate-180 transition-transform duration-500" />
           </button>
         </div>
 
@@ -6028,7 +6778,7 @@ export default function App() {
         </AnimatePresence>
 
         {/* Main Content */}
-        <main className="flex-1 overflow-y-auto relative bg-[#F8F9FA] pb-44 lg:pb-0">
+        <main key={refreshKey} className="flex-1 overflow-y-auto relative bg-[#F8F9FA] pb-44 lg:pb-0">
           {renderContent()}
           
           <footer className="p-4 text-center text-[10px] text-gray-400 border-t border-gray-100 mt-auto">

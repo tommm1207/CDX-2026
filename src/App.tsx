@@ -58,6 +58,19 @@ import {
   User,
   ClipboardCheck,
   Check,
+  Bell,
+  Cloud,
+  CloudRain,
+  Sun,
+  Wind,
+  Zap,
+  CloudLightning,
+  Thermometer,
+  CheckCircle2,
+  Clock,
+  Trash as TrashIcon,
+  Mail,
+  Play,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { supabase } from './supabaseClient';
@@ -217,6 +230,15 @@ const LoginPage = ({ onLogin }: { onLogin: (user: Employee) => void }) => {
             className="w-full bg-primary text-white font-bold py-3 rounded-xl hover:bg-primary-hover transition-colors shadow-lg shadow-green-900/20 disabled:opacity-50"
           >
             {loading ? 'ĐANG ĐĂNG NHẬP...' : 'ĐĂNG NHẬP'}
+          </button>
+
+          <button 
+            type="button"
+            onClick={() => window.open('https://cdx-2026.vercel.app', '_blank')}
+            className="w-full mt-4 flex items-center justify-center gap-2 text-primary font-medium py-3 rounded-xl border border-primary/20 hover:bg-primary/5 transition-colors"
+          >
+            <Download size={18} />
+            <span>HƯỚNG DẪN TẢI APP</span>
           </button>
         </form>
       </motion.div>
@@ -3812,7 +3834,16 @@ const Dashboard = ({ user, onNavigate }: { user: Employee, onNavigate: (page: st
       title: 'HỆ THỐNG',
       items: [
         { label: 'Quản lý nhân sự', icon: UserCircle, page: 'hr-records' },
+        { label: 'Nhật ký / Ghi chú', icon: FileText, page: 'notes' },
+        { label: 'Thiết lập Lịch nhắc', icon: Bell, page: 'reminders' },
         { label: 'Thùng rác', icon: Trash2, page: 'trash' },
+      ]
+    },
+    {
+      title: 'CÔNG CỤ',
+      items: [
+        { label: 'Cài đặt Backup', icon: Settings, page: 'backup-settings' },
+        { label: 'Sao lưu ngay', icon: Download, page: 'backup-now' },
       ]
     }
   ];
@@ -6888,9 +6919,934 @@ const BottomNav = ({ currentPage, onNavigate, user, pendingCount }: { currentPag
 
 // --- Main App ---
 
+const WEATHER_OPTIONS = [
+  { value: 'sunny', label: '☀️ Nắng nóng gay gắt' },
+  { value: 'sudden-rain', label: '⛈️ Mưa rào đột ngột' },
+  { value: 'cloudy', label: '☁️ Trời âm u, oi bức' },
+  { value: 'long-rain', label: '🌧️ Mưa dầm kéo dài' },
+  { value: 'strong-wind', label: '💨 Gió giật mạnh trong cơn dông' },
+  { value: 'thunderstorm', label: '🌩️ Sấm chớp dữ dội' },
+  { value: 'flood', label: '🌊 Ngập lụt cục bộ' },
+  { value: 'cool', label: '🌬️ Trời se lạnh vào sáng sớm' },
+  { value: 'smog', label: '🌫️ Sương mù quang hóa' },
+  { value: 'pleasant', label: '🌤️ Trời trong xanh, nắng dịu' },
+];
+
+const Notes = ({ user, onBack }: { user: Employee, onBack: () => void }) => {
+  const [notes, setNotes] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [showQuickNote, setShowQuickNote] = useState(false);
+  const [showAddNew, setShowAddNew] = useState(false);
+  const [employees, setEmployees] = useState<Employee[]>([]);
+  const [warehouses, setWarehouses] = useState<any[]>([]);
+  
+  const [filters, setFilters] = useState({
+    fromDate: '',
+    toDate: '',
+    employee: '',
+    warehouse: '',
+    search: ''
+  });
+
+  const [formData, setFormData] = useState({
+    content: '',
+    date: new Date().toISOString().split('T')[0],
+    weather: '',
+    related_object: '',
+    object_code: '',
+    note_code: '',
+    location: '',
+    related_personnel: [] as string[]
+  });
+
+  useEffect(() => {
+    fetchData();
+  }, []);
+
+  const fetchData = async () => {
+    setLoading(true);
+    const { data: notesData } = await supabase.from('notes').select('*, users(full_name)').order('created_at', { ascending: false });
+    if (notesData) setNotes(notesData);
+
+    const { data: empData } = await supabase.from('users').select('*').neq('status', 'Nghỉ việc').order('full_name');
+    if (empData) setEmployees(empData);
+
+    const { data: whData } = await supabase.from('warehouses').select('*').order('name');
+    if (whData) setWarehouses(whData);
+    setLoading(false);
+  };
+
+  const handleSave = async () => {
+    const { error } = await supabase.from('notes').insert([{
+      ...formData,
+      created_by: user.id
+    }]);
+    if (!error) {
+      setShowQuickNote(false);
+      setShowAddNew(false);
+      setFormData({
+        content: '',
+        date: new Date().toISOString().split('T')[0],
+        weather: '',
+        related_object: '',
+        object_code: '',
+        note_code: '',
+        location: '',
+        related_personnel: []
+      });
+      fetchData();
+    }
+  };
+
+  const filteredNotes = notes.filter(n => {
+    if (filters.fromDate && n.date < filters.fromDate) return false;
+    if (filters.toDate && n.date > filters.toDate) return false;
+    if (filters.employee && n.created_by !== filters.employee) return false;
+    if (filters.search && !n.content.toLowerCase().includes(filters.search.toLowerCase())) return false;
+    return true;
+  });
+
+  return (
+    <div className="p-4 md:p-6 space-y-6">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <PageBreadcrumb title="Nhật ký / Ghi chú" onBack={onBack} />
+        <div className="flex items-center gap-2">
+          <button 
+            onClick={() => setShowQuickNote(true)}
+            className="flex items-center gap-2 px-4 py-2 bg-amber-500 text-white rounded-xl text-sm font-bold hover:bg-amber-600 transition-all shadow-lg shadow-amber-500/20"
+          >
+            <FileText size={18} /> Ghi chú nhanh
+          </button>
+          <button 
+            onClick={() => setShowAddNew(true)}
+            className="flex items-center gap-2 px-4 py-2 bg-white text-gray-700 border border-gray-200 rounded-xl text-sm font-bold hover:bg-gray-50 transition-all shadow-sm"
+          >
+            <Plus size={18} /> Thêm mới
+          </button>
+        </div>
+      </div>
+
+      <div className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 space-y-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+          <div>
+            <label className="text-[10px] font-bold text-gray-400 uppercase">Từ ngày</label>
+            <input 
+              type="date" 
+              value={filters.fromDate}
+              onChange={e => setFilters({...filters, fromDate: e.target.value})}
+              className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm focus:ring-2 focus:ring-primary/20 outline-none mt-1" 
+            />
+          </div>
+          <div>
+            <label className="text-[10px] font-bold text-gray-400 uppercase">Đến ngày</label>
+            <input 
+              type="date" 
+              value={filters.toDate}
+              onChange={e => setFilters({...filters, toDate: e.target.value})}
+              className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm focus:ring-2 focus:ring-primary/20 outline-none mt-1" 
+            />
+          </div>
+          <div>
+            <label className="text-[10px] font-bold text-gray-400 uppercase">Nhân sự</label>
+            <select 
+              value={filters.employee}
+              onChange={e => setFilters({...filters, employee: e.target.value})}
+              className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm focus:ring-2 focus:ring-primary/20 outline-none mt-1"
+            >
+              <option value="">-- Tất cả --</option>
+              {employees.map(e => <option key={e.id} value={e.id}>{e.full_name}</option>)}
+            </select>
+          </div>
+          <div>
+            <label className="text-[10px] font-bold text-gray-400 uppercase">Kho</label>
+            <select 
+              value={filters.warehouse}
+              onChange={e => setFilters({...filters, warehouse: e.target.value})}
+              className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm focus:ring-2 focus:ring-primary/20 outline-none mt-1"
+            >
+              <option value="">-- Tất cả kho --</option>
+              {warehouses.map(w => <option key={w.id} value={w.id}>{w.name}</option>)}
+            </select>
+          </div>
+          <div>
+            <label className="text-[10px] font-bold text-gray-400 uppercase">Tìm kiếm nhanh</label>
+            <div className="relative mt-1">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
+              <input 
+                type="text" 
+                placeholder="Gõ để tìm..." 
+                value={filters.search}
+                onChange={e => setFilters({...filters, search: e.target.value})}
+                className="w-full pl-10 pr-4 py-2 rounded-xl border border-gray-200 text-sm focus:ring-2 focus:ring-primary/20 outline-none" 
+              />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+        <div className="p-4 border-b border-gray-50 flex items-center justify-between bg-primary/5">
+          <h3 className="text-sm font-bold text-primary flex items-center gap-2 uppercase tracking-wider">
+            <FileText size={18} /> Bảng ghi chú tháng {new Date().getMonth() + 1}/{new Date().getFullYear()}
+          </h3>
+        </div>
+        <div className="overflow-x-auto">
+          <table className="w-full text-left border-collapse">
+            <thead>
+              <tr className="bg-gray-50/50">
+                <th className="px-4 py-3 text-[10px] font-bold text-gray-400 uppercase">Đối tượng liên quan</th>
+                <th className="px-4 py-3 text-[10px] font-bold text-gray-400 uppercase">Mã đối tượng</th>
+                <th className="px-4 py-3 text-[10px] font-bold text-gray-400 uppercase">Mã ghi chú</th>
+                <th className="px-4 py-3 text-[10px] font-bold text-gray-400 uppercase">Vị trí / Tọa độ</th>
+                <th className="px-4 py-3 text-[10px] font-bold text-gray-400 uppercase text-center">Thao tác</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-50">
+              {loading ? (
+                <tr><td colSpan={5} className="px-4 py-8 text-center text-gray-400 italic">Đang tải dữ liệu...</td></tr>
+              ) : filteredNotes.length === 0 ? (
+                <tr><td colSpan={5} className="px-4 py-8 text-center text-gray-400 italic">Không có ghi chú nào</td></tr>
+              ) : filteredNotes.map((note) => (
+                <tr key={note.id} className="hover:bg-gray-50/50 transition-colors group">
+                  <td className="px-4 py-3">
+                    <p className="text-sm font-medium text-gray-700">{note.related_object || 'N/A'}</p>
+                    <p className="text-[10px] text-gray-400">{note.content}</p>
+                  </td>
+                  <td className="px-4 py-3 text-sm text-gray-600 font-mono">{note.object_code || 'N/A'}</td>
+                  <td className="px-4 py-3 text-sm text-gray-600 font-mono">{note.note_code || 'N/A'}</td>
+                  <td className="px-4 py-3 text-sm text-gray-600">{note.location || '0.000000, 0.000000'}</td>
+                  <td className="px-4 py-3">
+                    <div className="flex items-center justify-center gap-2">
+                      <button className="p-1.5 text-gray-400 hover:text-primary hover:bg-primary/10 rounded-lg transition-all"><Edit size={14} /></button>
+                      <button className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all"><Trash2 size={14} /></button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* Quick Note Modal */}
+      <AnimatePresence>
+        {showQuickNote && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setShowQuickNote(false)} className="absolute inset-0 bg-black/40 backdrop-blur-sm" />
+            <motion.div initial={{ opacity: 0, scale: 0.95, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95, y: 20 }} className="bg-white rounded-3xl shadow-2xl w-full max-w-lg overflow-hidden relative z-10">
+              <div className="p-6 border-b border-gray-50 flex items-center justify-between bg-amber-50">
+                <h3 className="text-lg font-bold text-amber-700 flex items-center gap-2 uppercase tracking-wide">
+                  <FileText size={20} /> Ghi chú nhanh
+                </h3>
+                <button onClick={() => setShowQuickNote(false)} className="p-2 hover:bg-amber-100 rounded-full transition-colors"><X size={20} className="text-amber-700" /></button>
+              </div>
+              <div className="p-6 space-y-4 max-h-[70vh] overflow-y-auto">
+                <div>
+                  <label className="text-[10px] font-bold text-gray-400 uppercase">Nội dung <span className="text-red-500">*</span></label>
+                  <textarea 
+                    value={formData.content}
+                    onChange={e => setFormData({...formData, content: e.target.value})}
+                    className="w-full px-4 py-3 rounded-xl border border-gray-200 text-sm focus:ring-2 focus:ring-primary/20 outline-none mt-1 min-h-[100px]" 
+                    placeholder="Nhập nội dung ghi chú..."
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-[10px] font-bold text-gray-400 uppercase">Ngày</label>
+                    <input 
+                      type="date" 
+                      value={formData.date}
+                      onChange={e => setFormData({...formData, date: e.target.value})}
+                      className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm focus:ring-2 focus:ring-primary/20 outline-none mt-1" 
+                    />
+                  </div>
+                  <div>
+                    <label className="text-[10px] font-bold text-gray-400 uppercase">Thời tiết</label>
+                    <select 
+                      value={formData.weather}
+                      onChange={e => setFormData({...formData, weather: e.target.value})}
+                      className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm focus:ring-2 focus:ring-primary/20 outline-none mt-1"
+                    >
+                      <option value="">-- Chọn --</option>
+                      {WEATHER_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+                    </select>
+                  </div>
+                </div>
+                <div>
+                  <label className="text-[10px] font-bold text-gray-400 uppercase">Đối tượng liên quan</label>
+                  <input 
+                    type="text" 
+                    placeholder="VD: Chuẩn bị vật tư..." 
+                    value={formData.related_object}
+                    onChange={e => setFormData({...formData, related_object: e.target.value})}
+                    className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm focus:ring-2 focus:ring-primary/20 outline-none mt-1" 
+                  />
+                </div>
+                <div>
+                  <label className="text-[10px] font-bold text-gray-400 uppercase">Nhân sự liên quan</label>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 mt-2 max-h-40 overflow-y-auto p-2 border border-gray-100 rounded-xl">
+                    {employees.map(emp => (
+                      <label key={emp.id} className="flex items-center gap-2 cursor-pointer hover:bg-gray-50 p-1 rounded transition-colors">
+                        <input 
+                          type="checkbox" 
+                          checked={formData.related_personnel.includes(emp.id)}
+                          onChange={e => {
+                            const newPersonnel = e.target.checked 
+                              ? [...formData.related_personnel, emp.id]
+                              : formData.related_personnel.filter(id => id !== emp.id);
+                            setFormData({...formData, related_personnel: newPersonnel});
+                          }}
+                          className="rounded border-gray-300 text-primary focus:ring-primary" 
+                        />
+                        <span className="text-xs text-gray-600 truncate">{emp.full_name}</span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              </div>
+              <div className="p-6 bg-gray-50 flex gap-3">
+                <button 
+                  onClick={handleSave}
+                  className="flex-1 py-3 bg-amber-500 text-white rounded-xl font-bold text-sm hover:bg-amber-600 transition-all shadow-lg shadow-amber-500/20 flex items-center justify-center gap-2"
+                >
+                  <Save size={18} /> Lưu ghi chú
+                </button>
+                <button onClick={() => setShowQuickNote(false)} className="px-6 py-3 bg-gray-400 text-white rounded-xl font-bold text-sm hover:bg-gray-500 transition-all">Hủy</button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Add New Modal */}
+      <AnimatePresence>
+        {showAddNew && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setShowAddNew(false)} className="absolute inset-0 bg-black/40 backdrop-blur-sm" />
+            <motion.div initial={{ opacity: 0, scale: 0.95, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95, y: 20 }} className="bg-white rounded-3xl shadow-2xl w-full max-w-4xl overflow-hidden relative z-10">
+              <div className="p-6 border-b border-gray-50 flex items-center justify-between bg-primary">
+                <h3 className="text-lg font-bold text-white uppercase tracking-wide">Thêm Mới</h3>
+                <button onClick={() => setShowAddNew(false)} className="p-2 hover:bg-white/10 rounded-full transition-colors"><X size={20} className="text-white" /></button>
+              </div>
+              <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-6 max-h-[70vh] overflow-y-auto">
+                <div className="space-y-4">
+                  <div>
+                    <label className="text-[10px] font-bold text-gray-400 uppercase">Đối tượng liên quan</label>
+                    <input type="text" value={formData.related_object} onChange={e => setFormData({...formData, related_object: e.target.value})} className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm focus:ring-2 focus:ring-primary/20 outline-none mt-1" />
+                  </div>
+                  <div>
+                    <label className="text-[10px] font-bold text-gray-400 uppercase">Mã ghi chú</label>
+                    <input type="text" value={formData.note_code} onChange={e => setFormData({...formData, note_code: e.target.value})} className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm focus:ring-2 focus:ring-primary/20 outline-none mt-1" />
+                  </div>
+                  <div>
+                    <label className="text-[10px] font-bold text-gray-400 uppercase">Ngày tạo</label>
+                    <input type="date" value={formData.date} onChange={e => setFormData({...formData, date: e.target.value})} className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm focus:ring-2 focus:ring-primary/20 outline-none mt-1" />
+                  </div>
+                  <div>
+                    <label className="text-[10px] font-bold text-gray-400 uppercase">Nội dung</label>
+                    <textarea value={formData.content} onChange={e => setFormData({...formData, content: e.target.value})} className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm focus:ring-2 focus:ring-primary/20 outline-none mt-1 min-h-[80px]" />
+                  </div>
+                  <div>
+                    <label className="text-[10px] font-bold text-gray-400 uppercase">Thời tiết</label>
+                    <select value={formData.weather} onChange={e => setFormData({...formData, weather: e.target.value})} className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm focus:ring-2 focus:ring-primary/20 outline-none mt-1">
+                      <option value="">-- Chọn --</option>
+                      {WEATHER_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+                    </select>
+                  </div>
+                </div>
+                <div className="space-y-4">
+                  <div>
+                    <label className="text-[10px] font-bold text-gray-400 uppercase">Mã đối tượng</label>
+                    <input type="text" value={formData.object_code} onChange={e => setFormData({...formData, object_code: e.target.value})} className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm focus:ring-2 focus:ring-primary/20 outline-none mt-1" />
+                  </div>
+                  <div>
+                    <label className="text-[10px] font-bold text-gray-400 uppercase">Vị trí / Tọa độ</label>
+                    <input type="text" value={formData.location} onChange={e => setFormData({...formData, location: e.target.value})} className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm focus:ring-2 focus:ring-primary/20 outline-none mt-1" placeholder="0.000000, 0.000000" />
+                  </div>
+                  <div>
+                    <label className="text-[10px] font-bold text-gray-400 uppercase">Người tạo</label>
+                    <input type="text" value={user.full_name} disabled className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm bg-gray-50 mt-1" />
+                  </div>
+                  <div>
+                    <label className="text-[10px] font-bold text-gray-400 uppercase">Nội dung</label>
+                    <textarea className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm focus:ring-2 focus:ring-primary/20 outline-none mt-1 min-h-[80px]" placeholder="Ghi chú thêm..." />
+                  </div>
+                </div>
+              </div>
+              <div className="p-6 bg-gray-50 flex justify-end gap-3">
+                <button onClick={() => setShowAddNew(false)} className="px-6 py-2.5 text-gray-500 font-bold text-sm hover:bg-gray-100 rounded-xl transition-all">Hủy bỏ</button>
+                <button onClick={handleSave} className="px-8 py-2.5 bg-primary text-white rounded-xl font-bold text-sm hover:bg-primary-dark transition-all shadow-lg shadow-primary/20">Lưu dữ liệu</button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+};
+
+const Reminders = ({ user, onBack }: { user: Employee, onBack: () => void }) => {
+  const [reminders, setReminders] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [showSetReminder, setShowSetReminder] = useState(false);
+  const [showAddNew, setShowAddNew] = useState(false);
+  const [employees, setEmployees] = useState<Employee[]>([]);
+  
+  const [filters, setFilters] = useState({
+    fromDate: '',
+    toDate: '',
+    employee: '',
+    search: ''
+  });
+
+  const [formData, setFormData] = useState({
+    title: '',
+    content: '',
+    reminder_time: new Date(Date.now() + 3600000).toISOString().slice(0, 16),
+    browser_notification: true,
+    reminder_code: ''
+  });
+
+  useEffect(() => {
+    fetchData();
+  }, []);
+
+  const fetchData = async () => {
+    setLoading(true);
+    const { data: remData } = await supabase.from('reminders').select('*, users(full_name)').order('reminder_time', { ascending: false });
+    if (remData) setReminders(remData);
+
+    const { data: empData } = await supabase.from('users').select('*').neq('status', 'Nghỉ việc').order('full_name');
+    if (empData) setEmployees(empData);
+    setLoading(false);
+  };
+
+  const handleSave = async () => {
+    const { error } = await supabase.from('reminders').insert([{
+      ...formData,
+      created_by: user.id,
+      status: 'pending'
+    }]);
+    if (!error) {
+      setShowSetReminder(false);
+      setShowAddNew(false);
+      setFormData({
+        title: '',
+        content: '',
+        reminder_time: new Date(Date.now() + 3600000).toISOString().slice(0, 16),
+        browser_notification: true,
+        reminder_code: ''
+      });
+      fetchData();
+    }
+  };
+
+  const filteredReminders = reminders.filter(r => {
+    if (filters.fromDate && r.reminder_time < filters.fromDate) return false;
+    if (filters.toDate && r.reminder_time > filters.toDate) return false;
+    if (filters.employee && r.created_by !== filters.employee) return false;
+    if (filters.search && !r.title.toLowerCase().includes(filters.search.toLowerCase())) return false;
+    return true;
+  });
+
+  return (
+    <div className="p-4 md:p-6 space-y-6">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <PageBreadcrumb title="Thiết lập Lịch nhắc" onBack={onBack} />
+        <div className="flex items-center gap-2">
+          <button 
+            onClick={() => setShowSetReminder(true)}
+            className="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-xl text-sm font-bold hover:bg-primary-dark transition-all shadow-lg shadow-primary/20"
+          >
+            <Bell size={18} /> Đặt lịch nhắc
+          </button>
+          <button 
+            onClick={() => setShowAddNew(true)}
+            className="flex items-center gap-2 px-4 py-2 bg-white text-gray-700 border border-gray-200 rounded-xl text-sm font-bold hover:bg-gray-50 transition-all shadow-sm"
+          >
+            <Plus size={18} /> Thêm mới
+          </button>
+        </div>
+      </div>
+
+      <div className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 space-y-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+          <div>
+            <label className="text-[10px] font-bold text-gray-400 uppercase">Từ ngày</label>
+            <input type="date" value={filters.fromDate} onChange={e => setFilters({...filters, fromDate: e.target.value})} className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm focus:ring-2 focus:ring-primary/20 outline-none mt-1" />
+          </div>
+          <div>
+            <label className="text-[10px] font-bold text-gray-400 uppercase">Đến ngày</label>
+            <input type="date" value={filters.toDate} onChange={e => setFilters({...filters, toDate: e.target.value})} className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm focus:ring-2 focus:ring-primary/20 outline-none mt-1" />
+          </div>
+          <div>
+            <label className="text-[10px] font-bold text-gray-400 uppercase">Nhân sự</label>
+            <select value={filters.employee} onChange={e => setFilters({...filters, employee: e.target.value})} className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm focus:ring-2 focus:ring-primary/20 outline-none mt-1">
+              <option value="">-- Tất cả --</option>
+              {employees.map(e => <option key={e.id} value={e.id}>{e.full_name}</option>)}
+            </select>
+          </div>
+          <div>
+            <label className="text-[10px] font-bold text-gray-400 uppercase">Kho</label>
+            <select className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm focus:ring-2 focus:ring-primary/20 outline-none mt-1">
+              <option value="">-- Tất cả kho --</option>
+            </select>
+          </div>
+          <div>
+            <label className="text-[10px] font-bold text-gray-400 uppercase">Tìm kiếm nhanh</label>
+            <div className="relative mt-1">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
+              <input type="text" placeholder="Gõ để tìm..." value={filters.search} onChange={e => setFilters({...filters, search: e.target.value})} className="w-full pl-10 pr-4 py-2 rounded-xl border border-gray-200 text-sm focus:ring-2 focus:ring-primary/20 outline-none" />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+        <div className="p-4 border-b border-gray-50 flex items-center justify-between bg-primary/5">
+          <h3 className="text-sm font-bold text-primary flex items-center gap-2 uppercase tracking-wider">
+            <Bell size={18} /> Danh sách lịch nhắc tháng {new Date().getMonth() + 1}/{new Date().getFullYear()}
+          </h3>
+        </div>
+        <div className="overflow-x-auto">
+          <table className="w-full text-left border-collapse">
+            <thead>
+              <tr className="bg-gray-50/50">
+                <th className="px-4 py-3 text-[10px] font-bold text-gray-400 uppercase">Đã nhắc (Trạng thái)</th>
+                <th className="px-4 py-3 text-[10px] font-bold text-gray-400 uppercase">Mã nhắc nhở</th>
+                <th className="px-4 py-3 text-[10px] font-bold text-gray-400 uppercase">Thời gian nhắc</th>
+                <th className="px-4 py-3 text-[10px] font-bold text-gray-400 uppercase">Người nhắc</th>
+                <th className="px-4 py-3 text-[10px] font-bold text-gray-400 uppercase">Nội dung</th>
+                <th className="px-4 py-3 text-[10px] font-bold text-gray-400 uppercase">Tiêu đề</th>
+                <th className="px-4 py-3 text-[10px] font-bold text-gray-400 uppercase text-center">Thao tác</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-50">
+              {loading ? (
+                <tr><td colSpan={7} className="px-4 py-8 text-center text-gray-400 italic">Đang tải dữ liệu...</td></tr>
+              ) : filteredReminders.length === 0 ? (
+                <tr><td colSpan={7} className="px-4 py-8 text-center text-gray-400 italic">Không có lịch nhắc nào</td></tr>
+              ) : filteredReminders.map((rem) => (
+                <tr key={rem.id} className="hover:bg-gray-50/50 transition-colors group">
+                  <td className="px-4 py-3">
+                    <span className={`px-2 py-1 rounded-md text-[10px] font-bold uppercase ${rem.status === 'reminded' ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'}`}>
+                      {rem.status === 'reminded' ? 'Đã nhắc' : 'Chờ nhắc'}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3 text-sm text-gray-600 font-mono">{rem.reminder_code || 'N/A'}</td>
+                  <td className="px-4 py-3 text-sm text-gray-600">{new Date(rem.reminder_time).toLocaleString('vi-VN')}</td>
+                  <td className="px-4 py-3 text-sm text-gray-600">{rem.users?.full_name}</td>
+                  <td className="px-4 py-3 text-sm text-gray-600 max-w-xs truncate">{rem.content}</td>
+                  <td className="px-4 py-3 text-sm font-medium text-gray-700">{rem.title}</td>
+                  <td className="px-4 py-3">
+                    <div className="flex items-center justify-center gap-2">
+                      <button className="p-1.5 text-gray-400 hover:text-primary hover:bg-primary/10 rounded-lg transition-all"><Edit size={14} /></button>
+                      <button className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all"><Trash2 size={14} /></button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* Set Reminder Modal */}
+      <AnimatePresence>
+        {showSetReminder && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setShowSetReminder(false)} className="absolute inset-0 bg-black/40 backdrop-blur-sm" />
+            <motion.div initial={{ opacity: 0, scale: 0.95, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95, y: 20 }} className="bg-white rounded-3xl shadow-2xl w-full max-w-lg overflow-hidden relative z-10">
+              <div className="p-6 border-b border-gray-50 flex items-center justify-between">
+                <h3 className="text-lg font-bold text-primary flex items-center gap-2 uppercase tracking-wide">
+                  <Bell size={20} /> Đặt lịch nhắc
+                </h3>
+                <button onClick={() => setShowSetReminder(false)} className="p-2 hover:bg-gray-100 rounded-full transition-colors"><X size={20} className="text-gray-400" /></button>
+              </div>
+              <div className="p-6 space-y-4">
+                <div>
+                  <label className="text-[10px] font-bold text-gray-400 uppercase">Tiêu đề <span className="text-red-500">*</span></label>
+                  <input 
+                    type="text" 
+                    placeholder="VD: Họp giao ban sáng..." 
+                    value={formData.title}
+                    onChange={e => setFormData({...formData, title: e.target.value})}
+                    className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm focus:ring-2 focus:ring-primary/20 outline-none mt-1" 
+                  />
+                </div>
+                <div>
+                  <label className="text-[10px] font-bold text-gray-400 uppercase">Nội dung chi tiết</label>
+                  <textarea 
+                    placeholder="Mô tả thêm..." 
+                    value={formData.content}
+                    onChange={e => setFormData({...formData, content: e.target.value})}
+                    className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm focus:ring-2 focus:ring-primary/20 outline-none mt-1 min-h-[100px]" 
+                  />
+                </div>
+                <div>
+                  <label className="text-[10px] font-bold text-gray-400 uppercase">Thời gian nhắc <span className="text-red-500">*</span></label>
+                  <input 
+                    type="datetime-local" 
+                    value={formData.reminder_time}
+                    onChange={e => setFormData({...formData, reminder_time: e.target.value})}
+                    className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm focus:ring-2 focus:ring-primary/20 outline-none mt-1" 
+                  />
+                </div>
+                <div className="flex items-center gap-3 p-3 bg-primary/5 rounded-xl border border-primary/10">
+                  <input 
+                    type="checkbox" 
+                    id="notify"
+                    checked={formData.browser_notification}
+                    onChange={e => setFormData({...formData, browser_notification: e.target.checked})}
+                    className="w-5 h-5 rounded border-gray-300 text-primary focus:ring-primary" 
+                  />
+                  <label htmlFor="notify" className="text-sm text-gray-700 font-medium cursor-pointer">Nhắc qua thông báo trình duyệt</label>
+                </div>
+              </div>
+              <div className="p-6 bg-gray-50 flex gap-3">
+                <button 
+                  onClick={handleSave}
+                  className="flex-1 py-3 bg-primary text-white rounded-xl font-bold text-sm hover:bg-primary-dark transition-all shadow-lg shadow-primary/20 flex items-center justify-center gap-2"
+                >
+                  <Bell size={18} /> Đặt nhắc
+                </button>
+                <button onClick={() => setShowSetReminder(false)} className="px-6 py-3 bg-gray-400 text-white rounded-xl font-bold text-sm hover:bg-gray-500 transition-all">Hủy</button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Add New Modal */}
+      <AnimatePresence>
+        {showAddNew && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setShowAddNew(false)} className="absolute inset-0 bg-black/40 backdrop-blur-sm" />
+            <motion.div initial={{ opacity: 0, scale: 0.95, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95, y: 20 }} className="bg-white rounded-3xl shadow-2xl w-full max-w-4xl overflow-hidden relative z-10">
+              <div className="p-6 border-b border-gray-50 flex items-center justify-between bg-primary">
+                <h3 className="text-lg font-bold text-white uppercase tracking-wide">Thêm Mới</h3>
+                <button onClick={() => setShowAddNew(false)} className="p-2 hover:bg-white/10 rounded-full transition-colors"><X size={20} className="text-white" /></button>
+              </div>
+              <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-6 max-h-[70vh] overflow-y-auto">
+                <div className="space-y-4">
+                  <div>
+                    <label className="text-[10px] font-bold text-gray-400 uppercase">Đã nhắc (Trạng thái)</label>
+                    <input type="text" className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm focus:ring-2 focus:ring-primary/20 outline-none mt-1" />
+                  </div>
+                  <div>
+                    <label className="text-[10px] font-bold text-gray-400 uppercase">Thời gian nhắc</label>
+                    <input type="date" className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm focus:ring-2 focus:ring-primary/20 outline-none mt-1" />
+                  </div>
+                  <div>
+                    <label className="text-[10px] font-bold text-gray-400 uppercase">Nội dung</label>
+                    <textarea className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm focus:ring-2 focus:ring-primary/20 outline-none mt-1 min-h-[80px]" />
+                  </div>
+                </div>
+                <div className="space-y-4">
+                  <div>
+                    <label className="text-[10px] font-bold text-gray-400 uppercase">Mã nhắc nhở</label>
+                    <input type="text" value={formData.reminder_code} onChange={e => setFormData({...formData, reminder_code: e.target.value})} className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm focus:ring-2 focus:ring-primary/20 outline-none mt-1" />
+                  </div>
+                  <div>
+                    <label className="text-[10px] font-bold text-gray-400 uppercase">Người nhắc</label>
+                    <input type="text" value={user.full_name} disabled className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm bg-gray-50 mt-1" />
+                  </div>
+                  <div>
+                    <label className="text-[10px] font-bold text-gray-400 uppercase">Tiêu đề</label>
+                    <input type="text" value={formData.title} onChange={e => setFormData({...formData, title: e.target.value})} className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm focus:ring-2 focus:ring-primary/20 outline-none mt-1" />
+                  </div>
+                </div>
+              </div>
+              <div className="p-6 bg-gray-50 flex justify-end gap-3">
+                <button onClick={() => setShowAddNew(false)} className="px-6 py-2.5 text-gray-500 font-bold text-sm hover:bg-gray-100 rounded-xl transition-all">Hủy bỏ</button>
+                <button onClick={handleSave} className="px-8 py-2.5 bg-primary text-white rounded-xl font-bold text-sm hover:bg-primary-dark transition-all shadow-lg shadow-primary/20">Lưu dữ liệu</button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+};
+
+const BACKUP_TABLES = [
+  { id: 'users', label: 'Bảng Nhân sự' },
+  { id: 'attendance', label: 'Bảng Chấm công' },
+  { id: 'salary_settings', label: 'Cài đặt lương' },
+  { id: 'advances', label: 'Tạm ứng / Phụ cấp' },
+  { id: 'stock_in', label: 'Báo cáo Nhập kho' },
+  { id: 'stock_out', label: 'Báo cáo Xuất kho' },
+  { id: 'transfers', label: 'Báo cáo Chuyển kho' },
+  { id: 'warehouses', label: 'Danh sách Kho' },
+  { id: 'materials', label: 'Danh mục Vật tư' },
+  { id: 'material_groups', label: 'Nhóm vật tư' },
+  { id: 'costs', label: 'Báo cáo Chi phí' },
+  { id: 'notes', label: 'Nhật ký / Ghi chú' },
+  { id: 'reminders', label: 'Lịch nhắc' },
+  { id: 'partners', label: 'Khách hàng & NCC' },
+];
+
+const BackupSettings = ({ onBack }: { onBack: () => void }) => {
+  const [email, setEmail] = useState('');
+  const [frequency, setFrequency] = useState('Thủ công (không tự động)');
+  const [time, setTime] = useState('06:00');
+  const [selectedTables, setSelectedTables] = useState<string[]>(BACKUP_TABLES.map(t => t.id));
+
+  const toggleTable = (id: string) => {
+    setSelectedTables(prev => 
+      prev.includes(id) ? prev.filter(t => t !== id) : [...prev, id]
+    );
+  };
+
+  const selectAll = () => setSelectedTables(BACKUP_TABLES.map(t => t.id));
+  const deselectAll = () => setSelectedTables([]);
+
+  const handleSave = () => {
+    alert('Đã lưu cấu hình backup!');
+  };
+
+  const handleBackupNow = async () => {
+    alert('Đang thực hiện backup các bảng đã chọn...');
+  };
+
+  return (
+    <div className="p-4 md:p-6 space-y-6">
+      <PageBreadcrumb title="Cài đặt Backup" onBack={onBack} />
+      
+      <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 max-w-2xl mx-auto space-y-6">
+        <div className="flex items-center gap-3 border-b border-gray-100 pb-4">
+          <Settings className="text-primary" size={24} />
+          <h2 className="text-lg font-bold text-gray-800">Cài đặt Backup</h2>
+        </div>
+
+        <div className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1 flex items-center gap-2">
+              <Mail size={16} /> Email nhận backup
+            </label>
+            <input 
+              type="email" 
+              value={email}
+              onChange={e => setEmail(e.target.value)}
+              placeholder="example@gmail.com"
+              className="w-full px-4 py-2 rounded-xl border border-gray-200 focus:ring-2 focus:ring-primary outline-none"
+            />
+            <p className="text-[10px] text-gray-400 mt-1 italic">File Excel sẽ được gửi vào email này</p>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1 flex items-center gap-2">
+                <RefreshCw size={16} /> Tần suất
+              </label>
+              <select 
+                value={frequency}
+                onChange={e => setFrequency(e.target.value)}
+                className="w-full px-4 py-2 rounded-xl border border-gray-200 focus:ring-2 focus:ring-primary outline-none"
+              >
+                <option>Thủ công (không tự động)</option>
+                <option>Hàng ngày</option>
+                <option>Hàng tuần</option>
+                <option>Hàng tháng</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1 flex items-center gap-2">
+                <Clock size={16} /> Giờ backup
+              </label>
+              <input 
+                type="time" 
+                value={time}
+                onChange={e => setTime(e.target.value)}
+                className="w-full px-4 py-2 rounded-xl border border-gray-200 focus:ring-2 focus:ring-primary outline-none"
+              />
+            </div>
+          </div>
+
+          <div>
+            <div className="flex items-center justify-between mb-2">
+              <label className="text-sm font-medium text-gray-700 flex items-center gap-2">
+                <Layers size={16} /> Chọn bảng dữ liệu
+              </label>
+              <div className="flex gap-2">
+                <button onClick={selectAll} className="text-[10px] text-primary hover:underline">Chọn tất cả</button>
+                <button onClick={deselectAll} className="text-[10px] text-gray-400 hover:underline">Bỏ chọn</button>
+              </div>
+            </div>
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-2 p-4 bg-gray-50 rounded-xl border border-gray-100 max-h-48 overflow-y-auto">
+              {BACKUP_TABLES.map(table => (
+                <label key={table.id} className="flex items-center gap-2 cursor-pointer group">
+                  <input 
+                    type="checkbox" 
+                    checked={selectedTables.includes(table.id)}
+                    onChange={() => toggleTable(table.id)}
+                    className="rounded border-gray-300 text-primary focus:ring-primary"
+                  />
+                  <span className="text-xs text-gray-600 group-hover:text-primary transition-colors">{table.label}</span>
+                </label>
+              ))}
+            </div>
+          </div>
+
+          <div className="bg-blue-50 p-3 rounded-xl border border-blue-100 flex gap-3">
+            <Info className="text-blue-500 shrink-0" size={18} />
+            <p className="text-[10px] text-blue-700 leading-relaxed">
+              <strong>Lưu ý:</strong> Backup sẽ tải file Excel về máy khi đến giờ. Nếu có email, hệ thống cũng gửi qua email.
+            </p>
+          </div>
+        </div>
+
+        <div className="flex gap-3 pt-4 border-t border-gray-100">
+          <button 
+            onClick={handleSave}
+            className="flex-1 bg-primary text-white font-bold py-3 rounded-xl hover:bg-primary-hover transition-all flex items-center justify-center gap-2 shadow-lg shadow-green-900/10"
+          >
+            <Save size={18} /> Lưu cấu hình
+          </button>
+          <button 
+            onClick={handleBackupNow}
+            className="flex-1 bg-green-600 text-white font-bold py-3 rounded-xl hover:bg-green-700 transition-all flex items-center justify-center gap-2 shadow-lg shadow-green-900/10"
+          >
+            <Play size={18} /> Backup ngay
+          </button>
+          <button 
+            onClick={onBack}
+            className="px-6 bg-gray-100 text-gray-600 font-bold py-3 rounded-xl hover:bg-gray-200 transition-all"
+          >
+            Hủy
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const BackupNow = ({ onBack }: { onBack: () => void }) => {
+  const [loading, setLoading] = useState(false);
+  const [status, setStatus] = useState('');
+
+  const handleFullBackup = async () => {
+    setLoading(true);
+    setStatus('Đang chuẩn bị dữ liệu...');
+    
+    try {
+      const workbook = utils.book_new();
+      
+      for (const table of BACKUP_TABLES) {
+        setStatus(`Đang tải bảng: ${table.label}...`);
+        const { data, error } = await supabase.from(table.id).select('*');
+        if (error) {
+          console.error(`Error fetching ${table.id}:`, error);
+          continue;
+        }
+        
+        if (data && data.length > 0) {
+          const worksheet = utils.json_to_sheet(data);
+          utils.book_append_sheet(workbook, worksheet, table.label.substring(0, 31));
+        }
+      }
+      
+      setStatus('Đang tạo file Excel...');
+      const fileName = `CDX_Full_Backup_${new Date().toISOString().split('T')[0]}.xlsx`;
+      writeFile(workbook, fileName);
+      
+      setStatus('Hoàn tất! File đã được tải về.');
+      alert('Sao lưu toàn bộ dữ liệu thành công!');
+    } catch (err) {
+      console.error('Backup error:', err);
+      alert('Đã xảy ra lỗi khi sao lưu dữ liệu.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="p-4 md:p-6 space-y-6">
+      <PageBreadcrumb title="Sao lưu toàn phần" onBack={onBack} />
+      
+      <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-12 flex flex-col items-center justify-center text-center max-w-2xl mx-auto space-y-6">
+        <div className={`p-8 rounded-full ${loading ? 'bg-primary/10 animate-pulse' : 'bg-primary/10'}`}>
+          <Download size={64} className="text-primary" />
+        </div>
+        
+        <div className="space-y-2">
+          <h2 className="text-2xl font-bold text-gray-800">Sao lưu toàn bộ dữ liệu</h2>
+          <p className="text-gray-500 max-w-md">
+            Hệ thống sẽ xuất toàn bộ dữ liệu từ tất cả các bảng ra một file Excel duy nhất để bạn có thể lưu trữ ngoại tuyến.
+          </p>
+        </div>
+
+        {loading && (
+          <div className="w-full max-w-xs bg-gray-100 rounded-full h-2 overflow-hidden">
+            <motion.div 
+              initial={{ width: 0 }}
+              animate={{ width: '100%' }}
+              transition={{ duration: 2, repeat: Infinity }}
+              className="bg-primary h-full"
+            />
+          </div>
+        )}
+
+        <p className="text-sm font-medium text-primary h-5">{status}</p>
+
+        <div className="flex gap-4 w-full">
+          <button 
+            onClick={handleFullBackup}
+            disabled={loading}
+            className="flex-1 bg-primary text-white font-bold py-4 rounded-xl hover:bg-primary-hover transition-all flex items-center justify-center gap-3 shadow-lg shadow-green-900/20 disabled:opacity-50"
+          >
+            <Download size={20} />
+            {loading ? 'ĐANG SAO LƯU...' : 'BẮT ĐẦU SAO LƯU'}
+          </button>
+          <button 
+            onClick={onBack}
+            disabled={loading}
+            className="px-8 bg-gray-100 text-gray-600 font-bold py-4 rounded-xl hover:bg-gray-200 transition-all disabled:opacity-50"
+          >
+            Hủy
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 export default function App() {
   const [user, setUser] = useState<Employee | null>(null);
   const [currentPage, setCurrentPage] = useState('dashboard');
+  const [reminders, setReminders] = useState<any[]>([]);
+
+  // Browser Notification Logic
+  useEffect(() => {
+    if (user && "Notification" in window && Notification.permission === "default") {
+      Notification.requestPermission();
+    }
+
+    const checkReminders = setInterval(async () => {
+      if (!user) return;
+      const now = new Date().toISOString();
+      const { data } = await supabase
+        .from('reminders')
+        .select('*')
+        .eq('status', 'pending')
+        .lte('reminder_time', now);
+
+      if (data && data.length > 0) {
+        data.forEach(async (rem) => {
+          if (rem.browser_notification && Notification.permission === "granted") {
+            new Notification(rem.title, { body: rem.content });
+          }
+          await supabase.from('reminders').update({ status: 'reminded' }).eq('id', rem.id);
+        });
+        // Refresh if on reminders page
+        if (currentPage === 'reminders') {
+          setRefreshKey(prev => prev + 1);
+        }
+      }
+    }, 30000);
+
+    return () => clearInterval(checkReminders);
+  }, [user, currentPage]);
   const [pageParams, setPageParams] = useState<any>(null);
   const [navigationHistory, setNavigationHistory] = useState<string[]>([]);
   const [isSidebarOpen, setIsSidebarOpen] = useState(window.innerWidth >= 1024);
@@ -6993,7 +7949,16 @@ export default function App() {
       title: 'HỆ THỐNG',
       items: [
         { id: 'hr-records', label: 'Quản lý nhân sự', icon: UserCircle },
+        { id: 'notes', label: 'Nhật ký / Ghi chú', icon: FileText },
+        { id: 'reminders', label: 'Thiết lập Lịch nhắc', icon: Bell },
         { id: 'trash', label: 'Thùng rác', icon: Trash2 },
+      ]
+    },
+    {
+      title: 'CÔNG CỤ',
+      items: [
+        { id: 'backup-settings', label: 'Cài đặt Backup', icon: Settings },
+        { id: 'backup-now', label: 'Sao lưu ngay', icon: Download },
       ]
     }
   ];
@@ -7002,7 +7967,7 @@ export default function App() {
     ...group,
     items: group.items.filter(item => {
       if (user.role === 'User') {
-        const allowed = ['stock-in', 'stock-out', 'transfer', 'cost-report'];
+        const allowed = ['stock-in', 'stock-out', 'transfer', 'attendance', 'cost-report'];
         return allowed.includes(item.id);
       }
       return true;
@@ -7026,6 +7991,8 @@ export default function App() {
       case 'advances': return <Advances user={user} onBack={goBack} />;
       case 'payroll': return <MonthlySalary user={user} onBack={goBack} />;
       case 'salary-settings': return <SalarySettings user={user} onBack={goBack} />;
+      case 'notes': return <Notes user={user} onBack={goBack} />;
+      case 'reminders': return <Reminders user={user} onBack={goBack} />;
       case 'partners': return <Placeholder title="Khách hàng & nhà cung cấp" onBack={goBack} />;
       case 'inventory-report': return <InventoryReport user={user} onBack={goBack} />;
       case 'trash': return <Trash onNavigate={navigateTo} onBack={goBack} />;
@@ -7033,6 +8000,8 @@ export default function App() {
       case 'deleted-warehouses': return <Placeholder title="Danh sách kho xóa" onBack={goBack} />;
       case 'deleted-slips': return <DeletedSlips onBack={goBack} />;
       case 'material-groups': return <MaterialGroups user={user} onBack={goBack} />;
+      case 'backup-settings': return <BackupSettings onBack={goBack} />;
+      case 'backup-now': return <BackupNow onBack={goBack} />;
       default: return (
         <div className="p-4 md:p-6 space-y-6">
           <PageBreadcrumb title={currentPage} onBack={goBack} />

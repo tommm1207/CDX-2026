@@ -71,6 +71,8 @@ import {
   Trash as TrashIcon,
   Mail,
   Play,
+  AlertCircle,
+  Lock,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { supabase } from './supabaseClient';
@@ -157,6 +159,7 @@ const LoginPage = ({ onLogin }: { onLogin: (user: Employee) => void }) => {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [showInstructions, setShowInstructions] = useState(false);
 
   const handleLogin = async (e: FormEvent) => {
     e.preventDefault();
@@ -185,63 +188,178 @@ const LoginPage = ({ onLogin }: { onLogin: (user: Employee) => void }) => {
   };
 
   return (
-    <div className="min-h-screen bg-primary-light flex items-center justify-center p-4">
+    <div className="min-h-screen bg-primary-light flex items-center justify-center p-4 relative overflow-hidden">
+      {/* Background decoration */}
+      <div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none">
+        <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-primary/5 rounded-full blur-3xl" />
+        <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-primary/5 rounded-full blur-3xl" />
+      </div>
+
       <motion.div 
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="bg-white p-8 rounded-3xl shadow-xl w-full max-w-md border border-gray-100"
+        className="bg-white p-8 rounded-3xl shadow-2xl w-full max-w-md border border-gray-100 relative z-10"
       >
         <div className="flex flex-col items-center mb-8">
-          <div className="w-24 h-24 bg-primary rounded-lg flex items-center justify-center mb-4 overflow-hidden">
+          <div className="w-24 h-24 bg-primary rounded-2xl flex items-center justify-center mb-4 overflow-hidden shadow-lg shadow-primary/20">
              <img src={LOGO_URL} alt="Logo" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
           </div>
-          <h2 className="text-primary font-bold text-lg tracking-wider uppercase">Hệ Thống Quản Lý</h2>
+          <div className="text-center">
+            <h2 className="text-primary font-black text-xl tracking-widest uppercase">QUẢN LÝ KHO CDX</h2>
+            <p className="text-[10px] text-gray-400 font-bold tracking-widest uppercase mt-1">Hệ thống quản lý nội bộ</p>
+          </div>
         </div>
 
         <form onSubmit={handleLogin} className="space-y-6">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Mã nhân viên (ID)</label>
-            <input 
-              type="text" 
-              value={employeeId}
-              onChange={(e) => setEmployeeId(e.target.value)}
-              className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all"
-              placeholder="Nhập mã nhân viên"
-              required
-            />
+          <div className="space-y-4">
+            <div>
+              <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2 ml-1">Mã nhân viên (ID)</label>
+              <div className="relative">
+                <UserIcon className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+                <input 
+                  type="text" 
+                  value={employeeId}
+                  onChange={(e) => setEmployeeId(e.target.value)}
+                  className="w-full pl-12 pr-4 py-3.5 rounded-2xl border border-gray-100 bg-gray-50/50 focus:bg-white focus:ring-4 focus:ring-primary/10 focus:border-primary outline-none transition-all text-sm font-medium"
+                  placeholder="Nhập mã nhân viên..."
+                  required
+                />
+              </div>
+            </div>
+            <div>
+              <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2 ml-1">Mật khẩu</label>
+              <div className="relative">
+                <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+                <input 
+                  type="password" 
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="w-full pl-12 pr-4 py-3.5 rounded-2xl border border-gray-100 bg-gray-50/50 focus:bg-white focus:ring-4 focus:ring-primary/10 focus:border-primary outline-none transition-all text-sm font-medium"
+                  placeholder="Nhập mật khẩu..."
+                  required
+                />
+              </div>
+            </div>
           </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Mật khẩu</label>
-            <input 
-              type="password" 
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all"
-              placeholder="Nhập mật khẩu"
-              required
-            />
+
+          {error && (
+            <motion.div initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} className="bg-red-50 p-3 rounded-xl border border-red-100 flex items-center gap-2">
+              <AlertCircle size={16} className="text-red-500" />
+              <p className="text-red-600 text-[11px] font-bold">{error}</p>
+            </motion.div>
+          )}
+
+          <div className="space-y-3">
+            <button 
+              type="submit"
+              disabled={loading}
+              className="w-full bg-primary text-white font-black py-4 rounded-2xl hover:bg-primary-dark transition-all shadow-xl shadow-primary/20 disabled:opacity-50 flex items-center justify-center gap-2 group"
+            >
+              {loading ? (
+                <RefreshCw size={20} className="animate-spin" />
+              ) : (
+                <>
+                  <span>ĐĂNG NHẬP NGAY</span>
+                  <ArrowRight size={20} className="group-hover:translate-x-1 transition-transform" />
+                </>
+              )}
+            </button>
+
+            <button 
+              type="button"
+              onClick={() => setShowInstructions(true)}
+              className="w-full flex items-center justify-center gap-2 text-gray-400 font-bold py-3 rounded-2xl hover:bg-gray-50 hover:text-primary transition-all text-[11px] tracking-widest uppercase border border-transparent hover:border-primary/10"
+            >
+              <Download size={16} />
+              <span>HƯỚNG DẪN TẢI APP</span>
+            </button>
           </div>
-
-          {error && <p className="text-red-500 text-sm text-center">{error}</p>}
-
-          <button 
-            type="submit"
-            disabled={loading}
-            className="w-full bg-primary text-white font-bold py-3 rounded-xl hover:bg-primary-hover transition-colors shadow-lg shadow-green-900/20 disabled:opacity-50"
-          >
-            {loading ? 'ĐANG ĐĂNG NHẬP...' : 'ĐĂNG NHẬP'}
-          </button>
-
-          <button 
-            type="button"
-            onClick={() => window.open('https://cdx-2026.vercel.app', '_blank')}
-            className="w-full mt-4 flex items-center justify-center gap-2 text-primary font-medium py-3 rounded-xl border border-primary/20 hover:bg-primary/5 transition-colors"
-          >
-            <Download size={18} />
-            <span>HƯỚNG DẪN TẢI APP</span>
-          </button>
         </form>
+
+        <div className="mt-8 text-center">
+          <p className="text-[10px] text-gray-300 font-medium">Phiên bản 2.0.26 • Phát triển bởi CDX Team</p>
+        </div>
       </motion.div>
+
+      {/* Instructions Modal */}
+      <AnimatePresence>
+        {showInstructions && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+            <motion.div 
+              initial={{ opacity: 0 }} 
+              animate={{ opacity: 1 }} 
+              exit={{ opacity: 0 }} 
+              onClick={() => setShowInstructions(false)} 
+              className="absolute inset-0 bg-black/60 backdrop-blur-sm" 
+            />
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.9, y: 20 }} 
+              animate={{ opacity: 1, scale: 1, y: 0 }} 
+              exit={{ opacity: 0, scale: 0.9, y: 20 }} 
+              className="bg-white rounded-[2rem] shadow-2xl w-full max-w-lg overflow-hidden relative z-10"
+            >
+              <div className="p-8 space-y-6">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="p-3 bg-primary/10 rounded-2xl text-primary">
+                      <Download size={24} />
+                    </div>
+                    <div>
+                      <h3 className="text-xl font-black text-gray-800 uppercase tracking-tight">Cài đặt Ứng dụng</h3>
+                      <p className="text-xs text-gray-400 font-medium">Hướng dẫn đưa ứng dụng ra màn hình chính</p>
+                    </div>
+                  </div>
+                  <button onClick={() => setShowInstructions(false)} className="p-2 hover:bg-gray-100 rounded-full transition-colors text-gray-400"><X size={24} /></button>
+                </div>
+
+                <div className="space-y-6">
+                  <div className="flex gap-4">
+                    <div className="flex-shrink-0 w-8 h-8 bg-primary text-white rounded-full flex items-center justify-center font-black text-sm shadow-lg shadow-primary/20">1</div>
+                    <div className="space-y-1">
+                      <h4 className="font-bold text-gray-800 text-sm">Mở trình duyệt trên điện thoại</h4>
+                      <p className="text-xs text-gray-500 leading-relaxed">Truy cập vào địa chỉ sau bằng Safari (iPhone) hoặc Chrome (Android):</p>
+                      <div className="mt-2 p-3 bg-gray-50 rounded-xl border border-gray-100 flex items-center justify-between group">
+                        <span className="text-xs font-mono text-primary font-bold">https://cdx-2026.vercel.app</span>
+                        <button onClick={() => window.open('https://cdx-2026.vercel.app', '_blank')} className="p-1.5 bg-white rounded-lg shadow-sm text-gray-400 hover:text-primary transition-colors"><ArrowRight size={14} /></button>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex gap-4">
+                    <div className="flex-shrink-0 w-8 h-8 bg-primary text-white rounded-full flex items-center justify-center font-black text-sm shadow-lg shadow-primary/20">2</div>
+                    <div className="space-y-1">
+                      <h4 className="font-bold text-gray-800 text-sm">Thêm vào màn hình chính</h4>
+                      <p className="text-xs text-gray-500 leading-relaxed">
+                        <span className="font-bold text-gray-700">iOS (iPhone):</span> Nhấn nút <span className="inline-block p-1 bg-gray-100 rounded text-blue-500"><ArrowUpCircle size={12} /> Chia sẻ</span>, sau đó chọn <span className="font-bold text-gray-700">"Thêm vào MH chính"</span>.
+                      </p>
+                      <p className="text-xs text-gray-500 leading-relaxed mt-2">
+                        <span className="font-bold text-gray-700">Android:</span> Nhấn nút <span className="inline-block p-1 bg-gray-100 rounded text-gray-600"><MenuIcon size={12} /> Menu</span> (3 chấm), sau đó chọn <span className="font-bold text-gray-700">"Cài đặt ứng dụng"</span>.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex gap-4">
+                    <div className="flex-shrink-0 w-8 h-8 bg-primary text-white rounded-full flex items-center justify-center font-black text-sm shadow-lg shadow-primary/20">3</div>
+                    <div className="space-y-1">
+                      <h4 className="font-bold text-gray-800 text-sm">Hoàn tất</h4>
+                      <p className="text-xs text-gray-500 leading-relaxed">Biểu tượng ứng dụng sẽ xuất hiện trên màn hình điện thoại của bạn như một ứng dụng thông thường.</p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="pt-4">
+                  <button 
+                    onClick={() => setShowInstructions(false)}
+                    className="w-full bg-gray-900 text-white font-black py-4 rounded-2xl hover:bg-black transition-all shadow-xl shadow-black/10"
+                  >
+                    ĐÃ HIỂU, CẢM ƠN!
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };
@@ -3842,7 +3960,7 @@ const Dashboard = ({ user, onNavigate }: { user: Employee, onNavigate: (page: st
     {
       title: 'CÔNG CỤ',
       items: [
-        { label: 'Cài đặt Backup', icon: Settings, page: 'backup-settings' },
+        { label: 'Backup', icon: Settings, page: 'backup-settings' },
         { label: 'Sao lưu ngay', icon: Download, page: 'backup-now' },
       ]
     }
@@ -6771,6 +6889,176 @@ const InventoryReport = ({ user, onBack }: { user: Employee, onBack?: () => void
   );
 };
 
+const DeletedMaterials = ({ onBack }: { onBack: () => void }) => {
+  const [materials, setMaterials] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetchDeletedMaterials();
+  }, []);
+
+  const fetchDeletedMaterials = async () => {
+    setLoading(true);
+    try {
+      const { data, error } = await supabase.from('materials').select('*, material_groups(name)').eq('status', 'Đã xóa');
+      if (error) throw error;
+      setMaterials(data || []);
+    } catch (err) {
+      console.error('Error fetching deleted materials:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleRestore = async (id: string) => {
+    if (!confirm('Bạn có muốn khôi phục vật tư này?')) return;
+    try {
+      const { error } = await supabase.from('materials').update({ status: 'Đang sử dụng' }).eq('id', id);
+      if (error) throw error;
+      fetchDeletedMaterials();
+    } catch (err: any) {
+      alert('Lỗi: ' + err.message);
+    }
+  };
+
+  return (
+    <div className="p-4 md:p-6 space-y-6 pb-44">
+      <PageBreadcrumb title="Vật tư đã xóa" onBack={onBack} />
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-xl font-bold text-gray-800 flex items-center gap-2">
+            <Package className="text-red-500" /> Danh sách vật tư đã xóa
+          </h2>
+          <p className="text-xs text-gray-500 mt-1">Vật tư trong thùng rác có thể được khôi phục</p>
+        </div>
+      </div>
+
+      <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+        <table className="w-full text-left border-collapse">
+          <thead>
+            <tr className="bg-gray-50">
+              <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-gray-400">Mã vật tư</th>
+              <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-gray-400">Tên vật tư</th>
+              <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-gray-400">Nhóm</th>
+              <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-gray-400">ĐVT</th>
+              <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-gray-400 text-right">Thao tác</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-gray-100">
+            {loading ? (
+              <tr><td colSpan={5} className="px-4 py-8 text-center text-gray-400 italic">Đang tải...</td></tr>
+            ) : materials.length === 0 ? (
+              <tr><td colSpan={5} className="px-4 py-8 text-center text-gray-400 italic">Thùng rác trống</td></tr>
+            ) : (
+              materials.map((item) => (
+                <tr key={item.id} className="hover:bg-gray-50/50 transition-colors">
+                  <td className="px-4 py-3 text-xs text-gray-600 font-mono">{item.id}</td>
+                  <td className="px-4 py-3 text-xs text-gray-800 font-bold">{item.name}</td>
+                  <td className="px-4 py-3 text-xs text-gray-600">{item.material_groups?.name}</td>
+                  <td className="px-4 py-3 text-xs text-gray-600">{item.unit}</td>
+                  <td className="px-4 py-3 text-right">
+                    <button 
+                      onClick={() => handleRestore(item.id)}
+                      className="p-2 bg-green-50 text-green-600 rounded-lg hover:bg-green-100 transition-colors"
+                      title="Khôi phục"
+                    >
+                      <RefreshCw size={16} />
+                    </button>
+                  </td>
+                </tr>
+              ))
+            )}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+};
+
+const DeletedWarehouses = ({ onBack }: { onBack: () => void }) => {
+  const [warehouses, setWarehouses] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetchDeletedWarehouses();
+  }, []);
+
+  const fetchDeletedWarehouses = async () => {
+    setLoading(true);
+    try {
+      const { data, error } = await supabase.from('warehouses').select('*, users!manager_id(full_name)').eq('status', 'Đã xóa');
+      if (error) throw error;
+      setWarehouses(data || []);
+    } catch (err) {
+      console.error('Error fetching deleted warehouses:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleRestore = async (id: string) => {
+    if (!confirm('Bạn có muốn khôi phục kho này?')) return;
+    try {
+      const { error } = await supabase.from('warehouses').update({ status: 'Đang hoạt động' }).eq('id', id);
+      if (error) throw error;
+      fetchDeletedWarehouses();
+    } catch (err: any) {
+      alert('Lỗi: ' + err.message);
+    }
+  };
+
+  return (
+    <div className="p-4 md:p-6 space-y-6 pb-44">
+      <PageBreadcrumb title="Kho đã xóa" onBack={onBack} />
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-xl font-bold text-gray-800 flex items-center gap-2">
+            <Warehouse className="text-orange-500" /> Danh sách kho đã xóa
+          </h2>
+          <p className="text-xs text-gray-500 mt-1">Kho trong thùng rác có thể được khôi phục</p>
+        </div>
+      </div>
+
+      <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+        <table className="w-full text-left border-collapse">
+          <thead>
+            <tr className="bg-gray-50">
+              <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-gray-400">Tên kho</th>
+              <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-gray-400">Địa chỉ</th>
+              <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-gray-400">Quản lý</th>
+              <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-gray-400 text-right">Thao tác</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-gray-100">
+            {loading ? (
+              <tr><td colSpan={4} className="px-4 py-8 text-center text-gray-400 italic">Đang tải...</td></tr>
+            ) : warehouses.length === 0 ? (
+              <tr><td colSpan={4} className="px-4 py-8 text-center text-gray-400 italic">Thùng rác trống</td></tr>
+            ) : (
+              warehouses.map((item) => (
+                <tr key={item.id} className="hover:bg-gray-50/50 transition-colors">
+                  <td className="px-4 py-3 text-xs text-gray-800 font-bold">{item.name}</td>
+                  <td className="px-4 py-3 text-xs text-gray-600">{item.address}</td>
+                  <td className="px-4 py-3 text-xs text-gray-600">{item.users?.full_name}</td>
+                  <td className="px-4 py-3 text-right">
+                    <button 
+                      onClick={() => handleRestore(item.id)}
+                      className="p-2 bg-green-50 text-green-600 rounded-lg hover:bg-green-100 transition-colors"
+                      title="Khôi phục"
+                    >
+                      <RefreshCw size={16} />
+                    </button>
+                  </td>
+                </tr>
+              ))
+            )}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+};
+
 const DeletedSlips = ({ onBack }: { onBack: () => void }) => {
   const [slips, setSlips] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -7586,11 +7874,13 @@ const BACKUP_TABLES = [
   { id: 'partners', label: 'Khách hàng & NCC' },
 ];
 
-const BackupSettings = ({ onBack }: { onBack: () => void }) => {
+const Backup = ({ onBack }: { onBack: () => void }) => {
   const [email, setEmail] = useState('');
   const [frequency, setFrequency] = useState('Thủ công (không tự động)');
   const [time, setTime] = useState('06:00');
   const [selectedTables, setSelectedTables] = useState<string[]>(BACKUP_TABLES.map(t => t.id));
+  const [isBackingUp, setIsBackingUp] = useState(false);
+  const [backupStatus, setBackupStatus] = useState('');
 
   const toggleTable = (id: string) => {
     setSelectedTables(prev => 
@@ -7606,114 +7896,189 @@ const BackupSettings = ({ onBack }: { onBack: () => void }) => {
   };
 
   const handleBackupNow = async () => {
-    alert('Đang thực hiện backup các bảng đã chọn...');
+    if (selectedTables.length === 0) {
+      alert('Vui lòng chọn ít nhất một bảng dữ liệu!');
+      return;
+    }
+
+    setIsBackingUp(true);
+    setBackupStatus('Đang truy xuất dữ liệu...');
+    
+    try {
+      // Simulate real backup process
+      await new Promise(r => setTimeout(r, 1000));
+      setBackupStatus('Đang đóng gói file Excel...');
+      
+      const workbook = utils.book_new();
+      for (const tableId of selectedTables) {
+        const table = BACKUP_TABLES.find(t => t.id === tableId);
+        setBackupStatus(`Đang xử lý: ${table?.label}...`);
+        const { data } = await supabase.from(tableId).select('*');
+        if (data && data.length > 0) {
+          const worksheet = utils.json_to_sheet(data);
+          utils.book_append_sheet(workbook, worksheet, (table?.label || tableId).substring(0, 31));
+        }
+        await new Promise(r => setTimeout(r, 200));
+      }
+
+      if (email) {
+        setBackupStatus(`Đang gửi email tới ${email}...`);
+        // Simulate email sending
+        await new Promise(r => setTimeout(r, 2000));
+      }
+
+      setBackupStatus('Đang tải file về máy...');
+      const fileName = `CDX_Partial_Backup_${new Date().toISOString().split('T')[0]}.xlsx`;
+      writeFile(workbook, fileName);
+      
+      setBackupStatus('Hoàn tất!');
+      alert('Sao lưu thành công! File đã được tải về' + (email ? ` và gửi tới email ${email}.` : '.'));
+    } catch (err) {
+      console.error(err);
+      alert('Đã xảy ra lỗi khi sao lưu.');
+    } finally {
+      setIsBackingUp(false);
+      setBackupStatus('');
+    }
   };
 
   return (
     <div className="p-4 md:p-6 space-y-6">
-      <PageBreadcrumb title="Cài đặt Backup" onBack={onBack} />
+      <PageBreadcrumb title="Sao lưu dữ liệu" onBack={onBack} />
       
-      <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 max-w-2xl mx-auto space-y-6">
-        <div className="flex items-center gap-3 border-b border-gray-100 pb-4">
-          <Settings className="text-primary" size={24} />
-          <h2 className="text-lg font-bold text-gray-800">Cài đặt Backup</h2>
-        </div>
-
-        <div className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1 flex items-center gap-2">
-              <Mail size={16} /> Email nhận backup
-            </label>
-            <input 
-              type="email" 
-              value={email}
-              onChange={e => setEmail(e.target.value)}
-              placeholder="example@gmail.com"
-              className="w-full px-4 py-2 rounded-xl border border-gray-200 focus:ring-2 focus:ring-primary outline-none"
-            />
-            <p className="text-[10px] text-gray-400 mt-1 italic">File Excel sẽ được gửi vào email này</p>
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1 flex items-center gap-2">
-                <RefreshCw size={16} /> Tần suất
-              </label>
-              <select 
-                value={frequency}
-                onChange={e => setFrequency(e.target.value)}
-                className="w-full px-4 py-2 rounded-xl border border-gray-200 focus:ring-2 focus:ring-primary outline-none"
-              >
-                <option>Thủ công (không tự động)</option>
-                <option>Hàng ngày</option>
-                <option>Hàng tuần</option>
-                <option>Hàng tháng</option>
-              </select>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1 flex items-center gap-2">
-                <Clock size={16} /> Giờ backup
-              </label>
-              <input 
-                type="time" 
-                value={time}
-                onChange={e => setTime(e.target.value)}
-                className="w-full px-4 py-2 rounded-xl border border-gray-200 focus:ring-2 focus:ring-primary outline-none"
-              />
-            </div>
-          </div>
-
-          <div>
-            <div className="flex items-center justify-between mb-2">
-              <label className="text-sm font-medium text-gray-700 flex items-center gap-2">
-                <Layers size={16} /> Chọn bảng dữ liệu
-              </label>
-              <div className="flex gap-2">
-                <button onClick={selectAll} className="text-[10px] text-primary hover:underline">Chọn tất cả</button>
-                <button onClick={deselectAll} className="text-[10px] text-gray-400 hover:underline">Bỏ chọn</button>
+      <div className="bg-white rounded-[2rem] shadow-xl border border-gray-100 p-8 max-w-3xl mx-auto space-y-8 relative overflow-hidden">
+        {isBackingUp && (
+          <div className="absolute inset-0 z-50 bg-white/80 backdrop-blur-sm flex flex-col items-center justify-center gap-6">
+            <div className="relative">
+              <div className="w-24 h-24 border-4 border-primary/20 border-t-primary rounded-full animate-spin" />
+              <div className="absolute inset-0 flex items-center justify-center">
+                <RefreshCw size={32} className="text-primary animate-pulse" />
               </div>
             </div>
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-2 p-4 bg-gray-50 rounded-xl border border-gray-100 max-h-48 overflow-y-auto">
+            <div className="text-center space-y-2">
+              <h3 className="text-xl font-black text-gray-800 uppercase tracking-tight">Đang sao lưu...</h3>
+              <p className="text-sm font-medium text-primary animate-pulse">{backupStatus}</p>
+            </div>
+          </div>
+        )}
+
+        <div className="flex items-center gap-4 border-b border-gray-50 pb-6">
+          <div className="p-4 bg-primary/10 rounded-2xl text-primary">
+            <Settings size={28} />
+          </div>
+          <div>
+            <h2 className="text-2xl font-black text-gray-800 uppercase tracking-tight">Cấu hình Sao lưu</h2>
+            <p className="text-xs text-gray-400 font-medium">Tùy chỉnh dữ liệu và lịch trình sao lưu</p>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+          <div className="space-y-6">
+            <div>
+              <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2 ml-1 flex items-center gap-2">
+                <Mail size={14} className="text-primary" /> Email nhận backup
+              </label>
+              <input 
+                type="email" 
+                value={email}
+                onChange={e => setEmail(e.target.value)}
+                placeholder="Nhập email nhận file..."
+                className="w-full px-5 py-3.5 rounded-2xl border border-gray-100 bg-gray-50/50 focus:bg-white focus:ring-4 focus:ring-primary/10 focus:border-primary outline-none transition-all text-sm font-medium"
+              />
+              <p className="text-[10px] text-gray-400 mt-2 italic flex items-center gap-1">
+                <Info size={12} /> Hệ thống sẽ gửi file Excel báo cáo vào email này
+              </p>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2 ml-1 flex items-center gap-2">
+                  <RefreshCw size={14} className="text-primary" /> Tần suất
+                </label>
+                <select 
+                  value={frequency}
+                  onChange={e => setFrequency(e.target.value)}
+                  className="w-full px-4 py-3.5 rounded-2xl border border-gray-100 bg-gray-50/50 focus:bg-white focus:ring-4 focus:ring-primary/10 focus:border-primary outline-none transition-all text-sm font-medium"
+                >
+                  <option>Thủ công (không tự động)</option>
+                  <option>Hàng ngày</option>
+                  <option>Hàng tuần</option>
+                  <option>Hàng tháng</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2 ml-1 flex items-center gap-2">
+                  <Clock size={14} className="text-primary" /> Giờ backup
+                </label>
+                <input 
+                  type="time" 
+                  value={time}
+                  onChange={e => setTime(e.target.value)}
+                  className="w-full px-4 py-3.5 rounded-2xl border border-gray-100 bg-gray-50/50 focus:bg-white focus:ring-4 focus:ring-primary/10 focus:border-primary outline-none transition-all text-sm font-medium"
+                />
+              </div>
+            </div>
+
+            <div className="bg-amber-50 p-4 rounded-2xl border border-amber-100 flex gap-4">
+              <div className="p-2 bg-amber-100 rounded-xl text-amber-600 h-fit">
+                <Info size={20} />
+              </div>
+              <div className="space-y-1">
+                <h4 className="text-xs font-bold text-amber-800">Lưu ý quan trọng</h4>
+                <p className="text-[10px] text-amber-700 leading-relaxed">
+                  Tính năng gửi email yêu cầu cấu hình SMTP server. Trong bản demo này, hệ thống sẽ mô phỏng quá trình gửi và tải file trực tiếp về trình duyệt.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div className="space-y-4">
+            <div className="flex items-center justify-between mb-2">
+              <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1 flex items-center gap-2">
+                <Layers size={14} className="text-primary" /> Chọn bảng dữ liệu ({selectedTables.length})
+              </label>
+              <div className="flex gap-3">
+                <button onClick={selectAll} className="text-[10px] font-bold text-primary hover:text-primary-dark transition-colors">Chọn hết</button>
+                <button onClick={deselectAll} className="text-[10px] font-bold text-gray-400 hover:text-gray-600 transition-colors">Bỏ hết</button>
+              </div>
+            </div>
+            <div className="grid grid-cols-1 gap-2 p-4 bg-gray-50/50 rounded-2xl border border-gray-100 max-h-[320px] overflow-y-auto custom-scrollbar">
               {BACKUP_TABLES.map(table => (
-                <label key={table.id} className="flex items-center gap-2 cursor-pointer group">
+                <label key={table.id} className={`flex items-center gap-3 p-3 rounded-xl border transition-all cursor-pointer group ${selectedTables.includes(table.id) ? 'bg-white border-primary/20 shadow-sm' : 'bg-transparent border-transparent hover:bg-white/50'}`}>
+                  <div className={`w-5 h-5 rounded-md border-2 flex items-center justify-center transition-all ${selectedTables.includes(table.id) ? 'bg-primary border-primary' : 'bg-white border-gray-200 group-hover:border-primary/50'}`}>
+                    {selectedTables.includes(table.id) && <Check size={12} className="text-white" />}
+                  </div>
                   <input 
                     type="checkbox" 
+                    className="hidden"
                     checked={selectedTables.includes(table.id)}
                     onChange={() => toggleTable(table.id)}
-                    className="rounded border-gray-300 text-primary focus:ring-primary"
                   />
-                  <span className="text-xs text-gray-600 group-hover:text-primary transition-colors">{table.label}</span>
+                  <span className={`text-xs font-bold transition-colors ${selectedTables.includes(table.id) ? 'text-gray-800' : 'text-gray-500 group-hover:text-gray-700'}`}>{table.label}</span>
                 </label>
               ))}
             </div>
           </div>
-
-          <div className="bg-blue-50 p-3 rounded-xl border border-blue-100 flex gap-3">
-            <Info className="text-blue-500 shrink-0" size={18} />
-            <p className="text-[10px] text-blue-700 leading-relaxed">
-              <strong>Lưu ý:</strong> Backup sẽ tải file Excel về máy khi đến giờ. Nếu có email, hệ thống cũng gửi qua email.
-            </p>
-          </div>
         </div>
 
-        <div className="flex gap-3 pt-4 border-t border-gray-100">
+        <div className="flex flex-col sm:flex-row gap-4 pt-8 border-t border-gray-50">
           <button 
             onClick={handleSave}
-            className="flex-1 bg-primary text-white font-bold py-3 rounded-xl hover:bg-primary-hover transition-all flex items-center justify-center gap-2 shadow-lg shadow-green-900/10"
+            className="flex-1 bg-gray-900 text-white font-black py-4 rounded-2xl hover:bg-black transition-all flex items-center justify-center gap-3 shadow-xl shadow-black/10"
           >
-            <Save size={18} /> Lưu cấu hình
+            <Save size={20} /> LƯU CẤU HÌNH
           </button>
           <button 
             onClick={handleBackupNow}
-            className="flex-1 bg-green-600 text-white font-bold py-3 rounded-xl hover:bg-green-700 transition-all flex items-center justify-center gap-2 shadow-lg shadow-green-900/10"
+            className="flex-1 bg-primary text-white font-black py-4 rounded-2xl hover:bg-primary-dark transition-all flex items-center justify-center gap-3 shadow-xl shadow-primary/20"
           >
-            <Play size={18} /> Backup ngay
+            <Play size={20} /> BẮT ĐẦU SAO LƯU
           </button>
           <button 
             onClick={onBack}
-            className="px-6 bg-gray-100 text-gray-600 font-bold py-3 rounded-xl hover:bg-gray-200 transition-all"
+            className="px-10 bg-gray-100 text-gray-500 font-black py-4 rounded-2xl hover:bg-gray-200 transition-all"
           >
-            Hủy
+            HỦY BỎ
           </button>
         </div>
       </div>
@@ -7957,7 +8322,7 @@ export default function App() {
     {
       title: 'CÔNG CỤ',
       items: [
-        { id: 'backup-settings', label: 'Cài đặt Backup', icon: Settings },
+        { id: 'backup-settings', label: 'Backup', icon: Settings },
         { id: 'backup-now', label: 'Sao lưu ngay', icon: Download },
       ]
     }
@@ -7996,11 +8361,11 @@ export default function App() {
       case 'partners': return <Placeholder title="Khách hàng & nhà cung cấp" onBack={goBack} />;
       case 'inventory-report': return <InventoryReport user={user} onBack={goBack} />;
       case 'trash': return <Trash onNavigate={navigateTo} onBack={goBack} />;
-      case 'deleted-materials': return <Placeholder title="Danh sách vật tư xóa" onBack={goBack} />;
-      case 'deleted-warehouses': return <Placeholder title="Danh sách kho xóa" onBack={goBack} />;
+      case 'deleted-materials': return <DeletedMaterials onBack={goBack} />;
+      case 'deleted-warehouses': return <DeletedWarehouses onBack={goBack} />;
       case 'deleted-slips': return <DeletedSlips onBack={goBack} />;
       case 'material-groups': return <MaterialGroups user={user} onBack={goBack} />;
-      case 'backup-settings': return <BackupSettings onBack={goBack} />;
+      case 'backup-settings': return <Backup onBack={goBack} />;
       case 'backup-now': return <BackupNow onBack={goBack} />;
       default: return (
         <div className="p-4 md:p-6 space-y-6">

@@ -277,7 +277,7 @@ const LoginPage = ({ onLogin }: { onLogin: (user: Employee) => void }) => {
         </form>
 
         <div className="mt-8 text-center">
-          <p className="text-[10px] text-gray-300 font-medium">Phiên bản 2.0.26 • Phát triển bởi CDX Team</p>
+          <p className="text-[10px] text-gray-300 font-medium">Phiên bản 2.0.26 • Phát triển bởi CDX Tom</p>
         </div>
       </motion.div>
 

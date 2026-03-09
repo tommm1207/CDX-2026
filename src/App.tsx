@@ -68,12 +68,7 @@ const LOGO_URL = "/logo.png"; // Đường dẫn đến file logo trong thư m�
 
 // --- Global Helper Functions ---
 const formatCurrency = (amount: number) => {
-  return new Intl.NumberFormat('vi-VN', { 
-    style: 'currency', 
-    currency: 'VND',
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 2
-  }).format(amount);
+  return new Intl.NumberFormat('vi-VN').format(amount) + ' đ';
 };
 
 const formatNumber = (val: number | string) => {
@@ -988,7 +983,8 @@ const Materials = ({ user, onBack }: { user: Employee, onBack?: () => void }) =>
     specification: '',
     unit: '',
     description: '',
-    image_url: ''
+    image_url: '',
+    quantity: 1
   };
 
   const [formData, setFormData] = useState(initialFormState);
@@ -1060,13 +1056,27 @@ const Materials = ({ user, onBack }: { user: Employee, onBack?: () => void }) =>
       }
 
       const payload = { ...formData, group_id: finalGroupId, warehouse_id: finalWarehouseId };
+      // Remove quantity from payload before saving to DB if the table doesn't have it
+      const { quantity, ...dbPayload } = payload;
 
       if (isEditing) {
-        const { error } = await supabase.from('materials').update(payload).eq('id', formData.id);
+        const { error } = await supabase.from('materials').update(dbPayload).eq('id', formData.id);
         if (error) throw error;
       } else {
-        const { error } = await supabase.from('materials').insert([payload]);
-        if (error) throw error;
+        const qty = parseInt(quantity?.toString() || '1');
+        if (qty > 1) {
+          const payloads = [];
+          for (let i = 1; i <= qty; i++) {
+            // If ID is provided, append a suffix, otherwise let Supabase generate UUIDs
+            const newId = formData.id ? `${formData.id}-${i}` : undefined;
+            payloads.push({ ...dbPayload, id: newId });
+          }
+          const { error } = await supabase.from('materials').insert(payloads);
+          if (error) throw error;
+        } else {
+          const { error } = await supabase.from('materials').insert([dbPayload]);
+          if (error) throw error;
+        }
       }
       setShowModal(false);
       fetchMaterials();
@@ -1290,6 +1300,20 @@ const Materials = ({ user, onBack }: { user: Employee, onBack?: () => void }) =>
                           className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20" 
                         />
                       </div>
+                      {!isEditing && (
+                        <div className="space-y-1">
+                          <label className="text-[10px] font-bold text-gray-400 uppercase">Số lượng nhập bản ghi</label>
+                          <input 
+                            type="number" 
+                            min="1"
+                            max="100"
+                            value={formData.quantity}
+                            onChange={(e) => setFormData({...formData, quantity: parseInt(e.target.value) || 1})}
+                            className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20" 
+                          />
+                          <p className="text-[9px] text-gray-400 italic">Nhập số lượng lớn để tạo nhiều bản ghi cùng lúc (ID sẽ tự động đánh số thứ tự)</p>
+                        </div>
+                      )}
                       <div className="space-y-1">
                         <label className="text-[10px] font-bold text-gray-400 uppercase">Tên vật tư *</label>
                         <input 
@@ -3672,7 +3696,7 @@ const Dashboard = ({ user, onNavigate }: { user: Employee, onNavigate: (page: st
       try {
         setLoading(true);
         // Fetch Employees
-        const { count: empCount } = await supabase.from('users').select('*', { count: 'exact', head: true });
+        const { count: empCount } = await supabase.from('users').select('*', { count: 'exact', head: true }).neq('role', 'Admin App');
         
         // Fetch Materials
         const { count: matCount } = await supabase.from('materials').select('*', { count: 'exact', head: true });
@@ -3774,9 +3798,7 @@ const Dashboard = ({ user, onNavigate }: { user: Employee, onNavigate: (page: st
       items: [
         { label: 'Chấm công', icon: CalendarCheck, page: 'attendance' },
         { label: 'Tạm ứng & phụ cấp', icon: Banknote, page: 'advances' },
-        { label: 'Báo cáo lương', icon: FilePieChart, page: 'payroll-report' },
         { label: 'Tổng hợp lương/tháng', icon: Wallet, page: 'payroll' },
-        { label: 'Tính lương', icon: Calculator, page: 'salary-calculation' },
         { label: 'Cài đặt lương', icon: Settings2, page: 'salary-settings' },
       ]
     },
@@ -4114,6 +4136,10 @@ const HRRecords = ({ user, onBack }: { user: Employee, onBack?: () => void }) =>
   };
 
   const handleEdit = (emp: Employee) => {
+    if (emp.role === 'Admin App' && user.role !== 'Admin App') {
+      alert('Bạn không có quyền chỉnh sửa tài khoản Admin App');
+      return;
+    }
     setFormData({
       ...emp,
       dob: emp.dob || '',
@@ -4141,6 +4167,14 @@ const HRRecords = ({ user, onBack }: { user: Employee, onBack?: () => void }) =>
 
   const confirmDelete = async () => {
     if (!itemToDelete) return;
+    
+    // Check if trying to delete an Admin App account
+    const target = employees.find(e => e.id === itemToDelete);
+    if (target?.role === 'Admin App' && user.role !== 'Admin App') {
+      alert('Bạn không có quyền xóa tài khoản Admin App');
+      return;
+    }
+
     try {
       const { error } = await supabase.from('users').delete().eq('id', itemToDelete);
       if (error) throw error;
@@ -4190,10 +4224,16 @@ const HRRecords = ({ user, onBack }: { user: Employee, onBack?: () => void }) =>
     }
   };
 
-  const filteredEmployees = employees.filter(emp => 
-    emp.full_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    emp.id.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredEmployees = employees.filter(emp => {
+    const matchesSearch = emp.full_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      emp.id.toLowerCase().includes(searchTerm.toLowerCase());
+    
+    // Hide Admin App accounts from non-Admin App users
+    if (user.role !== 'Admin App' && emp.role === 'Admin App') {
+      return false;
+    }
+    return matchesSearch;
+  });
 
   return (
     <div className="p-4 md:p-6 space-y-6 pb-44">
@@ -4478,12 +4518,12 @@ const HRRecords = ({ user, onBack }: { user: Employee, onBack?: () => void }) =>
                         <label className="text-[10px] font-bold text-gray-400 uppercase">Phân quyền</label>
                         <select 
                           value={formData.role}
-                          onChange={(e) => setFormData({...formData, role: e.target.value})}
+                          onChange={(e) => setFormData({...formData, role: e.target.value as any})}
                           className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20"
                         >
                           <option value="User">User</option>
                           <option value="Admin">Admin</option>
-                          <option value="Admin App">Admin App</option>
+                          {user.role === 'Admin App' && <option value="Admin App">Admin App</option>}
                         </select>
                       </div>
                       <div className="space-y-1">
@@ -4557,409 +4597,761 @@ const HRRecords = ({ user, onBack }: { user: Employee, onBack?: () => void }) =>
 };
 
 const Attendance = ({ user, onBack }: { user: Employee, onBack?: () => void }) => {
-  const [showModal, setShowModal] = useState(false);
   const [employees, setEmployees] = useState<Employee[]>([]);
-  const [attendanceList, setAttendanceList] = useState<any[]>([]);
+  const [attendance, setAttendance] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [submitting, setSubmitting] = useState(false);
-  const [isEditing, setIsEditing] = useState(false);
-  const [editingId, setEditingId] = useState<string | null>(null);
-
-  const initialFormState = {
-    employee_id: '',
-    date: new Date().toISOString().split('T')[0],
-    work_hours: 0,
-    overtime_hours: 0,
-    workplace: '',
-    work_content: '',
-    daily_overtime_pay: 0,
-    salary_at_time: 0,
-    daily_work_pay: 0,
-    overtime_rate: 1.5,
-    daily_total_pay: 0
-  };
-
-  const [formData, setFormData] = useState(initialFormState);
+  const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1);
+  const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
 
   useEffect(() => {
-    fetchEmployees();
-    fetchAttendance();
-  }, []);
+    fetchData();
+  }, [selectedMonth, selectedYear]);
 
-  const fetchEmployees = async () => {
-    const { data } = await supabase.from('users').select('id, full_name');
-    if (data) setEmployees(data as any);
-  };
-
-  const fetchAttendance = async () => {
+  const fetchData = async () => {
     setLoading(true);
-    const { data, error } = await supabase
-      .from('attendance')
-      .select('*, users(full_name)')
-      .order('date', { ascending: false });
-    if (data) setAttendanceList(data);
-    setLoading(false);
-  };
-
-  const handleEdit = (item: any) => {
-    setFormData({
-      employee_id: item.employee_id,
-      date: item.date,
-      work_hours: item.work_hours,
-      overtime_hours: item.overtime_hours,
-      workplace: item.workplace,
-      work_content: item.work_content,
-      daily_overtime_pay: item.daily_overtime_pay,
-      salary_at_time: item.salary_at_time,
-      daily_work_pay: item.daily_work_pay,
-      overtime_rate: item.overtime_rate,
-      daily_total_pay: item.daily_total_pay
-    });
-    setEditingId(item.id);
-    setIsEditing(true);
-    setShowModal(true);
-  };
-
-  const [showDeleteModal, setShowDeleteModal] = useState(false);
-  const [itemToDelete, setItemToDelete] = useState<string | null>(null);
-
-  const handleDeleteClick = (id: string) => {
-    setItemToDelete(id);
-    setShowDeleteModal(true);
-  };
-
-  const confirmDelete = async () => {
-    if (!itemToDelete) return;
-    if (user.role !== 'Admin' && user.role !== 'Admin App') {
-      alert('Bạn không có quyền xóa dữ liệu chấm công');
-      return;
-    }
     try {
-      const { error } = await supabase.from('attendance').delete().eq('id', itemToDelete);
-      if (error) throw error;
-      fetchAttendance();
-      setShowDeleteModal(false);
-      setItemToDelete(null);
-    } catch (err) {
-      alert('Lỗi khi xóa dữ liệu chấm công');
-    }
-  };
+      // Hide Admin App from attendance list for non-Admin App users
+      const { data: empData } = await supabase.from('users').select('*').neq('status', 'Nghỉ việc').neq('role', 'Admin App').order('full_name');
+      if (empData) setEmployees(empData);
 
-  const handleSubmit = async (e: FormEvent) => {
-    e.preventDefault();
-    if (user.role !== 'Admin' && user.role !== 'Admin App') {
-      alert('Bạn không có quyền thực hiện thao tác này');
-      return;
-    }
-    setSubmitting(true);
-    try {
-      if (isEditing && editingId) {
-        const { error } = await supabase.from('attendance').update(formData).eq('id', editingId);
-        if (error) throw error;
-      } else {
-        const { error } = await supabase.from('attendance').insert([formData]);
-        if (error) throw error;
-      }
+      const startDate = `${selectedYear}-${String(selectedMonth).padStart(2, '0')}-01`;
+      const endDate = new Date(selectedYear, selectedMonth, 0).toISOString().split('T')[0];
+
+      const { data: attData } = await supabase
+        .from('attendance')
+        .select('*')
+        .gte('date', startDate)
+        .lte('date', endDate);
       
-      setShowModal(false);
-      fetchAttendance();
-      setFormData(initialFormState);
-      setIsEditing(false);
-      setEditingId(null);
+      if (attData) setAttendance(attData);
     } catch (err) {
-      alert('Lỗi khi lưu dữ liệu chấm công');
+      console.error('Error fetching attendance:', err);
     } finally {
-      setSubmitting(false);
+      setLoading(false);
     }
   };
 
-  const handleExportExcel = () => {
-    const dataToExport = attendanceList.map(item => ({
-      'Ngày': item.date,
-      'Mã NV': item.employee_id,
-      'Họ tên': item.users?.full_name,
-      'Giờ công': item.work_hours,
-      'Tăng ca': item.overtime_hours,
-      'Kho làm việc': item.workplace,
-      'Nội dung': item.work_content,
-      'Tổng tiền': item.daily_total_pay
-    }));
+  const daysInMonth = new Date(selectedYear, selectedMonth, 0).getDate();
+  const days = Array.from({ length: daysInMonth }, (_, i) => i + 1);
 
-    const ws = utils.json_to_sheet(dataToExport);
-    const wb = utils.book_new();
-    utils.book_append_sheet(wb, ws, "Chấm công");
-    writeFile(wb, `Bang_Cham_Cong_${new Date().toISOString().split('T')[0]}.xlsx`);
+  const getStatus = (empId: string, day: number) => {
+    const dateStr = `${selectedYear}-${String(selectedMonth).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+    return attendance.find(a => a.employee_id === empId && a.date === dateStr);
+  };
+
+  const toggleAttendance = async (empId: string, day: number) => {
+    const dateStr = `${selectedYear}-${String(selectedMonth).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+    const current = getStatus(empId, day);
+
+    if (current) {
+      let nextStatus = 'present';
+      let hours = 8;
+
+      if (current.status === 'present') {
+        nextStatus = 'half-day';
+        hours = 4;
+      } else if (current.status === 'half-day') {
+        nextStatus = 'absent';
+        hours = 0;
+      } else {
+        await supabase.from('attendance').delete().eq('id', current.id);
+        fetchData();
+        return;
+      }
+
+      await supabase.from('attendance').update({ status: nextStatus, hours_worked: hours, overtime_hours: current.overtime_hours || 0 }).eq('id', current.id);
+    } else {
+      await supabase.from('attendance').insert([{
+        employee_id: empId,
+        date: dateStr,
+        status: 'present',
+        hours_worked: 8,
+        overtime_hours: 0
+      }]);
+    }
+    fetchData();
+  };
+
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editingAtt, setEditingAtt] = useState<any>(null);
+  const [editFormData, setEditFormData] = useState({ status: 'present', overtime: 0 });
+
+  const openEditModal = (empId: string, day: number) => {
+    const att = getStatus(empId, day);
+    const dateStr = `${selectedYear}-${String(selectedMonth).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+    setEditingAtt({ empId, day, dateStr, id: att?.id });
+    setEditFormData({
+      status: att?.status || 'present',
+      overtime: att?.overtime_hours || 0
+    });
+    setShowEditModal(true);
+  };
+
+  const saveEdit = async () => {
+    const hours = editFormData.status === 'present' ? 8 : (editFormData.status === 'half-day' ? 4 : 0);
+    if (editingAtt.id) {
+      await supabase.from('attendance').update({
+        status: editFormData.status,
+        hours_worked: hours,
+        overtime_hours: editFormData.overtime
+      }).eq('id', editingAtt.id);
+    } else {
+      await supabase.from('attendance').insert([{
+        employee_id: editingAtt.empId,
+        date: editingAtt.dateStr,
+        status: editFormData.status,
+        hours_worked: hours,
+        overtime_hours: editFormData.overtime
+      }]);
+    }
+    setShowEditModal(false);
+    fetchData();
+  };
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'present': return 'bg-green-500 text-white';
+      case 'half-day': return 'bg-amber-500 text-white';
+      case 'absent': return 'bg-red-500 text-white';
+      default: return 'bg-gray-100 text-gray-300';
+    }
+  };
+
+  const getStatusLabel = (status: string) => {
+    switch (status) {
+      case 'present': return 'X';
+      case 'half-day': return '1/2';
+      case 'absent': return 'V';
+      default: return '';
+    }
   };
 
   return (
     <div className="p-4 md:p-6 space-y-6 pb-44">
-      <PageBreadcrumb title="Bảng Chấm công" onBack={onBack} />
-      <div className="flex items-center justify-between">
-        <h2 className="text-lg font-bold text-gray-800 flex items-center gap-2">
-          <CalendarCheck size={20} className="text-primary" /> Bảng Chấm công
-        </h2>
-        {(user.role === 'Admin' || user.role === 'Admin App') && (
-          <button 
-            onClick={() => {
-              setFormData(initialFormState);
-              setIsEditing(false);
-              setEditingId(null);
-              setShowModal(true);
-            }}
-            className="bg-primary text-white px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 hover:bg-primary-hover transition-colors"
-          >
-            <Plus size={18} /> Thêm mới
-          </button>
-        )}
+      <PageBreadcrumb title="Chấm công" onBack={onBack} />
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+          <h2 className="text-xl font-bold text-gray-800 flex items-center gap-2">
+            <CalendarCheck className="text-primary" /> Chấm công nhân viên
+          </h2>
+          <p className="text-xs text-gray-500 mt-1">Quản lý chuyên cần và giờ làm việc</p>
+        </div>
+        <div className="flex items-center gap-2 bg-white p-1.5 rounded-2xl shadow-sm border border-gray-100">
+          <select value={selectedMonth} onChange={(e) => setSelectedMonth(Number(e.target.value))} className="px-3 py-1.5 rounded-xl border-none text-sm font-bold text-gray-700 outline-none">
+            {Array.from({ length: 12 }, (_, i) => i + 1).map(m => <option key={m} value={m}>Tháng {m}</option>)}
+          </select>
+          <select value={selectedYear} onChange={(e) => setSelectedYear(Number(e.target.value))} className="px-3 py-1.5 rounded-xl border-none text-sm font-bold text-gray-700 outline-none">
+            {[2024, 2025, 2026].map(y => <option key={y} value={y}>Năm {y}</option>)}
+          </select>
+        </div>
       </div>
 
-      <div className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100">
-        <div className="flex items-center gap-4 mb-6">
-          <select className="px-4 py-2 rounded-lg border border-gray-200 text-sm outline-none">
-            <option>Tháng 3</option>
-          </select>
-          <motion.button 
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
-            onClick={handleExportExcel}
-            className="ml-auto text-xs font-bold text-gray-500 flex items-center gap-2 border border-gray-200 px-3 py-1.5 rounded-lg hover:bg-gray-50 shadow-sm"
-          >
-            <FileSpreadsheet size={14} className="text-green-600" /> Xuất Excel
-          </motion.button>
-        </div>
-        
-        <div className="overflow-x-auto">
-          <table className="w-full text-left border-separate border-spacing-0">
+      <div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
+        <div className="overflow-x-auto custom-scrollbar">
+          <table className="w-full text-left border-collapse min-w-[1200px]">
             <thead>
-              <tr className="bg-primary text-white text-[11px] uppercase tracking-wider whitespace-nowrap">
-                <th className="p-3 first:rounded-tl-lg sticky left-0 bg-primary z-10">Ngày</th>
-                <th className="p-3">Mã NV</th>
-                <th className="p-3">Họ tên</th>
-                <th className="p-3">Giờ công</th>
-                <th className="p-3">Tăng ca</th>
-                <th className="p-3">Kho làm việc</th>
-                <th className="p-3">Nội dung</th>
-                <th className="p-3">Tổng tiền</th>
-                {(user.role === 'Admin' || user.role === 'Admin App') && <th className="p-3 last:rounded-tr-lg">Thao tác</th>}
+              <tr className="bg-primary text-white">
+                <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider sticky left-0 z-10 bg-primary border-r border-white/10 w-48">Nhân viên</th>
+                {days.map(d => <th key={d} className="px-1 py-3 text-[10px] font-bold uppercase tracking-wider text-center border-r border-white/10 w-10">{d}</th>)}
+                <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-center w-20">Tổng</th>
               </tr>
             </thead>
-            <tbody className="text-xs text-gray-600">
+            <tbody className="divide-y divide-gray-100">
               {loading ? (
-                <tr><td colSpan={9} className="p-8 text-center">Đang tải dữ liệu...</td></tr>
-              ) : attendanceList.length === 0 ? (
-                <tr><td colSpan={9} className="p-8 text-center italic">Chưa có dữ liệu chấm công</td></tr>
-              ) : attendanceList.map((item) => (
-                <tr key={item.id} className="border-b border-gray-50 hover:bg-gray-50 transition-colors whitespace-nowrap">
-                  <td className="p-3 sticky left-0 bg-white group-hover:bg-gray-50 z-10 border-b border-gray-50">{item.date}</td>
-                  <td className="p-3 font-bold">{item.employee_id}</td>
-                  <td className="p-3">{item.users?.full_name}</td>
-                  <td className="p-3">{item.work_hours}h</td>
-                  <td className="p-3">{item.overtime_hours}h</td>
-                  <td className="p-3">{item.workplace}</td>
-                  <td className="p-3">{item.work_content}</td>
-                  <td className="p-3 font-bold text-primary">{item.daily_total_pay?.toLocaleString()}đ</td>
-                  {(user.role === 'Admin' || user.role === 'Admin App') && (
-                    <td className="p-3">
-                      <div className="flex gap-2">
-                        <button 
-                          onClick={() => handleEdit(item)}
-                          className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                        >
-                          <Edit size={14} />
-                        </button>
-                        <button 
-                          onClick={() => handleDeleteClick(item.id)}
-                          className="p-1.5 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                        >
-                          <Trash2 size={14} />
-                        </button>
-                      </div>
-                    </td>
-                  )}
-                </tr>
-              ))}
+                <tr><td colSpan={days.length + 2} className="px-4 py-12 text-center text-gray-400 italic">Đang tải...</td></tr>
+              ) : (
+                employees.map((emp) => {
+                  const empAtt = attendance.filter(a => a.employee_id === emp.id);
+                  const totalDays = empAtt.reduce((sum, a) => sum + Number(a.hours_worked || 0), 0) / 8;
+                  return (
+                    <tr key={emp.id} className="hover:bg-gray-50 transition-colors group">
+                      <td className="px-4 py-3 sticky left-0 z-10 bg-white group-hover:bg-gray-50 border-r border-gray-100">
+                        <p className="text-xs font-bold text-gray-800 leading-tight">{emp.full_name}</p>
+                        <p className="text-[9px] text-gray-400">{emp.id}</p>
+                      </td>
+                      {days.map(d => {
+                        const att = getStatus(emp.id, d);
+                        return (
+                          <td key={d} className="p-0.5 border-r border-gray-50 relative group/cell">
+                            <button 
+                              onClick={() => toggleAttendance(emp.id, d)} 
+                              onContextMenu={(e) => { e.preventDefault(); openEditModal(emp.id, d); }}
+                              className={`w-full aspect-square flex flex-col items-center justify-center rounded-lg text-[10px] font-black transition-all ${getStatusColor(att?.status)}`}
+                            >
+                              <span>{getStatusLabel(att?.status)}</span>
+                              {att?.overtime_hours > 0 && <span className="text-[7px] leading-none mt-0.5">+{att.overtime_hours}h</span>}
+                            </button>
+                            <button 
+                              onClick={() => openEditModal(emp.id, d)}
+                              className="absolute -top-1 -right-1 bg-white shadow-sm border border-gray-100 rounded-full p-0.5 opacity-0 group-hover/cell:opacity-100 transition-opacity z-20"
+                            >
+                              <Plus size={8} className="text-primary" />
+                            </button>
+                          </td>
+                        );
+                      })}
+                      <td className="px-2 py-3 text-center text-xs font-black text-primary">{totalDays.toFixed(1)}</td>
+                    </tr>
+                  );
+                })
+              )}
             </tbody>
           </table>
         </div>
       </div>
 
-      {/* Delete Confirmation Modal */}
+      {/* Edit Attendance Modal */}
       <AnimatePresence>
-        {showDeleteModal && (
-          <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
+        {showEditModal && editingAtt && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
             <motion.div 
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
-              className="bg-white rounded-2xl shadow-xl p-6 max-w-sm w-full text-center"
+              className="bg-white rounded-2xl shadow-xl p-6 max-w-sm w-full"
             >
-              <div className="w-16 h-16 bg-red-50 text-red-600 rounded-full flex items-center justify-center mx-auto mb-4">
-                <Trash2 size={32} />
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="font-bold text-gray-800">Chi tiết ngày {editingAtt.day}</h3>
+                <button onClick={() => setShowEditModal(false)} className="p-1 hover:bg-gray-100 rounded-full"><X size={18} /></button>
               </div>
-              <h3 className="text-lg font-bold text-gray-800 mb-2">Xác nhận xóa?</h3>
-              <p className="text-sm text-gray-500 mb-6">Bạn có chắc chắn muốn xóa bản ghi chấm công này?</p>
-              <div className="flex gap-3">
-                <button 
-                  onClick={() => setShowDeleteModal(false)}
-                  className="flex-1 px-4 py-2 rounded-xl border border-gray-200 text-sm font-bold text-gray-500 hover:bg-gray-50 transition-colors"
-                >
-                  Hủy bỏ
-                </button>
-                <button 
-                  onClick={confirmDelete}
-                  className="flex-1 px-4 py-2 rounded-xl bg-red-600 text-white text-sm font-bold hover:bg-red-700 transition-colors"
-                >
-                  Xóa ngay
-                </button>
+              <div className="space-y-4">
+                <div>
+                  <label className="text-[10px] font-bold text-gray-400 uppercase">Trạng thái công</label>
+                  <div className="grid grid-cols-3 gap-2 mt-1">
+                    {['present', 'half-day', 'absent'].map(s => (
+                      <button 
+                        key={s}
+                        onClick={() => setEditFormData({ ...editFormData, status: s })}
+                        className={`py-2 rounded-xl text-xs font-bold border transition-all ${editFormData.status === s ? 'bg-primary text-white border-primary' : 'bg-white text-gray-500 border-gray-200'}`}
+                      >
+                        {getStatusLabel(s)}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <div>
+                  <label className="text-[10px] font-bold text-gray-400 uppercase">Giờ tăng ca (h)</label>
+                  <input 
+                    type="number" 
+                    step="0.5"
+                    value={editFormData.overtime}
+                    onChange={(e) => setEditFormData({ ...editFormData, overtime: Number(e.target.value) })}
+                    className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20 mt-1"
+                    placeholder="Ví dụ: 1.5"
+                  />
+                </div>
+                <div className="flex gap-3 pt-2">
+                  <button onClick={() => setShowEditModal(false)} className="flex-1 py-2 rounded-xl border border-gray-200 text-sm font-bold text-gray-500">Hủy</button>
+                  <button onClick={saveEdit} className="flex-1 py-2 rounded-xl bg-primary text-white text-sm font-bold shadow-lg shadow-primary/20">Lưu</button>
+                </div>
               </div>
             </motion.div>
           </div>
         )}
       </AnimatePresence>
+    </div>
+  );
+};
+
+const Advances = ({ user, onBack }: { user: Employee, onBack?: () => void }) => {
+  const [advances, setAdvances] = useState<any[]>([]);
+  const [allowances, setAllowances] = useState<any[]>([]);
+  const [employees, setEmployees] = useState<Employee[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [showModal, setShowModal] = useState(false);
+  const [activeTab, setActiveTab] = useState<'advances' | 'allowances'>('advances');
+  const [submitting, setSubmitting] = useState(false);
+
+  const initialFormState = {
+    employee_id: '',
+    amount: 0,
+    date: new Date().toISOString().split('T')[0],
+    reason: '',
+    type: 'meal'
+  };
+
+  const [formData, setFormData] = useState(initialFormState);
+
+  useEffect(() => {
+    fetchData();
+  }, []);
+
+  const fetchData = async () => {
+    setLoading(true);
+    const { data: empData } = await supabase.from('users').select('*').neq('status', 'Nghỉ việc').neq('role', 'Admin App').order('full_name');
+    if (empData) setEmployees(empData);
+
+    const { data: advData } = await supabase.from('advances').select('*, users(full_name)').order('date', { ascending: false });
+    if (advData) setAdvances(advData);
+
+    const { data: allData } = await supabase.from('allowances').select('*, users(full_name)').order('date', { ascending: false });
+    if (allData) setAllowances(allData);
+    setLoading(false);
+  };
+
+  const handleSubmit = async (e: FormEvent) => {
+    e.preventDefault();
+    setSubmitting(true);
+    try {
+      if (activeTab === 'advances') {
+        const { error } = await supabase.from('advances').insert([{
+          employee_id: formData.employee_id,
+          amount: formData.amount,
+          date: formData.date,
+          reason: formData.reason
+        }]);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase.from('allowances').insert([{
+          employee_id: formData.employee_id,
+          amount: formData.amount,
+          date: formData.date,
+          type: formData.type,
+          notes: formData.reason
+        }]);
+        if (error) throw error;
+      }
+      setShowModal(false);
+      fetchData();
+      setFormData(initialFormState);
+    } catch (err: any) {
+      alert('Lỗi: ' + err.message);
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <div className="p-4 md:p-6 space-y-6 pb-44">
+      <PageBreadcrumb title="Tạm ứng & Phụ cấp" onBack={onBack} />
+      <div className="flex items-center justify-between">
+        <div className="flex gap-2 bg-white p-1 rounded-2xl shadow-sm border border-gray-100">
+          <button onClick={() => setActiveTab('advances')} className={`px-4 py-2 rounded-xl text-sm font-bold transition-all ${activeTab === 'advances' ? 'bg-primary text-white shadow-lg shadow-primary/20' : 'text-gray-500 hover:bg-gray-50'}`}>Tạm ứng</button>
+          <button onClick={() => setActiveTab('allowances')} className={`px-4 py-2 rounded-xl text-sm font-bold transition-all ${activeTab === 'allowances' ? 'bg-primary text-white shadow-lg shadow-primary/20' : 'text-gray-500 hover:bg-gray-50'}`}>Phụ cấp</button>
+        </div>
+        <button onClick={() => setShowModal(true)} className="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-xl text-sm font-bold hover:bg-primary-hover transition-colors shadow-lg shadow-primary/20">
+          <Plus size={18} /> Thêm mới
+        </button>
+      </div>
+
+      <div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
+        <table className="w-full text-left border-collapse">
+          <thead>
+            <tr className="bg-primary text-white">
+              <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider">Ngày</th>
+              <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider">Nhân viên</th>
+              <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider">Số tiền</th>
+              <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider">{activeTab === 'advances' ? 'Lý do' : 'Loại / Ghi chú'}</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-gray-100">
+            {loading ? (
+              <tr><td colSpan={4} className="px-4 py-8 text-center text-gray-400 italic">Đang tải...</td></tr>
+            ) : (activeTab === 'advances' ? advances : allowances).length === 0 ? (
+              <tr><td colSpan={4} className="px-4 py-8 text-center text-gray-400 italic">Chưa có dữ liệu</td></tr>
+            ) : (
+              (activeTab === 'advances' ? advances : allowances).map((item) => (
+                <tr key={item.id} className="hover:bg-gray-50 transition-colors">
+                  <td className="px-4 py-3 text-xs text-gray-600">{formatDate(item.date)}</td>
+                  <td className="px-4 py-3 text-xs font-bold text-gray-800">{item.users?.full_name}</td>
+                  <td className="px-4 py-3 text-xs font-black text-red-600">{formatCurrency(item.amount)}</td>
+                  <td className="px-4 py-3 text-xs text-gray-500 italic">{item.reason || item.notes || item.type || '-'}</td>
+                </tr>
+              ))
+            )}
+          </tbody>
+        </table>
+      </div>
 
       <AnimatePresence>
         {showModal && (
-          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+          <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
+            <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} className="bg-white rounded-3xl shadow-2xl w-full max-w-md overflow-hidden">
+              <div className="bg-primary p-6 text-white flex items-center justify-between">
+                <h3 className="font-bold text-lg">Thêm {activeTab === 'advances' ? 'tạm ứng' : 'phụ cấp'} mới</h3>
+                <button onClick={() => setShowModal(false)} className="p-2 hover:bg-white/10 rounded-full transition-colors"><X size={20} /></button>
+              </div>
+              <form onSubmit={handleSubmit} className="p-6 space-y-4">
+                <div className="space-y-1">
+                  <label className="text-[10px] font-bold text-gray-400 uppercase">Nhân viên *</label>
+                  <select required value={formData.employee_id} onChange={(e) => setFormData({...formData, employee_id: e.target.value})} className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20">
+                    <option value="">-- Chọn nhân viên --</option>
+                    {employees.map(e => <option key={e.id} value={e.id}>{e.full_name}</option>)}
+                  </select>
+                </div>
+                <div className="space-y-1">
+                  <label className="text-[10px] font-bold text-gray-400 uppercase">Ngày *</label>
+                  <input type="date" required value={formData.date} onChange={(e) => setFormData({...formData, date: e.target.value})} className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20" />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-[10px] font-bold text-gray-400 uppercase">Số tiền *</label>
+                  <input type="number" required value={formData.amount} onChange={(e) => setFormData({...formData, amount: Number(e.target.value)})} className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20" />
+                </div>
+                {activeTab === 'allowances' && (
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-gray-400 uppercase">Loại phụ cấp</label>
+                    <select value={formData.type} onChange={(e) => setFormData({...formData, type: e.target.value})} className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20">
+                      <option value="meal">Tiền cơm</option>
+                      <option value="travel">Xăng xe</option>
+                      <option value="phone">Điện thoại</option>
+                      <option value="other">Khác</option>
+                    </select>
+                  </div>
+                )}
+                <div className="space-y-1">
+                  <label className="text-[10px] font-bold text-gray-400 uppercase">Ghi chú / Lý do</label>
+                  <textarea rows={3} value={formData.reason} onChange={(e) => setFormData({...formData, reason: e.target.value})} className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20 resize-none" />
+                </div>
+                <button type="submit" disabled={submitting} className="w-full py-3 bg-primary text-white rounded-xl font-bold hover:bg-primary-hover transition-colors shadow-lg shadow-primary/20 disabled:opacity-50">
+                  {submitting ? 'Đang lưu...' : 'Lưu dữ liệu'}
+                </button>
+              </form>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+};
+
+const MonthlySalary = ({ user, onBack }: { user: Employee, onBack?: () => void }) => {
+  const [salaries, setSalaries] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1);
+  const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
+
+  useEffect(() => {
+    fetchSalaries();
+  }, [selectedMonth, selectedYear]);
+
+  const fetchSalaries = async () => {
+    setLoading(true);
+    try {
+      // Hide Admin App from salary summary
+      const { data: employees } = await supabase.from('users').select('*').neq('status', 'Nghỉ việc').neq('role', 'Admin App');
+      if (!employees) return;
+
+      const { data: settings } = await supabase.from('salary_settings').select('*');
+
+      const startDate = `${selectedYear}-${String(selectedMonth).padStart(2, '0')}-01`;
+      const endDate = new Date(selectedYear, selectedMonth, 0).toISOString().split('T')[0];
+      const { data: att } = await supabase.from('attendance').select('*').gte('date', startDate).lte('date', endDate);
+
+      const { data: adv } = await supabase.from('advances').select('*').gte('date', startDate).lte('date', endDate);
+      const { data: all } = await supabase.from('allowances').select('*').gte('date', startDate).lte('date', endDate);
+
+      const calculated = employees.map(emp => {
+        const set = settings?.find(s => s.employee_id === emp.id) || { base_salary: 0, daily_rate: 0 };
+        const empAtt = att?.filter(a => a.employee_id === emp.id) || [];
+        const empAdv = adv?.filter(a => a.employee_id === emp.id) || [];
+        const empAll = all?.filter(a => a.employee_id === emp.id) || [];
+
+        const totalDays = empAtt.reduce((sum, a) => sum + Number(a.hours_worked || 0), 0) / 8;
+        const totalOT = empAtt.reduce((sum, a) => sum + Number(a.overtime_hours || 0), 0);
+        const totalAdv = empAdv.reduce((sum, a) => sum + Number(a.amount || 0), 0);
+        const totalAll = empAll.reduce((sum, a) => sum + Number(a.amount || 0), 0);
+        
+        const hourlyRate = Number(set.daily_rate || 0) / 8;
+        const earnedSalary = totalDays * Number(set.daily_rate || 0);
+        const otSalary = totalOT * hourlyRate;
+        const netSalary = earnedSalary + otSalary + totalAll - totalAdv;
+
+        return {
+          ...emp,
+          totalDays,
+          totalOT,
+          earnedSalary,
+          otSalary,
+          totalAdv,
+          totalAll,
+          netSalary,
+          dailyRate: Number(set.daily_rate || 0),
+          hourlyRate,
+          attendanceDetails: empAtt,
+          advancesDetails: empAdv,
+          allowancesDetails: empAll
+        };
+      });
+
+      setSalaries(calculated);
+    } catch (err) {
+      console.error('Error calculating salaries:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const [selectedSalary, setSelectedSalary] = useState<any>(null);
+  const [showDetailModal, setShowDetailModal] = useState(false);
+
+  return (
+    <div className="p-4 md:p-6 space-y-6 pb-44">
+      <PageBreadcrumb title="Tổng hợp lương" onBack={onBack} />
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+          <h2 className="text-xl font-bold text-gray-800 flex items-center gap-2">
+            <Wallet className="text-primary" /> Tổng hợp lương tháng
+          </h2>
+          <p className="text-xs text-gray-500 mt-1">Bảng lương chi tiết dựa trên công và các khoản phụ phí</p>
+        </div>
+        <div className="flex items-center gap-2 bg-white p-1.5 rounded-2xl shadow-sm border border-gray-100">
+          <select value={selectedMonth} onChange={(e) => setSelectedMonth(Number(e.target.value))} className="px-3 py-1.5 rounded-xl border-none text-sm font-bold text-gray-700 outline-none">
+            {Array.from({ length: 12 }, (_, i) => i + 1).map(m => <option key={m} value={m}>Tháng {m}</option>)}
+          </select>
+          <select value={selectedYear} onChange={(e) => setSelectedYear(Number(e.target.value))} className="px-3 py-1.5 rounded-xl border-none text-sm font-bold text-gray-700 outline-none">
+            {[2024, 2025, 2026].map(y => <option key={y} value={y}>Năm {y}</option>)}
+          </select>
+        </div>
+      </div>
+
+      <div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden overflow-x-auto">
+        <table className="w-full text-left border-collapse min-w-[800px]">
+          <thead>
+            <tr className="bg-primary text-white">
+              <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider">Nhân viên</th>
+              <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-center">Công</th>
+              <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-center">Tăng ca</th>
+              <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-right">Lương công</th>
+              <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-right">Phụ cấp</th>
+              <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-right">Tạm ứng</th>
+              <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-right">Thực lĩnh</th>
+              <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-center">Thao tác</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-gray-100">
+            {loading ? (
+              <tr><td colSpan={8} className="px-4 py-12 text-center text-gray-400 italic">Đang tính toán...</td></tr>
+            ) : (
+              salaries.map((s) => (
+                <tr key={s.id} className="hover:bg-gray-50 transition-colors">
+                  <td className="px-4 py-3">
+                    <p className="text-xs font-bold text-gray-800">{s.full_name}</p>
+                    <p className="text-[9px] text-gray-400">{s.id}</p>
+                  </td>
+                  <td className="px-4 py-3 text-center text-xs font-bold text-gray-600">{s.totalDays.toFixed(1)}</td>
+                  <td className="px-4 py-3 text-center text-xs font-bold text-amber-600">{s.totalOT.toFixed(1)}h</td>
+                  <td className="px-4 py-3 text-right text-xs font-medium text-gray-600">{formatCurrency(s.earnedSalary + s.otSalary)}</td>
+                  <td className="px-4 py-3 text-right text-xs font-medium text-green-600">+{formatCurrency(s.totalAll)}</td>
+                  <td className="px-4 py-3 text-right text-xs font-medium text-red-600">-{formatCurrency(s.totalAdv)}</td>
+                  <td className="px-4 py-3 text-right text-xs font-black text-primary">{formatCurrency(s.netSalary)}</td>
+                  <td className="px-4 py-3 text-center">
+                    <button 
+                      onClick={() => { setSelectedSalary(s); setShowDetailModal(true); }}
+                      className="p-1.5 text-primary hover:bg-primary/10 rounded-lg transition-colors"
+                      title="Xem chi tiết"
+                    >
+                      <Eye size={14} />
+                    </button>
+                  </td>
+                </tr>
+              ))
+            )}
+          </tbody>
+        </table>
+      </div>
+
+      {/* Individual Salary Detail Modal */}
+      <AnimatePresence>
+        {showDetailModal && selectedSalary && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm overflow-y-auto">
             <motion.div 
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              onClick={() => setShowModal(false)}
-              className="absolute inset-0 bg-black/40 backdrop-blur-sm"
-            />
-            <motion.div 
-              initial={{ opacity: 0, scale: 0.95, y: 20 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.95, y: 20 }}
-              className="bg-white rounded-3xl shadow-2xl w-full max-w-2xl relative z-10"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 20 }}
+              className="bg-white rounded-3xl shadow-2xl w-full max-w-2xl my-8"
             >
-              <div className="bg-primary p-4 flex items-center justify-between text-white rounded-t-3xl">
-                <h3 className="font-bold">{isEditing ? 'Cập Nhật Chấm Công' : 'Thêm Mới Chấm Công'}</h3>
-                <button onClick={() => setShowModal(false)} className="hover:bg-white/20 p-1 rounded-full"><X size={20} /></button>
+              <div className="p-6 border-b border-gray-100 flex items-center justify-between">
+                <div>
+                  <h3 className="text-lg font-bold text-gray-800">Chi tiết lương cá nhân</h3>
+                  <p className="text-xs text-gray-500">Tháng {selectedMonth} năm {selectedYear}</p>
+                </div>
+                <button onClick={() => setShowDetailModal(false)} className="p-2 hover:bg-gray-100 rounded-full transition-colors"><X size={20} /></button>
               </div>
               
-              <form onSubmit={handleSubmit}>
-                <div className="p-6 max-h-[70vh] overflow-y-auto">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="space-y-1">
-                      <label className="text-[10px] font-bold text-gray-400 uppercase">Mã nhân viên</label>
-                      <select 
-                        required
-                        value={formData.employee_id}
-                        onChange={(e) => setFormData({...formData, employee_id: e.target.value})}
-                        className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20"
-                      >
-                        <option value="">-- Chọn --</option>
-                        {employees.map(e => <option key={e.id} value={e.id}>{e.id} - {e.full_name}</option>)}
-                      </select>
+              <div className="p-8 space-y-8">
+                {/* Header Info */}
+                <div className="flex items-center gap-4 bg-gray-50 p-6 rounded-2xl border border-gray-100">
+                  <div className="w-16 h-16 bg-primary/10 rounded-2xl flex items-center justify-center text-primary font-black text-xl">
+                    {selectedSalary.full_name.charAt(0)}
+                  </div>
+                  <div>
+                    <h4 className="text-xl font-black text-gray-800">{selectedSalary.full_name}</h4>
+                    <p className="text-xs text-gray-500 uppercase tracking-widest font-bold">Mã NV: {selectedSalary.id}</p>
+                  </div>
+                </div>
+
+                {/* Calculation Table */}
+                <div className="space-y-4">
+                  <h5 className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Chi tiết tính toán</h5>
+                  <div className="space-y-3">
+                    <div className="flex justify-between items-center text-sm">
+                      <span className="text-gray-500">Lương ngày (8h)</span>
+                      <span className="font-bold text-gray-800">{formatCurrency(selectedSalary.dailyRate)}</span>
                     </div>
-                    <div className="space-y-1">
-                      <label className="text-[10px] font-bold text-gray-400 uppercase">Ngày (Ghi nhận)</label>
-                      <input 
-                        type="date" 
-                        required
-                        value={formData.date}
-                        onChange={(e) => setFormData({...formData, date: e.target.value})}
-                        className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20" 
-                      />
+                    <div className="flex justify-between items-center text-sm">
+                      <span className="text-gray-500">Lương giờ (Tăng ca)</span>
+                      <span className="font-bold text-gray-800">{formatCurrency(selectedSalary.hourlyRate)}</span>
                     </div>
-                    <div className="space-y-1">
-                      <label className="text-[10px] font-bold text-gray-400 uppercase">Số giờ công</label>
-                      <input 
-                        type="number" 
-                        step="0.5"
-                        value={formData.work_hours}
-                        onChange={(e) => setFormData({...formData, work_hours: parseFloat(e.target.value)})}
-                        className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20" 
-                      />
+                    <div className="h-px bg-gray-100" />
+                    <div className="flex justify-between items-center text-sm">
+                      <span className="text-gray-500">Tổng công ({selectedSalary.totalDays.toFixed(1)} ngày)</span>
+                      <span className="font-bold text-gray-800">{formatCurrency(selectedSalary.earnedSalary)}</span>
                     </div>
-                    <div className="space-y-1">
-                      <label className="text-[10px] font-bold text-gray-400 uppercase">Số giờ tăng ca</label>
-                      <input 
-                        type="number" 
-                        step="0.5"
-                        value={formData.overtime_hours}
-                        onChange={(e) => setFormData({...formData, overtime_hours: parseFloat(e.target.value)})}
-                        className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20" 
-                      />
+                    <div className="flex justify-between items-center text-sm">
+                      <span className="text-gray-500">Tổng tăng ca ({selectedSalary.totalOT.toFixed(1)} giờ)</span>
+                      <span className="font-bold text-amber-600">+{formatCurrency(selectedSalary.otSalary)}</span>
                     </div>
-                    <div className="space-y-1">
-                      <label className="text-[10px] font-bold text-gray-400 uppercase">Kho làm việc</label>
-                      <input 
-                        type="text" 
-                        value={formData.workplace}
-                        onChange={(e) => setFormData({...formData, workplace: e.target.value})}
-                        className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20" 
-                      />
+                    <div className="flex justify-between items-center text-sm">
+                      <span className="text-gray-500">Tổng phụ cấp</span>
+                      <span className="font-bold text-green-600">+{formatCurrency(selectedSalary.totalAll)}</span>
                     </div>
-                    <div className="space-y-1">
-                      <label className="text-[10px] font-bold text-gray-400 uppercase">Nội dung công việc</label>
-                      <input 
-                        type="text" 
-                        value={formData.work_content}
-                        onChange={(e) => setFormData({...formData, work_content: e.target.value})}
-                        className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20" 
-                      />
+                    <div className="flex justify-between items-center text-sm">
+                      <span className="text-gray-500">Tổng tạm ứng</span>
+                      <span className="font-bold text-red-600">-{formatCurrency(selectedSalary.totalAdv)}</span>
                     </div>
-                    <div className="space-y-1">
-                      <label className="text-[10px] font-bold text-gray-400 uppercase">Tiền tăng ca ngày</label>
-                      <input 
-                        type="number" 
-                        value={formData.daily_overtime_pay}
-                        onChange={(e) => setFormData({...formData, daily_overtime_pay: parseFloat(e.target.value)})}
-                        className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20" 
-                      />
-                    </div>
-                    <div className="space-y-1">
-                      <label className="text-[10px] font-bold text-gray-400 uppercase">Lương tại thời điểm</label>
-                      <input 
-                        type="number" 
-                        value={formData.salary_at_time}
-                        onChange={(e) => setFormData({...formData, salary_at_time: parseFloat(e.target.value)})}
-                        className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20" 
-                      />
-                    </div>
-                    <div className="space-y-1">
-                      <label className="text-[10px] font-bold text-gray-400 uppercase">Lương công nhật</label>
-                      <input 
-                        type="number" 
-                        value={formData.daily_work_pay}
-                        onChange={(e) => setFormData({...formData, daily_work_pay: parseFloat(e.target.value)})}
-                        className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20" 
-                      />
-                    </div>
-                    <div className="space-y-1">
-                      <label className="text-[10px] font-bold text-gray-400 uppercase">Hệ số tăng ca thời điểm</label>
-                      <input 
-                        type="number" 
-                        step="0.1"
-                        value={formData.overtime_rate}
-                        onChange={(e) => setFormData({...formData, overtime_rate: parseFloat(e.target.value)})}
-                        className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20" 
-                      />
-                    </div>
-                    <div className="space-y-1 md:col-span-2">
-                      <label className="text-[10px] font-bold text-gray-400 uppercase">Tiền công ngày (Tổng)</label>
-                      <input 
-                        type="number" 
-                        value={formData.daily_total_pay}
-                        onChange={(e) => setFormData({...formData, daily_total_pay: parseFloat(e.target.value)})}
-                        className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20 font-bold text-primary" 
-                      />
+                    <div className="pt-4 border-t-2 border-dashed border-gray-100 flex justify-between items-center">
+                      <span className="text-lg font-black text-gray-800 uppercase">Thực lĩnh</span>
+                      <span className="text-2xl font-black text-primary">{formatCurrency(selectedSalary.netSalary)}</span>
                     </div>
                   </div>
                 </div>
 
-                <div className="p-6 bg-gray-50 flex justify-end gap-3">
-                  <button type="button" onClick={() => setShowModal(false)} className="px-6 py-2 rounded-xl text-sm font-bold text-gray-500 hover:bg-gray-200 transition-colors">Hủy bỏ</button>
-                  <button 
-                    type="submit" 
-                    disabled={submitting}
-                    className="px-6 py-2 rounded-xl text-sm font-bold bg-primary text-white hover:bg-primary-hover transition-colors disabled:opacity-50"
-                  >
-                    {submitting ? 'Đang lưu...' : 'Lưu dữ liệu'}
+                {/* Footer Notes */}
+                <div className="p-4 bg-amber-50 rounded-xl border border-amber-100">
+                  <p className="text-[10px] text-amber-700 leading-relaxed italic">
+                    * Bảng lương này được tính toán tự động dựa trên dữ liệu chấm công và các khoản phát sinh trong tháng. 
+                    Mọi thắc mắc vui lòng liên hệ bộ phận kế toán.
+                  </p>
+                </div>
+
+                <div className="flex gap-3">
+                  <button onClick={() => window.print()} className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl bg-gray-100 text-gray-600 font-bold hover:bg-gray-200 transition-colors">
+                    <Printer size={18} /> In bảng lương
+                  </button>
+                  <button onClick={() => setShowDetailModal(false)} className="flex-1 py-3 rounded-xl bg-primary text-white font-bold shadow-lg shadow-primary/20">
+                    Đóng
                   </button>
                 </div>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+};
+
+const SalarySettings = ({ user, onBack }: { user: Employee, onBack?: () => void }) => {
+  const [employees, setEmployees] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [showModal, setShowModal] = useState(false);
+  const [selectedEmp, setSelectedEmp] = useState<any>(null);
+  const [submitting, setSubmitting] = useState(false);
+
+  const [formData, setFormData] = useState({
+    base_salary: 0,
+    daily_rate: 0,
+    insurance_deduction: 0
+  });
+
+  useEffect(() => {
+    fetchData();
+  }, []);
+
+  const fetchData = async () => {
+    setLoading(true);
+    const { data: empData } = await supabase.from('users').select('*').neq('status', 'Nghỉ việc').order('full_name');
+    const { data: setData } = await supabase.from('salary_settings').select('*');
+    
+    if (empData) {
+      const combined = empData.map(e => ({
+        ...e,
+        settings: setData?.find(s => s.employee_id === e.id) || { base_salary: 0, daily_rate: 0, insurance_deduction: 0 }
+      }));
+      setEmployees(combined);
+    }
+    setLoading(false);
+  };
+
+  const handleEdit = (emp: any) => {
+    setSelectedEmp(emp);
+    setFormData({
+      base_salary: emp.settings.base_salary,
+      daily_rate: emp.settings.daily_rate,
+      insurance_deduction: emp.settings.insurance_deduction
+    });
+    setShowModal(true);
+  };
+
+  const handleSubmit = async (e: FormEvent) => {
+    e.preventDefault();
+    setSubmitting(true);
+    try {
+      await supabase.from('salary_settings').upsert({
+        employee_id: selectedEmp.id,
+        ...formData
+      }, { onConflict: 'employee_id' });
+      setShowModal(false);
+      fetchData();
+    } catch (err: any) {
+      alert('Lỗi: ' + err.message);
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <div className="p-4 md:p-6 space-y-6 pb-44">
+      <PageBreadcrumb title="Cài đặt lương" onBack={onBack} />
+      <div className="flex items-center justify-between">
+        <h2 className="text-xl font-bold text-gray-800 flex items-center gap-2">
+          <Settings2 className="text-primary" /> Cài đặt lương
+        </h2>
+      </div>
+
+      <div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
+        <table className="w-full text-left border-collapse">
+          <thead>
+            <tr className="bg-primary text-white">
+              <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider">Nhân viên</th>
+              <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-right">Lương/Ngày</th>
+              <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-center w-20">Sửa</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-gray-100">
+            {loading ? (
+              <tr><td colSpan={3} className="px-4 py-8 text-center text-gray-400 italic">Đang tải...</td></tr>
+            ) : (
+              employees.map((emp) => (
+                <tr key={emp.id} className="hover:bg-gray-50 transition-colors">
+                  <td className="px-4 py-3 text-xs font-bold text-gray-800">{emp.full_name}</td>
+                  <td className="px-4 py-3 text-right text-xs font-bold text-primary">{formatCurrency(emp.settings.daily_rate)}</td>
+                  <td className="px-4 py-3 text-center">
+                    <button onClick={() => handleEdit(emp)} className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"><Edit size={14} /></button>
+                  </td>
+                </tr>
+              ))
+            )}
+          </tbody>
+        </table>
+      </div>
+
+      <AnimatePresence>
+        {showModal && (
+          <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
+            <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} className="bg-white rounded-3xl shadow-2xl w-full max-w-md overflow-hidden">
+              <div className="bg-primary p-6 text-white flex items-center justify-between">
+                <h3 className="font-bold text-lg">Thiết lập lương</h3>
+                <button onClick={() => setShowModal(false)} className="p-2 hover:bg-white/10 rounded-full transition-colors"><X size={20} /></button>
+              </div>
+              <form onSubmit={handleSubmit} className="p-6 space-y-4">
+                <div className="space-y-1">
+                  <label className="text-[10px] font-bold text-gray-400 uppercase">Lương theo ngày công *</label>
+                  <input type="number" required value={formData.daily_rate} onChange={(e) => setFormData({...formData, daily_rate: Number(e.target.value)})} className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20" />
+                </div>
+                <button type="submit" disabled={submitting} className="w-full py-3 bg-primary text-white rounded-xl font-bold hover:bg-primary-hover transition-colors shadow-lg shadow-primary/20 disabled:opacity-50">
+                  Cập nhật
+                </button>
               </form>
             </motion.div>
           </div>
@@ -5435,6 +5827,8 @@ const StockOut = ({ user, onBack }: { user: Employee, onBack?: () => void }) => 
   const [submitting, setSubmitting] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
 
+  const [availableStock, setAvailableStock] = useState<number | null>(null);
+
   const initialFormState = {
     date: new Date().toISOString().split('T')[0],
     warehouse_id: '',
@@ -5451,6 +5845,38 @@ const StockOut = ({ user, onBack }: { user: Employee, onBack?: () => void }) => 
     fetchWarehouses();
     fetchMaterials();
   }, []);
+
+  useEffect(() => {
+    if (formData.warehouse_id && formData.material_id) {
+      checkStock();
+    } else {
+      setAvailableStock(null);
+    }
+  }, [formData.warehouse_id, formData.material_id]);
+
+  const checkStock = async () => {
+    const wh = warehouses.find(w => w.name === formData.warehouse_id || w.id === formData.warehouse_id);
+    const mat = materials.find(m => m.name === formData.material_id || m.id === formData.material_id);
+    
+    if (!wh?.id || !mat?.id) return;
+
+    try {
+      // Calculate stock: total in - total out - total transfer from + total transfer to
+      const { data: inData } = await supabase.from('stock_in').select('quantity').eq('warehouse_id', wh.id).eq('material_id', mat.id).eq('status', 'Đã duyệt');
+      const { data: outData } = await supabase.from('stock_out').select('quantity').eq('warehouse_id', wh.id).eq('material_id', mat.id).eq('status', 'Đã duyệt');
+      const { data: transFrom } = await supabase.from('transfers').select('quantity').eq('from_warehouse_id', wh.id).eq('material_id', mat.id).eq('status', 'Đã duyệt');
+      const { data: transTo } = await supabase.from('transfers').select('quantity').eq('to_warehouse_id', wh.id).eq('material_id', mat.id).eq('status', 'Đã duyệt');
+
+      const totalIn = (inData || []).reduce((sum, item) => sum + Number(item.quantity), 0);
+      const totalOut = (outData || []).reduce((sum, item) => sum + Number(item.quantity), 0);
+      const totalTransFrom = (transFrom || []).reduce((sum, item) => sum + Number(item.quantity), 0);
+      const totalTransTo = (transTo || []).reduce((sum, item) => sum + Number(item.quantity), 0);
+
+      setAvailableStock(totalIn - totalOut - totalTransFrom + totalTransTo);
+    } catch (err) {
+      console.error('Error checking stock:', err);
+    }
+  };
 
   const fetchSlips = async () => {
     setLoading(true);
@@ -5687,6 +6113,13 @@ const StockOut = ({ user, onBack }: { user: Employee, onBack?: () => void }) => 
                       placeholder="Chọn vật tư..."
                       required
                     />
+
+                    {availableStock !== null && (
+                      <div className="p-3 bg-blue-50 rounded-xl border border-blue-100">
+                        <p className="text-[10px] font-bold text-blue-400 uppercase">Tồn kho hiện tại</p>
+                        <p className="text-sm font-bold text-blue-600">{formatNumber(availableStock)} {materials.find(m => m.id === formData.material_id || m.name === formData.material_id)?.unit}</p>
+                      </div>
+                    )}
                   </div>
 
                   <div className="space-y-4">
@@ -6546,9 +6979,7 @@ export default function App() {
       items: [
         { id: 'attendance', label: 'Chấm công', icon: CalendarCheck },
         { id: 'advances', label: 'Tạm ứng & phụ cấp', icon: Banknote },
-        { id: 'payroll-report', label: 'Báo cáo lương', icon: FilePieChart },
         { id: 'payroll', label: 'Tổng hợp lương/tháng', icon: Wallet },
-        { id: 'salary-calculation', label: 'Tính lương', icon: Calculator },
         { id: 'salary-settings', label: 'Cài đặt lương', icon: Settings2 },
       ]
     },
@@ -6592,11 +7023,9 @@ export default function App() {
       case 'transfer': return <Transfer user={user} onBack={goBack} />;
       case 'cost-report': return <CostReport user={user} onBack={goBack} />;
       case 'cost-filter': return <CostFilter user={user} onBack={goBack} />;
-      case 'payroll-report': return <Placeholder title="Báo cáo lương" onBack={goBack} />;
-      case 'salary-calculation': return <Placeholder title="Tính lương" onBack={goBack} />;
-      case 'advances': return <Placeholder title="Tạm ứng & phụ cấp" onBack={goBack} />;
-      case 'payroll': return <Placeholder title="Tổng hợp lương/tháng" onBack={goBack} />;
-      case 'salary-settings': return <Placeholder title="Cài đặt lương" onBack={goBack} />;
+      case 'advances': return <Advances user={user} onBack={goBack} />;
+      case 'payroll': return <MonthlySalary user={user} onBack={goBack} />;
+      case 'salary-settings': return <SalarySettings user={user} onBack={goBack} />;
       case 'partners': return <Placeholder title="Khách hàng & nhà cung cấp" onBack={goBack} />;
       case 'inventory-report': return <InventoryReport user={user} onBack={goBack} />;
       case 'trash': return <Trash onNavigate={navigateTo} onBack={goBack} />;

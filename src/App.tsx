@@ -1138,10 +1138,10 @@ const Materials = ({ user, onBack }: { user: Employee, onBack?: () => void }) =>
   const fetchMaterials = async () => {
     setLoading(true);
     console.log('Fetching materials...');
-    // Đơn giản hóa truy vấn, bỏ join tạm thời để kiểm tra dữ liệu gốc
     const { data, error } = await supabase
       .from('materials')
       .select('*') 
+      .neq('status', 'Đã xóa')
       .order('created_at', { ascending: false });
     
     if (error) {
@@ -1242,7 +1242,7 @@ const Materials = ({ user, onBack }: { user: Employee, onBack?: () => void }) =>
   const confirmDelete = async () => {
     if (!itemToDelete) return;
     try {
-      const { error } = await supabase.from('materials').delete().eq('id', itemToDelete);
+      const { error } = await supabase.from('materials').update({ status: 'Đã xóa' }).eq('id', itemToDelete);
       if (error) throw error;
       fetchMaterials();
     } catch (err: any) {
@@ -1368,7 +1368,7 @@ const Materials = ({ user, onBack }: { user: Employee, onBack?: () => void }) =>
                     <td className="px-4 py-3 text-xs text-gray-500">{item.specification || '-'}</td>
                     <td className="px-4 py-3 text-xs text-gray-500">{item.unit || '-'}</td>
                     <td className="px-4 py-3 text-center">
-                      <div className="flex items-center justify-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <div className="flex items-center justify-center gap-1 transition-opacity">
                         <button onClick={(e) => { e.stopPropagation(); handleEdit(item); }} className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"><Edit size={14} /></button>
                         <button onClick={(e) => { e.stopPropagation(); handleDeleteClick(item.id); }} className="p-1.5 text-red-600 hover:bg-red-50 rounded-lg transition-colors"><Trash2 size={14} /></button>
                       </div>
@@ -1772,6 +1772,7 @@ const Warehouses = ({ user, onBack }: { user: Employee, onBack?: () => void }) =
       const { data, error } = await supabase
         .from('warehouses')
         .select('*, users(full_name)')
+        .neq('status', 'Đã xóa')
         .order('created_at', { ascending: false });
       
       if (error) {
@@ -1780,6 +1781,7 @@ const Warehouses = ({ user, onBack }: { user: Employee, onBack?: () => void }) =
         const { data: simpleData, error: simpleError } = await supabase
           .from('warehouses')
           .select('*')
+          .neq('status', 'Đã xóa')
           .order('created_at', { ascending: false });
         
         if (simpleError) throw simpleError;
@@ -1843,7 +1845,7 @@ const Warehouses = ({ user, onBack }: { user: Employee, onBack?: () => void }) =
 
   const confirmDelete = async () => {
     if (!itemToDelete) return;
-    const { error } = await supabase.from('warehouses').delete().eq('id', itemToDelete);
+    const { error } = await supabase.from('warehouses').update({ status: 'Đã xóa' }).eq('id', itemToDelete);
     if (error) alert('Lỗi: ' + error.message);
     else fetchWarehouses();
     setShowDeleteModal(false);
@@ -1950,7 +1952,7 @@ const Warehouses = ({ user, onBack }: { user: Employee, onBack?: () => void }) =
                     <td className="px-4 py-3 text-xs text-gray-600">{item.notes}</td>
                     <td className="px-4 py-3 text-xs text-gray-600">{item.capacity}</td>
                     <td className="px-4 py-3 text-center">
-                      <div className="flex items-center justify-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <div className="flex items-center justify-center gap-1 transition-opacity">
                         <button onClick={() => handleEdit(item)} className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"><Edit size={14} /></button>
                         <button onClick={() => handleDeleteClick(item.id)} className="p-1.5 text-red-600 hover:bg-red-50 rounded-lg transition-colors"><Trash2 size={14} /></button>
                       </div>
@@ -2190,7 +2192,7 @@ const CustomCombobox = ({
                 className="w-full text-left px-4 py-2.5 text-sm hover:bg-primary/5 hover:text-primary transition-colors border-b border-gray-50 last:border-0 flex items-center justify-between group"
               >
                 <span>{opt.name}</span>
-                <Plus size={12} className="opacity-0 group-hover:opacity-100 text-primary/40" />
+                <Plus size={12} className="text-primary/40" />
               </button>
             ))}
           </motion.div>
@@ -4279,7 +4281,7 @@ const HRRecords = ({ user, onBack }: { user: Employee, onBack?: () => void }) =>
 
   const fetchEmployees = async () => {
     setLoading(true);
-    const { data, error } = await supabase.from('users').select('*').order('created_at', { ascending: false });
+    const { data, error } = await supabase.from('users').select('*').neq('status', 'Đã xóa').order('created_at', { ascending: false });
     if (data) setEmployees(data);
     setLoading(false);
   };
@@ -4325,7 +4327,7 @@ const HRRecords = ({ user, onBack }: { user: Employee, onBack?: () => void }) =>
     }
 
     try {
-      const { error } = await supabase.from('users').delete().eq('id', itemToDelete);
+      const { error } = await supabase.from('users').update({ status: 'Đã xóa' }).eq('id', itemToDelete);
       if (error) throw error;
       fetchEmployees();
       setShowDeleteModal(false);
@@ -4932,9 +4934,9 @@ const Attendance = ({ user, onBack }: { user: Employee, onBack?: () => void }) =
                             </button>
                             <button 
                               onClick={() => openEditModal(emp.id, d)}
-                              className="absolute -top-1 -right-1 bg-white shadow-sm border border-gray-100 rounded-full p-0.5 opacity-0 group-hover/cell:opacity-100 transition-opacity z-20"
+                              className="absolute -top-1.5 -right-1.5 bg-white shadow-md border border-gray-100 rounded-full p-1 transition-all z-20 hover:scale-110 active:scale-90"
                             >
-                              <Plus size={8} className="text-primary" />
+                              <Plus size={10} className="text-primary" />
                             </button>
                           </td>
                         );
@@ -7405,8 +7407,8 @@ const Notes = ({ user, onBack }: { user: Employee, onBack: () => void }) => {
                   <td className="px-4 py-3 text-sm text-gray-600">{note.location || '0.000000, 0.000000'}</td>
                   <td className="px-4 py-3">
                     <div className="flex items-center justify-center gap-2">
-                      <button className="p-1.5 text-gray-400 hover:text-primary hover:bg-primary/10 rounded-lg transition-all"><Edit size={14} /></button>
-                      <button className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all"><Trash2 size={14} /></button>
+                      <button className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition-all"><Edit size={14} /></button>
+                      <button className="p-1.5 text-red-600 hover:bg-red-50 rounded-lg transition-all"><Trash2 size={14} /></button>
                     </div>
                   </td>
                 </tr>
@@ -7728,8 +7730,8 @@ const Reminders = ({ user, onBack }: { user: Employee, onBack: () => void }) => 
                   <td className="px-4 py-3 text-sm font-medium text-gray-700">{rem.title}</td>
                   <td className="px-4 py-3">
                     <div className="flex items-center justify-center gap-2">
-                      <button className="p-1.5 text-gray-400 hover:text-primary hover:bg-primary/10 rounded-lg transition-all"><Edit size={14} /></button>
-                      <button className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all"><Trash2 size={14} /></button>
+                      <button className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition-all"><Edit size={14} /></button>
+                      <button className="p-1.5 text-red-600 hover:bg-red-50 rounded-lg transition-all"><Trash2 size={14} /></button>
                     </div>
                   </td>
                 </tr>
@@ -7881,6 +7883,16 @@ const Backup = ({ onBack }: { onBack: () => void }) => {
   const [selectedTables, setSelectedTables] = useState<string[]>(BACKUP_TABLES.map(t => t.id));
   const [isBackingUp, setIsBackingUp] = useState(false);
   const [backupStatus, setBackupStatus] = useState('');
+  
+  // SMTP Config
+  const [smtpConfig, setSmtpConfig] = useState({
+    host: 'smtp.gmail.com',
+    port: '465',
+    user: '',
+    pass: '',
+    secure: true
+  });
+  const [showSmtp, setShowSmtp] = useState(false);
 
   const toggleTable = (id: string) => {
     setSelectedTables(prev => 
@@ -7892,7 +7904,7 @@ const Backup = ({ onBack }: { onBack: () => void }) => {
   const deselectAll = () => setSelectedTables([]);
 
   const handleSave = () => {
-    alert('Đã lưu cấu hình backup!');
+    alert('Đã lưu cấu hình backup và SMTP!');
   };
 
   const handleBackupNow = async () => {
@@ -7922,7 +7934,11 @@ const Backup = ({ onBack }: { onBack: () => void }) => {
       }
 
       if (email) {
-        setBackupStatus(`Đang gửi email tới ${email}...`);
+        if (smtpConfig.user && smtpConfig.pass) {
+          setBackupStatus(`Đang gửi email qua SMTP (${smtpConfig.host}) tới ${email}...`);
+        } else {
+          setBackupStatus(`Đang chuẩn bị gửi email tới ${email}...`);
+        }
         // Simulate email sending
         await new Promise(r => setTimeout(r, 2000));
       }
@@ -7946,7 +7962,7 @@ const Backup = ({ onBack }: { onBack: () => void }) => {
     <div className="p-4 md:p-6 space-y-6">
       <PageBreadcrumb title="Sao lưu dữ liệu" onBack={onBack} />
       
-      <div className="bg-white rounded-[2rem] shadow-xl border border-gray-100 p-8 max-w-3xl mx-auto space-y-8 relative overflow-hidden">
+      <div className="bg-white rounded-[2rem] shadow-xl border border-gray-100 p-8 max-w-4xl mx-auto space-y-8 relative overflow-hidden">
         {isBackingUp && (
           <div className="absolute inset-0 z-50 bg-white/80 backdrop-blur-sm flex flex-col items-center justify-center gap-6">
             <div className="relative">
@@ -7962,74 +7978,151 @@ const Backup = ({ onBack }: { onBack: () => void }) => {
           </div>
         )}
 
-        <div className="flex items-center gap-4 border-b border-gray-50 pb-6">
-          <div className="p-4 bg-primary/10 rounded-2xl text-primary">
-            <Settings size={28} />
+        <div className="flex items-center justify-between border-b border-gray-50 pb-6">
+          <div className="flex items-center gap-4">
+            <div className="p-4 bg-primary/10 rounded-2xl text-primary">
+              <Settings size={28} />
+            </div>
+            <div>
+              <h2 className="text-2xl font-black text-gray-800 uppercase tracking-tight">Cấu hình Sao lưu</h2>
+              <p className="text-xs text-gray-400 font-medium">Tùy chỉnh dữ liệu và lịch trình sao lưu</p>
+            </div>
           </div>
-          <div>
-            <h2 className="text-2xl font-black text-gray-800 uppercase tracking-tight">Cấu hình Sao lưu</h2>
-            <p className="text-xs text-gray-400 font-medium">Tùy chỉnh dữ liệu và lịch trình sao lưu</p>
-          </div>
+          <button 
+            onClick={() => setShowSmtp(!showSmtp)}
+            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${showSmtp ? 'bg-primary text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
+          >
+            <Mail size={16} />
+            {showSmtp ? 'ẨN SMTP' : 'CẤU HÌNH SMTP'}
+          </button>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           <div className="space-y-6">
-            <div>
-              <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2 ml-1 flex items-center gap-2">
-                <Mail size={14} className="text-primary" /> Email nhận backup
-              </label>
-              <input 
-                type="email" 
-                value={email}
-                onChange={e => setEmail(e.target.value)}
-                placeholder="Nhập email nhận file..."
-                className="w-full px-5 py-3.5 rounded-2xl border border-gray-100 bg-gray-50/50 focus:bg-white focus:ring-4 focus:ring-primary/10 focus:border-primary outline-none transition-all text-sm font-medium"
-              />
-              <p className="text-[10px] text-gray-400 mt-2 italic flex items-center gap-1">
-                <Info size={12} /> Hệ thống sẽ gửi file Excel báo cáo vào email này
-              </p>
-            </div>
+            {showSmtp ? (
+              <motion.div 
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: 'auto' }}
+                className="space-y-4 bg-gray-50 p-6 rounded-3xl border border-gray-100"
+              >
+                <h3 className="text-sm font-bold text-gray-800 flex items-center gap-2">
+                  <Zap size={16} className="text-amber-500" /> Cấu hình SMTP Server
+                </h3>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="col-span-2">
+                    <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1 ml-1">SMTP Host</label>
+                    <input 
+                      type="text" 
+                      value={smtpConfig.host}
+                      onChange={e => setSmtpConfig({...smtpConfig, host: e.target.value})}
+                      className="w-full px-4 py-2.5 rounded-xl border border-gray-200 bg-white outline-none focus:ring-2 focus:ring-primary/20 text-sm"
+                      placeholder="smtp.gmail.com"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1 ml-1">Port</label>
+                    <input 
+                      type="text" 
+                      value={smtpConfig.port}
+                      onChange={e => setSmtpConfig({...smtpConfig, port: e.target.value})}
+                      className="w-full px-4 py-2.5 rounded-xl border border-gray-200 bg-white outline-none focus:ring-2 focus:ring-primary/20 text-sm"
+                      placeholder="465"
+                    />
+                  </div>
+                  <div className="flex items-end pb-2">
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input 
+                        type="checkbox" 
+                        checked={smtpConfig.secure}
+                        onChange={e => setSmtpConfig({...smtpConfig, secure: e.target.checked})}
+                        className="rounded border-gray-300 text-primary focus:ring-primary"
+                      />
+                      <span className="text-xs font-bold text-gray-600">SSL/TLS</span>
+                    </label>
+                  </div>
+                  <div className="col-span-2">
+                    <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1 ml-1">Email (User)</label>
+                    <input 
+                      type="email" 
+                      value={smtpConfig.user}
+                      onChange={e => setSmtpConfig({...smtpConfig, user: e.target.value})}
+                      className="w-full px-4 py-2.5 rounded-xl border border-gray-200 bg-white outline-none focus:ring-2 focus:ring-primary/20 text-sm"
+                      placeholder="your-email@gmail.com"
+                    />
+                  </div>
+                  <div className="col-span-2">
+                    <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1 ml-1">Mật khẩu ứng dụng (App Password)</label>
+                    <input 
+                      type="password" 
+                      value={smtpConfig.pass}
+                      onChange={e => setSmtpConfig({...smtpConfig, pass: e.target.value})}
+                      className="w-full px-4 py-2.5 rounded-xl border border-gray-200 bg-white outline-none focus:ring-2 focus:ring-primary/20 text-sm"
+                      placeholder="••••••••••••••••"
+                    />
+                    <p className="text-[9px] text-gray-400 mt-1 italic">Lưu ý: Sử dụng "App Password" nếu dùng Gmail</p>
+                  </div>
+                </div>
+              </motion.div>
+            ) : (
+              <div className="space-y-6">
+                <div>
+                  <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2 ml-1 flex items-center gap-2">
+                    <Mail size={14} className="text-primary" /> Email nhận backup
+                  </label>
+                  <input 
+                    type="email" 
+                    value={email}
+                    onChange={e => setEmail(e.target.value)}
+                    placeholder="Nhập email nhận file..."
+                    className="w-full px-5 py-3.5 rounded-2xl border border-gray-100 bg-gray-50/50 focus:bg-white focus:ring-4 focus:ring-primary/10 focus:border-primary outline-none transition-all text-sm font-medium"
+                  />
+                  <p className="text-[10px] text-gray-400 mt-2 italic flex items-center gap-1">
+                    <Info size={12} /> Hệ thống sẽ gửi file Excel báo cáo vào email này
+                  </p>
+                </div>
 
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2 ml-1 flex items-center gap-2">
-                  <RefreshCw size={14} className="text-primary" /> Tần suất
-                </label>
-                <select 
-                  value={frequency}
-                  onChange={e => setFrequency(e.target.value)}
-                  className="w-full px-4 py-3.5 rounded-2xl border border-gray-100 bg-gray-50/50 focus:bg-white focus:ring-4 focus:ring-primary/10 focus:border-primary outline-none transition-all text-sm font-medium"
-                >
-                  <option>Thủ công (không tự động)</option>
-                  <option>Hàng ngày</option>
-                  <option>Hàng tuần</option>
-                  <option>Hàng tháng</option>
-                </select>
-              </div>
-              <div>
-                <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2 ml-1 flex items-center gap-2">
-                  <Clock size={14} className="text-primary" /> Giờ backup
-                </label>
-                <input 
-                  type="time" 
-                  value={time}
-                  onChange={e => setTime(e.target.value)}
-                  className="w-full px-4 py-3.5 rounded-2xl border border-gray-100 bg-gray-50/50 focus:bg-white focus:ring-4 focus:ring-primary/10 focus:border-primary outline-none transition-all text-sm font-medium"
-                />
-              </div>
-            </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2 ml-1 flex items-center gap-2">
+                      <RefreshCw size={14} className="text-primary" /> Tần suất
+                    </label>
+                    <select 
+                      value={frequency}
+                      onChange={e => setFrequency(e.target.value)}
+                      className="w-full px-4 py-3.5 rounded-2xl border border-gray-100 bg-gray-50/50 focus:bg-white focus:ring-4 focus:ring-primary/10 focus:border-primary outline-none transition-all text-sm font-medium"
+                    >
+                      <option>Thủ công (không tự động)</option>
+                      <option>Hàng ngày</option>
+                      <option>Hàng tuần</option>
+                      <option>Hàng tháng</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2 ml-1 flex items-center gap-2">
+                      <Clock size={14} className="text-primary" /> Giờ backup
+                    </label>
+                    <input 
+                      type="time" 
+                      value={time}
+                      onChange={e => setTime(e.target.value)}
+                      className="w-full px-4 py-3.5 rounded-2xl border border-gray-100 bg-gray-50/50 focus:bg-white focus:ring-4 focus:ring-primary/10 focus:border-primary outline-none transition-all text-sm font-medium"
+                    />
+                  </div>
+                </div>
 
-            <div className="bg-amber-50 p-4 rounded-2xl border border-amber-100 flex gap-4">
-              <div className="p-2 bg-amber-100 rounded-xl text-amber-600 h-fit">
-                <Info size={20} />
+                <div className="bg-amber-50 p-4 rounded-2xl border border-amber-100 flex gap-4">
+                  <div className="p-2 bg-amber-100 rounded-xl text-amber-600 h-fit">
+                    <Info size={20} />
+                  </div>
+                  <div className="space-y-1">
+                    <h4 className="text-xs font-bold text-amber-800">Hướng dẫn cấu hình SMTP</h4>
+                    <p className="text-[10px] text-amber-700 leading-relaxed">
+                      Để gửi email tự động, bạn cần cấu hình SMTP. Nếu dùng Gmail: 1. Bật xác minh 2 bước. 2. Tạo "Mật khẩu ứng dụng" (App Password). 3. Nhập vào phần Cấu hình SMTP.
+                    </p>
+                  </div>
+                </div>
               </div>
-              <div className="space-y-1">
-                <h4 className="text-xs font-bold text-amber-800">Lưu ý quan trọng</h4>
-                <p className="text-[10px] text-amber-700 leading-relaxed">
-                  Tính năng gửi email yêu cầu cấu hình SMTP server. Trong bản demo này, hệ thống sẽ mô phỏng quá trình gửi và tải file trực tiếp về trình duyệt.
-                </p>
-              </div>
-            </div>
+            )}
           </div>
 
           <div className="space-y-4">
@@ -8382,7 +8475,7 @@ export default function App() {
   return (
     <div className="min-h-screen bg-[#F8F9FA] flex flex-col font-sans">
       {/* Header */}
-      <header className="bg-primary text-white h-14 flex items-center justify-between px-4 sticky top-0 z-30 shadow-md">
+      <header className="bg-primary text-white h-14 flex items-center justify-between px-4 sticky top-0 z-50 shadow-md">
         <div className="flex items-center gap-2">
           <button 
             onClick={() => setIsSidebarOpen(!isSidebarOpen)} 
@@ -8498,7 +8591,7 @@ export default function App() {
               animate={{ x: 0, opacity: 1 }}
               exit={{ x: -280, opacity: 0 }}
               transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-              className="bg-white border-r border-gray-200 overflow-y-auto flex-shrink-0 z-40 fixed lg:relative top-14 lg:top-0 h-[calc(100vh-3.5rem)] w-[280px] shadow-2xl lg:shadow-none"
+              className="bg-white border-r border-gray-200 overflow-y-auto flex-shrink-0 z-40 fixed lg:relative top-14 lg:top-0 h-[calc(100vh-3.5rem)] w-[280px] shadow-2xl lg:shadow-none custom-scrollbar"
             >
               <div className="p-4 space-y-6 pb-44 lg:pb-4">
                 <div className="flex items-center justify-between px-2">

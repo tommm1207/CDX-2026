@@ -23,17 +23,9 @@ export interface Employee {
 
 export interface AttendanceRecord {
   id: string;
-  attendance_code: string;
-  display_code: string;
   employee_id: string;
   date: string;
-  work_hours: number;
+  status: 'present' | 'half-day' | 'absent';
+  hours_worked: number;
   overtime_hours: number;
-  workplace: string;
-  work_content: string;
-  daily_overtime_pay: number;
-  salary_at_time: number;
-  daily_work_pay: number;
-  overtime_rate: number;
-  daily_total_pay: number;
 }

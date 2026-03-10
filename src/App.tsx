@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 import { useState, useEffect, FormEvent, MouseEvent, ChangeEvent, useRef, useMemo, useCallback } from 'react';
-import { utils, writeFile } from 'xlsx';
+import { utils, writeFile, write } from 'xlsx';
 import { 
   LayoutDashboard, 
   Package, 
@@ -1137,21 +1137,33 @@ const Materials = ({ user, onBack }: { user: Employee, onBack?: () => void }) =>
 
   const fetchMaterials = async () => {
     setLoading(true);
-    console.log('Fetching materials...');
-    const { data, error } = await supabase
-      .from('materials')
-      .select('*') 
-      .neq('status', 'Đã xóa')
-      .order('created_at', { ascending: false });
-    
-    if (error) {
-      console.error('Error fetching materials:', error);
-      alert('Lỗi tải danh mục vật tư: ' + error.message);
+    try {
+      console.log('Fetching materials...');
+      const { data, error } = await supabase
+        .from('materials')
+        .select('*') 
+        .order('name', { ascending: true });
+      
+      if (error) {
+        console.error('Error fetching materials:', error);
+        // If error is related to missing columns, try a simpler select
+        if (error.message.includes('column')) {
+           const { data: simpleData, error: simpleError } = await supabase.from('materials').select('id, name').order('name');
+           if (simpleError) throw simpleError;
+           setMaterials(simpleData || []);
+        } else {
+          throw error;
+        }
+      } else {
+        console.log('Materials data received:', data);
+        setMaterials(data || []);
+      }
+    } catch (err: any) {
+      console.error('Final error fetching materials:', err);
+      alert('Lỗi tải danh mục vật tư: ' + err.message);
+    } finally {
+      setLoading(false);
     }
-    
-    console.log('Materials data received:', data);
-    if (data) setMaterials(data);
-    setLoading(false);
   };
 
   const fetchGroups = async () => {
@@ -1160,7 +1172,7 @@ const Materials = ({ user, onBack }: { user: Employee, onBack?: () => void }) =>
   };
 
   const fetchWarehouses = async () => {
-    const { data } = await supabase.from('warehouses').select('*').order('name');
+    const { data } = await supabase.from('warehouses').select('*').or('status.is.null,status.neq.Đã xóa').order('name');
     if (data) setWarehouses(data);
   };
 
@@ -1195,7 +1207,7 @@ const Materials = ({ user, onBack }: { user: Employee, onBack?: () => void }) =>
         }
       }
 
-      const payload = { ...formData, group_id: finalGroupId, warehouse_id: finalWarehouseId };
+      const payload = { ...formData, group_id: finalGroupId, warehouse_id: finalWarehouseId, status: formData.status || 'Đang sử dụng' };
       // Remove quantity from payload before saving to DB if the table doesn't have it
       const { quantity, ...dbPayload } = payload;
 
@@ -1772,7 +1784,7 @@ const Warehouses = ({ user, onBack }: { user: Employee, onBack?: () => void }) =
       const { data, error } = await supabase
         .from('warehouses')
         .select('*, users(full_name)')
-        .neq('status', 'Đã xóa')
+        .or('status.is.null,status.neq.Đã xóa')
         .order('created_at', { ascending: false });
       
       if (error) {
@@ -1781,7 +1793,7 @@ const Warehouses = ({ user, onBack }: { user: Employee, onBack?: () => void }) =
         const { data: simpleData, error: simpleError } = await supabase
           .from('warehouses')
           .select('*')
-          .neq('status', 'Đã xóa')
+          .or('status.is.null,status.neq.Đã xóa')
           .order('created_at', { ascending: false });
         
         if (simpleError) throw simpleError;
@@ -2239,14 +2251,25 @@ const Costs = ({ user, onBack }: { user: Employee, onBack?: () => void }) => {
 
   const fetchCosts = async () => {
     setLoading(true);
-    const { data, error } = await supabase
-      .from('costs')
-      .select('*, users(full_name), warehouses(name), materials(name)')
-      .order('date', { ascending: false });
-    
-    if (error) console.error('Error fetching costs:', error);
-    if (data) setCosts(data);
-    setLoading(false);
+    try {
+      const { data, error } = await supabase
+        .from('costs')
+        .select('*, users(full_name), warehouses(name), materials(name)')
+        .order('date', { ascending: false });
+      
+      if (error) {
+        console.error('Error fetching costs:', error);
+        const { data: fallbackData, error: fallbackError } = await supabase.from('costs').select('*').order('date', { ascending: false });
+        if (fallbackError) throw fallbackError;
+        setCosts(fallbackData || []);
+      } else {
+        setCosts(data || []);
+      }
+    } catch (err: any) {
+      alert('Lỗi tải danh sách chi phí: ' + err.message);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const fetchMaterials = async () => {
@@ -3932,7 +3955,7 @@ const Dashboard = ({ user, onNavigate }: { user: Employee, onNavigate: (page: st
         { label: 'Luân chuyển kho', icon: ArrowLeftRight, page: 'transfer' },
         { label: 'Kiểm tra tồn kho', icon: BarChart3, page: 'inventory-report' },
         { label: 'Danh sách kho', icon: Warehouse, page: 'warehouses' },
-        { label: 'Thư viện vật tư', icon: Settings, page: 'materials' },
+        { label: 'Danh mục vật tư', icon: Settings, page: 'materials' },
       ]
     },
     {
@@ -5550,15 +5573,28 @@ const StockIn = ({ user, onBack, initialStatus }: { user: Employee, onBack?: () 
 
   const fetchSlips = async () => {
     setLoading(true);
-    let query = supabase.from('stock_in').select('*, warehouses(name), materials(name, unit)').order('created_at', { ascending: false });
-    
-    if (statusFilter !== 'Tất cả') {
-      query = query.eq('status', statusFilter);
+    try {
+      let query = supabase.from('stock_in').select('*, warehouses(name), materials(name, unit)').order('created_at', { ascending: false });
+      
+      if (statusFilter !== 'Tất cả') {
+        query = query.eq('status', statusFilter);
+      }
+      
+      const { data, error } = await query;
+      if (error) {
+        console.error('Error fetching stock_in:', error);
+        // Fallback to simple select if join fails
+        const { data: fallbackData, error: fallbackError } = await supabase.from('stock_in').select('*').order('created_at', { ascending: false });
+        if (fallbackError) throw fallbackError;
+        setSlips(fallbackData || []);
+      } else {
+        setSlips(data || []);
+      }
+    } catch (err: any) {
+      alert('Lỗi tải phiếu nhập kho: ' + err.message);
+    } finally {
+      setLoading(false);
     }
-    
-    const { data } = await query;
-    if (data) setSlips(data);
-    setLoading(false);
   };
 
   useEffect(() => {
@@ -5579,8 +5615,25 @@ const StockIn = ({ user, onBack, initialStatus }: { user: Employee, onBack?: () 
     e.preventDefault();
     setSubmitting(true);
     try {
-      const wh = warehouses.find(w => w.name === formData.warehouse_id || w.id === formData.warehouse_id);
-      const mat = materials.find(m => m.name === formData.material_id || m.id === formData.material_id);
+      // Resolve warehouse_id
+      let wh = warehouses.find(w => w.name === formData.warehouse_id || w.id === formData.warehouse_id);
+      if (!wh && formData.warehouse_id) {
+        const { data: newWh, error: whErr } = await supabase.from('warehouses').insert([{ name: formData.warehouse_id }]).select();
+        if (!whErr && newWh) {
+          wh = newWh[0];
+          fetchWarehouses();
+        }
+      }
+
+      // Resolve material_id
+      let mat = materials.find(m => m.name === formData.material_id || m.id === formData.material_id);
+      if (!mat && formData.material_id) {
+        const { data: newMat, error: matErr } = await supabase.from('materials').insert([{ name: formData.material_id, unit: formData.unit }]).select();
+        if (!matErr && newMat) {
+          mat = newMat[0];
+          fetchMaterials();
+        }
+      }
       
       const payload = {
         ...formData,
@@ -6031,9 +6084,21 @@ const StockOut = ({ user, onBack }: { user: Employee, onBack?: () => void }) => 
 
   const fetchSlips = async () => {
     setLoading(true);
-    const { data } = await supabase.from('stock_out').select('*, warehouses(name), materials(name, unit)').order('created_at', { ascending: false });
-    if (data) setSlips(data);
-    setLoading(false);
+    try {
+      const { data, error } = await supabase.from('stock_out').select('*, warehouses(name), materials(name, unit)').order('created_at', { ascending: false });
+      if (error) {
+        console.error('Error fetching stock_out:', error);
+        const { data: fallbackData, error: fallbackError } = await supabase.from('stock_out').select('*').order('created_at', { ascending: false });
+        if (fallbackError) throw fallbackError;
+        setSlips(fallbackData || []);
+      } else {
+        setSlips(data || []);
+      }
+    } catch (err: any) {
+      alert('Lỗi tải phiếu xuất kho: ' + err.message);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const fetchWarehouses = async () => {
@@ -6050,8 +6115,25 @@ const StockOut = ({ user, onBack }: { user: Employee, onBack?: () => void }) => 
     e.preventDefault();
     setSubmitting(true);
     try {
-      const wh = warehouses.find(w => w.name === formData.warehouse_id || w.id === formData.warehouse_id);
-      const mat = materials.find(m => m.name === formData.material_id || m.id === formData.material_id);
+      // Resolve warehouse_id
+      let wh = warehouses.find(w => w.name === formData.warehouse_id || w.id === formData.warehouse_id);
+      if (!wh && formData.warehouse_id) {
+        const { data: newWh, error: whErr } = await supabase.from('warehouses').insert([{ name: formData.warehouse_id }]).select();
+        if (!whErr && newWh) {
+          wh = newWh[0];
+          fetchWarehouses();
+        }
+      }
+
+      // Resolve material_id
+      let mat = materials.find(m => m.name === formData.material_id || m.id === formData.material_id);
+      if (!mat && formData.material_id) {
+        const { data: newMat, error: matErr } = await supabase.from('materials').insert([{ name: formData.material_id }]).select();
+        if (!matErr && newMat) {
+          mat = newMat[0];
+          fetchMaterials();
+        }
+      }
 
       const payload = {
         ...formData,
@@ -6364,9 +6446,21 @@ const Transfer = ({ user, onBack }: { user: Employee, onBack?: () => void }) => 
 
   const fetchSlips = async () => {
     setLoading(true);
-    const { data } = await supabase.from('transfers').select('*, from_wh:warehouses!from_warehouse_id(name), to_wh:warehouses!to_warehouse_id(name), materials(name, unit)').neq('status', 'Đã xóa').order('created_at', { ascending: false });
-    if (data) setSlips(data);
-    setLoading(false);
+    try {
+      const { data, error } = await supabase.from('transfers').select('*, from_wh:warehouses!from_warehouse_id(name), to_wh:warehouses!to_warehouse_id(name), materials(name, unit)').order('created_at', { ascending: false });
+      if (error) {
+        console.error('Error fetching transfers:', error);
+        const { data: fallbackData, error: fallbackError } = await supabase.from('transfers').select('*').order('created_at', { ascending: false });
+        if (fallbackError) throw fallbackError;
+        setSlips(fallbackData || []);
+      } else {
+        setSlips(data || []);
+      }
+    } catch (err: any) {
+      alert('Lỗi tải phiếu luân chuyển: ' + err.message);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const fetchWarehouses = async () => {
@@ -6387,9 +6481,35 @@ const Transfer = ({ user, onBack }: { user: Employee, onBack?: () => void }) => 
     }
     setSubmitting(true);
     try {
-      const fromWh = warehouses.find(w => w.name === formData.from_warehouse_id || w.id === formData.from_warehouse_id);
-      const toWh = warehouses.find(w => w.name === formData.to_warehouse_id || w.id === formData.to_warehouse_id);
-      const mat = materials.find(m => m.name === formData.material_id || m.id === formData.material_id);
+      // Resolve from_warehouse_id
+      let fromWh = warehouses.find(w => w.name === formData.from_warehouse_id || w.id === formData.from_warehouse_id);
+      if (!fromWh && formData.from_warehouse_id) {
+        const { data: newWh, error: whErr } = await supabase.from('warehouses').insert([{ name: formData.from_warehouse_id }]).select();
+        if (!whErr && newWh) {
+          fromWh = newWh[0];
+          fetchWarehouses();
+        }
+      }
+
+      // Resolve to_warehouse_id
+      let toWh = warehouses.find(w => w.name === formData.to_warehouse_id || w.id === formData.to_warehouse_id);
+      if (!toWh && formData.to_warehouse_id) {
+        const { data: newWh, error: whErr } = await supabase.from('warehouses').insert([{ name: formData.to_warehouse_id }]).select();
+        if (!whErr && newWh) {
+          toWh = newWh[0];
+          fetchWarehouses();
+        }
+      }
+
+      // Resolve material_id
+      let mat = materials.find(m => m.name === formData.material_id || m.id === formData.material_id);
+      if (!mat && formData.material_id) {
+        const { data: newMat, error: matErr } = await supabase.from('materials').insert([{ name: formData.material_id }]).select();
+        if (!matErr && newMat) {
+          mat = newMat[0];
+          fetchMaterials();
+        }
+      }
 
       const payload = {
         ...formData,
@@ -6684,7 +6804,6 @@ const InventoryReport = ({ user, onBack }: { user: Employee, onBack?: () => void
   const [loading, setLoading] = useState(true);
   const [warehouses, setWarehouses] = useState<any[]>([]);
   const [selectedWarehouse, setSelectedWarehouse] = useState<string>('');
-  const [viewMode, setViewMode] = useState<'material' | 'warehouse'>('material');
 
   useEffect(() => {
     fetchWarehouses();
@@ -6692,18 +6811,18 @@ const InventoryReport = ({ user, onBack }: { user: Employee, onBack?: () => void
 
   useEffect(() => {
     fetchReport();
-  }, [selectedWarehouse, viewMode]);
+  }, [selectedWarehouse]);
 
   const fetchWarehouses = async () => {
-    const { data } = await supabase.from('warehouses').select('*').order('name');
+    const { data } = await supabase.from('warehouses').select('*').or('status.is.null,status.neq.Đã xóa').order('name');
     if (data) setWarehouses(data);
   };
 
   const fetchReport = async () => {
     setLoading(true);
     try {
-      const { data: materials } = await supabase.from('materials').select('*').order('name');
-      const { data: whs } = await supabase.from('warehouses').select('*').order('name');
+      const { data: materials } = await supabase.from('materials').select('*').or('status.is.null,status.neq.Đã xóa').order('name');
+      const { data: whs } = await supabase.from('warehouses').select('*').or('status.is.null,status.neq.Đã xóa').order('name');
       if (!materials || !whs) return;
 
       const [si, so, tr_out, tr_in] = await Promise.all([
@@ -6713,48 +6832,69 @@ const InventoryReport = ({ user, onBack }: { user: Employee, onBack?: () => void
         supabase.from('transfers').select('material_id, to_warehouse_id, quantity').eq('status', 'Đã duyệt')
       ]);
 
-      if (viewMode === 'material') {
-        const reportData = materials.map(mat => {
-          const filterByWh = (list: any[], key: string) => 
-            selectedWarehouse ? list.filter(item => item[key] === selectedWarehouse) : list;
+      // Pre-calculate everything in O(T) where T is transactions
+      const balanceMap: Record<string, Record<string, number>> = {}; // warehouseId -> materialId -> balance
+      const totalInMap: Record<string, number> = {}; // materialId -> totalIn
+      const totalOutMap: Record<string, number> = {}; // materialId -> totalOut
 
-          const matIn = filterByWh(si.data || [], 'warehouse_id').filter(i => i.material_id === mat.id).reduce((s, i) => s + i.quantity, 0);
-          const matOut = filterByWh(so.data || [], 'warehouse_id').filter(i => i.material_id === mat.id).reduce((s, i) => s + i.quantity, 0);
-          const matTrOut = filterByWh(tr_out.data || [], 'from_warehouse_id').filter(i => i.material_id === mat.id).reduce((s, i) => s + i.quantity, 0);
-          const matTrIn = filterByWh(tr_in.data || [], 'to_warehouse_id').filter(i => i.material_id === mat.id).reduce((s, i) => s + i.quantity, 0);
+      // Helper to update maps
+      const updateMaps = (list: any[], whKey: string, matIdKey: string, multiplier: number, isDirectStock: boolean) => {
+        list.forEach(item => {
+          const whId = item[whKey];
+          const matId = item[matIdKey];
+          const qty = item.quantity;
 
-          const totalIn = matIn + matTrIn;
-          const totalOut = matOut + matTrOut;
-          const balance = totalIn - totalOut;
+          // Update balance map
+          if (!balanceMap[whId]) balanceMap[whId] = {};
+          balanceMap[whId][matId] = (balanceMap[whId][matId] || 0) + (qty * multiplier);
 
-          // Breakdown by warehouse
-          const breakdown = whs.map(wh => {
-            const whIn = (si.data || []).filter(i => i.warehouse_id === wh.id && i.material_id === mat.id).reduce((s, i) => s + i.quantity, 0);
-            const whOut = (so.data || []).filter(i => i.warehouse_id === wh.id && i.material_id === mat.id).reduce((s, i) => s + i.quantity, 0);
-            const whTrOut = (tr_out.data || []).filter(i => i.from_warehouse_id === wh.id && i.material_id === mat.id).reduce((s, i) => s + i.quantity, 0);
-            const whTrIn = (tr_in.data || []).filter(i => i.to_warehouse_id === wh.id && i.material_id === mat.id).reduce((s, i) => s + i.quantity, 0);
-            return { whName: wh.name, balance: (whIn + whTrIn) - (whOut + whTrOut) };
-          }).filter(b => b.balance !== 0);
+          // Update total maps (only if not filtering by warehouse, or if we want global totals)
+          if (multiplier > 0) {
+            totalInMap[matId] = (totalInMap[matId] || 0) + qty;
+          } else {
+            totalOutMap[matId] = (totalOutMap[matId] || 0) + qty;
+          }
+        });
+      };
 
-          return { ...mat, totalIn, totalOut, balance, breakdown };
-        }).filter(item => item.totalIn > 0 || item.totalOut > 0 || item.balance > 0);
-        setReport(reportData);
-      } else {
-        // Warehouse view
-        const reportData = whs.map(wh => {
-          const whMaterials = materials.map(mat => {
-            const whIn = (si.data || []).filter(i => i.warehouse_id === wh.id && i.material_id === mat.id).reduce((s, i) => s + i.quantity, 0);
-            const whOut = (so.data || []).filter(i => i.warehouse_id === wh.id && i.material_id === mat.id).reduce((s, i) => s + i.quantity, 0);
-            const whTrOut = (tr_out.data || []).filter(i => i.from_warehouse_id === wh.id && i.material_id === mat.id).reduce((s, i) => s + i.quantity, 0);
-            const whTrIn = (tr_in.data || []).filter(i => i.to_warehouse_id === wh.id && i.material_id === mat.id).reduce((s, i) => s + i.quantity, 0);
-            const balance = (whIn + whTrIn) - (whOut + whTrOut);
-            return balance !== 0 ? { ...mat, balance } : null;
-          }).filter(m => m !== null);
+      updateMaps(si.data || [], 'warehouse_id', 'material_id', 1, true);
+      updateMaps(so.data || [], 'warehouse_id', 'material_id', -1, true);
+      updateMaps(tr_out.data || [], 'from_warehouse_id', 'material_id', -1, false);
+      updateMaps(tr_in.data || [], 'to_warehouse_id', 'material_id', 1, false);
 
-          return { ...wh, materials: whMaterials };
-        }).filter(wh => wh.materials.length > 0);
-        setReport(reportData);
-      }
+      const reportData = materials.map(mat => {
+        let balance = 0;
+        const breakdown: any[] = [];
+
+        whs.forEach(wh => {
+          const whBalance = balanceMap[wh.id]?.[mat.id] || 0;
+          if (whBalance !== 0) {
+            breakdown.push({ whName: wh.name, balance: whBalance });
+            balance += whBalance;
+          }
+        });
+
+        if (selectedWarehouse) {
+          const whBalance = balanceMap[selectedWarehouse]?.[mat.id] || 0;
+          return { 
+            ...mat, 
+            totalIn: 0, 
+            totalOut: 0, 
+            balance: whBalance, 
+            breakdown: whBalance !== 0 ? [{ whName: whs.find(w => w.id === selectedWarehouse)?.name, balance: whBalance }] : [] 
+          };
+        }
+
+        return { 
+          ...mat, 
+          totalIn: totalInMap[mat.id] || 0, 
+          totalOut: totalOutMap[mat.id] || 0, 
+          balance, 
+          breakdown 
+        };
+      }).filter(item => item.balance !== 0 || (item.totalIn || 0) > 0);
+      
+      setReport(reportData);
     } catch (err) {
       console.error('Error fetching report:', err);
     } finally {
@@ -6772,121 +6912,69 @@ const InventoryReport = ({ user, onBack }: { user: Employee, onBack?: () => void
           </h2>
           <p className="text-xs text-gray-500 mt-1">Xem chi tiết vật tư theo từng kho</p>
         </div>
-        <div className="flex items-center gap-2 bg-gray-100 p-1 rounded-xl">
-          <button 
-            onClick={() => setViewMode('material')}
-            className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${viewMode === 'material' ? 'bg-white text-primary shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
-          >
-            Theo vật tư
-          </button>
-          <button 
-            onClick={() => setViewMode('warehouse')}
-            className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${viewMode === 'warehouse' ? 'bg-white text-primary shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
-          >
-            Theo kho
-          </button>
-        </div>
       </div>
 
-      {viewMode === 'material' ? (
-        <div className="space-y-4">
-          <div className="w-full md:w-64">
-            <select 
-              value={selectedWarehouse} 
-              onChange={(e) => setSelectedWarehouse(e.target.value)}
-              className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20"
-            >
-              <option value="">Tất cả các kho</option>
-              {warehouses.map(wh => (
-                <option key={wh.id} value={wh.id}>{wh.name}</option>
-              ))}
-            </select>
-          </div>
+      <div className="space-y-4">
+        <div className="w-full md:w-64">
+          <select 
+            value={selectedWarehouse} 
+            onChange={(e) => setSelectedWarehouse(e.target.value)}
+            className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20"
+          >
+            <option value="">Tất cả các kho</option>
+            {warehouses.map(wh => (
+              <option key={wh.id} value={wh.id}>{wh.name}</option>
+            ))}
+          </select>
+        </div>
 
-          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-            <div className="overflow-x-auto">
-              <table className="w-full text-left border-collapse min-w-[600px]">
-                <thead>
-                  <tr className="bg-gray-50 border-bottom border-gray-100">
-                    <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-wider text-gray-400">Vật tư / Phân bổ kho</th>
-                    <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-wider text-gray-400 text-center">ĐVT</th>
-                    <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-wider text-gray-400 text-right">Tổng nhập</th>
-                    <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-wider text-gray-400 text-right">Tổng xuất</th>
-                    <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-wider text-gray-400 text-right">Tồn kho</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-100">
-                  {loading ? (
-                    <tr><td colSpan={5} className="px-6 py-12 text-center text-gray-400 italic">Đang tải...</td></tr>
-                  ) : report.length === 0 ? (
-                    <tr><td colSpan={5} className="px-6 py-12 text-center text-gray-400 italic">Không có dữ liệu</td></tr>
-                  ) : (
-                    report.map((item) => (
-                      <tr key={item.id} className="hover:bg-gray-50/50 transition-colors align-top">
-                        <td className="px-6 py-4">
-                          <div className="text-sm font-bold text-gray-800">{item.name}</div>
-                          <div className="mt-2 space-y-1">
-                            {item.breakdown.map((b: any, idx: number) => (
-                              <div key={idx} className="flex items-center gap-2 text-[10px]">
-                                <span className="text-gray-400">{b.whName}:</span>
-                                <span className="font-bold text-primary">{formatNumber(b.balance)}</span>
-                              </div>
-                            ))}
-                          </div>
-                        </td>
-                        <td className="px-6 py-4 text-center text-xs text-gray-500">{item.unit}</td>
-                        <td className="px-6 py-4 text-right text-sm font-medium text-blue-600">+{formatNumber(item.totalIn)}</td>
-                        <td className="px-6 py-4 text-right text-sm font-medium text-orange-600">-{formatNumber(item.totalOut)}</td>
-                        <td className="px-6 py-4 text-right text-sm font-bold text-gray-900">
-                          <span className={`px-2 py-1 rounded-lg ${item.balance <= 5 ? 'bg-red-50 text-red-600' : 'bg-green-50 text-green-600'}`}>
-                            {formatNumber(item.balance)}
-                          </span>
-                        </td>
-                      </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
-            </div>
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse min-w-[600px]">
+              <thead>
+                <tr className="bg-gray-50 border-bottom border-gray-100">
+                  <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-wider text-gray-400">Vật tư / Phân bổ kho</th>
+                  <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-wider text-gray-400 text-center">ĐVT</th>
+                  <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-wider text-gray-400 text-right">Tổng nhập</th>
+                  <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-wider text-gray-400 text-right">Tổng xuất</th>
+                  <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-wider text-gray-400 text-right">Tồn kho</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100">
+                {loading ? (
+                  <tr><td colSpan={5} className="px-6 py-12 text-center text-gray-400 italic">Đang tải...</td></tr>
+                ) : report.length === 0 ? (
+                  <tr><td colSpan={5} className="px-6 py-12 text-center text-gray-400 italic">Không có dữ liệu</td></tr>
+                ) : (
+                  report.map((item) => (
+                    <tr key={item.id} className="hover:bg-gray-50/50 transition-colors align-top">
+                      <td className="px-6 py-4">
+                        <div className="text-sm font-bold text-gray-800">{item.name}</div>
+                        <div className="mt-2 space-y-1">
+                          {item.breakdown.map((b: any, idx: number) => (
+                            <div key={idx} className="flex items-center gap-2 text-[10px]">
+                              <span className="text-gray-400">{b.whName}:</span>
+                              <span className="font-bold text-primary">{formatNumber(b.balance)}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 text-center text-xs text-gray-500">{item.unit}</td>
+                      <td className="px-6 py-4 text-right text-sm font-medium text-blue-600">+{formatNumber(item.totalIn)}</td>
+                      <td className="px-6 py-4 text-right text-sm font-medium text-orange-600">-{formatNumber(item.totalOut)}</td>
+                      <td className="px-6 py-4 text-right text-sm font-bold text-gray-900">
+                        <span className={`px-2 py-1 rounded-lg ${item.balance <= 5 ? 'bg-red-50 text-red-600' : 'bg-green-50 text-green-600'}`}>
+                          {formatNumber(item.balance)}
+                        </span>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
           </div>
         </div>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {loading ? (
-            <div className="md:col-span-2 py-12 text-center text-gray-400 italic">Đang tải...</div>
-          ) : report.length === 0 ? (
-            <div className="md:col-span-2 py-12 text-center text-gray-400 italic">Không có dữ liệu</div>
-          ) : (
-            report.map((wh) => (
-              <div key={wh.id} className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden flex flex-col">
-                <div className="bg-primary/5 p-4 border-b border-primary/10 flex items-center justify-between">
-                  <h3 className="font-bold text-gray-800 flex items-center gap-2">
-                    <Warehouse size={18} className="text-primary" /> {wh.name}
-                  </h3>
-                  <span className="text-[10px] font-bold bg-primary text-white px-2 py-0.5 rounded-full">
-                    {wh.materials.length} vật tư
-                  </span>
-                </div>
-                <div className="p-4 flex-1">
-                  <div className="space-y-3">
-                    {wh.materials.map((mat: any) => (
-                      <div key={mat.id} className="flex items-center justify-between text-sm border-b border-gray-50 pb-2 last:border-0">
-                        <div>
-                          <p className="font-medium text-gray-700">{mat.name}</p>
-                          <p className="text-[10px] text-gray-400">{mat.unit}</p>
-                        </div>
-                        <span className={`font-bold ${mat.balance <= 5 ? 'text-red-600' : 'text-primary'}`}>
-                          {formatNumber(mat.balance)}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            ))
-          )}
-        </div>
-      )}
+      </div>
     </div>
   );
 };
@@ -7877,7 +7965,7 @@ const BACKUP_TABLES = [
 ];
 
 const Backup = ({ onBack }: { onBack: () => void }) => {
-  const [email, setEmail] = useState('');
+  const [email, setEmail] = useState(() => localStorage.getItem('backup_email') || '');
   const [frequency, setFrequency] = useState('Thủ công (không tự động)');
   const [time, setTime] = useState('06:00');
   const [selectedTables, setSelectedTables] = useState<string[]>(BACKUP_TABLES.map(t => t.id));
@@ -7885,12 +7973,15 @@ const Backup = ({ onBack }: { onBack: () => void }) => {
   const [backupStatus, setBackupStatus] = useState('');
   
   // SMTP Config
-  const [smtpConfig, setSmtpConfig] = useState({
-    host: 'smtp.gmail.com',
-    port: '465',
-    user: '',
-    pass: '',
-    secure: true
+  const [smtpConfig, setSmtpConfig] = useState(() => {
+    const saved = localStorage.getItem('smtp_config');
+    return saved ? JSON.parse(saved) : {
+      host: 'smtp.gmail.com',
+      port: '465',
+      user: '',
+      pass: '',
+      secure: true
+    };
   });
   const [showSmtp, setShowSmtp] = useState(false);
 
@@ -7904,6 +7995,8 @@ const Backup = ({ onBack }: { onBack: () => void }) => {
   const deselectAll = () => setSelectedTables([]);
 
   const handleSave = () => {
+    localStorage.setItem('backup_email', email);
+    localStorage.setItem('smtp_config', JSON.stringify(smtpConfig));
     alert('Đã lưu cấu hình backup và SMTP!');
   };
 
@@ -7917,10 +8010,6 @@ const Backup = ({ onBack }: { onBack: () => void }) => {
     setBackupStatus('Đang truy xuất dữ liệu...');
     
     try {
-      // Simulate real backup process
-      await new Promise(r => setTimeout(r, 1000));
-      setBackupStatus('Đang đóng gói file Excel...');
-      
       const workbook = utils.book_new();
       for (const tableId of selectedTables) {
         const table = BACKUP_TABLES.find(t => t.id === tableId);
@@ -7930,28 +8019,39 @@ const Backup = ({ onBack }: { onBack: () => void }) => {
           const worksheet = utils.json_to_sheet(data);
           utils.book_append_sheet(workbook, worksheet, (table?.label || tableId).substring(0, 31));
         }
-        await new Promise(r => setTimeout(r, 200));
       }
 
-      if (email) {
-        if (smtpConfig.user && smtpConfig.pass) {
-          setBackupStatus(`Đang gửi email qua SMTP (${smtpConfig.host}) tới ${email}...`);
-        } else {
-          setBackupStatus(`Đang chuẩn bị gửi email tới ${email}...`);
+      const fileName = `CDX_Partial_Backup_${new Date().toISOString().split('T')[0]}.xlsx`;
+
+      if (email && smtpConfig.user && smtpConfig.pass) {
+        setBackupStatus(`Đang gửi email qua SMTP (${smtpConfig.host}) tới ${email}...`);
+        const fileData = write(workbook, { type: 'base64', bookType: 'xlsx' });
+        
+        const response = await fetch('/api/send-backup', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            email,
+            fileName,
+            fileData,
+            smtpConfig
+          })
+        });
+        
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.error || 'Failed to send email');
         }
-        // Simulate email sending
-        await new Promise(r => setTimeout(r, 2000));
       }
 
       setBackupStatus('Đang tải file về máy...');
-      const fileName = `CDX_Partial_Backup_${new Date().toISOString().split('T')[0]}.xlsx`;
       writeFile(workbook, fileName);
       
       setBackupStatus('Hoàn tất!');
       alert('Sao lưu thành công! File đã được tải về' + (email ? ` và gửi tới email ${email}.` : '.'));
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
-      alert('Đã xảy ra lỗi khi sao lưu.');
+      alert('Đã xảy ra lỗi khi sao lưu: ' + err.message);
     } finally {
       setIsBackingUp(false);
       setBackupStatus('');
@@ -8030,12 +8130,15 @@ const Backup = ({ onBack }: { onBack: () => void }) => {
                     />
                   </div>
                   <div className="flex items-end pb-2">
-                    <label className="flex items-center gap-2 cursor-pointer">
+                    <label className="flex items-center gap-3 cursor-pointer group">
+                      <div className={`w-6 h-6 rounded-lg border-2 flex items-center justify-center transition-all ${smtpConfig.secure ? 'bg-primary border-primary shadow-lg shadow-green-900/20' : 'bg-white border-gray-200 group-hover:border-primary/50'}`}>
+                        {smtpConfig.secure && <Check size={14} className="text-white" />}
+                      </div>
                       <input 
                         type="checkbox" 
                         checked={smtpConfig.secure}
                         onChange={e => setSmtpConfig({...smtpConfig, secure: e.target.checked})}
-                        className="rounded border-gray-300 text-primary focus:ring-primary"
+                        className="hidden"
                       />
                       <span className="text-xs font-bold text-gray-600">SSL/TLS</span>
                     </label>
@@ -8110,14 +8213,41 @@ const Backup = ({ onBack }: { onBack: () => void }) => {
                   </div>
                 </div>
 
-                <div className="bg-amber-50 p-4 rounded-2xl border border-amber-100 flex gap-4">
-                  <div className="p-2 bg-amber-100 rounded-xl text-amber-600 h-fit">
-                    <Info size={20} />
+                <div className="bg-amber-50 p-6 rounded-3xl border border-amber-100 space-y-4">
+                  <div className="flex gap-4">
+                    <div className="p-3 bg-amber-100 rounded-2xl text-amber-600 h-fit">
+                      <Info size={24} />
+                    </div>
+                    <div className="space-y-2">
+                      <h4 className="text-sm font-bold text-amber-900">Hướng dẫn gửi Email chi tiết</h4>
+                      <p className="text-xs text-amber-800 leading-relaxed">
+                        Để hệ thống có thể tự động gửi file sao lưu qua email, bạn cần thực hiện các bước sau (Ví dụ với Gmail):
+                      </p>
+                    </div>
                   </div>
-                  <div className="space-y-1">
-                    <h4 className="text-xs font-bold text-amber-800">Hướng dẫn cấu hình SMTP</h4>
-                    <p className="text-[10px] text-amber-700 leading-relaxed">
-                      Để gửi email tự động, bạn cần cấu hình SMTP. Nếu dùng Gmail: 1. Bật xác minh 2 bước. 2. Tạo "Mật khẩu ứng dụng" (App Password). 3. Nhập vào phần Cấu hình SMTP.
+                  
+                  <div className="space-y-3 pl-14">
+                    <div className="flex items-start gap-3">
+                      <div className="w-5 h-5 rounded-full bg-amber-200 text-amber-800 text-[10px] flex items-center justify-center font-bold shrink-0 mt-0.5">1</div>
+                      <p className="text-[11px] text-amber-800">Truy cập <b>myaccount.google.com</b> và bật <b>Xác minh 2 bước</b>.</p>
+                    </div>
+                    <div className="flex items-start gap-3">
+                      <div className="w-5 h-5 rounded-full bg-amber-200 text-amber-800 text-[10px] flex items-center justify-center font-bold shrink-0 mt-0.5">2</div>
+                      <p className="text-[11px] text-amber-800">Tìm kiếm <b>"Mật khẩu ứng dụng"</b> (App Password) trong thanh tìm kiếm của tài khoản Google.</p>
+                    </div>
+                    <div className="flex items-start gap-3">
+                      <div className="w-5 h-5 rounded-full bg-amber-200 text-amber-800 text-[10px] flex items-center justify-center font-bold shrink-0 mt-0.5">3</div>
+                      <p className="text-[11px] text-amber-800">Tạo một mật khẩu mới (ví dụ tên là "CDX App"), Google sẽ cấp cho bạn một mã <b>16 ký tự</b>.</p>
+                    </div>
+                    <div className="flex items-start gap-3">
+                      <div className="w-5 h-5 rounded-full bg-amber-200 text-amber-800 text-[10px] flex items-center justify-center font-bold shrink-0 mt-0.5">4</div>
+                      <p className="text-[11px] text-amber-800">Nhập mã 16 ký tự đó vào ô <b>Mật khẩu ứng dụng</b> trong phần cấu hình SMTP bên trên.</p>
+                    </div>
+                  </div>
+
+                  <div className="pt-2 pl-14">
+                    <p className="text-[10px] text-amber-600 italic font-medium">
+                      * Lưu ý: Không sử dụng mật khẩu đăng nhập Gmail thông thường vì Google sẽ chặn do lý do bảo mật.
                     </p>
                   </div>
                 </div>
@@ -8206,13 +8336,39 @@ const BackupNow = ({ onBack }: { onBack: () => void }) => {
       
       setStatus('Đang tạo file Excel...');
       const fileName = `CDX_Full_Backup_${new Date().toISOString().split('T')[0]}.xlsx`;
+
+      const email = localStorage.getItem('backup_email');
+      const smtpRaw = localStorage.getItem('smtp_config');
+      const smtpConfig = smtpRaw ? JSON.parse(smtpRaw) : null;
+
+      if (email && smtpConfig && smtpConfig.user && smtpConfig.pass) {
+        setStatus(`Đang gửi email tới ${email}...`);
+        const fileData = write(workbook, { type: 'base64', bookType: 'xlsx' });
+        
+        const response = await fetch('/api/send-backup', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            email,
+            fileName,
+            fileData,
+            smtpConfig
+          })
+        });
+        
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.error || 'Failed to send email');
+        }
+      }
+
       writeFile(workbook, fileName);
       
-      setStatus('Hoàn tất! File đã được tải về.');
-      alert('Sao lưu toàn bộ dữ liệu thành công!');
-    } catch (err) {
+      setStatus('Hoàn tất!');
+      alert('Sao lưu toàn bộ dữ liệu thành công!' + (email ? ` Đã gửi tới email ${email}.` : ''));
+    } catch (err: any) {
       console.error('Backup error:', err);
-      alert('Đã xảy ra lỗi khi sao lưu dữ liệu.');
+      alert('Đã xảy ra lỗi khi sao lưu dữ liệu: ' + err.message);
     } finally {
       setLoading(false);
     }
@@ -8385,7 +8541,7 @@ export default function App() {
         { id: 'transfer', label: 'Luân chuyển kho', icon: ArrowLeftRight },
         { id: 'inventory-report', label: 'Kiểm tra tồn kho', icon: BarChart3 },
         { id: 'warehouses', label: 'Danh sách kho', icon: Warehouse },
-        { id: 'materials', label: 'Thư viện vật tư', icon: Package },
+        { id: 'materials', label: 'Danh mục vật tư', icon: Package },
       ]
     },
     {

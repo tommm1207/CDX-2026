@@ -82,6 +82,11 @@ import { Employee } from './types';
 const LOGO_URL = "/logo.png"; // Đường dẫn đến file logo trong thư mục public
 
 // --- Global Helper Functions ---
+const isUUID = (str: string) => {
+  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  return uuidRegex.test(str);
+};
+
 const formatCurrency = (amount: number) => {
   return new Intl.NumberFormat('vi-VN').format(amount) + ' đ';
 };
@@ -167,21 +172,30 @@ const LoginPage = ({ onLogin }: { onLogin: (user: Employee) => void }) => {
     setError('');
 
     try {
-      // Use 'users' table for login as requested
-      const { data, error: fetchError } = await supabase
-        .from('users')
-        .select('*')
-        .eq('id', employeeId)
-        .eq('app_pass', password)
-        .single();
+      // Build query: if it's a UUID, check both id and code. If not, only check code.
+      let query = supabase.from('users').select('*');
+      
+      if (isUUID(employeeId)) {
+        query = query.or(`id.eq."${employeeId}",code.eq."${employeeId}"`);
+      } else {
+        query = query.eq('code', employeeId);
+      }
 
-      if (fetchError || !data) {
+      const { data, error: fetchError } = await query
+        .eq('app_pass', password)
+        .maybeSingle();
+
+      if (fetchError) {
+        console.error('Login error:', fetchError);
+        setError(`Lỗi kết nối: ${fetchError.message}. Vui lòng kiểm tra lại Supabase URL/Key.`);
+      } else if (!data) {
         setError('Mã nhân viên hoặc mật khẩu không đúng');
       } else {
         onLogin(data as Employee);
       }
-    } catch (err) {
-      setError('Đã xảy ra lỗi khi đăng nhập');
+    } catch (err: any) {
+      console.error('Unexpected login error:', err);
+      setError('Đã xảy ra lỗi hệ thống: ' + (err.message || 'Không rõ nguyên nhân'));
     } finally {
       setLoading(false);
     }
@@ -1117,14 +1131,14 @@ const Materials = ({ user, onBack }: { user: Employee, onBack?: () => void }) =>
 
   const initialFormState = {
     id: '',
+    code: '',
     name: '',
     group_id: '',
-    warehouse_id: '',
     specification: '',
     unit: '',
     description: '',
     image_url: '',
-    quantity: 1
+    status: 'Đang sử dụng'
   };
 
   const [formData, setFormData] = useState(initialFormState);
@@ -1176,59 +1190,64 @@ const Materials = ({ user, onBack }: { user: Employee, onBack?: () => void }) =>
     if (data) setWarehouses(data);
   };
 
+  const generateNextMaterialCode = async () => {
+    try {
+      const { data } = await supabase
+        .from('materials')
+        .select('code')
+        .like('code', 'MAT%')
+        .order('code', { ascending: false })
+        .limit(1);
+
+      if (data && data.length > 0 && data[0].code) {
+        const lastCode = data[0].code;
+        const lastNumber = parseInt(lastCode.replace('MAT', ''));
+        if (!isNaN(lastNumber)) {
+          const nextNumber = lastNumber + 1;
+          return `MAT${nextNumber.toString().padStart(3, '0')}`;
+        }
+      }
+      return 'MAT001';
+    } catch (err) {
+      console.error('Error generating material code:', err);
+      return 'MAT001';
+    }
+  };
+
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setSubmitting(true);
     try {
       // Resolve group_id if it's a name
       let finalGroupId = formData.group_id;
-      const groupByName = groups.find(g => g.name === formData.group_id);
-      if (groupByName) {
-        finalGroupId = groupByName.id;
-      } else if (formData.group_id && !groups.find(g => g.id === formData.group_id)) {
-        // Create new group
-        const { data: newGroup, error: groupErr } = await supabase.from('material_groups').insert([{ name: formData.group_id }]).select();
-        if (!groupErr && newGroup) {
-          finalGroupId = newGroup[0].id;
-          fetchGroups();
+      if (formData.group_id && !isUUID(formData.group_id)) {
+        const groupByName = groups.find(g => g.name.toLowerCase() === formData.group_id.toLowerCase());
+        if (groupByName) {
+          finalGroupId = groupByName.id;
+        } else {
+          // Create new group
+          const { data: newGroup, error: groupErr } = await supabase.from('material_groups').insert([{ name: formData.group_id }]).select();
+          if (groupErr) throw groupErr;
+          if (newGroup) {
+            finalGroupId = newGroup[0].id;
+            fetchGroups();
+          }
         }
       }
 
-      // Resolve warehouse_id
-      let finalWarehouseId = formData.warehouse_id;
-      const warehouseByName = warehouses.find(w => w.name === formData.warehouse_id);
-      if (warehouseByName) {
-        finalWarehouseId = warehouseByName.id;
-      } else if (formData.warehouse_id && !warehouses.find(w => w.id === formData.warehouse_id)) {
-        const { data: newWh, error: whErr } = await supabase.from('warehouses').insert([{ name: formData.warehouse_id }]).select();
-        if (!whErr && newWh) {
-          finalWarehouseId = newWh[0].id;
-          fetchWarehouses();
-        }
-      }
+      const { id, ...dbPayload } = { 
+        ...formData, 
+        group_id: finalGroupId,
+        status: formData.status || 'Đang sử dụng' 
+      };
 
-      const payload = { ...formData, group_id: finalGroupId, warehouse_id: finalWarehouseId, status: formData.status || 'Đang sử dụng' };
-      // Remove quantity from payload before saving to DB if the table doesn't have it
-      const { quantity, ...dbPayload } = payload;
-
-      if (isEditing) {
-        const { error } = await supabase.from('materials').update(dbPayload).eq('id', formData.id);
+      if (isEditing && id) {
+        const { error } = await supabase.from('materials').update(dbPayload).eq('id', id);
         if (error) throw error;
       } else {
-        const qty = parseInt(quantity?.toString() || '1');
-        if (qty > 1) {
-          const payloads = [];
-          for (let i = 1; i <= qty; i++) {
-            // If ID is provided, append a suffix, otherwise let Supabase generate UUIDs
-            const newId = formData.id ? `${formData.id}-${i}` : undefined;
-            payloads.push({ ...dbPayload, id: newId });
-          }
-          const { error } = await supabase.from('materials').insert(payloads);
-          if (error) throw error;
-        } else {
-          const { error } = await supabase.from('materials').insert([dbPayload]);
-          if (error) throw error;
-        }
+        const nextCode = formData.code || await generateNextMaterialCode();
+        const { error } = await supabase.from('materials').insert([{ ...dbPayload, code: nextCode }]);
+        if (error) throw error;
       }
       setShowModal(false);
       fetchMaterials();
@@ -1276,9 +1295,9 @@ const Materials = ({ user, onBack }: { user: Employee, onBack?: () => void }) =>
 
   const filteredMaterials = materials.filter(m => {
     const name = m.name || '';
-    const id = m.id || '';
+    const code = m.code || '';
     const matchesSearch = name.toLowerCase().includes(searchTerm.toLowerCase()) || 
-                         id.toLowerCase().includes(searchTerm.toLowerCase());
+                         code.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesGroup = groupFilter === '' || m.group_id === groupFilter;
     return matchesSearch && matchesGroup;
   });
@@ -1296,7 +1315,12 @@ const Materials = ({ user, onBack }: { user: Employee, onBack?: () => void }) =>
           <p className="text-xs text-gray-500 mt-1">Quản lý toàn bộ danh sách vật tư, thiết bị trong hệ thống</p>
         </div>
         <button 
-          onClick={() => { setFormData(initialFormState); setIsEditing(false); setShowModal(true); }}
+          onClick={async () => { 
+            const nextCode = await generateNextMaterialCode();
+            setFormData({ ...initialFormState, code: nextCode }); 
+            setIsEditing(false); 
+            setShowModal(true); 
+          }}
           className="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-xl text-sm font-bold hover:bg-primary-hover transition-colors shadow-lg shadow-primary/20"
         >
           <Plus size={18} /> Thêm mới
@@ -1346,7 +1370,6 @@ const Materials = ({ user, onBack }: { user: Employee, onBack?: () => void }) =>
                 <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider border-r border-white/10 w-32">Mã vật tư</th>
                 <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider border-r border-white/10">Tên vật tư</th>
                 <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider border-r border-white/10">Nhóm</th>
-                <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider border-r border-white/10">Kho</th>
                 <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider border-r border-white/10">Quy cách</th>
                 <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider border-r border-white/10">ĐVT</th>
                 <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-center w-24">Thao tác</th>
@@ -1364,7 +1387,7 @@ const Materials = ({ user, onBack }: { user: Employee, onBack?: () => void }) =>
                     className="hover:bg-gray-50 transition-colors group cursor-pointer"
                     onClick={() => { setSelectedMaterial(item); setShowDetailModal(true); }}
                   >
-                    <td className="px-4 py-3 text-xs font-bold text-gray-700">{item.id}</td>
+                    <td className="px-4 py-3 text-xs font-bold text-gray-700">{item.code || item.id.slice(0, 8)}</td>
                     <td className="px-4 py-3 text-xs text-gray-600 font-medium">
                       <div className="flex items-center gap-2">
                         {item.image_url && (
@@ -1376,7 +1399,6 @@ const Materials = ({ user, onBack }: { user: Employee, onBack?: () => void }) =>
                       </div>
                     </td>
                     <td className="px-4 py-3 text-xs text-gray-500">{item.group_id || '-'}</td>
-                    <td className="px-4 py-3 text-xs text-gray-500">{item.warehouse_id || '-'}</td>
                     <td className="px-4 py-3 text-xs text-gray-500">{item.specification || '-'}</td>
                     <td className="px-4 py-3 text-xs text-gray-500">{item.unit || '-'}</td>
                     <td className="px-4 py-3 text-center">
@@ -1442,30 +1464,16 @@ const Materials = ({ user, onBack }: { user: Employee, onBack?: () => void }) =>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div className="space-y-4">
                       <div className="space-y-1">
-                        <label className="text-[10px] font-bold text-gray-400 uppercase">Mã vật tư (ID) *</label>
+                        <label className="text-[10px] font-bold text-gray-400 uppercase">Mã vật tư</label>
                         <input 
                           required
                           type="text" 
-                          placeholder="Ví dụ: VT001"
-                          value={formData.id}
-                          onChange={(e) => setFormData({...formData, id: e.target.value})}
-                          className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20" 
+                          disabled={isEditing}
+                          value={formData.code}
+                          onChange={(e) => setFormData({...formData, code: e.target.value})}
+                          className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20 disabled:bg-gray-50" 
                         />
                       </div>
-                      {!isEditing && (
-                        <div className="space-y-1">
-                          <label className="text-[10px] font-bold text-gray-400 uppercase">Số lượng nhập bản ghi</label>
-                          <input 
-                            type="number" 
-                            min="1"
-                            max="100"
-                            value={formData.quantity}
-                            onChange={(e) => setFormData({...formData, quantity: parseInt(e.target.value) || 1})}
-                            className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20" 
-                          />
-                          <p className="text-[9px] text-gray-400 italic">Nhập số lượng lớn để tạo nhiều bản ghi cùng lúc (ID sẽ tự động đánh số thứ tự)</p>
-                        </div>
-                      )}
                       <div className="space-y-1">
                         <label className="text-[10px] font-bold text-gray-400 uppercase">Tên vật tư *</label>
                         <input 
@@ -1485,14 +1493,6 @@ const Materials = ({ user, onBack }: { user: Employee, onBack?: () => void }) =>
                         options={groups}
                         placeholder="Chọn hoặc nhập mới..."
                         required
-                      />
-
-                      <CustomCombobox 
-                        label="Kho lưu trữ"
-                        value={warehouses.find(w => w.id === formData.warehouse_id)?.name || formData.warehouse_id}
-                        onChange={(val) => setFormData({...formData, warehouse_id: val})}
-                        options={warehouses}
-                        placeholder="Chọn hoặc nhập mới..."
                       />
                     </div>
 
@@ -1763,6 +1763,7 @@ const Warehouses = ({ user, onBack }: { user: Employee, onBack?: () => void }) =
 
   const initialFormState = {
     id: '',
+    code: '',
     name: '',
     address: '',
     manager_id: '',
@@ -1810,8 +1811,36 @@ const Warehouses = ({ user, onBack }: { user: Employee, onBack?: () => void }) =
   };
 
   const fetchEmployees = async () => {
-    const { data } = await supabase.from('users').select('*');
+    let query = supabase.from('users').select('*');
+    if (user.role !== 'Admin App') {
+      query = query.neq('role', 'Admin App');
+    }
+    const { data } = await query;
     if (data) setEmployees(data);
+  };
+
+  const generateNextWarehouseCode = async () => {
+    try {
+      const { data } = await supabase
+        .from('warehouses')
+        .select('code')
+        .like('code', 'WH%')
+        .order('code', { ascending: false })
+        .limit(1);
+
+      if (data && data.length > 0 && data[0].code) {
+        const lastCode = data[0].code;
+        const lastNumber = parseInt(lastCode.replace('WH', ''));
+        if (!isNaN(lastNumber)) {
+          const nextNumber = lastNumber + 1;
+          return `WH${nextNumber.toString().padStart(3, '0')}`;
+        }
+      }
+      return 'WH001';
+    } catch (err) {
+      console.error('Error generating warehouse code:', err);
+      return 'WH001';
+    }
   };
 
   const handleSubmit = async (e: FormEvent) => {
@@ -1819,11 +1848,13 @@ const Warehouses = ({ user, onBack }: { user: Employee, onBack?: () => void }) =
     setSubmitting(true);
 
     try {
-      if (isEditing) {
-        const { error } = await supabase.from('warehouses').update(formData).eq('id', formData.id);
+      const { id, ...dbPayload } = formData;
+      if (isEditing && id) {
+        const { error } = await supabase.from('warehouses').update(dbPayload).eq('id', id);
         if (error) throw error;
       } else {
-        const { error } = await supabase.from('warehouses').insert([formData]);
+        const nextCode = formData.code || await generateNextWarehouseCode();
+        const { error } = await supabase.from('warehouses').insert([{ ...dbPayload, code: nextCode }]);
         if (error) throw error;
       }
       setShowModal(false);
@@ -1839,6 +1870,7 @@ const Warehouses = ({ user, onBack }: { user: Employee, onBack?: () => void }) =
   const handleEdit = (item: any) => {
     setFormData({
       id: item.id,
+      code: item.code || '',
       name: item.name,
       address: item.address || '',
       manager_id: item.manager_id || '',
@@ -1883,7 +1915,12 @@ const Warehouses = ({ user, onBack }: { user: Employee, onBack?: () => void }) =
           <p className="text-xs text-gray-500 mt-1">Quản lý hệ thống bãi đúc và kho bãi công trình</p>
         </div>
         <button 
-          onClick={() => { setFormData(initialFormState); setIsEditing(false); setShowModal(true); }}
+          onClick={async () => { 
+            const nextCode = await generateNextWarehouseCode();
+            setFormData({ ...initialFormState, code: nextCode }); 
+            setIsEditing(false); 
+            setShowModal(true); 
+          }}
           className="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-xl text-sm font-bold hover:bg-primary-hover transition-colors shadow-lg shadow-primary/20"
         >
           <Plus size={18} /> Thêm mới
@@ -1943,7 +1980,7 @@ const Warehouses = ({ user, onBack }: { user: Employee, onBack?: () => void }) =
               ) : (
                 warehouses.map((item) => (
                   <tr key={item.id} className="hover:bg-gray-50 transition-colors group">
-                    <td className="px-4 py-3 text-xs font-bold text-gray-700">{item.id}</td>
+                    <td className="px-4 py-3 text-xs font-bold text-gray-700">{item.code || item.id.slice(0, 8)}</td>
                     <td className="px-4 py-3 text-xs text-gray-600">{item.name}</td>
                     <td className="px-4 py-3 text-xs text-gray-600">{item.address}</td>
                     <td className="px-4 py-3 text-xs text-gray-600">{item.users?.full_name || item.manager_id}</td>
@@ -2026,14 +2063,14 @@ const Warehouses = ({ user, onBack }: { user: Employee, onBack?: () => void }) =
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div className="space-y-4">
                       <div className="space-y-1">
-                        <label className="text-[10px] font-bold text-gray-400 uppercase">Mã kho (ID) *</label>
+                        <label className="text-[10px] font-bold text-gray-400 uppercase">Mã kho</label>
                         <input 
                           required
                           type="text" 
                           disabled={isEditing}
-                          placeholder="Ví dụ: KHO_CDX_01"
-                          value={formData.id}
-                          onChange={(e) => setFormData({...formData, id: e.target.value})}
+                          placeholder="Ví dụ: WH001"
+                          value={formData.code}
+                          onChange={(e) => setFormData({...formData, code: e.target.value})}
                           className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20 disabled:bg-gray-50" 
                         />
                       </div>
@@ -2133,22 +2170,37 @@ const CustomCombobox = ({
   onChange, 
   options, 
   placeholder, 
-  required = false 
+  required = false,
+  onCreateNew
 }: { 
   label: string, 
   value: string, 
   onChange: (val: string) => void, 
   options: any[], 
   placeholder: string,
-  required?: boolean
+  required?: boolean,
+  onCreateNew?: (name: string) => void
 }) => {
   const [isOpen, setIsOpen] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
   const containerRef = useRef<HTMLDivElement>(null);
 
   const filteredOptions = useMemo(() => {
-    const search = (value || '').toLowerCase();
-    return options.filter(opt => (opt.name || '').toLowerCase().includes(search));
-  }, [value, options]);
+    const search = searchTerm.toLowerCase();
+    return options.filter(opt => 
+      (opt.name || '').toLowerCase().includes(search) || 
+      (opt.code || '').toLowerCase().includes(search)
+    );
+  }, [searchTerm, options]);
+
+  // Display value logic
+  const displayValue = useMemo(() => {
+    const selected = options.find(opt => opt.id === value || opt.name === value);
+    if (selected) {
+      return selected.code ? `[${selected.code}] ${selected.name}` : selected.name;
+    }
+    return searchTerm || value;
+  }, [value, options, searchTerm]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -2167,12 +2219,15 @@ const CustomCombobox = ({
         <input
           type="text"
           required={required}
-          value={value}
+          value={isOpen ? searchTerm : displayValue}
           onChange={(e) => {
-            onChange(e.target.value);
+            setSearchTerm(e.target.value);
             if (!isOpen) setIsOpen(true);
           }}
-          onFocus={() => setIsOpen(true)}
+          onFocus={() => {
+            setIsOpen(true);
+            setSearchTerm('');
+          }}
           placeholder={placeholder}
           className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20 pr-10 bg-white transition-all"
         />
@@ -2186,27 +2241,52 @@ const CustomCombobox = ({
       </div>
       
       <AnimatePresence>
-        {isOpen && filteredOptions.length > 0 && (
+        {isOpen && (
             <motion.div
               initial={{ opacity: 0, y: -5 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -5 }}
-              className="absolute left-0 right-0 mt-1 bg-white rounded-xl shadow-2xl border border-gray-100 max-h-40 overflow-y-auto py-1 z-[210] custom-scrollbar"
+              className="absolute left-0 right-0 mt-1 bg-white rounded-xl shadow-2xl border border-gray-100 max-h-60 overflow-y-auto py-1 z-[210] custom-scrollbar"
             >
-            {filteredOptions.map((opt, idx) => (
+            {filteredOptions.length > 0 ? (
+              filteredOptions.map((opt, idx) => (
+                <button
+                  key={opt.id || idx}
+                  type="button"
+                  onClick={() => {
+                    onChange(opt.id || opt.name);
+                    setSearchTerm('');
+                    setIsOpen(false);
+                  }}
+                  className="w-full text-left px-4 py-2.5 text-sm hover:bg-primary/5 hover:text-primary transition-colors border-b border-gray-50 last:border-0 flex items-center justify-between group"
+                >
+                  <div className="flex items-center gap-2">
+                    {opt.code && <span className="text-[10px] bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded font-mono">#{opt.code}</span>}
+                    <span>{opt.name}</span>
+                  </div>
+                  <Plus size={12} className="text-primary/40 opacity-0 group-hover:opacity-100 transition-opacity" />
+                </button>
+              ))
+            ) : (
+              <div className="px-4 py-3 text-center">
+                <p className="text-xs text-gray-400 italic mb-2">Không tìm thấy kết quả</p>
+              </div>
+            )}
+            
+            {onCreateNew && searchTerm && !options.find(o => o.name.toLowerCase() === searchTerm.toLowerCase()) && (
               <button
-                key={opt.id || idx}
                 type="button"
                 onClick={() => {
-                  onChange(opt.name);
+                  onCreateNew(searchTerm);
+                  setSearchTerm('');
                   setIsOpen(false);
                 }}
-                className="w-full text-left px-4 py-2.5 text-sm hover:bg-primary/5 hover:text-primary transition-colors border-b border-gray-50 last:border-0 flex items-center justify-between group"
+                className="w-full text-left px-4 py-3 text-sm bg-primary/5 text-primary font-bold hover:bg-primary/10 transition-colors flex items-center gap-2 border-t border-primary/10"
               >
-                <span>{opt.name}</span>
-                <Plus size={12} className="text-primary/40" />
+                <Plus size={16} />
+                Thêm mới "{searchTerm}"
               </button>
-            ))}
+            )}
           </motion.div>
         )}
       </AnimatePresence>
@@ -2306,6 +2386,7 @@ const Costs = ({ user, onBack }: { user: Employee, onBack?: () => void }) => {
 
   const ensureValueExists = async (table: string, name: string, currentList: any[], fetchFn: () => void) => {
     if (!name) return null;
+    if (isUUID(name)) return name;
     
     // Nếu là bảng costs thì không cần lưu vào bảng danh mục riêng
     if (table === 'costs') return null;
@@ -2313,8 +2394,15 @@ const Costs = ({ user, onBack }: { user: Employee, onBack?: () => void }) => {
     const existing = currentList.find(item => item.name.toLowerCase() === name.toLowerCase());
     if (existing) return existing.id;
 
-    // Auto-save new value for warehouses and materials
-    const { data, error } = await supabase.from(table).insert([{ name }]).select();
+    // Auto-save new value for warehouses and materials with codes
+    let code = '';
+    if (table === 'warehouses') {
+      code = `K${(currentList.length + 1).toString().padStart(2, '0')}`;
+    } else if (table === 'materials') {
+      code = `VT${(currentList.length + 1).toString().padStart(3, '0')}`;
+    }
+
+    const { data, error } = await supabase.from(table).insert([{ name, code }]).select();
     if (!error && data && data[0]) {
       fetchFn();
       return data[0].id;
@@ -2707,6 +2795,7 @@ const Costs = ({ user, onBack }: { user: Employee, onBack?: () => void }) => {
                         label="Loại chi phí *"
                         value={formData.cost_type}
                         onChange={(val) => setFormData({...formData, cost_type: val})}
+                        onCreateNew={(name) => setFormData({...formData, cost_type: name})}
                         options={costTypes}
                         placeholder="Chọn hoặc nhập mới..."
                         required
@@ -2716,6 +2805,7 @@ const Costs = ({ user, onBack }: { user: Employee, onBack?: () => void }) => {
                         label="Tên kho *"
                         value={formData.warehouse_name}
                         onChange={(val) => setFormData({...formData, warehouse_name: val})}
+                        onCreateNew={(name) => setFormData({...formData, warehouse_name: name})}
                         options={warehouses}
                         placeholder="Chọn hoặc nhập mới..."
                         required
@@ -2725,6 +2815,7 @@ const Costs = ({ user, onBack }: { user: Employee, onBack?: () => void }) => {
                         label="Nội dung chi *"
                         value={formData.content}
                         onChange={(val) => setFormData({...formData, content: val})}
+                        onCreateNew={(name) => setFormData({...formData, content: name})}
                         options={materials}
                         placeholder="Chọn hoặc nhập mới..."
                         required
@@ -2746,6 +2837,7 @@ const Costs = ({ user, onBack }: { user: Employee, onBack?: () => void }) => {
                           label="Đơn vị tính"
                           value={formData.unit}
                           onChange={(val) => setFormData({...formData, unit: val})}
+                          onCreateNew={(name) => setFormData({...formData, unit: name})}
                           options={units}
                           placeholder="Chọn/Nhập..."
                         />
@@ -2836,7 +2928,11 @@ const CostFilter = ({ user, onBack }: { user: Employee, onBack?: () => void }) =
     if (whData) setWarehouses(whData);
 
     // Fetch employees
-    const { data: empData } = await supabase.from('users').select('id, full_name');
+    let empQuery = supabase.from('users').select('id, full_name');
+    if (user.role !== 'Admin App') {
+      empQuery = empQuery.neq('role', 'Admin App');
+    }
+    const { data: empData } = await empQuery;
     if (empData) setEmployees(empData.map(e => ({ id: e.id, name: e.full_name })));
 
     // Fetch unique contents
@@ -3861,7 +3957,11 @@ const Dashboard = ({ user, onNavigate }: { user: Employee, onNavigate: (page: st
       try {
         setLoading(true);
         // Fetch Employees
-        const { count: empCount } = await supabase.from('users').select('*', { count: 'exact', head: true }).neq('role', 'Admin App');
+        let empQuery = supabase.from('users').select('*', { count: 'exact', head: true });
+        if (user.role !== 'Admin App') {
+          empQuery = empQuery.neq('role', 'Admin App');
+        }
+        const { count: empCount } = await empQuery;
         
         // Fetch Materials
         const { count: matCount } = await supabase.from('materials').select('*', { count: 'exact', head: true });
@@ -3892,19 +3992,10 @@ const Dashboard = ({ user, onNavigate }: { user: Employee, onNavigate: (page: st
         // Fetch Inventory Data for Quick View
         const { data: materials } = await supabase.from('materials').select('id, name, unit').limit(10);
         if (materials) {
-          const [si, so, tr_out, tr_in] = await Promise.all([
-            supabase.from('stock_in').select('material_id, quantity').eq('status', 'Đã duyệt'),
-            supabase.from('stock_out').select('material_id, quantity').eq('status', 'Đã duyệt'),
-            supabase.from('transfers').select('material_id, quantity').eq('status', 'Đã duyệt'),
-            supabase.from('transfers').select('material_id, quantity').eq('status', 'Đã duyệt')
-          ]);
-
+          const { data: inventory } = await supabase.from('inventory').select('*');
           const invData = materials.map(mat => {
-            const matIn = (si.data || []).filter(i => i.material_id === mat.id).reduce((s, i) => s + i.quantity, 0);
-            const matOut = (so.data || []).filter(i => i.material_id === mat.id).reduce((s, i) => s + i.quantity, 0);
-            const matTrOut = (tr_out.data || []).filter(i => i.material_id === mat.id).reduce((s, i) => s + i.quantity, 0);
-            const matTrIn = (tr_in.data || []).filter(i => i.material_id === mat.id).reduce((s, i) => s + i.quantity, 0);
-            return { ...mat, balance: (matIn + matTrIn) - (matOut + matTrOut) };
+            const balance = (inventory || []).filter(i => i.material_id === mat.id).reduce((s, i) => s + (i.quantity || 0), 0);
+            return { ...mat, balance };
           });
           setInventory(invData);
         }
@@ -4148,14 +4239,54 @@ const PendingApprovals = ({ user, onBack, onNavigate, onRefreshCount }: { user: 
 
   const handleApprove = async (id: string, status: string, table: string) => {
     try {
-      // Nếu từ chối thì chuyển sang trạng thái Đã xóa để vào thùng rác
       const finalStatus = status === 'Từ chối' ? 'Đã xóa' : status;
+      const { data: slip, error: fetchError } = await supabase.from(table).select('*').eq('id', id).single();
+      if (fetchError) throw fetchError;
+
       const { error } = await supabase.from(table).update({ status: finalStatus }).eq('id', id);
       if (error) throw error;
+
+      // Update inventory if approved
+      if (status === 'Đã duyệt') {
+        if (table === 'stock_in') {
+          await updateInventory(slip.warehouse_id, slip.material_id, slip.quantity);
+        } else if (table === 'stock_out') {
+          await updateInventory(slip.warehouse_id, slip.material_id, -slip.quantity);
+        } else if (table === 'transfers') {
+          await updateInventory(slip.from_warehouse_id, slip.material_id, -slip.quantity);
+          await updateInventory(slip.to_warehouse_id, slip.material_id, slip.quantity);
+        }
+      }
+
       fetchPendingSlips();
       if (onRefreshCount) onRefreshCount();
     } catch (err: any) {
       alert('Lỗi: ' + err.message);
+    }
+  };
+
+  const updateInventory = async (warehouseId: string, materialId: string, quantityChange: number) => {
+    try {
+      const { data: current, error: fetchError } = await supabase
+        .from('inventory')
+        .select('quantity')
+        .eq('warehouse_id', warehouseId)
+        .eq('material_id', materialId)
+        .maybeSingle();
+      
+      if (fetchError) {
+        console.error('Error fetching inventory:', fetchError);
+        return;
+      }
+
+      if (current) {
+        const newQty = (current.quantity || 0) + quantityChange;
+        await supabase.from('inventory').update({ quantity: newQty }).eq('warehouse_id', warehouseId).eq('material_id', materialId);
+      } else {
+        await supabase.from('inventory').insert([{ warehouse_id: warehouseId, material_id: materialId, quantity: quantityChange }]);
+      }
+    } catch (err) {
+      console.error('Error updating inventory:', err);
     }
   };
 
@@ -4277,6 +4408,7 @@ const HRRecords = ({ user, onBack }: { user: Employee, onBack?: () => void }) =>
 
   const initialFormState = {
     id: '',
+    code: '',
     full_name: '',
     email: '',
     phone: '',
@@ -4304,9 +4436,40 @@ const HRRecords = ({ user, onBack }: { user: Employee, onBack?: () => void }) =>
 
   const fetchEmployees = async () => {
     setLoading(true);
-    const { data, error } = await supabase.from('users').select('*').neq('status', 'Đã xóa').order('created_at', { ascending: false });
+    let query = supabase.from('users').select('*').neq('status', 'Đã xóa');
+    
+    // Hide Admin App from non-Admin App users
+    if (user.role !== 'Admin App') {
+      query = query.neq('role', 'Admin App');
+    }
+    
+    const { data, error } = await query.order('created_at', { ascending: false });
     if (data) setEmployees(data);
     setLoading(false);
+  };
+
+  const generateNextEmployeeCode = async () => {
+    try {
+      const { data } = await supabase
+        .from('users')
+        .select('code')
+        .like('code', 'cdx%')
+        .order('code', { ascending: false })
+        .limit(1);
+
+      if (data && data.length > 0) {
+        const lastCode = data[0].code;
+        const lastNumber = parseInt(lastCode.replace('cdx', ''));
+        if (!isNaN(lastNumber)) {
+          const nextNumber = lastNumber + 1;
+          return `cdx${nextNumber.toString().padStart(3, '0')}`;
+        }
+      }
+      return 'cdx001';
+    } catch (err) {
+      console.error('Error generating code:', err);
+      return 'cdx001';
+    }
   };
 
   const handleEdit = (emp: Employee) => {
@@ -4316,6 +4479,7 @@ const HRRecords = ({ user, onBack }: { user: Employee, onBack?: () => void }) =>
     }
     setFormData({
       ...emp,
+      code: emp.code || '',
       dob: emp.dob || '',
       resign_date: emp.resign_date || '',
       email: emp.email || '',
@@ -4364,8 +4528,9 @@ const HRRecords = ({ user, onBack }: { user: Employee, onBack?: () => void }) =>
     e.preventDefault();
     setSubmitting(true);
     try {
+      const { id, ...rest } = formData;
       const dataToSubmit = {
-        ...formData,
+        ...rest,
         dob: formData.dob || null,
         join_date: formData.join_date || null,
         resign_date: formData.resign_date || null,
@@ -4380,9 +4545,10 @@ const HRRecords = ({ user, onBack }: { user: Employee, onBack?: () => void }) =>
       };
 
       if (isEditing) {
-        const { error } = await supabase.from('users').update(dataToSubmit).eq('id', formData.id);
+        const { error } = await supabase.from('users').update(dataToSubmit).eq('id', id);
         if (error) throw error;
       } else {
+        // For new records, don't send the empty ID string so Supabase generates a UUID
         const { error } = await supabase.from('users').insert([dataToSubmit]);
         if (error) throw error;
       }
@@ -4400,7 +4566,7 @@ const HRRecords = ({ user, onBack }: { user: Employee, onBack?: () => void }) =>
 
   const filteredEmployees = employees.filter(emp => {
     const matchesSearch = emp.full_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      emp.id.toLowerCase().includes(searchTerm.toLowerCase());
+      (emp.code && emp.code.toLowerCase().includes(searchTerm.toLowerCase()));
     
     // Hide Admin App accounts from non-Admin App users
     if (user.role !== 'Admin App' && emp.role === 'Admin App') {
@@ -4417,8 +4583,9 @@ const HRRecords = ({ user, onBack }: { user: Employee, onBack?: () => void }) =>
           <Users size={20} className="text-primary" /> Hồ sơ Nhân sự
         </h2>
         <button 
-          onClick={() => {
-            setFormData(initialFormState);
+          onClick={async () => {
+            const nextCode = await generateNextEmployeeCode();
+            setFormData({ ...initialFormState, code: nextCode });
             setIsEditing(false);
             setShowModal(true);
           }}
@@ -4474,7 +4641,7 @@ const HRRecords = ({ user, onBack }: { user: Employee, onBack?: () => void }) =>
                 <tr><td colSpan={user.role === 'Admin App' ? 11 : 10} className="p-8 text-center">Không tìm thấy nhân sự nào</td></tr>
               ) : filteredEmployees.map((emp) => (
                 <tr key={emp.id} className="border-b border-gray-50 hover:bg-gray-50 transition-colors whitespace-nowrap">
-                  <td className="p-3 font-bold text-gray-800 sticky left-0 bg-white group-hover:bg-gray-50 z-10 border-b border-gray-50">{emp.id}</td>
+                  <td className="p-3 font-bold text-gray-800 sticky left-0 bg-white group-hover:bg-gray-50 z-10 border-b border-gray-50">{emp.code || emp.id.slice(0, 8)}</td>
                   <td className="p-3">{emp.full_name}</td>
                   <td className="p-3">{emp.email || '-'}</td>
                   <td className="p-3">{emp.phone || '-'}</td>
@@ -4534,7 +4701,7 @@ const HRRecords = ({ user, onBack }: { user: Employee, onBack?: () => void }) =>
                 <Trash2 size={32} />
               </div>
               <h3 className="text-lg font-bold text-gray-800 mb-2">Xác nhận xóa?</h3>
-              <p className="text-sm text-gray-500 mb-6">Bạn có chắc chắn muốn xóa nhân sự <strong>{itemToDelete}</strong>? Dữ liệu liên quan có thể bị ảnh hưởng.</p>
+              <p className="text-sm text-gray-500 mb-6">Bạn có chắc chắn muốn xóa nhân sự <strong>{employees.find(e => e.id === itemToDelete)?.code || itemToDelete}</strong>? Dữ liệu liên quan có thể bị ảnh hưởng.</p>
               <div className="flex gap-3">
                 <button 
                   onClick={() => setShowDeleteModal(false)}
@@ -4578,8 +4745,8 @@ const HRRecords = ({ user, onBack }: { user: Employee, onBack?: () => void }) =>
                           required
                           type="text" 
                           disabled={isEditing}
-                          value={formData.id}
-                          onChange={(e) => setFormData({...formData, id: e.target.value})}
+                          value={formData.code}
+                          onChange={(e) => setFormData({...formData, code: e.target.value})}
                           className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20 disabled:bg-gray-50" 
                         />
                       </div>
@@ -4941,7 +5108,7 @@ const Attendance = ({ user, onBack }: { user: Employee, onBack?: () => void }) =
                     <tr key={emp.id} className="hover:bg-gray-50 transition-colors group">
                       <td className="px-4 py-3 sticky left-0 z-10 bg-white group-hover:bg-gray-50 border-r border-gray-100">
                         <p className="text-xs font-bold text-gray-800 leading-tight">{emp.full_name}</p>
-                        <p className="text-[9px] text-gray-400">{emp.id}</p>
+                        <p className="text-[9px] text-gray-400">{emp.code || emp.id.slice(0, 8)}</p>
                       </td>
                       {days.map(d => {
                         const att = getStatus(emp.id, d);
@@ -5434,7 +5601,11 @@ const SalarySettings = ({ user, onBack }: { user: Employee, onBack?: () => void 
 
   const fetchData = async () => {
     setLoading(true);
-    const { data: empData } = await supabase.from('users').select('*').neq('status', 'Nghỉ việc').order('full_name');
+    let empQuery = supabase.from('users').select('*').neq('status', 'Nghỉ việc');
+    if (user.role !== 'Admin App') {
+      empQuery = empQuery.neq('role', 'Admin App');
+    }
+    const { data: empData } = await empQuery.order('full_name');
     const { data: setData } = await supabase.from('salary_settings').select('*');
     
     if (empData) {
@@ -5616,32 +5787,46 @@ const StockIn = ({ user, onBack, initialStatus }: { user: Employee, onBack?: () 
     setSubmitting(true);
     try {
       // Resolve warehouse_id
-      let wh = warehouses.find(w => w.name === formData.warehouse_id || w.id === formData.warehouse_id);
-      if (!wh && formData.warehouse_id) {
-        const { data: newWh, error: whErr } = await supabase.from('warehouses').insert([{ name: formData.warehouse_id }]).select();
-        if (!whErr && newWh) {
-          wh = newWh[0];
-          fetchWarehouses();
+      let finalWarehouseId = formData.warehouse_id;
+      if (formData.warehouse_id && !isUUID(formData.warehouse_id)) {
+        const whByName = warehouses.find(w => w.name.toLowerCase() === formData.warehouse_id.toLowerCase());
+        if (whByName) {
+          finalWarehouseId = whByName.id;
+        } else {
+          const code = `K${(warehouses.length + 1).toString().padStart(2, '0')}`;
+          const { data: newWh, error: whErr } = await supabase.from('warehouses').insert([{ name: formData.warehouse_id, code }]).select();
+          if (whErr) throw whErr;
+          if (newWh) {
+            finalWarehouseId = newWh[0].id;
+            fetchWarehouses();
+          }
         }
       }
 
       // Resolve material_id
-      let mat = materials.find(m => m.name === formData.material_id || m.id === formData.material_id);
-      if (!mat && formData.material_id) {
-        const { data: newMat, error: matErr } = await supabase.from('materials').insert([{ name: formData.material_id, unit: formData.unit }]).select();
-        if (!matErr && newMat) {
-          mat = newMat[0];
-          fetchMaterials();
+      let finalMaterialId = formData.material_id;
+      if (formData.material_id && !isUUID(formData.material_id)) {
+        const matByName = materials.find(m => m.name.toLowerCase() === formData.material_id.toLowerCase());
+        if (matByName) {
+          finalMaterialId = matByName.id;
+        } else {
+          const code = `VT${(materials.length + 1).toString().padStart(3, '0')}`;
+          const { data: newMat, error: matErr } = await supabase.from('materials').insert([{ name: formData.material_id, unit: formData.unit, code }]).select();
+          if (matErr) throw matErr;
+          if (newMat) {
+            finalMaterialId = newMat[0].id;
+            fetchMaterials();
+          }
         }
       }
       
       const payload = {
         ...formData,
-        warehouse_id: wh?.id || formData.warehouse_id,
-        material_id: mat?.id || formData.material_id,
+        warehouse_id: finalWarehouseId,
+        material_id: finalMaterialId,
         employee_id: user.id,
         total_amount: formData.quantity * formData.unit_price,
-        unit: formData.unit || mat?.unit || '',
+        unit: formData.unit || materials.find(m => m.id === finalMaterialId)?.unit || '',
         status: 'Chờ duyệt',
         notes: isEditing ? `[SỬA] ${formData.notes}` : formData.notes
       };
@@ -5657,6 +5842,8 @@ const StockIn = ({ user, onBack, initialStatus }: { user: Employee, onBack?: () 
       setShowModal(false);
       fetchSlips();
       setFormData(initialFormState);
+      setIsEditing(false);
+      setSelectedSlip(null);
     } catch (err: any) {
       alert('Lỗi: ' + err.message);
     } finally {
@@ -5755,10 +5942,10 @@ const StockIn = ({ user, onBack, initialStatus }: { user: Employee, onBack?: () 
             <thead>
               <tr className="bg-primary text-white">
                 <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider border-r border-white/10">Ngày</th>
-                <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider border-r border-white/10">Phê duyệt</th>
+                <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider border-r border-white/10">Vật tư</th>
+                <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider border-r border-white/10">Kho</th>
                 <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider border-r border-white/10">Thành tiền</th>
-                <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider border-r border-white/10">Diễn giải</th>
-                <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider">Mã nhập xuất</th>
+                <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider">Trạng thái</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
@@ -5774,20 +5961,26 @@ const StockIn = ({ user, onBack, initialStatus }: { user: Employee, onBack?: () 
                     className="hover:bg-gray-50 transition-colors cursor-pointer group"
                   >
                     <td className="px-4 py-3 text-xs text-gray-600">{formatDate(item.date)}</td>
-                    <td className="px-4 py-3 text-xs">
-                      <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
-                        item.status === 'Đã duyệt' ? 'bg-green-100 text-green-600' : 
-                        item.status === 'Từ chối' ? 'bg-red-100 text-red-600' : 
-                        'bg-yellow-100 text-yellow-600'
-                      }`}>
-                        {item.status || 'Chờ duyệt'}
-                      </span>
+                    <td className="px-4 py-3 text-xs text-gray-800 font-bold">
+                      <p>{item.materials?.name}</p>
+                      <p className="text-[10px] text-gray-400 font-normal">#{item.materials?.code}</p>
+                    </td>
+                    <td className="px-4 py-3 text-xs text-gray-600">
+                      <p>{item.warehouses?.name}</p>
+                      <p className="text-[10px] text-gray-400">#{item.warehouses?.code}</p>
                     </td>
                     <td className="px-4 py-3 text-xs text-primary font-bold">{formatCurrency(item.total_amount || 0)}</td>
-                    <td className="px-4 py-3 text-xs text-gray-600 truncate max-w-[200px]">{item.notes || '-'}</td>
-                    <td className="px-4 py-3 text-xs text-gray-800 font-bold flex items-center justify-between">
-                      {item.import_code || '-'}
-                      <ChevronRight size={14} className="text-gray-300 group-hover:text-primary transition-colors" />
+                    <td className="px-4 py-3 text-xs">
+                      <div className="flex items-center justify-between">
+                        <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                          item.status === 'Đã duyệt' ? 'bg-green-100 text-green-600' : 
+                          item.status === 'Từ chối' ? 'bg-red-100 text-red-600' : 
+                          'bg-yellow-100 text-yellow-600'
+                        }`}>
+                          {item.status || 'Chờ duyệt'}
+                        </span>
+                        <ChevronRight size={14} className="text-gray-300 group-hover:text-primary transition-colors" />
+                      </div>
                     </td>
                   </tr>
                 ))
@@ -5821,6 +6014,20 @@ const StockIn = ({ user, onBack, initialStatus }: { user: Employee, onBack?: () 
                 </div>
 
                 <div className="grid grid-cols-1 gap-6">
+                  <div className="flex justify-between items-center border-b border-gray-50 pb-3">
+                    <span className="text-xs text-gray-400 font-bold uppercase">Vật tư</span>
+                    <div className="text-right">
+                      <p className="text-sm font-medium text-gray-800">{selectedSlip.materials?.name || 'N/A'}</p>
+                      <p className="text-[10px] text-gray-400">Mã: {selectedSlip.materials?.code || selectedSlip.material_id?.slice(0, 8)}</p>
+                    </div>
+                  </div>
+                  <div className="flex justify-between items-center border-b border-gray-50 pb-3">
+                    <span className="text-xs text-gray-400 font-bold uppercase">Kho nhập</span>
+                    <div className="text-right">
+                      <p className="text-sm font-medium text-gray-800">{selectedSlip.warehouses?.name || 'N/A'}</p>
+                      <p className="text-[10px] text-gray-400">Mã: {selectedSlip.warehouses?.code || selectedSlip.warehouse_id?.slice(0, 8)}</p>
+                    </div>
+                  </div>
                   <div className="flex justify-between items-center border-b border-gray-50 pb-3">
                     <span className="text-xs text-gray-400 font-bold uppercase">Ngày</span>
                     <span className="text-sm font-medium text-gray-800">{formatDate(selectedSlip.date)}</span>
@@ -5932,7 +6139,7 @@ const StockIn = ({ user, onBack, initialStatus }: { user: Employee, onBack?: () 
                     
                     <CustomCombobox 
                       label="Tên vật tư nhập *"
-                      value={materials.find(m => m.id === formData.material_id)?.name || formData.material_id}
+                      value={formData.material_id}
                       onChange={(val) => {
                         const mat = materials.find(m => m.id === val || m.name === val);
                         setFormData({
@@ -5940,6 +6147,9 @@ const StockIn = ({ user, onBack, initialStatus }: { user: Employee, onBack?: () 
                           material_id: mat?.id || val,
                           unit: mat?.unit || formData.unit
                         });
+                      }}
+                      onCreateNew={(name) => {
+                        setFormData({...formData, material_id: name});
                       }}
                       options={materials}
                       placeholder="Chọn vật tư..."
@@ -5972,8 +6182,9 @@ const StockIn = ({ user, onBack, initialStatus }: { user: Employee, onBack?: () 
                   <div className="space-y-4">
                     <CustomCombobox 
                       label="Tên kho nhập *"
-                      value={warehouses.find(w => w.id === formData.warehouse_id)?.name || formData.warehouse_id}
+                      value={formData.warehouse_id}
                       onChange={(val) => setFormData({...formData, warehouse_id: val})}
+                      onCreateNew={(name) => setFormData({...formData, warehouse_id: name})}
                       options={warehouses}
                       placeholder="Chọn kho..."
                       required
@@ -6116,29 +6327,43 @@ const StockOut = ({ user, onBack }: { user: Employee, onBack?: () => void }) => 
     setSubmitting(true);
     try {
       // Resolve warehouse_id
-      let wh = warehouses.find(w => w.name === formData.warehouse_id || w.id === formData.warehouse_id);
-      if (!wh && formData.warehouse_id) {
-        const { data: newWh, error: whErr } = await supabase.from('warehouses').insert([{ name: formData.warehouse_id }]).select();
-        if (!whErr && newWh) {
-          wh = newWh[0];
-          fetchWarehouses();
+      let finalWarehouseId = formData.warehouse_id;
+      if (formData.warehouse_id && !isUUID(formData.warehouse_id)) {
+        const whByName = warehouses.find(w => w.name.toLowerCase() === formData.warehouse_id.toLowerCase());
+        if (whByName) {
+          finalWarehouseId = whByName.id;
+        } else {
+          const code = `K${(warehouses.length + 1).toString().padStart(2, '0')}`;
+          const { data: newWh, error: whErr } = await supabase.from('warehouses').insert([{ name: formData.warehouse_id, code }]).select();
+          if (whErr) throw whErr;
+          if (newWh) {
+            finalWarehouseId = newWh[0].id;
+            fetchWarehouses();
+          }
         }
       }
 
       // Resolve material_id
-      let mat = materials.find(m => m.name === formData.material_id || m.id === formData.material_id);
-      if (!mat && formData.material_id) {
-        const { data: newMat, error: matErr } = await supabase.from('materials').insert([{ name: formData.material_id }]).select();
-        if (!matErr && newMat) {
-          mat = newMat[0];
-          fetchMaterials();
+      let finalMaterialId = formData.material_id;
+      if (formData.material_id && !isUUID(formData.material_id)) {
+        const matByName = materials.find(m => m.name.toLowerCase() === formData.material_id.toLowerCase());
+        if (matByName) {
+          finalMaterialId = matByName.id;
+        } else {
+          const code = `VT${(materials.length + 1).toString().padStart(3, '0')}`;
+          const { data: newMat, error: matErr } = await supabase.from('materials').insert([{ name: formData.material_id, code }]).select();
+          if (matErr) throw matErr;
+          if (newMat) {
+            finalMaterialId = newMat[0].id;
+            fetchMaterials();
+          }
         }
       }
 
       const payload = {
         ...formData,
-        warehouse_id: wh?.id || formData.warehouse_id,
-        material_id: mat?.id || formData.material_id,
+        warehouse_id: finalWarehouseId,
+        material_id: finalMaterialId,
         employee_id: user.id,
         status: 'Chờ duyệt',
         notes: isEditing ? `[SỬA] ${formData.notes}` : formData.notes
@@ -6156,6 +6381,7 @@ const StockOut = ({ user, onBack }: { user: Employee, onBack?: () => void }) => 
       fetchSlips();
       setFormData(initialFormState);
       setIsEditing(false);
+      setSelectedSlip(null);
     } catch (err: any) {
       alert('Lỗi: ' + err.message);
     } finally {
@@ -6218,11 +6444,17 @@ const StockOut = ({ user, onBack }: { user: Employee, onBack?: () => void }) => 
               <tr><td colSpan={5} className="px-4 py-8 text-center text-gray-400 italic">Chưa có phiếu xuất nào</td></tr>
             ) : (
               slips.map((item) => (
-                <tr key={item.id} onClick={() => handleRowClick(item)} className="hover:bg-gray-50 transition-colors cursor-pointer">
-                  <td className="px-4 py-3 text-xs text-gray-600">{new Date(item.date).toLocaleDateString('vi-VN')}</td>
-                  <td className="px-4 py-3 text-xs text-gray-600 font-medium">{item.warehouses?.name}</td>
-                  <td className="px-4 py-3 text-xs text-gray-600">{item.materials?.name}</td>
-                  <td className="px-4 py-3 text-xs text-red-600 text-center font-bold">-{item.quantity}</td>
+                  <tr key={item.id} onClick={() => handleRowClick(item)} className="hover:bg-gray-50 transition-colors cursor-pointer">
+                    <td className="px-4 py-3 text-xs text-gray-600">{new Date(item.date).toLocaleDateString('vi-VN')}</td>
+                    <td className="px-4 py-3 text-xs text-gray-600 font-medium">
+                      <p>{item.warehouses?.name}</p>
+                      <p className="text-[10px] text-gray-400">#{item.warehouses?.code}</p>
+                    </td>
+                    <td className="px-4 py-3 text-xs text-gray-600">
+                      <p>{item.materials?.name}</p>
+                      <p className="text-[10px] text-gray-400">#{item.materials?.code}</p>
+                    </td>
+                    <td className="px-4 py-3 text-xs text-red-600 text-center font-bold">-{item.quantity}</td>
                   <td className="px-4 py-3 text-xs">
                     <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
                       item.status === 'Đã duyệt' ? 'bg-green-100 text-green-600' :
@@ -6269,10 +6501,12 @@ const StockOut = ({ user, onBack }: { user: Employee, onBack?: () => void }) => 
                   <div>
                     <p className="text-[10px] font-bold text-gray-400 uppercase">Kho xuất</p>
                     <p className="text-sm font-bold text-gray-800">{selectedSlip.warehouses?.name}</p>
+                    <p className="text-[10px] text-gray-400">Mã: {selectedSlip.warehouses?.code || selectedSlip.warehouse_id?.slice(0, 8)}</p>
                   </div>
                   <div>
                     <p className="text-[10px] font-bold text-gray-400 uppercase">Vật tư</p>
                     <p className="text-sm font-bold text-gray-800">{selectedSlip.materials?.name}</p>
+                    <p className="text-[10px] text-gray-400">Mã: {selectedSlip.materials?.code || selectedSlip.material_id?.slice(0, 8)}</p>
                   </div>
                   <div>
                     <p className="text-[10px] font-bold text-gray-400 uppercase">Số lượng</p>
@@ -6331,8 +6565,9 @@ const StockOut = ({ user, onBack }: { user: Employee, onBack?: () => void }) => 
                     
                     <CustomCombobox 
                       label="Kho xuất *"
-                      value={warehouses.find(w => w.id === formData.warehouse_id)?.name || formData.warehouse_id}
+                      value={formData.warehouse_id}
                       onChange={(val) => setFormData({...formData, warehouse_id: val})}
+                      onCreateNew={(name) => setFormData({...formData, warehouse_id: name})}
                       options={warehouses}
                       placeholder="Chọn kho..."
                       required
@@ -6340,8 +6575,9 @@ const StockOut = ({ user, onBack }: { user: Employee, onBack?: () => void }) => 
 
                     <CustomCombobox 
                       label="Vật tư *"
-                      value={materials.find(m => m.id === formData.material_id)?.name || formData.material_id}
+                      value={formData.material_id}
                       onChange={(val) => setFormData({...formData, material_id: val})}
+                      onCreateNew={(name) => setFormData({...formData, material_id: name})}
                       options={materials}
                       placeholder="Chọn vật tư..."
                       required
@@ -6482,40 +6718,61 @@ const Transfer = ({ user, onBack }: { user: Employee, onBack?: () => void }) => 
     setSubmitting(true);
     try {
       // Resolve from_warehouse_id
-      let fromWh = warehouses.find(w => w.name === formData.from_warehouse_id || w.id === formData.from_warehouse_id);
-      if (!fromWh && formData.from_warehouse_id) {
-        const { data: newWh, error: whErr } = await supabase.from('warehouses').insert([{ name: formData.from_warehouse_id }]).select();
-        if (!whErr && newWh) {
-          fromWh = newWh[0];
-          fetchWarehouses();
+      let finalFromWhId = formData.from_warehouse_id;
+      if (formData.from_warehouse_id && !isUUID(formData.from_warehouse_id)) {
+        const whByName = warehouses.find(w => w.name.toLowerCase() === formData.from_warehouse_id.toLowerCase());
+        if (whByName) {
+          finalFromWhId = whByName.id;
+        } else {
+          const code = `K${(warehouses.length + 1).toString().padStart(2, '0')}`;
+          const { data: newWh, error: whErr } = await supabase.from('warehouses').insert([{ name: formData.from_warehouse_id, code }]).select();
+          if (whErr) throw whErr;
+          if (newWh) {
+            finalFromWhId = newWh[0].id;
+            fetchWarehouses();
+          }
         }
       }
 
       // Resolve to_warehouse_id
-      let toWh = warehouses.find(w => w.name === formData.to_warehouse_id || w.id === formData.to_warehouse_id);
-      if (!toWh && formData.to_warehouse_id) {
-        const { data: newWh, error: whErr } = await supabase.from('warehouses').insert([{ name: formData.to_warehouse_id }]).select();
-        if (!whErr && newWh) {
-          toWh = newWh[0];
-          fetchWarehouses();
+      let finalToWhId = formData.to_warehouse_id;
+      if (formData.to_warehouse_id && !isUUID(formData.to_warehouse_id)) {
+        const whByName = warehouses.find(w => w.name.toLowerCase() === formData.to_warehouse_id.toLowerCase());
+        if (whByName) {
+          finalToWhId = whByName.id;
+        } else {
+          const code = `K${(warehouses.length + 1).toString().padStart(2, '0')}`;
+          const { data: newWh, error: whErr } = await supabase.from('warehouses').insert([{ name: formData.to_warehouse_id, code }]).select();
+          if (whErr) throw whErr;
+          if (newWh) {
+            finalToWhId = newWh[0].id;
+            fetchWarehouses();
+          }
         }
       }
 
       // Resolve material_id
-      let mat = materials.find(m => m.name === formData.material_id || m.id === formData.material_id);
-      if (!mat && formData.material_id) {
-        const { data: newMat, error: matErr } = await supabase.from('materials').insert([{ name: formData.material_id }]).select();
-        if (!matErr && newMat) {
-          mat = newMat[0];
-          fetchMaterials();
+      let finalMaterialId = formData.material_id;
+      if (formData.material_id && !isUUID(formData.material_id)) {
+        const matByName = materials.find(m => m.name.toLowerCase() === formData.material_id.toLowerCase());
+        if (matByName) {
+          finalMaterialId = matByName.id;
+        } else {
+          const code = `VT${(materials.length + 1).toString().padStart(3, '0')}`;
+          const { data: newMat, error: matErr } = await supabase.from('materials').insert([{ name: formData.material_id, code }]).select();
+          if (matErr) throw matErr;
+          if (newMat) {
+            finalMaterialId = newMat[0].id;
+            fetchMaterials();
+          }
         }
       }
 
       const payload = {
         ...formData,
-        from_warehouse_id: fromWh?.id || formData.from_warehouse_id,
-        to_warehouse_id: toWh?.id || formData.to_warehouse_id,
-        material_id: mat?.id || formData.material_id,
+        from_warehouse_id: finalFromWhId,
+        to_warehouse_id: finalToWhId,
+        material_id: finalMaterialId,
         employee_id: user.id,
         status: 'Chờ duyệt',
         notes: isEditing ? `[SỬA] ${formData.notes}` : formData.notes
@@ -6533,6 +6790,7 @@ const Transfer = ({ user, onBack }: { user: Employee, onBack?: () => void }) => 
       fetchSlips();
       setFormData(initialFormState);
       setIsEditing(false);
+      setSelectedSlip(null);
     } catch (err: any) {
       alert('Lỗi: ' + err.message);
     } finally {
@@ -6608,11 +6866,20 @@ const Transfer = ({ user, onBack }: { user: Employee, onBack?: () => void }) => 
               <tr><td colSpan={5} className="px-4 py-8 text-center text-gray-400 italic">Chưa có phiếu chuyển nào</td></tr>
             ) : (
               slips.map((item) => (
-                <tr key={item.id} onClick={() => handleRowClick(item)} className="hover:bg-gray-50 transition-colors cursor-pointer">
+                  <tr key={item.id} onClick={() => handleRowClick(item)} className="hover:bg-gray-50 transition-colors cursor-pointer">
                   <td className="px-4 py-3 text-xs text-gray-600">{new Date(item.date).toLocaleDateString('vi-VN')}</td>
-                  <td className="px-4 py-3 text-xs text-gray-600">{item.from_wh?.name}</td>
-                  <td className="px-4 py-3 text-xs text-gray-600">{item.to_wh?.name}</td>
-                  <td className="px-4 py-3 text-xs text-gray-600 font-medium">{item.materials?.name}</td>
+                  <td className="px-4 py-3 text-xs text-gray-600">
+                    <p>{item.from_wh?.name}</p>
+                    <p className="text-[10px] text-gray-400">#{item.from_wh?.code}</p>
+                  </td>
+                  <td className="px-4 py-3 text-xs text-gray-600">
+                    <p>{item.to_wh?.name}</p>
+                    <p className="text-[10px] text-gray-400">#{item.to_wh?.code}</p>
+                  </td>
+                  <td className="px-4 py-3 text-xs text-gray-600 font-medium">
+                    <p>{item.materials?.name}</p>
+                    <p className="text-[10px] text-gray-400">#{item.materials?.code}</p>
+                  </td>
                   <td className="px-4 py-3 text-xs text-orange-600 text-center font-bold">{item.quantity}</td>
                   <td className="px-4 py-3 text-xs">
                     <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
@@ -6660,14 +6927,17 @@ const Transfer = ({ user, onBack }: { user: Employee, onBack?: () => void }) => 
                   <div>
                     <p className="text-[10px] font-bold text-gray-400 uppercase">Từ kho</p>
                     <p className="text-sm font-bold text-gray-800">{selectedSlip.from_wh?.name}</p>
+                    <p className="text-[10px] text-gray-400">Mã: {selectedSlip.from_wh?.code || selectedSlip.from_warehouse_id?.slice(0, 8)}</p>
                   </div>
                   <div>
                     <p className="text-[10px] font-bold text-gray-400 uppercase">Đến kho</p>
                     <p className="text-sm font-bold text-gray-800">{selectedSlip.to_wh?.name}</p>
+                    <p className="text-[10px] text-gray-400">Mã: {selectedSlip.to_wh?.code || selectedSlip.to_warehouse_id?.slice(0, 8)}</p>
                   </div>
                   <div>
                     <p className="text-[10px] font-bold text-gray-400 uppercase">Vật tư</p>
                     <p className="text-sm font-bold text-gray-800">{selectedSlip.materials?.name}</p>
+                    <p className="text-[10px] text-gray-400">Mã: {selectedSlip.materials?.code || selectedSlip.material_id?.slice(0, 8)}</p>
                   </div>
                   <div>
                     <p className="text-[10px] font-bold text-gray-400 uppercase">Số lượng</p>
@@ -6732,8 +7002,9 @@ const Transfer = ({ user, onBack }: { user: Employee, onBack?: () => void }) => 
                     
                     <CustomCombobox 
                       label="Từ kho *"
-                      value={warehouses.find(w => w.id === formData.from_warehouse_id)?.name || formData.from_warehouse_id}
+                      value={formData.from_warehouse_id}
                       onChange={(val) => setFormData({...formData, from_warehouse_id: val})}
+                      onCreateNew={(name) => setFormData({...formData, from_warehouse_id: name})}
                       options={warehouses}
                       placeholder="Chọn kho nguồn..."
                       required
@@ -6741,8 +7012,9 @@ const Transfer = ({ user, onBack }: { user: Employee, onBack?: () => void }) => 
 
                     <CustomCombobox 
                       label="Đến kho *"
-                      value={warehouses.find(w => w.id === formData.to_warehouse_id)?.name || formData.to_warehouse_id}
+                      value={formData.to_warehouse_id}
                       onChange={(val) => setFormData({...formData, to_warehouse_id: val})}
+                      onCreateNew={(name) => setFormData({...formData, to_warehouse_id: name})}
                       options={warehouses}
                       placeholder="Chọn kho đích..."
                       required
@@ -6752,8 +7024,9 @@ const Transfer = ({ user, onBack }: { user: Employee, onBack?: () => void }) => 
                   <div className="space-y-4">
                     <CustomCombobox 
                       label="Vật tư điều chuyển *"
-                      value={materials.find(m => m.id === formData.material_id)?.name || formData.material_id}
+                      value={formData.material_id}
                       onChange={(val) => setFormData({...formData, material_id: val})}
+                      onCreateNew={(name) => setFormData({...formData, material_id: name})}
                       options={materials}
                       placeholder="Chọn vật tư..."
                       required
@@ -6821,78 +7094,40 @@ const InventoryReport = ({ user, onBack }: { user: Employee, onBack?: () => void
   const fetchReport = async () => {
     setLoading(true);
     try {
-      const { data: materials } = await supabase.from('materials').select('*').or('status.is.null,status.neq.Đã xóa').order('name');
-      const { data: whs } = await supabase.from('warehouses').select('*').or('status.is.null,status.neq.Đã xóa').order('name');
-      if (!materials || !whs) return;
-
-      const [si, so, tr_out, tr_in] = await Promise.all([
-        supabase.from('stock_in').select('material_id, warehouse_id, quantity').eq('status', 'Đã duyệt'),
-        supabase.from('stock_out').select('material_id, warehouse_id, quantity').eq('status', 'Đã duyệt'),
-        supabase.from('transfers').select('material_id, from_warehouse_id, quantity').eq('status', 'Đã duyệt'),
-        supabase.from('transfers').select('material_id, to_warehouse_id, quantity').eq('status', 'Đã duyệt')
-      ]);
-
-      // Pre-calculate everything in O(T) where T is transactions
-      const balanceMap: Record<string, Record<string, number>> = {}; // warehouseId -> materialId -> balance
-      const totalInMap: Record<string, number> = {}; // materialId -> totalIn
-      const totalOutMap: Record<string, number> = {}; // materialId -> totalOut
-
-      // Helper to update maps
-      const updateMaps = (list: any[], whKey: string, matIdKey: string, multiplier: number, isDirectStock: boolean) => {
-        list.forEach(item => {
-          const whId = item[whKey];
-          const matId = item[matIdKey];
-          const qty = item.quantity;
-
-          // Update balance map
-          if (!balanceMap[whId]) balanceMap[whId] = {};
-          balanceMap[whId][matId] = (balanceMap[whId][matId] || 0) + (qty * multiplier);
-
-          // Update total maps (only if not filtering by warehouse, or if we want global totals)
-          if (multiplier > 0) {
-            totalInMap[matId] = (totalInMap[matId] || 0) + qty;
-          } else {
-            totalOutMap[matId] = (totalOutMap[matId] || 0) + qty;
-          }
-        });
-      };
-
-      updateMaps(si.data || [], 'warehouse_id', 'material_id', 1, true);
-      updateMaps(so.data || [], 'warehouse_id', 'material_id', -1, true);
-      updateMaps(tr_out.data || [], 'from_warehouse_id', 'material_id', -1, false);
-      updateMaps(tr_in.data || [], 'to_warehouse_id', 'material_id', 1, false);
+      const { data: materials } = await supabase.from('materials').select('*').order('name');
+      const { data: whs } = await supabase.from('warehouses').select('*').order('name');
+      const { data: inventory } = await supabase.from('inventory').select('*');
+      
+      if (!materials || !whs || !inventory) return;
 
       const reportData = materials.map(mat => {
-        let balance = 0;
-        const breakdown: any[] = [];
-
-        whs.forEach(wh => {
-          const whBalance = balanceMap[wh.id]?.[mat.id] || 0;
-          if (whBalance !== 0) {
-            breakdown.push({ whName: wh.name, balance: whBalance });
-            balance += whBalance;
-          }
-        });
+        const matInventory = inventory.filter(i => i.material_id === mat.id);
+        const balance = matInventory.reduce((sum, i) => sum + (i.quantity || 0), 0);
+        const breakdown = matInventory.map(i => ({
+          whName: whs.find(w => w.id === i.warehouse_id)?.name || 'N/A',
+          balance: i.quantity
+        })).filter(b => b.balance !== 0);
 
         if (selectedWarehouse) {
-          const whBalance = balanceMap[selectedWarehouse]?.[mat.id] || 0;
-          return { 
-            ...mat, 
-            totalIn: 0, 
-            totalOut: 0, 
-            balance: whBalance, 
-            breakdown: whBalance !== 0 ? [{ whName: whs.find(w => w.id === selectedWarehouse)?.name, balance: whBalance }] : [] 
+          const whInv = matInventory.find(i => i.warehouse_id === selectedWarehouse);
+          const whQty = whInv?.quantity || 0;
+          return {
+            ...mat,
+            totalIn: 0,
+            totalOut: 0,
+            balance: whQty,
+            breakdown: whQty !== 0 ? [{ whName: whs.find(w => w.id === selectedWarehouse)?.name, balance: whQty }] : []
           };
         }
 
-        return { 
-          ...mat, 
-          totalIn: totalInMap[mat.id] || 0, 
-          totalOut: totalOutMap[mat.id] || 0, 
-          balance, 
-          breakdown 
+        return {
+          ...mat,
+          totalIn: 0, // Note: totalIn/Out are not tracked in inventory table
+          totalOut: 0,
+          balance,
+          breakdown
         };
-      }).filter(item => item.balance !== 0 || (item.totalIn || 0) > 0);
+      }).filter(item => item.balance !== 0);
       
       setReport(reportData);
     } catch (err) {
@@ -6949,7 +7184,10 @@ const InventoryReport = ({ user, onBack }: { user: Employee, onBack?: () => void
                   report.map((item) => (
                     <tr key={item.id} className="hover:bg-gray-50/50 transition-colors align-top">
                       <td className="px-6 py-4">
-                        <div className="text-sm font-bold text-gray-800">{item.name}</div>
+                        <div className="flex items-center gap-2">
+                          {item.code && <span className="text-[10px] bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded font-mono">#{item.code}</span>}
+                          <div className="text-sm font-bold text-gray-800">{item.name}</div>
+                        </div>
                         <div className="mt-2 space-y-1">
                           {item.breakdown.map((b: any, idx: number) => (
                             <div key={idx} className="flex items-center gap-2 text-[10px]">
@@ -7042,7 +7280,7 @@ const DeletedMaterials = ({ onBack }: { onBack: () => void }) => {
             ) : (
               materials.map((item) => (
                 <tr key={item.id} className="hover:bg-gray-50/50 transition-colors">
-                  <td className="px-4 py-3 text-xs text-gray-600 font-mono">{item.id}</td>
+                  <td className="px-4 py-3 text-xs text-gray-600 font-mono">{item.code || item.id.slice(0, 8)}</td>
                   <td className="px-4 py-3 text-xs text-gray-800 font-bold">{item.name}</td>
                   <td className="px-4 py-3 text-xs text-gray-600">{item.material_groups?.name}</td>
                   <td className="px-4 py-3 text-xs text-gray-600">{item.unit}</td>
@@ -7113,6 +7351,7 @@ const DeletedWarehouses = ({ onBack }: { onBack: () => void }) => {
         <table className="w-full text-left border-collapse">
           <thead>
             <tr className="bg-gray-50">
+              <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-gray-400">Mã kho</th>
               <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-gray-400">Tên kho</th>
               <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-gray-400">Địa chỉ</th>
               <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-gray-400">Quản lý</th>
@@ -7121,12 +7360,13 @@ const DeletedWarehouses = ({ onBack }: { onBack: () => void }) => {
           </thead>
           <tbody className="divide-y divide-gray-100">
             {loading ? (
-              <tr><td colSpan={4} className="px-4 py-8 text-center text-gray-400 italic">Đang tải...</td></tr>
+              <tr><td colSpan={5} className="px-4 py-8 text-center text-gray-400 italic">Đang tải...</td></tr>
             ) : warehouses.length === 0 ? (
-              <tr><td colSpan={4} className="px-4 py-8 text-center text-gray-400 italic">Thùng rác trống</td></tr>
+              <tr><td colSpan={5} className="px-4 py-8 text-center text-gray-400 italic">Thùng rác trống</td></tr>
             ) : (
               warehouses.map((item) => (
                 <tr key={item.id} className="hover:bg-gray-50/50 transition-colors">
+                  <td className="px-4 py-3 text-xs text-gray-600 font-mono">{item.code || item.id.slice(0, 8)}</td>
                   <td className="px-4 py-3 text-xs text-gray-800 font-bold">{item.name}</td>
                   <td className="px-4 py-3 text-xs text-gray-600">{item.address}</td>
                   <td className="px-4 py-3 text-xs text-gray-600">{item.users?.full_name}</td>
@@ -7346,7 +7586,11 @@ const Notes = ({ user, onBack }: { user: Employee, onBack: () => void }) => {
     const { data: notesData } = await supabase.from('notes').select('*, users(full_name)').order('created_at', { ascending: false });
     if (notesData) setNotes(notesData);
 
-    const { data: empData } = await supabase.from('users').select('*').neq('status', 'Nghỉ việc').order('full_name');
+    let empQuery = supabase.from('users').select('*').neq('status', 'Nghỉ việc');
+    if (user.role !== 'Admin App') {
+      empQuery = empQuery.neq('role', 'Admin App');
+    }
+    const { data: empData } = await empQuery.order('full_name');
     if (empData) setEmployees(empData);
 
     const { data: whData } = await supabase.from('warehouses').select('*').order('name');
@@ -7694,7 +7938,11 @@ const Reminders = ({ user, onBack }: { user: Employee, onBack: () => void }) => 
     const { data: remData } = await supabase.from('reminders').select('*, users(full_name)').order('reminder_time', { ascending: false });
     if (remData) setReminders(remData);
 
-    const { data: empData } = await supabase.from('users').select('*').neq('status', 'Nghỉ việc').order('full_name');
+    let empQuery = supabase.from('users').select('*').neq('status', 'Nghỉ việc');
+    if (user.role !== 'Admin App') {
+      empQuery = empQuery.neq('role', 'Admin App');
+    }
+    const { data: empData } = await empQuery.order('full_name');
     if (empData) setEmployees(empData);
     setLoading(false);
   };

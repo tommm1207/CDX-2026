@@ -1,7 +1,8 @@
 export type UserRole = 'Admin App' | 'Admin' | 'User';
 
 export interface Employee {
-  id: string; // Mã nhân viên (ID)
+  id: string; // Khóa chính (UUID)
+  code: string; // Mã nhân viên (ID hiển thị, ví dụ: cdx001)
   full_name: string;
   email?: string;
   phone?: string;
@@ -19,6 +20,34 @@ export interface Employee {
   resign_date?: string;
   initial_budget?: number;
   status: 'Đang làm việc' | 'Hoạt động' | 'Nghỉ việc';
+}
+
+export interface Material {
+  id: string;
+  code: string; // Mã vật tư (ví dụ: MAT001)
+  name: string;
+  group_id?: string;
+  specification?: string;
+  unit?: string;
+  description?: string;
+  image_url?: string;
+  status?: string;
+}
+
+export interface Warehouse {
+  id: string;
+  code: string; // Mã kho (ví dụ: WH001)
+  name: string;
+  location?: string;
+  manager_id?: string;
+  status?: string;
+}
+
+export interface MaterialGroup {
+  id: string;
+  code: string; // Mã nhóm (ví dụ: GRP001)
+  name: string;
+  description?: string;
 }
 
 export interface AttendanceRecord {

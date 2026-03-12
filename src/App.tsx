@@ -59,6 +59,7 @@ import {
   ClipboardCheck,
   Check,
   Bell,
+  BellRing,
   Cloud,
   CloudRain,
   Sun,
@@ -113,6 +114,91 @@ const formatDate = (dateStr: string) => {
   return `${d}/${m}/${y}`;
 };
 
+const NumericInput = ({ 
+  label, 
+  value, 
+  onChange, 
+  placeholder = "0", 
+  required = false,
+  className = "",
+  labelClassName = "text-[10px] font-bold text-gray-400 uppercase",
+  inputClassName = "w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20",
+  icon: Icon,
+  showControls = false,
+  step = 1,
+  error = false
+}: { 
+  label?: string, 
+  value: number, 
+  onChange: (val: number) => void, 
+  placeholder?: string,
+  required?: boolean,
+  className?: string,
+  labelClassName?: string,
+  inputClassName?: string,
+  icon?: any,
+  showControls?: boolean,
+  step?: number,
+  error?: boolean
+}) => {
+  const [displayValue, setDisplayValue] = useState(formatNumber(value));
+
+  useEffect(() => {
+    setDisplayValue(formatNumber(value));
+  }, [value]);
+
+  const handleChange = (e: ChangeEvent<HTMLInputElement>) => {
+    const rawValue = e.target.value;
+    const cleanValue = rawValue.replace(/[^0-9]/g, '');
+    if (cleanValue === '') {
+      setDisplayValue('');
+      onChange(0);
+      return;
+    }
+    const numValue = parseInt(cleanValue, 10);
+    setDisplayValue(formatNumber(numValue));
+    onChange(numValue);
+  };
+
+  return (
+    <div className={className}>
+      {label && <label className={labelClassName}>{label} {required && '*'}</label>}
+      <div className="relative flex items-center gap-2 mt-1">
+        {showControls && (
+          <button 
+            type="button" 
+            onClick={() => onChange(Math.max(0, value - step))}
+            className="p-2 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
+          >
+            <Minus size={14} />
+          </button>
+        )}
+        <div className="relative flex-1">
+          {Icon && <Icon className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />}
+          <input 
+            type="text"
+            inputMode="numeric"
+            value={displayValue}
+            onChange={handleChange}
+            placeholder={placeholder}
+            required={required}
+            className={`${inputClassName} ${Icon ? 'pl-10' : ''} ${error ? 'border-red-500 ring-2 ring-red-500/10' : ''} ${showControls ? 'text-center' : ''}`}
+          />
+        </div>
+        {showControls && (
+          <button 
+            type="button" 
+            onClick={() => onChange(value + step)}
+            className="p-2 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
+          >
+            <Plus size={14} />
+          </button>
+        )}
+      </div>
+    </div>
+  );
+};
+
 const numberToWords = (number: number): string => {
   const units = ["", "một", "hai", "ba", "bốn", "năm", "sáu", "bảy", "tám", "chín"];
   const tens = ["", "mười", "hai mươi", "ba mươi", "bốn mươi", "năm mươi", "sáu mươi", "bảy mươi", "tám mươi", "chín mươi"];
@@ -165,6 +251,23 @@ const LoginPage = ({ onLogin }: { onLogin: (user: Employee) => void }) => {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [showInstructions, setShowInstructions] = useState(false);
+  const [connectionStatus, setConnectionStatus] = useState<'checking' | 'ok' | 'error'>('checking');
+
+  useEffect(() => {
+    checkConnection();
+  }, []);
+
+  const checkConnection = async () => {
+    try {
+      setConnectionStatus('checking');
+      const { error } = await supabase.from('users').select('id', { count: 'exact', head: true }).limit(1);
+      if (error) throw error;
+      setConnectionStatus('ok');
+    } catch (err) {
+      console.error('Connection check failed:', err);
+      setConnectionStatus('error');
+    }
+  };
 
   const handleLogin = async (e: FormEvent) => {
     e.preventDefault();
@@ -221,6 +324,20 @@ const LoginPage = ({ onLogin }: { onLogin: (user: Employee) => void }) => {
           <div className="text-center">
             <h2 className="text-primary font-black text-xl tracking-widest uppercase">QUẢN LÝ KHO CDX</h2>
             <p className="text-[10px] text-gray-400 font-bold tracking-widest uppercase mt-1">Hệ thống quản lý nội bộ</p>
+          </div>
+          
+          <div className="mt-4 flex items-center gap-2 px-3 py-1 rounded-full bg-gray-50 border border-gray-100">
+            <div className={`w-1.5 h-1.5 rounded-full ${
+              connectionStatus === 'ok' ? 'bg-green-500 animate-pulse' : 
+              connectionStatus === 'error' ? 'bg-red-500' : 'bg-amber-500 animate-bounce'
+            }`} />
+            <span className="text-[9px] font-bold text-gray-500 uppercase tracking-tighter">
+              {connectionStatus === 'ok' ? 'Kết nối Database: OK' : 
+               connectionStatus === 'error' ? 'Lỗi kết nối Database' : 'Đang kiểm tra kết nối...'}
+            </span>
+            {connectionStatus === 'error' && (
+              <button onClick={checkConnection} className="text-[9px] text-primary font-black hover:underline ml-1">Thử lại</button>
+            )}
           </div>
         </div>
 
@@ -669,7 +786,7 @@ const MaterialGroups = ({ user, onBack }: { user: Employee, onBack?: () => void 
                     onClick={() => handleRowClick(item)}
                     className="hover:bg-gray-50 transition-colors group cursor-pointer"
                   >
-                    <td className="px-4 py-3 text-xs font-bold text-gray-700">{item.id}</td>
+                    <td className="px-4 py-3 text-xs font-bold text-gray-700">{item.code || item.id.slice(0, 8)}</td>
                     <td className="px-4 py-3 text-xs text-gray-600 font-medium">{item.name}</td>
                     <td className="px-4 py-3 text-xs text-gray-500 italic">{item.notes || '-'}</td>
                     <td className="px-4 py-3 text-center">
@@ -792,7 +909,7 @@ const MaterialGroups = ({ user, onBack }: { user: Employee, onBack?: () => void 
                 <div className="grid grid-cols-2 gap-12">
                   <div className="space-y-1">
                     <label className="text-[10px] font-bold text-gray-400 uppercase">Mã nhóm vật tư</label>
-                    <p className="text-sm font-bold text-gray-800 border-b border-gray-100 pb-2">{selectedGroup.id}</p>
+                    <p className="text-sm font-bold text-gray-800 border-b border-gray-100 pb-2">{selectedGroup.code || selectedGroup.id.slice(0, 8)}</p>
                   </div>
                   <div className="space-y-1">
                     <label className="text-[10px] font-bold text-gray-400 uppercase">Nhóm vật tư</label>
@@ -819,7 +936,7 @@ const MaterialGroups = ({ user, onBack }: { user: Employee, onBack?: () => void 
                     <table className="w-full text-left border-collapse">
                       <thead>
                         <tr className="bg-primary text-white">
-                          <th className="px-4 py-2 text-[10px] font-bold uppercase border-r border-white/10">Mã vật tư (ID)</th>
+                          <th className="px-4 py-2 text-[10px] font-bold uppercase border-r border-white/10">Mã vật tư</th>
                           <th className="px-4 py-2 text-[10px] font-bold uppercase border-r border-white/10">Tên vật tư</th>
                           <th className="px-4 py-2 text-[10px] font-bold uppercase border-r border-white/10">Kho</th>
                           <th className="px-4 py-2 text-[10px] font-bold uppercase border-r border-white/10">Quy cách</th>
@@ -834,7 +951,7 @@ const MaterialGroups = ({ user, onBack }: { user: Employee, onBack?: () => void 
                         ) : (
                           materials.map((mat) => (
                             <tr key={mat.id} className="hover:bg-gray-50 transition-colors group">
-                              <td className="px-4 py-2 text-xs font-medium text-gray-700">{mat.id}</td>
+                              <td className="px-4 py-2 text-xs font-medium text-gray-700">{mat.code || mat.id.slice(0, 8)}</td>
                               <td className="px-4 py-2 text-xs text-gray-600">{mat.name}</td>
                               <td className="px-4 py-2 text-xs text-gray-500">{mat.warehouses?.name || '-'}</td>
                               <td className="px-4 py-2 text-xs text-gray-500">{mat.specification || '-'}</td>
@@ -1048,8 +1165,8 @@ const MaterialGroups = ({ user, onBack }: { user: Employee, onBack?: () => void 
               <div className="p-8 space-y-8 overflow-y-auto">
                 <div className="grid grid-cols-3 gap-8">
                   <div className="space-y-1">
-                    <label className="text-[10px] font-bold text-gray-400 uppercase">Mã vật tư (ID)</label>
-                    <p className="text-sm font-bold text-gray-800 border-b border-gray-100 pb-2">{selectedMaterial.id}</p>
+                    <label className="text-[10px] font-bold text-gray-400 uppercase">Mã vật tư</label>
+                    <p className="text-sm font-bold text-gray-800 border-b border-gray-100 pb-2">{selectedMaterial.code || selectedMaterial.id.slice(0, 8)}</p>
                   </div>
                   <div className="col-span-2 space-y-1">
                     <label className="text-[10px] font-bold text-gray-400 uppercase">Tên vật tư</label>
@@ -1065,7 +1182,7 @@ const MaterialGroups = ({ user, onBack }: { user: Employee, onBack?: () => void 
                   </div>
                   <div className="space-y-1">
                     <label className="text-[10px] font-bold text-gray-400 uppercase">Nhóm vật tư</label>
-                    <p className="text-sm font-bold text-gray-800 border-b border-gray-100 pb-2">{selectedGroup?.id}</p>
+                    <p className="text-sm font-bold text-gray-800 border-b border-gray-100 pb-2">{selectedGroup?.code || selectedGroup?.id.slice(0, 8)}</p>
                   </div>
                   <div className="space-y-1">
                     <label className="text-[10px] font-bold text-gray-400 uppercase">Đơn vị tính</label>
@@ -1429,7 +1546,7 @@ const Materials = ({ user, onBack }: { user: Employee, onBack?: () => void }) =>
                 <Trash2 size={32} />
               </div>
               <h3 className="text-lg font-bold text-gray-800 mb-2">Xác nhận xóa?</h3>
-              <p className="text-sm text-gray-500 mb-6">Bạn có chắc chắn muốn xóa vật tư <strong>{itemToDelete}</strong>? Hành động này không thể hoàn tác.</p>
+              <p className="text-sm text-gray-500 mb-6">Bạn có chắc chắn muốn xóa vật tư <strong>{materials.find(m => m.id === itemToDelete)?.code || itemToDelete.slice(0, 8)}</strong>? Hành động này không thể hoàn tác.</p>
               <div className="flex gap-3">
                 <button onClick={() => setShowDeleteModal(false)} className="flex-1 px-4 py-2 rounded-xl border border-gray-200 text-sm font-bold text-gray-500 hover:bg-gray-50 transition-colors">Hủy bỏ</button>
                 <button onClick={confirmDelete} className="flex-1 px-4 py-2 rounded-xl bg-red-600 text-white text-sm font-bold hover:bg-red-700 transition-colors">Xóa ngay</button>
@@ -1613,8 +1730,8 @@ const Materials = ({ user, onBack }: { user: Employee, onBack?: () => void }) =>
                   </div>
                   <div className="flex-1 grid grid-cols-2 gap-6">
                     <div className="space-y-1">
-                      <label className="text-[10px] font-bold text-gray-400 uppercase">Mã vật tư (ID)</label>
-                      <p className="text-sm font-bold text-gray-800 border-b border-gray-100 pb-2">{selectedMaterial.id}</p>
+                      <label className="text-[10px] font-bold text-gray-400 uppercase">Mã vật tư</label>
+                      <p className="text-sm font-bold text-gray-800 border-b border-gray-100 pb-2">{selectedMaterial.code || selectedMaterial.id.slice(0, 8)}</p>
                     </div>
                     <div className="space-y-1">
                       <label className="text-[10px] font-bold text-gray-400 uppercase">Tên vật tư</label>
@@ -2028,7 +2145,7 @@ const Warehouses = ({ user, onBack }: { user: Employee, onBack?: () => void }) =
                 <Trash2 size={32} />
               </div>
               <h3 className="text-lg font-bold text-gray-800 mb-2">Xác nhận xóa?</h3>
-              <p className="text-sm text-gray-500 mb-6">Bạn có chắc chắn muốn xóa kho <strong>{itemToDelete}</strong>? Hành động này không thể hoàn tác.</p>
+              <p className="text-sm text-gray-500 mb-6">Bạn có chắc chắn muốn xóa kho <strong>{warehouses.find(w => w.id === itemToDelete)?.code || itemToDelete.slice(0, 8)}</strong>? Hành động này không thể hoàn tác.</p>
               <div className="flex gap-3">
                 <button onClick={() => setShowDeleteModal(false)} className="flex-1 px-4 py-2 rounded-xl border border-gray-200 text-sm font-bold text-gray-500 hover:bg-gray-50 transition-colors">Hủy bỏ</button>
                 <button onClick={confirmDelete} className="flex-1 px-4 py-2 rounded-xl bg-red-600 text-white text-sm font-bold hover:bg-red-700 transition-colors">Xóa ngay</button>
@@ -2103,7 +2220,7 @@ const Warehouses = ({ user, onBack }: { user: Employee, onBack?: () => void }) =
                           className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20"
                         >
                           <option value="">-- Chọn nhân sự --</option>
-                          {employees.map(emp => <option key={emp.id} value={emp.id}>{emp.full_name} ({emp.id})</option>)}
+                          {employees.map(emp => <option key={emp.id} value={emp.id}>{emp.full_name} ({emp.code || emp.id.slice(0, 8)})</option>)}
                         </select>
                       </div>
                     </div>
@@ -2396,10 +2513,11 @@ const Costs = ({ user, onBack }: { user: Employee, onBack?: () => void }) => {
 
     // Auto-save new value for warehouses and materials with codes
     let code = '';
+    const random = Math.floor(100 + Math.random() * 900);
     if (table === 'warehouses') {
-      code = `K${(currentList.length + 1).toString().padStart(2, '0')}`;
+      code = `K${(currentList.length + 1).toString().padStart(2, '0')}-${random}`;
     } else if (table === 'materials') {
-      code = `VT${(currentList.length + 1).toString().padStart(3, '0')}`;
+      code = `VT${(currentList.length + 1).toString().padStart(3, '0')}-${random}`;
     }
 
     const { data, error } = await supabase.from(table).insert([{ name, code }]).select();
@@ -2425,7 +2543,9 @@ const Costs = ({ user, onBack }: { user: Employee, onBack?: () => void }) => {
       const d = String(dateObj.getDate()).padStart(2, '0');
       const m = String(dateObj.getMonth() + 1).padStart(2, '0');
       const y = String(dateObj.getFullYear()).slice(-2);
-      const finalCode = `${user.id.toUpperCase()}-${d}${m}${y}`;
+      const random = Math.floor(1000 + Math.random() * 9000);
+      const userPrefix = user.code || user.id.slice(0, 4);
+      const finalCode = `CP-${userPrefix.toUpperCase()}-${d}${m}${y}-${random}`;
 
       const payload: any = {
         date: formData.date,
@@ -2824,15 +2944,11 @@ const Costs = ({ user, onBack }: { user: Employee, onBack?: () => void }) => {
 
                     <div className="space-y-4">
                       <div className="grid grid-cols-2 gap-4">
-                        <div className="space-y-1">
-                          <label className="text-[10px] font-bold text-gray-400 uppercase">Số lượng</label>
-                          <input 
-                            type="number" 
-                            value={formData.quantity}
-                            onChange={(e) => setFormData({...formData, quantity: parseFloat(e.target.value) || 0})}
-                            className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20" 
-                          />
-                        </div>
+                        <NumericInput 
+                          label="Số lượng"
+                          value={formData.quantity}
+                          onChange={(val) => setFormData({...formData, quantity: val})}
+                        />
                         <CustomCombobox 
                           label="Đơn vị tính"
                           value={formData.unit}
@@ -2843,16 +2959,13 @@ const Costs = ({ user, onBack }: { user: Employee, onBack?: () => void }) => {
                         />
                       </div>
 
-                      <div className="space-y-1">
-                        <label className="text-[10px] font-bold text-gray-400 uppercase">Số tiền *</label>
-                        <input 
-                          type="number" 
-                          required
-                          value={formData.total_amount}
-                          onChange={(e) => setFormData({...formData, total_amount: parseFloat(e.target.value) || 0})}
-                          className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20 font-bold text-primary" 
-                        />
-                      </div>
+                      <NumericInput 
+                        label="Số tiền *"
+                        required
+                        value={formData.total_amount}
+                        onChange={(val) => setFormData({...formData, total_amount: val})}
+                        inputClassName="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20 font-bold text-primary"
+                      />
 
                       <div className="space-y-1">
                         <label className="text-[10px] font-bold text-gray-400 uppercase">Ghi chú</label>
@@ -3141,7 +3254,7 @@ const CostFilter = ({ user, onBack }: { user: Employee, onBack?: () => void }) =
                     >
                       <div className="flex items-center justify-between mb-2">
                         <span className="text-[10px] font-bold text-primary bg-primary/5 px-2 py-0.5 rounded-full uppercase">
-                          {item.cost_code || 'No Code'}
+                          {item.cost_code || item.id.slice(0, 8)}
                         </span>
                         <span className="text-[10px] font-bold text-gray-400">{formatDate(item.date)}</span>
                       </div>
@@ -3182,7 +3295,7 @@ const CostFilter = ({ user, onBack }: { user: Employee, onBack?: () => void }) =
                   <div className="p-2 bg-white/20 rounded-xl"><FileText size={24} /></div>
                   <div>
                     <h3 className="font-bold text-lg">Chi tiết chi phí</h3>
-                    <p className="text-xs text-white/70">Mã: {selectedCost.cost_code}</p>
+                    <p className="text-xs text-white/70">Mã: {selectedCost.cost_code || selectedCost.id.slice(0, 8)}</p>
                   </div>
                 </div>
                 <button onClick={() => setShowDetailModal(false)} className="p-2 hover:bg-white/10 rounded-full transition-colors"><X size={20} /></button>
@@ -4621,7 +4734,7 @@ const HRRecords = ({ user, onBack }: { user: Employee, onBack?: () => void }) =>
           <table className="w-full text-left border-separate border-spacing-0">
             <thead>
               <tr className="bg-primary text-white text-[11px] uppercase tracking-wider whitespace-nowrap">
-                <th className="p-3 first:rounded-tl-lg sticky left-0 bg-primary z-10">Mã NV (ID)</th>
+                <th className="p-3 first:rounded-tl-lg sticky left-0 bg-primary z-10">Mã NV</th>
                 <th className="p-3">Họ và tên</th>
                 <th className="p-3">Email</th>
                 <th className="p-3">Số điện thoại</th>
@@ -4701,7 +4814,7 @@ const HRRecords = ({ user, onBack }: { user: Employee, onBack?: () => void }) =>
                 <Trash2 size={32} />
               </div>
               <h3 className="text-lg font-bold text-gray-800 mb-2">Xác nhận xóa?</h3>
-              <p className="text-sm text-gray-500 mb-6">Bạn có chắc chắn muốn xóa nhân sự <strong>{employees.find(e => e.id === itemToDelete)?.code || itemToDelete}</strong>? Dữ liệu liên quan có thể bị ảnh hưởng.</p>
+              <p className="text-sm text-gray-500 mb-6">Bạn có chắc chắn muốn xóa nhân sự <strong>{employees.find(e => e.id === itemToDelete)?.code || itemToDelete.slice(0, 8)}</strong>? Dữ liệu liên quan có thể bị ảnh hưởng.</p>
               <div className="flex gap-3">
                 <button 
                   onClick={() => setShowDeleteModal(false)}
@@ -4740,7 +4853,7 @@ const HRRecords = ({ user, onBack }: { user: Employee, onBack?: () => void }) =>
                   <div className="p-6">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                       <div className="space-y-1">
-                        <label className="text-[10px] font-bold text-gray-400 uppercase">Mã nhân viên (ID)</label>
+                        <label className="text-[10px] font-bold text-gray-400 uppercase">Mã nhân viên</label>
                         <input 
                           required
                           type="text" 
@@ -5170,17 +5283,14 @@ const Attendance = ({ user, onBack }: { user: Employee, onBack?: () => void }) =
                     ))}
                   </div>
                 </div>
-                <div>
-                  <label className="text-[10px] font-bold text-gray-400 uppercase">Giờ tăng ca (h)</label>
-                  <input 
-                    type="number" 
-                    step="0.5"
-                    value={editFormData.overtime}
-                    onChange={(e) => setEditFormData({ ...editFormData, overtime: Number(e.target.value) })}
-                    className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20 mt-1"
-                    placeholder="Ví dụ: 1.5"
-                  />
-                </div>
+                <NumericInput 
+                  label="Giờ tăng ca (h)"
+                  value={editFormData.overtime}
+                  onChange={(val) => setEditFormData({ ...editFormData, overtime: val })}
+                  placeholder="Ví dụ: 1.5"
+                  step="0.1"
+                  type="number"
+                />
                 <div className="flex gap-3 pt-2">
                   <button onClick={() => setShowEditModal(false)} className="flex-1 py-2 rounded-xl border border-gray-200 text-sm font-bold text-gray-500">Hủy</button>
                   <button onClick={saveEdit} className="flex-1 py-2 rounded-xl bg-primary text-white text-sm font-bold shadow-lg shadow-primary/20">Lưu</button>
@@ -5324,10 +5434,12 @@ const Advances = ({ user, onBack }: { user: Employee, onBack?: () => void }) => 
                   <label className="text-[10px] font-bold text-gray-400 uppercase">Ngày *</label>
                   <input type="date" required value={formData.date} onChange={(e) => setFormData({...formData, date: e.target.value})} className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20" />
                 </div>
-                <div className="space-y-1">
-                  <label className="text-[10px] font-bold text-gray-400 uppercase">Số tiền *</label>
-                  <input type="number" required value={formData.amount} onChange={(e) => setFormData({...formData, amount: Number(e.target.value)})} className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20" />
-                </div>
+                <NumericInput 
+                  label="Số tiền *"
+                  required
+                  value={formData.amount}
+                  onChange={(val) => setFormData({...formData, amount: val})}
+                />
                 {activeTab === 'allowances' && (
                   <div className="space-y-1">
                     <label className="text-[10px] font-bold text-gray-400 uppercase">Loại phụ cấp</label>
@@ -5467,7 +5579,7 @@ const MonthlySalary = ({ user, onBack }: { user: Employee, onBack?: () => void }
                 <tr key={s.id} className="hover:bg-gray-50 transition-colors">
                   <td className="px-4 py-3">
                     <p className="text-xs font-bold text-gray-800">{s.full_name}</p>
-                    <p className="text-[9px] text-gray-400">{s.id}</p>
+                    <p className="text-[9px] text-gray-400">{s.code || s.id.slice(0, 8)}</p>
                   </td>
                   <td className="px-4 py-3 text-center text-xs font-bold text-gray-600">{s.totalDays.toFixed(1)}</td>
                   <td className="px-4 py-3 text-center text-xs font-bold text-amber-600">{s.totalOT.toFixed(1)}h</td>
@@ -5517,7 +5629,7 @@ const MonthlySalary = ({ user, onBack }: { user: Employee, onBack?: () => void }
                   </div>
                   <div>
                     <h4 className="text-xl font-black text-gray-800">{selectedSalary.full_name}</h4>
-                    <p className="text-xs text-gray-500 uppercase tracking-widest font-bold">Mã NV: {selectedSalary.id}</p>
+                    <p className="text-xs text-gray-500 uppercase tracking-widest font-bold">Mã NV: {selectedSalary.code || selectedSalary.id.slice(0, 8)}</p>
                   </div>
                 </div>
 
@@ -5690,10 +5802,12 @@ const SalarySettings = ({ user, onBack }: { user: Employee, onBack?: () => void 
                 <button onClick={() => setShowModal(false)} className="p-2 hover:bg-white/10 rounded-full transition-colors"><X size={20} /></button>
               </div>
               <form onSubmit={handleSubmit} className="p-6 space-y-4">
-                <div className="space-y-1">
-                  <label className="text-[10px] font-bold text-gray-400 uppercase">Lương theo ngày công *</label>
-                  <input type="number" required value={formData.daily_rate} onChange={(e) => setFormData({...formData, daily_rate: Number(e.target.value)})} className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20" />
-                </div>
+                <NumericInput 
+                  label="Lương theo ngày công *"
+                  required
+                  value={formData.daily_rate}
+                  onChange={(val) => setFormData({...formData, daily_rate: val})}
+                />
                 <button type="submit" disabled={submitting} className="w-full py-3 bg-primary text-white rounded-xl font-bold hover:bg-primary-hover transition-colors shadow-lg shadow-primary/20 disabled:opacity-50">
                   Cập nhật
                 </button>
@@ -5793,7 +5907,8 @@ const StockIn = ({ user, onBack, initialStatus }: { user: Employee, onBack?: () 
         if (whByName) {
           finalWarehouseId = whByName.id;
         } else {
-          const code = `K${(warehouses.length + 1).toString().padStart(2, '0')}`;
+          const random = Math.floor(100 + Math.random() * 900);
+          const code = `K${(warehouses.length + 1).toString().padStart(2, '0')}-${random}`;
           const { data: newWh, error: whErr } = await supabase.from('warehouses').insert([{ name: formData.warehouse_id, code }]).select();
           if (whErr) throw whErr;
           if (newWh) {
@@ -5810,7 +5925,8 @@ const StockIn = ({ user, onBack, initialStatus }: { user: Employee, onBack?: () 
         if (matByName) {
           finalMaterialId = matByName.id;
         } else {
-          const code = `VT${(materials.length + 1).toString().padStart(3, '0')}`;
+          const random = Math.floor(100 + Math.random() * 900);
+          const code = `VT${(materials.length + 1).toString().padStart(3, '0')}-${random}`;
           const { data: newMat, error: matErr } = await supabase.from('materials').insert([{ name: formData.material_id, unit: formData.unit, code }]).select();
           if (matErr) throw matErr;
           if (newMat) {
@@ -6156,20 +6272,13 @@ const StockIn = ({ user, onBack, initialStatus }: { user: Employee, onBack?: () 
                       required
                     />
 
-                    <div className="space-y-1">
-                      <label className="text-[10px] font-bold text-gray-400 uppercase">Số lượng nhập *</label>
-                      <div className="flex items-center gap-2">
-                        <button type="button" onClick={() => setFormData({...formData, quantity: Math.max(0, formData.quantity - 1)})} className="p-2 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"><Minus size={14} /></button>
-                        <input 
-                          type="text" 
-                          required 
-                          value={formatNumber(formData.quantity)} 
-                          onChange={(e) => setFormData({...formData, quantity: parseNumber(e.target.value)})} 
-                          className="flex-1 px-4 py-2 rounded-xl border border-gray-200 text-sm text-center outline-none focus:ring-2 focus:ring-primary/20" 
-                        />
-                        <button type="button" onClick={() => setFormData({...formData, quantity: formData.quantity + 1})} className="p-2 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"><Plus size={14} /></button>
-                      </div>
-                    </div>
+                    <NumericInput 
+                      label="Số lượng nhập *"
+                      required
+                      value={formData.quantity}
+                      onChange={(val) => setFormData({...formData, quantity: val})}
+                      showControls
+                    />
 
                     <div className="space-y-1">
                       <label className="text-[10px] font-bold text-gray-400 uppercase">Thành tiền</label>
@@ -6195,19 +6304,13 @@ const StockIn = ({ user, onBack, initialStatus }: { user: Employee, onBack?: () 
                       <input type="text" value={formData.unit} onChange={(e) => setFormData({...formData, unit: e.target.value})} className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20" />
                     </div>
 
-                    <div className="space-y-1">
-                      <label className="text-[10px] font-bold text-gray-400 uppercase">Đơn giá</label>
-                      <div className="flex items-center gap-2">
-                        <button type="button" onClick={() => setFormData({...formData, unit_price: Math.max(0, formData.unit_price - 1000)})} className="p-2 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"><Minus size={14} /></button>
-                        <input 
-                          type="text" 
-                          value={formatNumber(formData.unit_price)} 
-                          onChange={(e) => setFormData({...formData, unit_price: parseNumber(e.target.value)})} 
-                          className="flex-1 px-4 py-2 rounded-xl border border-gray-200 text-sm text-center outline-none focus:ring-2 focus:ring-primary/20" 
-                        />
-                        <button type="button" onClick={() => setFormData({...formData, unit_price: formData.unit_price + 1000})} className="p-2 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"><Plus size={14} /></button>
-                      </div>
-                    </div>
+                    <NumericInput 
+                      label="Đơn giá"
+                      value={formData.unit_price}
+                      onChange={(val) => setFormData({...formData, unit_price: val})}
+                      showControls
+                      step={1000}
+                    />
 
                     <div className="space-y-1">
                       <label className="text-[10px] font-bold text-gray-400 uppercase">Diễn giải</label>
@@ -6333,7 +6436,8 @@ const StockOut = ({ user, onBack }: { user: Employee, onBack?: () => void }) => 
         if (whByName) {
           finalWarehouseId = whByName.id;
         } else {
-          const code = `K${(warehouses.length + 1).toString().padStart(2, '0')}`;
+          const random = Math.floor(100 + Math.random() * 900);
+          const code = `K${(warehouses.length + 1).toString().padStart(2, '0')}-${random}`;
           const { data: newWh, error: whErr } = await supabase.from('warehouses').insert([{ name: formData.warehouse_id, code }]).select();
           if (whErr) throw whErr;
           if (newWh) {
@@ -6350,7 +6454,8 @@ const StockOut = ({ user, onBack }: { user: Employee, onBack?: () => void }) => 
         if (matByName) {
           finalMaterialId = matByName.id;
         } else {
-          const code = `VT${(materials.length + 1).toString().padStart(3, '0')}`;
+          const random = Math.floor(100 + Math.random() * 900);
+          const code = `VT${(materials.length + 1).toString().padStart(3, '0')}-${random}`;
           const { data: newMat, error: matErr } = await supabase.from('materials').insert([{ name: formData.material_id, code }]).select();
           if (matErr) throw matErr;
           if (newMat) {
@@ -6592,10 +6697,12 @@ const StockOut = ({ user, onBack }: { user: Employee, onBack?: () => void }) => 
                   </div>
 
                   <div className="space-y-4">
-                    <div className="space-y-1">
-                      <label className="text-[10px] font-bold text-gray-400 uppercase">Số lượng xuất *</label>
-                      <input type="number" required value={formData.quantity} onChange={(e) => setFormData({...formData, quantity: Number(e.target.value)})} className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-red-600/20" />
-                    </div>
+                    <NumericInput 
+                      label="Số lượng xuất *"
+                      required
+                      value={formData.quantity}
+                      onChange={(val) => setFormData({...formData, quantity: val})}
+                    />
 
                     <div className="space-y-1">
                       <label className="text-[10px] font-bold text-gray-400 uppercase">Ghi chú / Mục đích xuất</label>
@@ -6724,7 +6831,8 @@ const Transfer = ({ user, onBack }: { user: Employee, onBack?: () => void }) => 
         if (whByName) {
           finalFromWhId = whByName.id;
         } else {
-          const code = `K${(warehouses.length + 1).toString().padStart(2, '0')}`;
+          const random = Math.floor(100 + Math.random() * 900);
+          const code = `K${(warehouses.length + 1).toString().padStart(2, '0')}-${random}`;
           const { data: newWh, error: whErr } = await supabase.from('warehouses').insert([{ name: formData.from_warehouse_id, code }]).select();
           if (whErr) throw whErr;
           if (newWh) {
@@ -6741,7 +6849,8 @@ const Transfer = ({ user, onBack }: { user: Employee, onBack?: () => void }) => 
         if (whByName) {
           finalToWhId = whByName.id;
         } else {
-          const code = `K${(warehouses.length + 1).toString().padStart(2, '0')}`;
+          const random = Math.floor(100 + Math.random() * 900);
+          const code = `K${(warehouses.length + 1).toString().padStart(2, '0')}-${random}`;
           const { data: newWh, error: whErr } = await supabase.from('warehouses').insert([{ name: formData.to_warehouse_id, code }]).select();
           if (whErr) throw whErr;
           if (newWh) {
@@ -6758,7 +6867,8 @@ const Transfer = ({ user, onBack }: { user: Employee, onBack?: () => void }) => 
         if (matByName) {
           finalMaterialId = matByName.id;
         } else {
-          const code = `VT${(materials.length + 1).toString().padStart(3, '0')}`;
+          const random = Math.floor(100 + Math.random() * 900);
+          const code = `VT${(materials.length + 1).toString().padStart(3, '0')}-${random}`;
           const { data: newMat, error: matErr } = await supabase.from('materials').insert([{ name: formData.material_id, code }]).select();
           if (matErr) throw matErr;
           if (newMat) {
@@ -7033,21 +7143,18 @@ const Transfer = ({ user, onBack }: { user: Employee, onBack?: () => void }) => 
                     />
 
                     <div className="space-y-1">
-                      <label className="text-[10px] font-bold text-gray-400 uppercase">Số lượng chuyển *</label>
-                      <div className="relative">
-                        <input 
-                          type="number" 
-                          required 
-                          value={formData.quantity} 
-                          onChange={(e) => setFormData({...formData, quantity: Number(e.target.value)})} 
-                          className={`w-full px-4 py-2 rounded-xl border ${availableStock !== null && formData.quantity > availableStock ? 'border-red-500 ring-2 ring-red-500/10' : 'border-gray-200'} text-sm outline-none focus:ring-2 focus:ring-orange-500/20`} 
-                        />
-                        {availableStock !== null && (
-                          <div className={`absolute -bottom-5 left-0 text-[10px] font-bold ${availableStock <= 0 ? 'text-red-500' : 'text-green-600'}`}>
-                            Tồn kho hiện tại: {formatNumber(availableStock)}
-                          </div>
-                        )}
-                      </div>
+                      <NumericInput 
+                        label="Số lượng chuyển *"
+                        required
+                        value={formData.quantity}
+                        onChange={(val) => setFormData({...formData, quantity: val})}
+                        error={availableStock !== null && formData.quantity > availableStock}
+                      />
+                      {availableStock !== null && (
+                        <div className={`text-[10px] font-bold mt-1 ${availableStock <= 0 ? 'text-red-500' : 'text-green-600'}`}>
+                          Tồn kho hiện tại: {formatNumber(availableStock)}
+                        </div>
+                      )}
                     </div>
 
                     <div className="space-y-1">
@@ -8673,6 +8780,324 @@ const BackupNow = ({ onBack }: { onBack: () => void }) => {
   );
 };
 
+const DatabaseSetup = ({ onBack }: { onBack: () => void }) => {
+  const sqlSchema = `-- SQL Schema for CDX Warehouse Management
+-- Updated: 2026-03-12
+
+-- 1. Users table (Employees)
+CREATE TABLE IF NOT EXISTS users (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  code TEXT UNIQUE NOT NULL,
+  full_name TEXT NOT NULL,
+  email TEXT,
+  phone TEXT,
+  id_card TEXT,
+  dob DATE,
+  join_date DATE DEFAULT CURRENT_DATE,
+  tax_id TEXT,
+  app_pass TEXT NOT NULL,
+  department TEXT,
+  position TEXT,
+  has_salary BOOLEAN DEFAULT false,
+  role TEXT NOT NULL DEFAULT 'User',
+  data_view_permission TEXT,
+  avatar_url TEXT,
+  resign_date DATE,
+  initial_budget NUMERIC DEFAULT 0,
+  status TEXT DEFAULT 'Đang làm việc',
+  created_at TIMESTAMPTZ DEFAULT now()
+);
+
+-- 2. Material Groups table
+CREATE TABLE IF NOT EXISTS material_groups (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  code TEXT UNIQUE,
+  name TEXT NOT NULL,
+  notes TEXT,
+  created_at TIMESTAMPTZ DEFAULT now()
+);
+
+-- 3. Materials table
+CREATE TABLE IF NOT EXISTS materials (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  code TEXT UNIQUE NOT NULL,
+  name TEXT NOT NULL,
+  group_id UUID REFERENCES material_groups(id),
+  warehouse_id UUID, -- Optional: default warehouse
+  specification TEXT,
+  unit TEXT,
+  description TEXT,
+  image_url TEXT,
+  status TEXT DEFAULT 'Đang sử dụng',
+  created_at TIMESTAMPTZ DEFAULT now()
+);
+
+-- 4. Warehouses table
+CREATE TABLE IF NOT EXISTS warehouses (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  code TEXT UNIQUE NOT NULL,
+  name TEXT NOT NULL,
+  address TEXT,
+  manager_id UUID REFERENCES users(id),
+  coordinates TEXT,
+  notes TEXT,
+  capacity TEXT,
+  status TEXT DEFAULT 'Đang hoạt động',
+  created_at TIMESTAMPTZ DEFAULT now()
+);
+
+-- 5. Stock In table
+CREATE TABLE IF NOT EXISTS stock_in (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  import_code TEXT UNIQUE NOT NULL,
+  date DATE NOT NULL,
+  warehouse_id UUID REFERENCES warehouses(id),
+  material_id UUID REFERENCES materials(id),
+  quantity NUMERIC NOT NULL,
+  unit_price NUMERIC NOT NULL,
+  total_amount NUMERIC NOT NULL,
+  unit TEXT,
+  notes TEXT,
+  employee_id UUID REFERENCES users(id),
+  status TEXT DEFAULT 'Chờ duyệt',
+  created_at TIMESTAMPTZ DEFAULT now()
+);
+
+-- 6. Stock Out table
+CREATE TABLE IF NOT EXISTS stock_out (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  export_code TEXT UNIQUE NOT NULL,
+  date DATE NOT NULL,
+  warehouse_id UUID REFERENCES warehouses(id),
+  material_id UUID REFERENCES materials(id),
+  quantity NUMERIC NOT NULL,
+  notes TEXT,
+  employee_id UUID REFERENCES users(id),
+  status TEXT DEFAULT 'Chờ duyệt',
+  created_at TIMESTAMPTZ DEFAULT now()
+);
+
+-- 7. Transfers table
+CREATE TABLE IF NOT EXISTS transfers (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  transfer_code TEXT UNIQUE NOT NULL,
+  date DATE NOT NULL,
+  from_warehouse_id UUID REFERENCES warehouses(id),
+  to_warehouse_id UUID REFERENCES warehouses(id),
+  material_id UUID REFERENCES materials(id),
+  quantity NUMERIC NOT NULL,
+  notes TEXT,
+  employee_id UUID REFERENCES users(id),
+  status TEXT DEFAULT 'Chờ duyệt',
+  created_at TIMESTAMPTZ DEFAULT now()
+);
+
+-- 8. Costs table
+CREATE TABLE IF NOT EXISTS costs (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  cost_code TEXT UNIQUE,
+  date DATE NOT NULL,
+  employee_id UUID REFERENCES users(id),
+  cost_type TEXT,
+  content TEXT,
+  warehouse_id UUID REFERENCES warehouses(id),
+  material_id UUID REFERENCES materials(id),
+  quantity NUMERIC DEFAULT 0,
+  unit TEXT,
+  unit_price NUMERIC DEFAULT 0,
+  total_amount NUMERIC NOT NULL,
+  notes TEXT,
+  cost_category TEXT DEFAULT 'Chi phí',
+  stock_status TEXT DEFAULT 'Chưa nhập',
+  status TEXT DEFAULT 'Chờ duyệt',
+  created_at TIMESTAMPTZ DEFAULT now()
+);
+
+-- 9. Attendance table
+CREATE TABLE IF NOT EXISTS attendance (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  employee_id UUID REFERENCES users(id),
+  date DATE NOT NULL,
+  status TEXT NOT NULL,
+  notes TEXT,
+  created_at TIMESTAMPTZ DEFAULT now(),
+  UNIQUE(employee_id, date)
+);
+
+-- 10. Advances table
+CREATE TABLE IF NOT EXISTS advances (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  employee_id UUID REFERENCES users(id),
+  date DATE NOT NULL,
+  amount NUMERIC NOT NULL,
+  type TEXT NOT NULL,
+  notes TEXT,
+  status TEXT DEFAULT 'Chờ duyệt',
+  created_at TIMESTAMPTZ DEFAULT now()
+);
+
+-- 11. Reminders table
+CREATE TABLE IF NOT EXISTS reminders (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  title TEXT NOT NULL,
+  content TEXT,
+  reminder_time TIMESTAMPTZ NOT NULL,
+  browser_notification BOOLEAN DEFAULT true,
+  status TEXT DEFAULT 'pending',
+  created_at TIMESTAMPTZ DEFAULT now()
+);
+
+-- 12. Notes table
+CREATE TABLE IF NOT EXISTS notes (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  content TEXT NOT NULL,
+  date DATE NOT NULL DEFAULT CURRENT_DATE,
+  weather TEXT,
+  related_object TEXT,
+  object_code TEXT,
+  note_code TEXT,
+  location TEXT,
+  related_personnel JSONB DEFAULT '[]',
+  created_by UUID REFERENCES users(id),
+  created_at TIMESTAMPTZ DEFAULT now()
+);
+
+-- 13. Inventory table (Real-time balance)
+CREATE TABLE IF NOT EXISTS inventory (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  warehouse_id UUID REFERENCES warehouses(id),
+  material_id UUID REFERENCES materials(id),
+  quantity NUMERIC DEFAULT 0,
+  updated_at TIMESTAMPTZ DEFAULT now(),
+  UNIQUE(warehouse_id, material_id)
+);
+
+-- 14. Salary Settings table
+CREATE TABLE IF NOT EXISTS salary_settings (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  employee_id UUID REFERENCES users(id) UNIQUE,
+  base_salary NUMERIC DEFAULT 0,
+  daily_rate NUMERIC DEFAULT 0,
+  insurance_deduction NUMERIC DEFAULT 0,
+  created_at TIMESTAMPTZ DEFAULT now()
+);
+
+-- 15. Partners table (Customers & Suppliers)
+CREATE TABLE IF NOT EXISTS partners (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  code TEXT UNIQUE NOT NULL,
+  name TEXT NOT NULL,
+  type TEXT, -- 'Khách hàng', 'Nhà cung cấp', 'Cả hai'
+  phone TEXT,
+  address TEXT,
+  tax_id TEXT,
+  notes TEXT,
+  status TEXT DEFAULT 'Hoạt động',
+  created_at TIMESTAMPTZ DEFAULT now()
+);
+
+-- 16. Allowances table
+CREATE TABLE IF NOT EXISTS allowances (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  employee_id UUID REFERENCES users(id),
+  date DATE NOT NULL,
+  amount NUMERIC NOT NULL,
+  type TEXT NOT NULL, -- 'Phụ cấp', 'Thưởng', 'Khác'
+  notes TEXT,
+  status TEXT DEFAULT 'Chờ duyệt',
+  created_at TIMESTAMPTZ DEFAULT now()
+);
+
+-- ==========================================
+-- ROW LEVEL SECURITY (RLS) CONFIGURATION
+-- ==========================================
+
+-- Enable RLS for all tables
+ALTER TABLE users ENABLE ROW LEVEL SECURITY;
+ALTER TABLE material_groups ENABLE ROW LEVEL SECURITY;
+ALTER TABLE materials ENABLE ROW LEVEL SECURITY;
+ALTER TABLE warehouses ENABLE ROW LEVEL SECURITY;
+ALTER TABLE stock_in ENABLE ROW LEVEL SECURITY;
+ALTER TABLE stock_out ENABLE ROW LEVEL SECURITY;
+ALTER TABLE transfers ENABLE ROW LEVEL SECURITY;
+ALTER TABLE costs ENABLE ROW LEVEL SECURITY;
+ALTER TABLE attendance ENABLE ROW LEVEL SECURITY;
+ALTER TABLE advances ENABLE ROW LEVEL SECURITY;
+ALTER TABLE reminders ENABLE ROW LEVEL SECURITY;
+ALTER TABLE notes ENABLE ROW LEVEL SECURITY;
+ALTER TABLE inventory ENABLE ROW LEVEL SECURITY;
+ALTER TABLE salary_settings ENABLE ROW LEVEL SECURITY;
+ALTER TABLE partners ENABLE ROW LEVEL SECURITY;
+ALTER TABLE allowances ENABLE ROW LEVEL SECURITY;
+
+-- Create Policies (Allow all for anon and authenticated roles)
+-- This ensures that both anonymous and logged-in users can interact with data.
+DO $$ 
+DECLARE 
+  t text;
+BEGIN
+  FOR t IN SELECT table_name FROM information_schema.tables WHERE table_schema = 'public' AND table_type = 'BASE TABLE'
+  LOOP
+    EXECUTE format('DROP POLICY IF EXISTS "Enable all for anon" ON %I', t);
+    EXECUTE format('CREATE POLICY "Enable all for anon" ON %I FOR ALL TO anon USING (true) WITH CHECK (true)', t);
+    EXECUTE format('DROP POLICY IF EXISTS "Enable all for authenticated" ON %I', t);
+    EXECUTE format('CREATE POLICY "Enable all for authenticated" ON %I FOR ALL TO authenticated USING (true) WITH CHECK (true)', t);
+  END LOOP;
+END $$;
+`;
+
+  const copyToClipboard = () => {
+    navigator.clipboard.writeText(sqlSchema);
+    alert('Đã sao chép SQL vào bộ nhớ tạm!');
+  };
+
+  return (
+    <div className="p-4 md:p-6 space-y-6 pb-44">
+      <PageBreadcrumb title="Cấu hình Database" onBack={onBack} />
+      
+      <div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
+        <div className="p-6 border-b border-gray-50 flex items-center justify-between bg-gray-50/50">
+          <div>
+            <h3 className="text-lg font-bold text-gray-800">SQL Schema cho Supabase</h3>
+            <p className="text-xs text-gray-500 mt-1">Sử dụng mã SQL này trong Supabase SQL Editor để khởi tạo các bảng.</p>
+          </div>
+          <button 
+            onClick={copyToClipboard}
+            className="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-xl text-sm font-bold hover:bg-primary-hover transition-colors shadow-lg shadow-primary/20"
+          >
+            <ClipboardCheck size={18} /> Sao chép SQL
+          </button>
+        </div>
+        
+        <div className="p-6">
+          <div className="bg-gray-900 rounded-2xl p-6 overflow-x-auto">
+            <pre className="text-green-400 text-xs font-mono leading-relaxed">
+              {sqlSchema}
+            </pre>
+          </div>
+          
+          <div className="mt-8 p-6 bg-amber-50 rounded-2xl border border-amber-100 space-y-4">
+            <div className="flex gap-4">
+              <div className="p-3 bg-amber-100 rounded-2xl text-amber-600 h-fit">
+                <AlertCircle size={24} />
+              </div>
+              <div className="space-y-2">
+                <h4 className="text-sm font-bold text-amber-900">Lưu ý quan trọng về RLS</h4>
+                <p className="text-xs text-amber-800 leading-relaxed">
+                  Mặc định Supabase bật <b>Row Level Security (RLS)</b>. Nếu bạn không thêm các Policy để cho phép <b>INSERT/SELECT/UPDATE</b>, ứng dụng sẽ không thể nhập dữ liệu.
+                </p>
+                <p className="text-xs text-amber-800 leading-relaxed font-bold">
+                  Để thử nghiệm nhanh, bạn có thể tắt RLS cho từng bảng trong Supabase Dashboard (không khuyến khích cho sản xuất).
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 export default function App() {
   const [user, setUser] = useState<Employee | null>(null);
   const [currentPage, setCurrentPage] = useState('dashboard');
@@ -8790,6 +9215,7 @@ export default function App() {
         { id: 'inventory-report', label: 'Kiểm tra tồn kho', icon: BarChart3 },
         { id: 'warehouses', label: 'Danh sách kho', icon: Warehouse },
         { id: 'materials', label: 'Danh mục vật tư', icon: Package },
+        { id: 'database-setup', label: 'Cấu hình Database', icon: Settings2 },
       ]
     },
     {
@@ -8812,6 +9238,7 @@ export default function App() {
       items: [
         { id: 'hr-records', label: 'Quản lý nhân sự', icon: UserCircle },
         { id: 'notes', label: 'Nhật ký / Ghi chú', icon: FileText },
+        { id: 'notifications', label: 'Thông báo', icon: BellRing },
         { id: 'reminders', label: 'Thiết lập Lịch nhắc', icon: Bell },
         { id: 'trash', label: 'Thùng rác', icon: Trash2 },
       ]
@@ -8831,6 +9258,10 @@ export default function App() {
       if (user.role === 'User') {
         const allowed = ['stock-in', 'stock-out', 'transfer', 'attendance', 'cost-report'];
         return allowed.includes(item.id);
+      }
+      if (user.role !== 'Admin App') {
+        const adminOnly = ['database-setup', 'backup-now', 'backup-settings', 'salary-settings'];
+        return !adminOnly.includes(item.id);
       }
       return true;
     }).map(item => item.id === 'pending-approvals' ? { ...item, badge: pendingCount } : item)
@@ -8854,6 +9285,7 @@ export default function App() {
       case 'payroll': return <MonthlySalary user={user} onBack={goBack} />;
       case 'salary-settings': return <SalarySettings user={user} onBack={goBack} />;
       case 'notes': return <Notes user={user} onBack={goBack} />;
+      case 'notifications': return <Reminders user={user} onBack={goBack} />;
       case 'reminders': return <Reminders user={user} onBack={goBack} />;
       case 'partners': return <Placeholder title="Khách hàng & nhà cung cấp" onBack={goBack} />;
       case 'inventory-report': return <InventoryReport user={user} onBack={goBack} />;
@@ -8862,8 +9294,15 @@ export default function App() {
       case 'deleted-warehouses': return <DeletedWarehouses onBack={goBack} />;
       case 'deleted-slips': return <DeletedSlips onBack={goBack} />;
       case 'material-groups': return <MaterialGroups user={user} onBack={goBack} />;
-      case 'backup-settings': return <Backup onBack={goBack} />;
-      case 'backup-now': return <BackupNow onBack={goBack} />;
+      case 'backup-settings': 
+        if (user.role !== 'Admin App') return <Dashboard user={user} onNavigate={navigateTo} />;
+        return <Backup onBack={goBack} />;
+      case 'backup-now': 
+        if (user.role !== 'Admin App') return <Dashboard user={user} onNavigate={navigateTo} />;
+        return <BackupNow onBack={goBack} />;
+      case 'database-setup': 
+        if (user.role !== 'Admin App') return <Dashboard user={user} onNavigate={navigateTo} />;
+        return <DatabaseSetup onBack={goBack} />;
       default: return (
         <div className="p-4 md:p-6 space-y-6">
           <PageBreadcrumb title={currentPage} onBack={goBack} />
@@ -8942,7 +9381,7 @@ export default function App() {
                     <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">Tài khoản</p>
                     <p className="text-sm font-bold text-gray-800">{user.full_name}</p>
                     <div className="flex items-center gap-2 mt-1">
-                      <span className="text-xs text-gray-500">{user.id}</span>
+                      <span className="text-xs text-gray-500">{user.code || user.id.slice(0, 8)}</span>
                       <span className="text-[9px] bg-primary/10 text-primary px-1.5 py-0.5 rounded-md font-bold uppercase tracking-wider">{user.role}</span>
                     </div>
                   </div>

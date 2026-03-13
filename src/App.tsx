@@ -74,6 +74,7 @@ import {
   Play,
   AlertCircle,
   Lock,
+  Edit2,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { supabase } from './supabaseClient';
@@ -126,7 +127,8 @@ const NumericInput = ({
   icon: Icon,
   showControls = false,
   step = 1,
-  error = false
+  error = false,
+  isDecimal = false
 }: { 
   label?: string, 
   value: number, 
@@ -139,25 +141,64 @@ const NumericInput = ({
   icon?: any,
   showControls?: boolean,
   step?: number,
-  error?: boolean
+  error?: boolean,
+  isDecimal?: boolean
 }) => {
-  const [displayValue, setDisplayValue] = useState(formatNumber(value));
+  const [displayValue, setDisplayValue] = useState('');
+  const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    setDisplayValue(formatNumber(value));
-  }, [value]);
+    if (value === 0 && displayValue === '') return;
+    const formatted = isDecimal ? value.toString() : formatNumber(value);
+    if (formatted !== displayValue) {
+      setDisplayValue(formatted);
+    }
+  }, [value, isDecimal]);
 
   const handleChange = (e: ChangeEvent<HTMLInputElement>) => {
     const rawValue = e.target.value;
+    
+    if (isDecimal) {
+      // Allow digits and one dot
+      const cleanValue = rawValue.replace(/[^0-9.]/g, '');
+      const parts = cleanValue.split('.');
+      const finalValue = parts[0] + (parts.length > 1 ? '.' + parts.slice(1).join('') : '');
+      
+      setDisplayValue(finalValue);
+      const numValue = parseFloat(finalValue);
+      if (!isNaN(numValue)) {
+        onChange(numValue);
+      } else if (finalValue === '') {
+        onChange(0);
+      }
+      return;
+    }
+
     const cleanValue = rawValue.replace(/[^0-9]/g, '');
     if (cleanValue === '') {
       setDisplayValue('');
       onChange(0);
       return;
     }
+    
     const numValue = parseInt(cleanValue, 10);
-    setDisplayValue(formatNumber(numValue));
+    const formatted = formatNumber(numValue);
+    
+    // Cursor position fix
+    const cursorPosition = e.target.selectionStart || 0;
+    const oldLength = rawValue.length;
+    
+    setDisplayValue(formatted);
     onChange(numValue);
+
+    // We need to wait for the next render to set the cursor position
+    setTimeout(() => {
+      if (inputRef.current) {
+        const newLength = formatted.length;
+        const newPosition = cursorPosition + (newLength - oldLength);
+        inputRef.current.setSelectionRange(newPosition, newPosition);
+      }
+    }, 0);
   };
 
   return (
@@ -176,8 +217,9 @@ const NumericInput = ({
         <div className="relative flex-1">
           {Icon && <Icon className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />}
           <input 
+            ref={inputRef}
             type="text"
-            inputMode="numeric"
+            inputMode={isDecimal ? "decimal" : "numeric"}
             value={displayValue}
             onChange={handleChange}
             placeholder={placeholder}
@@ -195,6 +237,136 @@ const NumericInput = ({
           </button>
         )}
       </div>
+    </div>
+  );
+};
+
+const CreatableSelect = ({
+  label,
+  value,
+  options,
+  onChange,
+  onCreate,
+  placeholder = "-- Chọn --",
+  required = false,
+  className = "",
+  labelClassName = "text-[10px] font-bold text-gray-400 uppercase",
+  selectClassName = "w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20 bg-white",
+}: {
+  label?: string;
+  value: string;
+  options: { id: string; name: string }[];
+  onChange: (id: string) => void;
+  onCreate: (name: string) => void;
+  placeholder?: string;
+  required?: boolean;
+  className?: string;
+  labelClassName?: string;
+  selectClassName?: string;
+}) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const [searchTerm, setSearchTerm] = useState("");
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  const selectedOption = options.find(opt => opt.id === value);
+  
+  useEffect(() => {
+    if (!isOpen) {
+      setSearchTerm(selectedOption ? selectedOption.name : (value && !isUUID(value) ? value : ""));
+    }
+  }, [value, selectedOption, isOpen]);
+
+  const filteredOptions = options.filter(opt => 
+    opt.name.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
+        setIsOpen(false);
+        setSearchTerm(selectedOption ? selectedOption.name : (value && !isUUID(value) ? value : ""));
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [selectedOption, value]);
+
+  return (
+    <div className={`relative ${className}`} ref={containerRef}>
+      {label && <label className={labelClassName}>{label} {required && '*'}</label>}
+      <div className="relative mt-1">
+        <div className="relative">
+          <input
+            type="text"
+            placeholder={placeholder}
+            value={searchTerm}
+            onChange={(e) => {
+              setSearchTerm(e.target.value);
+              setIsOpen(true);
+              if (e.target.value === "") onChange("");
+            }}
+            onFocus={() => setIsOpen(true)}
+            className={`${selectClassName} pr-10`}
+          />
+          <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1">
+            {searchTerm && (
+              <button 
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setSearchTerm("");
+                  onChange("");
+                }}
+                className="p-1 hover:bg-gray-100 rounded-full text-gray-400"
+              >
+                <X size={12} />
+              </button>
+            )}
+            <ChevronDown size={16} className={`text-gray-400 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+          </div>
+        </div>
+
+        <AnimatePresence>
+          {isOpen && (filteredOptions.length > 0 || (searchTerm && !options.find(opt => opt.name.toLowerCase() === searchTerm.toLowerCase()))) && (
+            <motion.div
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              className="absolute z-[120] left-0 right-0 mt-1 bg-white rounded-xl shadow-xl border border-gray-100 overflow-hidden"
+            >
+              <div className="max-h-60 overflow-y-auto custom-scrollbar">
+                {filteredOptions.map((opt) => (
+                  <div
+                    key={opt.id}
+                    onClick={() => {
+                      onChange(opt.id);
+                      setSearchTerm(opt.name);
+                      setIsOpen(false);
+                    }}
+                    className={`px-4 py-2 text-sm cursor-pointer hover:bg-primary/5 transition-colors ${value === opt.id ? 'bg-primary/10 text-primary font-bold' : 'text-gray-700'}`}
+                  >
+                    {opt.name}
+                  </div>
+                ))}
+                
+                {searchTerm && !options.find(opt => opt.name.toLowerCase() === searchTerm.toLowerCase()) && (
+                  <div
+                    onClick={() => {
+                      onCreate(searchTerm);
+                      setIsOpen(false);
+                    }}
+                    className="px-4 py-3 border-t border-gray-50 bg-gray-50/50 cursor-pointer hover:bg-primary/5 transition-colors flex items-center gap-2 text-primary font-bold text-sm"
+                  >
+                    <Plus size={16} />
+                    <span>Thêm mới: "{searchTerm}"</span>
+                  </div>
+                )}
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
+      {required && !value && <input tabIndex={-1} autoComplete="off" style={{ opacity: 0, height: 0, width: 0, position: 'absolute' }} required />}
     </div>
   );
 };
@@ -324,20 +496,6 @@ const LoginPage = ({ onLogin }: { onLogin: (user: Employee) => void }) => {
           <div className="text-center">
             <h2 className="text-primary font-black text-xl tracking-widest uppercase">QUẢN LÝ KHO CDX</h2>
             <p className="text-[10px] text-gray-400 font-bold tracking-widest uppercase mt-1">Hệ thống quản lý nội bộ</p>
-          </div>
-          
-          <div className="mt-4 flex items-center gap-2 px-3 py-1 rounded-full bg-gray-50 border border-gray-100">
-            <div className={`w-1.5 h-1.5 rounded-full ${
-              connectionStatus === 'ok' ? 'bg-green-500 animate-pulse' : 
-              connectionStatus === 'error' ? 'bg-red-500' : 'bg-amber-500 animate-bounce'
-            }`} />
-            <span className="text-[9px] font-bold text-gray-500 uppercase tracking-tighter">
-              {connectionStatus === 'ok' ? 'Kết nối Database: OK' : 
-               connectionStatus === 'error' ? 'Lỗi kết nối Database' : 'Đang kiểm tra kết nối...'}
-            </span>
-            {connectionStatus === 'error' && (
-              <button onClick={checkConnection} className="text-[9px] text-primary font-black hover:underline ml-1">Thử lại</button>
-            )}
           </div>
         </div>
 
@@ -1230,7 +1388,7 @@ const MaterialGroups = ({ user, onBack }: { user: Employee, onBack?: () => void 
   );
 };
 
-const Materials = ({ user, onBack }: { user: Employee, onBack?: () => void }) => {
+const Materials = ({ user, onBack, onNavigate }: { user: Employee, onBack?: () => void, onNavigate?: (page: string) => void }) => {
   const [materials, setMaterials] = useState<any[]>([]);
   const [groups, setGroups] = useState<any[]>([]);
   const [warehouses, setWarehouses] = useState<any[]>([]);
@@ -1603,22 +1761,24 @@ const Materials = ({ user, onBack }: { user: Employee, onBack?: () => void }) =>
                         />
                       </div>
                       
-                      <CustomCombobox 
+                      <CreatableSelect
                         label="Nhóm vật tư *"
-                        value={groups.find(g => g.id === formData.group_id)?.name || formData.group_id}
-                        onChange={(val) => setFormData({...formData, group_id: val})}
+                        value={formData.group_id}
                         options={groups}
-                        placeholder="Chọn hoặc nhập mới..."
+                        onChange={(val) => setFormData({...formData, group_id: val})}
+                        onCreate={(val) => setFormData({...formData, group_id: val})}
+                        placeholder="Chọn nhóm..."
                         required
                       />
                     </div>
 
                     <div className="space-y-4">
-                      <CustomCombobox 
+                      <CreatableSelect 
                         label="Đơn vị tính"
                         value={formData.unit}
+                        options={Array.from(new Set(materials.map(m => m.unit))).filter(Boolean).map((u: any) => ({ id: String(u), name: String(u) }))}
                         onChange={(val) => setFormData({...formData, unit: val})}
-                        options={Array.from(new Set(materials.map(m => m.unit))).filter(Boolean).map((u, i) => ({ id: i, name: u }))}
+                        onCreate={(val) => setFormData({...formData, unit: val})}
                         placeholder="Chọn hoặc nhập mới..."
                       />
 
@@ -2911,33 +3071,33 @@ const Costs = ({ user, onBack }: { user: Employee, onBack?: () => void }) => {
                         </div>
                       </div>
 
-                      <CustomCombobox 
+                      <CreatableSelect 
                         label="Loại chi phí *"
                         value={formData.cost_type}
-                        onChange={(val) => setFormData({...formData, cost_type: val})}
-                        onCreateNew={(name) => setFormData({...formData, cost_type: name})}
                         options={costTypes}
-                        placeholder="Chọn hoặc nhập mới..."
+                        onChange={(val) => setFormData({...formData, cost_type: val})}
+                        onCreate={(val) => setFormData({...formData, cost_type: val})}
+                        placeholder="Chọn loại chi phí..."
                         required
                       />
 
-                      <CustomCombobox 
+                      <CreatableSelect 
                         label="Tên kho *"
                         value={formData.warehouse_name}
-                        onChange={(val) => setFormData({...formData, warehouse_name: val})}
-                        onCreateNew={(name) => setFormData({...formData, warehouse_name: name})}
                         options={warehouses}
-                        placeholder="Chọn hoặc nhập mới..."
+                        onChange={(val) => setFormData({...formData, warehouse_name: val})}
+                        onCreate={(val) => setFormData({...formData, warehouse_name: val})}
+                        placeholder="Chọn kho..."
                         required
                       />
 
-                      <CustomCombobox 
+                      <CreatableSelect 
                         label="Nội dung chi *"
                         value={formData.content}
-                        onChange={(val) => setFormData({...formData, content: val})}
-                        onCreateNew={(name) => setFormData({...formData, content: name})}
                         options={materials}
-                        placeholder="Chọn hoặc nhập mới..."
+                        onChange={(val) => setFormData({...formData, content: val})}
+                        onCreate={(val) => setFormData({...formData, content: val})}
+                        placeholder="Chọn nội dung..."
                         required
                       />
                     </div>
@@ -2949,12 +3109,12 @@ const Costs = ({ user, onBack }: { user: Employee, onBack?: () => void }) => {
                           value={formData.quantity}
                           onChange={(val) => setFormData({...formData, quantity: val})}
                         />
-                        <CustomCombobox 
+                        <CreatableSelect 
                           label="Đơn vị tính"
                           value={formData.unit}
-                          onChange={(val) => setFormData({...formData, unit: val})}
-                          onCreateNew={(name) => setFormData({...formData, unit: name})}
                           options={units}
+                          onChange={(val) => setFormData({...formData, unit: val})}
+                          onCreate={(val) => setFormData({...formData, unit: val})}
                           placeholder="Chọn/Nhập..."
                         />
                       </div>
@@ -3912,34 +4072,27 @@ const CostReport = ({ user, onBack }: { user: Employee, onBack?: () => void }) =
                       <input type="text" readOnly value={generateCostCode(masterForm.date, masterForm.employee_id)} className="w-full px-4 py-2 rounded-xl border border-gray-100 bg-gray-50 text-sm text-gray-500 outline-none" />
                     </div>
 
-                    <CustomCombobox 
+                    <CreatableSelect 
                       label="Nội dung chi *"
                       value={detailForm.content}
-                      onChange={(val) => setDetailForm({...detailForm, content: val})}
                       options={materials}
-                      placeholder="Chọn hoặc nhập mới..."
+                      onChange={(val) => setDetailForm({...detailForm, content: val})}
+                      onCreate={(val) => setDetailForm({...detailForm, content: val})}
+                      placeholder="Chọn nội dung..."
                       required
                     />
 
                     <div className="grid grid-cols-2 gap-4">
-                      <div className="space-y-1">
-                        <label className="text-[10px] font-bold text-gray-400 uppercase">Đơn giá</label>
-                        <input 
-                          type="number" 
-                          value={detailForm.unit_price} 
-                          onChange={(e) => setDetailForm({...detailForm, unit_price: Number(e.target.value)})}
-                          className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20" 
-                        />
-                      </div>
-                      <div className="space-y-1">
-                        <label className="text-[10px] font-bold text-gray-400 uppercase">Số lượng</label>
-                        <input 
-                          type="number" 
-                          value={detailForm.quantity} 
-                          onChange={(e) => setDetailForm({...detailForm, quantity: Number(e.target.value)})}
-                          className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20" 
-                        />
-                      </div>
+                      <NumericInput 
+                        label="Đơn giá"
+                        value={detailForm.unit_price}
+                        onChange={(val) => setDetailForm({...detailForm, unit_price: val})}
+                      />
+                      <NumericInput 
+                        label="Số lượng"
+                        value={detailForm.quantity}
+                        onChange={(val) => setDetailForm({...detailForm, quantity: val})}
+                      />
                     </div>
 
                     <div className="space-y-1">
@@ -3951,28 +4104,31 @@ const CostReport = ({ user, onBack }: { user: Employee, onBack?: () => void }) =
                   </div>
 
                   <div className="space-y-4">
-                    <CustomCombobox 
+                    <CreatableSelect 
                       label="Loại chi phí *"
                       value={detailForm.cost_type}
-                      onChange={(val) => setDetailForm({...detailForm, cost_type: val})}
                       options={costTypes}
-                      placeholder="Chọn hoặc nhập mới..."
+                      onChange={(val) => setDetailForm({...detailForm, cost_type: val})}
+                      onCreate={(val) => setDetailForm({...detailForm, cost_type: val})}
+                      placeholder="Chọn loại chi phí..."
                       required
                     />
 
                     <div className="grid grid-cols-2 gap-4">
-                      <CustomCombobox 
+                      <CreatableSelect 
                         label="Đơn vị tính"
                         value={detailForm.unit}
-                        onChange={(val) => setDetailForm({...detailForm, unit: val})}
                         options={units}
+                        onChange={(val) => setDetailForm({...detailForm, unit: val})}
+                        onCreate={(val) => setDetailForm({...detailForm, unit: val})}
                         placeholder="Chọn/Nhập..."
                       />
-                      <CustomCombobox 
+                      <CreatableSelect 
                         label="Tên kho"
                         value={detailForm.warehouse_name}
-                        onChange={(val) => setDetailForm({...detailForm, warehouse_name: val})}
                         options={warehouses}
+                        onChange={(val) => setDetailForm({...detailForm, warehouse_name: val})}
+                        onCreate={(val) => setDetailForm({...detailForm, warehouse_name: val})}
                         placeholder="Chọn kho..."
                       />
                     </div>
@@ -4069,36 +4225,31 @@ const Dashboard = ({ user, onNavigate }: { user: Employee, onNavigate: (page: st
     const fetchCounts = async () => {
       try {
         setLoading(true);
-        // Fetch Employees
-        let empQuery = supabase.from('users').select('*', { count: 'exact', head: true });
+        // Fetch Counts
+        let empQuery = supabase.from('users').select('*', { count: 'exact', head: true }).neq('status', 'Nghỉ việc');
         if (user.role !== 'Admin App') {
           empQuery = empQuery.neq('role', 'Admin App');
         }
         const { count: empCount } = await empQuery;
-        
-        // Fetch Materials
         const { count: matCount } = await supabase.from('materials').select('*', { count: 'exact', head: true });
-        
-        // Fetch Warehouses
         const { count: whCount } = await supabase.from('warehouses').select('*', { count: 'exact', head: true });
+        const { count: groupCount } = await supabase.from('material_groups').select('*', { count: 'exact', head: true });
         
-        // Fetch Slips
-        const { count: siCount } = await supabase.from('stock_in').select('*', { count: 'exact', head: true });
-        const { count: soCount } = await supabase.from('stock_out').select('*', { count: 'exact', head: true });
-        const { count: trCount } = await supabase.from('transfers').select('*', { count: 'exact', head: true });
-        
-        // Fetch Pending Slips
-        const [siP, soP, trP] = await Promise.all([
+        const [siP, soP, trP, siT, soT, trT] = await Promise.all([
           supabase.from('stock_in').select('*', { count: 'exact', head: true }).eq('status', 'Chờ duyệt'),
           supabase.from('stock_out').select('*', { count: 'exact', head: true }).eq('status', 'Chờ duyệt'),
-          supabase.from('transfers').select('*', { count: 'exact', head: true }).eq('status', 'Chờ duyệt')
+          supabase.from('transfers').select('*', { count: 'exact', head: true }).eq('status', 'Chờ duyệt'),
+          supabase.from('stock_in').select('*', { count: 'exact', head: true }),
+          supabase.from('stock_out').select('*', { count: 'exact', head: true }),
+          supabase.from('transfers').select('*', { count: 'exact', head: true })
         ]);
         
         setCounts({
           employees: empCount || 0,
           materials: matCount || 0,
           warehouses: whCount || 0,
-          slips: (siCount || 0) + (soCount || 0) + (trCount || 0),
+          materialGroups: groupCount || 0,
+          slips: (siT.count || 0) + (soT.count || 0) + (trT.count || 0),
           pendingSlips: (siP.count || 0) + (soP.count || 0) + (trP.count || 0)
         });
 
@@ -4110,7 +4261,18 @@ const Dashboard = ({ user, onNavigate }: { user: Employee, onNavigate: (page: st
             const balance = (inventory || []).filter(i => i.material_id === mat.id).reduce((s, i) => s + (i.quantity || 0), 0);
             return { ...mat, balance };
           });
-          setInventory(invData);
+
+          // Group by name to handle duplicates
+          const groupedInv: any[] = [];
+          invData.forEach(item => {
+            const existing = groupedInv.find(g => g.name.toLowerCase().trim() === item.name.toLowerCase().trim() && g.unit === item.unit);
+            if (existing) {
+              existing.balance += item.balance;
+            } else {
+              groupedInv.push({ ...item });
+            }
+          });
+          setInventory(groupedInv.filter(i => i.balance !== 0));
         }
 
         // Check attendance
@@ -4130,6 +4292,7 @@ const Dashboard = ({ user, onNavigate }: { user: Employee, onNavigate: (page: st
   const stats: any[] = [
     { label: 'NHÂN SỰ', value: counts.employees, icon: Users, color: 'bg-blue-50 text-blue-600', page: 'hr-records' },
     { label: 'VẬT TƯ', value: counts.materials, icon: Package, color: 'bg-green-50 text-green-600', page: 'materials' },
+    { label: 'NHÓM VẬT TƯ', value: counts.materialGroups, icon: Layers, color: 'bg-indigo-50 text-indigo-600', page: 'material-groups' },
     { label: 'KHO BÃI', value: counts.warehouses, icon: Warehouse, color: 'bg-orange-50 text-orange-600', page: 'warehouses' },
     (user.role === 'Admin' || user.role === 'Admin App')
       ? { label: 'PHIẾU DUYỆT', value: counts.pendingSlips, icon: ClipboardCheck, color: 'bg-purple-50 text-purple-600', page: 'pending-approvals' }
@@ -4159,6 +4322,7 @@ const Dashboard = ({ user, onNavigate }: { user: Employee, onNavigate: (page: st
         { label: 'Luân chuyển kho', icon: ArrowLeftRight, page: 'transfer' },
         { label: 'Kiểm tra tồn kho', icon: BarChart3, page: 'inventory-report' },
         { label: 'Danh sách kho', icon: Warehouse, page: 'warehouses' },
+        { label: 'Nhóm vật tư', icon: Layers, page: 'material-groups' },
         { label: 'Danh mục vật tư', icon: Settings, page: 'materials' },
       ]
     },
@@ -5288,8 +5452,7 @@ const Attendance = ({ user, onBack }: { user: Employee, onBack?: () => void }) =
                   value={editFormData.overtime}
                   onChange={(val) => setEditFormData({ ...editFormData, overtime: val })}
                   placeholder="Ví dụ: 1.5"
-                  step="0.1"
-                  type="number"
+                  isDecimal={true}
                 />
                 <div className="flex gap-3 pt-2">
                   <button onClick={() => setShowEditModal(false)} className="flex-1 py-2 rounded-xl border border-gray-200 text-sm font-bold text-gray-500">Hủy</button>
@@ -5322,6 +5485,8 @@ const Advances = ({ user, onBack }: { user: Employee, onBack?: () => void }) => 
   };
 
   const [formData, setFormData] = useState(initialFormState);
+  const [isEditing, setIsEditing] = useState(false);
+  const [selectedItem, setSelectedItem] = useState<any>(null);
 
   useEffect(() => {
     fetchData();
@@ -5344,31 +5509,55 @@ const Advances = ({ user, onBack }: { user: Employee, onBack?: () => void }) => 
     e.preventDefault();
     setSubmitting(true);
     try {
-      if (activeTab === 'advances') {
-        const { error } = await supabase.from('advances').insert([{
-          employee_id: formData.employee_id,
-          amount: formData.amount,
-          date: formData.date,
-          reason: formData.reason
-        }]);
+      const payload = {
+        employee_id: formData.employee_id,
+        amount: formData.amount,
+        date: formData.date,
+        type: activeTab === 'advances' ? 'Tạm ứng' : formData.type,
+        notes: formData.reason
+      };
+
+      if (isEditing && selectedItem) {
+        const { error } = await supabase.from(activeTab === 'advances' ? 'advances' : 'allowances').update(payload).eq('id', selectedItem.id);
         if (error) throw error;
       } else {
-        const { error } = await supabase.from('allowances').insert([{
-          employee_id: formData.employee_id,
-          amount: formData.amount,
-          date: formData.date,
-          type: formData.type,
-          notes: formData.reason
-        }]);
+        const { error } = await supabase.from(activeTab === 'advances' ? 'advances' : 'allowances').insert([payload]);
         if (error) throw error;
       }
+
       setShowModal(false);
       fetchData();
       setFormData(initialFormState);
+      setIsEditing(false);
+      setSelectedItem(null);
     } catch (err: any) {
       alert('Lỗi: ' + err.message);
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  const handleEdit = (item: any) => {
+    setSelectedItem(item);
+    setFormData({
+      employee_id: item.employee_id,
+      amount: item.amount,
+      date: item.date,
+      reason: item.notes || '',
+      type: item.type
+    });
+    setIsEditing(true);
+    setShowModal(true);
+  };
+
+  const handleDelete = async (id: string) => {
+    if (!confirm('Bạn có chắc chắn muốn xóa?')) return;
+    try {
+      const { error } = await supabase.from(activeTab === 'advances' ? 'advances' : 'allowances').delete().eq('id', id);
+      if (error) throw error;
+      fetchData();
+    } catch (err: any) {
+      alert('Lỗi: ' + err.message);
     }
   };
 
@@ -5402,11 +5591,19 @@ const Advances = ({ user, onBack }: { user: Employee, onBack?: () => void }) => 
               <tr><td colSpan={4} className="px-4 py-8 text-center text-gray-400 italic">Chưa có dữ liệu</td></tr>
             ) : (
               (activeTab === 'advances' ? advances : allowances).map((item) => (
-                <tr key={item.id} className="hover:bg-gray-50 transition-colors">
+                <tr key={item.id} className="hover:bg-gray-50 transition-colors group">
                   <td className="px-4 py-3 text-xs text-gray-600">{formatDate(item.date)}</td>
                   <td className="px-4 py-3 text-xs font-bold text-gray-800">{item.users?.full_name}</td>
                   <td className="px-4 py-3 text-xs font-black text-red-600">{formatCurrency(item.amount)}</td>
-                  <td className="px-4 py-3 text-xs text-gray-500 italic">{item.reason || item.notes || item.type || '-'}</td>
+                  <td className="px-4 py-3 text-xs text-gray-500 italic">
+                    <div className="flex items-center justify-between">
+                      <span>{item.reason || item.notes || item.type || '-'}</span>
+                      <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <button onClick={() => handleEdit(item)} className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"><Edit2 size={14} /></button>
+                        <button onClick={() => handleDelete(item.id)} className="p-1.5 text-red-600 hover:bg-red-50 rounded-lg transition-colors"><Trash2 size={14} /></button>
+                      </div>
+                    </div>
+                  </td>
                 </tr>
               ))
             )}
@@ -5419,8 +5616,8 @@ const Advances = ({ user, onBack }: { user: Employee, onBack?: () => void }) => 
           <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
             <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} className="bg-white rounded-3xl shadow-2xl w-full max-w-md overflow-hidden">
               <div className="bg-primary p-6 text-white flex items-center justify-between">
-                <h3 className="font-bold text-lg">Thêm {activeTab === 'advances' ? 'tạm ứng' : 'phụ cấp'} mới</h3>
-                <button onClick={() => setShowModal(false)} className="p-2 hover:bg-white/10 rounded-full transition-colors"><X size={20} /></button>
+                <h3 className="font-bold text-lg">{isEditing ? 'Cập nhật' : 'Thêm'} {activeTab === 'advances' ? 'tạm ứng' : 'phụ cấp'} mới</h3>
+                <button onClick={() => { setShowModal(false); setIsEditing(false); setSelectedItem(null); }} className="p-2 hover:bg-white/10 rounded-full transition-colors"><X size={20} /></button>
               </div>
               <form onSubmit={handleSubmit} className="p-6 space-y-4">
                 <div className="space-y-1">
@@ -5441,15 +5638,19 @@ const Advances = ({ user, onBack }: { user: Employee, onBack?: () => void }) => 
                   onChange={(val) => setFormData({...formData, amount: val})}
                 />
                 {activeTab === 'allowances' && (
-                  <div className="space-y-1">
-                    <label className="text-[10px] font-bold text-gray-400 uppercase">Loại phụ cấp</label>
-                    <select value={formData.type} onChange={(e) => setFormData({...formData, type: e.target.value})} className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20">
-                      <option value="meal">Tiền cơm</option>
-                      <option value="travel">Xăng xe</option>
-                      <option value="phone">Điện thoại</option>
-                      <option value="other">Khác</option>
-                    </select>
-                  </div>
+                  <CreatableSelect 
+                    label="Loại phụ cấp"
+                    value={formData.type}
+                    options={[
+                      { id: 'meal', name: 'Tiền cơm' },
+                      { id: 'travel', name: 'Xăng xe' },
+                      { id: 'phone', name: 'Điện thoại' },
+                      { id: 'other', name: 'Khác' }
+                    ]}
+                    onChange={(val) => setFormData({...formData, type: val})}
+                    onCreate={(val) => setFormData({...formData, type: val})}
+                    placeholder="Chọn hoặc nhập loại mới..."
+                  />
                 )}
                 <div className="space-y-1">
                   <label className="text-[10px] font-bold text-gray-400 uppercase">Ghi chú / Lý do</label>
@@ -6253,21 +6454,19 @@ const StockIn = ({ user, onBack, initialStatus }: { user: Employee, onBack?: () 
                       <input type="date" required value={formData.date} onChange={(e) => setFormData({...formData, date: e.target.value})} className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20" />
                     </div>
                     
-                    <CustomCombobox 
+                    <CreatableSelect 
                       label="Tên vật tư nhập *"
                       value={formData.material_id}
+                      options={materials}
                       onChange={(val) => {
-                        const mat = materials.find(m => m.id === val || m.name === val);
+                        const mat = materials.find(m => m.id === val);
                         setFormData({
                           ...formData, 
-                          material_id: mat?.id || val,
+                          material_id: val,
                           unit: mat?.unit || formData.unit
                         });
                       }}
-                      onCreateNew={(name) => {
-                        setFormData({...formData, material_id: name});
-                      }}
-                      options={materials}
+                      onCreate={(val) => setFormData({...formData, material_id: val})}
                       placeholder="Chọn vật tư..."
                       required
                     />
@@ -6289,12 +6488,12 @@ const StockIn = ({ user, onBack, initialStatus }: { user: Employee, onBack?: () 
                   </div>
 
                   <div className="space-y-4">
-                    <CustomCombobox 
+                    <CreatableSelect 
                       label="Tên kho nhập *"
                       value={formData.warehouse_id}
-                      onChange={(val) => setFormData({...formData, warehouse_id: val})}
-                      onCreateNew={(name) => setFormData({...formData, warehouse_id: name})}
                       options={warehouses}
+                      onChange={(val) => setFormData({...formData, warehouse_id: val})}
+                      onCreate={(val) => setFormData({...formData, warehouse_id: val})}
                       placeholder="Chọn kho..."
                       required
                     />
@@ -6668,22 +6867,22 @@ const StockOut = ({ user, onBack }: { user: Employee, onBack?: () => void }) => 
                       <input type="date" required value={formData.date} onChange={(e) => setFormData({...formData, date: e.target.value})} className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-red-600/20" />
                     </div>
                     
-                    <CustomCombobox 
+                    <CreatableSelect 
                       label="Kho xuất *"
                       value={formData.warehouse_id}
-                      onChange={(val) => setFormData({...formData, warehouse_id: val})}
-                      onCreateNew={(name) => setFormData({...formData, warehouse_id: name})}
                       options={warehouses}
+                      onChange={(val) => setFormData({...formData, warehouse_id: val})}
+                      onCreate={(val) => setFormData({...formData, warehouse_id: val})}
                       placeholder="Chọn kho..."
                       required
                     />
 
-                    <CustomCombobox 
+                    <CreatableSelect 
                       label="Vật tư *"
                       value={formData.material_id}
-                      onChange={(val) => setFormData({...formData, material_id: val})}
-                      onCreateNew={(name) => setFormData({...formData, material_id: name})}
                       options={materials}
+                      onChange={(val) => setFormData({...formData, material_id: val})}
+                      onCreate={(val) => setFormData({...formData, material_id: val})}
                       placeholder="Chọn vật tư..."
                       required
                     />
@@ -7110,34 +7309,34 @@ const Transfer = ({ user, onBack }: { user: Employee, onBack?: () => void }) => 
                       <input type="date" required value={formData.date} onChange={(e) => setFormData({...formData, date: e.target.value})} className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-orange-500/20" />
                     </div>
                     
-                    <CustomCombobox 
+                    <CreatableSelect 
                       label="Từ kho *"
                       value={formData.from_warehouse_id}
-                      onChange={(val) => setFormData({...formData, from_warehouse_id: val})}
-                      onCreateNew={(name) => setFormData({...formData, from_warehouse_id: name})}
                       options={warehouses}
+                      onChange={(val) => setFormData({...formData, from_warehouse_id: val})}
+                      onCreate={(val) => setFormData({...formData, from_warehouse_id: val})}
                       placeholder="Chọn kho nguồn..."
                       required
                     />
 
-                    <CustomCombobox 
+                    <CreatableSelect 
                       label="Đến kho *"
                       value={formData.to_warehouse_id}
-                      onChange={(val) => setFormData({...formData, to_warehouse_id: val})}
-                      onCreateNew={(name) => setFormData({...formData, to_warehouse_id: name})}
                       options={warehouses}
+                      onChange={(val) => setFormData({...formData, to_warehouse_id: val})}
+                      onCreate={(val) => setFormData({...formData, to_warehouse_id: val})}
                       placeholder="Chọn kho đích..."
                       required
                     />
                   </div>
 
                   <div className="space-y-4">
-                    <CustomCombobox 
+                    <CreatableSelect 
                       label="Vật tư điều chuyển *"
                       value={formData.material_id}
-                      onChange={(val) => setFormData({...formData, material_id: val})}
-                      onCreateNew={(name) => setFormData({...formData, material_id: name})}
                       options={materials}
+                      onChange={(val) => setFormData({...formData, material_id: val})}
+                      onCreate={(val) => setFormData({...formData, material_id: val})}
                       placeholder="Chọn vật tư..."
                       required
                     />
@@ -7235,8 +7434,24 @@ const InventoryReport = ({ user, onBack }: { user: Employee, onBack?: () => void
           breakdown
         };
       }).filter(item => item.balance !== 0);
-      
-      setReport(reportData);
+
+      // Group by material name to handle duplicates if any
+      const groupedReport: any[] = [];
+      reportData.forEach(item => {
+        const existing = groupedReport.find(g => g.name.toLowerCase().trim() === item.name.toLowerCase().trim() && g.unit === item.unit);
+        if (existing) {
+          existing.balance += item.balance;
+          item.breakdown.forEach((b: any) => {
+            const exWh = existing.breakdown.find((eb: any) => eb.whName === b.whName);
+            if (exWh) exWh.balance += b.balance;
+            else existing.breakdown.push(b);
+          });
+        } else {
+          groupedReport.push({ ...item });
+        }
+      });
+
+      setReport(groupedReport);
     } catch (err) {
       console.error('Error fetching report:', err);
     } finally {
@@ -9030,20 +9245,78 @@ ALTER TABLE salary_settings ENABLE ROW LEVEL SECURITY;
 ALTER TABLE partners ENABLE ROW LEVEL SECURITY;
 ALTER TABLE allowances ENABLE ROW LEVEL SECURITY;
 
--- Create Policies (Allow all for anon and authenticated roles)
--- This ensures that both anonymous and logged-in users can interact with data.
-DO $$ 
-DECLARE 
-  t text;
-BEGIN
-  FOR t IN SELECT table_name FROM information_schema.tables WHERE table_schema = 'public' AND table_type = 'BASE TABLE'
-  LOOP
-    EXECUTE format('DROP POLICY IF EXISTS "Enable all for anon" ON %I', t);
-    EXECUTE format('CREATE POLICY "Enable all for anon" ON %I FOR ALL TO anon USING (true) WITH CHECK (true)', t);
-    EXECUTE format('DROP POLICY IF EXISTS "Enable all for authenticated" ON %I', t);
-    EXECUTE format('CREATE POLICY "Enable all for authenticated" ON %I FOR ALL TO authenticated USING (true) WITH CHECK (true)', t);
-  END LOOP;
-END $$;
+-- Helper function to get user role
+CREATE OR REPLACE FUNCTION public.get_user_role()
+RETURNS text AS $$
+  SELECT role FROM public.users WHERE id = auth.uid();
+$$ LANGUAGE sql SECURITY DEFINER;
+
+-- 1. Users Table Policies
+CREATE POLICY "Users can view their own profile" ON users FOR SELECT USING (auth.uid() = id OR get_user_role() IN ('Admin', 'Admin App'));
+CREATE POLICY "Admins can manage users" ON users FOR ALL USING (get_user_role() IN ('Admin', 'Admin App'));
+
+-- 2. Material Groups Policies
+CREATE POLICY "Everyone can view material groups" ON material_groups FOR SELECT USING (true);
+CREATE POLICY "Admins can manage material groups" ON material_groups FOR ALL USING (get_user_role() IN ('Admin', 'Admin App'));
+
+-- 3. Materials Policies
+CREATE POLICY "Everyone can view materials" ON materials FOR SELECT USING (true);
+CREATE POLICY "Admins can manage materials" ON materials FOR ALL USING (get_user_role() IN ('Admin', 'Admin App'));
+
+-- 4. Warehouses Policies
+CREATE POLICY "Everyone can view warehouses" ON warehouses FOR SELECT USING (true);
+CREATE POLICY "Admins can manage warehouses" ON warehouses FOR ALL USING (get_user_role() IN ('Admin', 'Admin App'));
+
+-- 5. Stock In Policies
+CREATE POLICY "Users can view stock in" ON stock_in FOR SELECT USING (true);
+CREATE POLICY "Users can create stock in" ON stock_in FOR INSERT WITH CHECK (true);
+CREATE POLICY "Admins can manage stock in" ON stock_in FOR ALL USING (get_user_role() IN ('Admin', 'Admin App'));
+
+-- 6. Stock Out Policies
+CREATE POLICY "Users can view stock out" ON stock_out FOR SELECT USING (true);
+CREATE POLICY "Users can create stock out" ON stock_out FOR INSERT WITH CHECK (true);
+CREATE POLICY "Admins can manage stock out" ON stock_out FOR ALL USING (get_user_role() IN ('Admin', 'Admin App'));
+
+-- 7. Transfers Policies
+CREATE POLICY "Users can view transfers" ON transfers FOR SELECT USING (true);
+CREATE POLICY "Users can create transfers" ON transfers FOR INSERT WITH CHECK (true);
+CREATE POLICY "Admins can manage transfers" ON transfers FOR ALL USING (get_user_role() IN ('Admin', 'Admin App'));
+
+-- 8. Costs Policies
+CREATE POLICY "Users can view costs" ON costs FOR SELECT USING (true);
+CREATE POLICY "Users can create costs" ON costs FOR INSERT WITH CHECK (true);
+CREATE POLICY "Admins can manage costs" ON costs FOR ALL USING (get_user_role() IN ('Admin', 'Admin App'));
+
+-- 9. Attendance Policies
+CREATE POLICY "Users can view attendance" ON attendance FOR SELECT USING (true);
+CREATE POLICY "Admins can manage attendance" ON attendance FOR ALL USING (get_user_role() IN ('Admin', 'Admin App'));
+
+-- 10. Advances Policies
+CREATE POLICY "Users can view their own advances" ON advances FOR SELECT USING (auth.uid() = employee_id OR get_user_role() IN ('Admin', 'Admin App'));
+CREATE POLICY "Admins can manage advances" ON advances FOR ALL USING (get_user_role() IN ('Admin', 'Admin App'));
+
+-- 11. Reminders Policies
+CREATE POLICY "Users can manage their own reminders" ON reminders FOR ALL USING (true); -- Simplified for now
+
+-- 12. Notes Policies
+CREATE POLICY "Users can view notes" ON notes FOR SELECT USING (true);
+CREATE POLICY "Users can manage their own notes" ON notes FOR ALL USING (auth.uid() = created_by OR get_user_role() IN ('Admin', 'Admin App'));
+
+-- 13. Inventory Policies
+CREATE POLICY "Everyone can view inventory" ON inventory FOR SELECT USING (true);
+CREATE POLICY "System can manage inventory" ON inventory FOR ALL USING (true); -- Usually managed via triggers or app logic
+
+-- 14. Salary Settings Policies
+CREATE POLICY "Users can view their own salary settings" ON salary_settings FOR SELECT USING (auth.uid() = employee_id OR get_user_role() IN ('Admin', 'Admin App'));
+CREATE POLICY "Admins can manage salary settings" ON salary_settings FOR ALL USING (get_user_role() IN ('Admin', 'Admin App'));
+
+-- 15. Partners Policies
+CREATE POLICY "Everyone can view partners" ON partners FOR SELECT USING (true);
+CREATE POLICY "Admins can manage partners" ON partners FOR ALL USING (get_user_role() IN ('Admin', 'Admin App'));
+
+-- 16. Allowances Policies
+CREATE POLICY "Users can view their own allowances" ON allowances FOR SELECT USING (auth.uid() = employee_id OR get_user_role() IN ('Admin', 'Admin App'));
+CREATE POLICY "Admins can manage allowances" ON allowances FOR ALL USING (get_user_role() IN ('Admin', 'Admin App'));
 `;
 
   const copyToClipboard = () => {
@@ -9214,6 +9487,7 @@ export default function App() {
         { id: 'transfer', label: 'Luân chuyển kho', icon: ArrowLeftRight },
         { id: 'inventory-report', label: 'Kiểm tra tồn kho', icon: BarChart3 },
         { id: 'warehouses', label: 'Danh sách kho', icon: Warehouse },
+        { id: 'material-groups', label: 'Nhóm vật tư', icon: Layers },
         { id: 'materials', label: 'Danh mục vật tư', icon: Package },
         { id: 'database-setup', label: 'Cấu hình Database', icon: Settings2 },
       ]
@@ -9274,7 +9548,7 @@ export default function App() {
       case 'attendance': return <Attendance user={user} onBack={goBack} />;
       case 'costs': return <Costs user={user} onBack={goBack} />;
       case 'warehouses': return <Warehouses user={user} onBack={goBack} />;
-      case 'materials': return <Materials user={user} onBack={goBack} />;
+      case 'materials': return <Materials user={user} onBack={goBack} onNavigate={navigateTo} />;
       case 'stock-in': return <StockIn user={user} onBack={goBack} initialStatus={pageParams?.status} />;
       case 'pending-approvals': return <PendingApprovals user={user} onBack={goBack} onNavigate={navigateTo} onRefreshCount={fetchPendingCount} />;
       case 'stock-out': return <StockOut user={user} onBack={goBack} />;

@@ -4,27 +4,27 @@
  */
 import { useState, useEffect, FormEvent, MouseEvent, ChangeEvent, useRef, useMemo, useCallback } from 'react';
 import { utils, writeFile, write } from 'xlsx';
-import { 
-  LayoutDashboard, 
-  Package, 
-  Users, 
-  Settings, 
-  LogOut, 
-  Menu as MenuIcon, 
-  X, 
-  Warehouse, 
-  ArrowDownCircle, 
-  ArrowUpCircle, 
-  ArrowLeftRight, 
-  BarChart3, 
-  CalendarCheck, 
-  Wallet, 
-  Banknote, 
-  UserCircle, 
-  Settings2, 
-  List, 
-  Boxes, 
-  Layers, 
+import {
+  LayoutDashboard,
+  Package,
+  Users,
+  Settings,
+  LogOut,
+  Menu as MenuIcon,
+  X,
+  Warehouse,
+  ArrowDownCircle,
+  ArrowUpCircle,
+  ArrowLeftRight,
+  BarChart3,
+  CalendarCheck,
+  Wallet,
+  Banknote,
+  UserCircle,
+  Settings2,
+  List,
+  Boxes,
+  Layers,
   Handshake,
   Plus,
   RefreshCw,
@@ -115,11 +115,11 @@ const formatDate = (dateStr: string) => {
   return `${d}/${m}/${y}`;
 };
 
-const NumericInput = ({ 
-  label, 
-  value, 
-  onChange, 
-  placeholder = "0", 
+const NumericInput = ({
+  label,
+  value,
+  onChange,
+  placeholder = "0",
   required = false,
   className = "",
   labelClassName = "text-[10px] font-bold text-gray-400 uppercase",
@@ -129,10 +129,10 @@ const NumericInput = ({
   step = 1,
   error = false,
   isDecimal = false
-}: { 
-  label?: string, 
-  value: number, 
-  onChange: (val: number) => void, 
+}: {
+  label?: string,
+  value: number,
+  onChange: (val: number) => void,
   placeholder?: string,
   required?: boolean,
   className?: string,
@@ -157,13 +157,13 @@ const NumericInput = ({
 
   const handleChange = (e: ChangeEvent<HTMLInputElement>) => {
     const rawValue = e.target.value;
-    
+
     if (isDecimal) {
       // Allow digits and one dot
       const cleanValue = rawValue.replace(/[^0-9.]/g, '');
       const parts = cleanValue.split('.');
       const finalValue = parts[0] + (parts.length > 1 ? '.' + parts.slice(1).join('') : '');
-      
+
       setDisplayValue(finalValue);
       const numValue = parseFloat(finalValue);
       if (!isNaN(numValue)) {
@@ -180,14 +180,14 @@ const NumericInput = ({
       onChange(0);
       return;
     }
-    
+
     const numValue = parseInt(cleanValue, 10);
     const formatted = formatNumber(numValue);
-    
+
     // Cursor position fix
     const cursorPosition = e.target.selectionStart || 0;
     const oldLength = rawValue.length;
-    
+
     setDisplayValue(formatted);
     onChange(numValue);
 
@@ -206,8 +206,8 @@ const NumericInput = ({
       {label && <label className={labelClassName}>{label} {required && '*'}</label>}
       <div className="relative flex items-center gap-2 mt-1">
         {showControls && (
-          <button 
-            type="button" 
+          <button
+            type="button"
             onClick={() => onChange(Math.max(0, value - step))}
             className="p-2 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
           >
@@ -216,7 +216,7 @@ const NumericInput = ({
         )}
         <div className="relative flex-1">
           {Icon && <Icon className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />}
-          <input 
+          <input
             ref={inputRef}
             type="text"
             inputMode={isDecimal ? "decimal" : "numeric"}
@@ -228,8 +228,8 @@ const NumericInput = ({
           />
         </div>
         {showControls && (
-          <button 
-            type="button" 
+          <button
+            type="button"
             onClick={() => onChange(value + step)}
             className="p-2 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
           >
@@ -269,14 +269,20 @@ const CreatableSelect = ({
   const containerRef = useRef<HTMLDivElement>(null);
 
   const selectedOption = options.find(opt => opt.id === value);
-  
+
   useEffect(() => {
     if (!isOpen) {
-      setSearchTerm(selectedOption ? selectedOption.name : (value && !isUUID(value) ? value : ""));
+      if (selectedOption) {
+        setSearchTerm(selectedOption.name);
+      } else if (value && !isUUID(value)) {
+        setSearchTerm(value);
+      } else {
+        setSearchTerm("");
+      }
     }
   }, [value, selectedOption, isOpen]);
 
-  const filteredOptions = options.filter(opt => 
+  const filteredOptions = options.filter(opt =>
     opt.name.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
@@ -284,7 +290,13 @@ const CreatableSelect = ({
     const handleClickOutside = (event: MouseEvent) => {
       if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
         setIsOpen(false);
-        setSearchTerm(selectedOption ? selectedOption.name : (value && !isUUID(value) ? value : ""));
+        if (selectedOption) {
+          setSearchTerm(selectedOption.name);
+        } else if (value && !isUUID(value)) {
+          setSearchTerm(value);
+        } else {
+          setSearchTerm("");
+        }
       }
     };
     document.addEventListener("mousedown", handleClickOutside);
@@ -310,7 +322,7 @@ const CreatableSelect = ({
           />
           <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1">
             {searchTerm && (
-              <button 
+              <button
                 type="button"
                 onClick={(e) => {
                   e.stopPropagation();
@@ -348,7 +360,7 @@ const CreatableSelect = ({
                     {opt.name}
                   </div>
                 ))}
-                
+
                 {searchTerm && !options.find(opt => opt.name.toLowerCase() === searchTerm.toLowerCase()) && (
                   <div
                     onClick={() => {
@@ -374,30 +386,30 @@ const CreatableSelect = ({
 const numberToWords = (number: number): string => {
   const units = ["", "một", "hai", "ba", "bốn", "năm", "sáu", "bảy", "tám", "chín"];
   const tens = ["", "mười", "hai mươi", "ba mươi", "bốn mươi", "năm mươi", "sáu mươi", "bảy mươi", "tám mươi", "chín mươi"];
-  
+
   if (number === 0) return "không đồng";
-  
+
   const readGroup = (n: number) => {
     let s = "";
     const h = Math.floor(n / 100);
     const t = Math.floor((n % 100) / 10);
     const u = n % 10;
-    
+
     if (h > 0) {
       s += units[h] + " trăm ";
       if (t === 0 && u > 0) s += "lẻ ";
     }
-    
+
     if (t > 0) {
       s += tens[t] + " ";
     }
-    
+
     if (u > 0) {
       if (u === 1 && t > 1) s += "mốt";
       else if (u === 5 && t > 0) s += "lăm";
       else s += units[u];
     }
-    
+
     return s.trim();
   };
 
@@ -449,7 +461,7 @@ const LoginPage = ({ onLogin }: { onLogin: (user: Employee) => void }) => {
     try {
       // Build query: if it's a UUID, check both id and code. If not, only check code.
       let query = supabase.from('users').select('*');
-      
+
       if (isUUID(employeeId)) {
         query = query.or(`id.eq."${employeeId}",code.eq."${employeeId}"`);
       } else {
@@ -484,14 +496,14 @@ const LoginPage = ({ onLogin }: { onLogin: (user: Employee) => void }) => {
         <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-primary/5 rounded-full blur-3xl" />
       </div>
 
-      <motion.div 
+      <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         className="bg-white p-8 rounded-3xl shadow-2xl w-full max-w-md border border-gray-100 relative z-10"
       >
         <div className="flex flex-col items-center mb-8">
           <div className="w-24 h-24 bg-primary rounded-2xl flex items-center justify-center mb-4 overflow-hidden shadow-lg shadow-primary/20">
-             <img src={LOGO_URL} alt="Logo" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+            <img src={LOGO_URL} alt="Logo" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
           </div>
           <div className="text-center">
             <h2 className="text-primary font-black text-xl tracking-widest uppercase">QUẢN LÝ KHO CDX</h2>
@@ -505,8 +517,8 @@ const LoginPage = ({ onLogin }: { onLogin: (user: Employee) => void }) => {
               <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2 ml-1">Mã nhân viên (ID)</label>
               <div className="relative">
                 <UserIcon className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
-                <input 
-                  type="text" 
+                <input
+                  type="text"
                   value={employeeId}
                   onChange={(e) => setEmployeeId(e.target.value)}
                   className="w-full pl-12 pr-4 py-3.5 rounded-2xl border border-gray-100 bg-gray-50/50 focus:bg-white focus:ring-4 focus:ring-primary/10 focus:border-primary outline-none transition-all text-sm font-medium"
@@ -519,8 +531,8 @@ const LoginPage = ({ onLogin }: { onLogin: (user: Employee) => void }) => {
               <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2 ml-1">Mật khẩu</label>
               <div className="relative">
                 <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
-                <input 
-                  type="password" 
+                <input
+                  type="password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   className="w-full pl-12 pr-4 py-3.5 rounded-2xl border border-gray-100 bg-gray-50/50 focus:bg-white focus:ring-4 focus:ring-primary/10 focus:border-primary outline-none transition-all text-sm font-medium"
@@ -539,7 +551,7 @@ const LoginPage = ({ onLogin }: { onLogin: (user: Employee) => void }) => {
           )}
 
           <div className="space-y-3">
-            <button 
+            <button
               type="submit"
               disabled={loading}
               className="w-full bg-primary text-white font-black py-4 rounded-2xl hover:bg-primary-dark transition-all shadow-xl shadow-primary/20 disabled:opacity-50 flex items-center justify-center gap-2 group"
@@ -554,7 +566,7 @@ const LoginPage = ({ onLogin }: { onLogin: (user: Employee) => void }) => {
               )}
             </button>
 
-            <button 
+            <button
               type="button"
               onClick={() => setShowInstructions(true)}
               className="w-full flex items-center justify-center gap-2 text-gray-400 font-bold py-3 rounded-2xl hover:bg-gray-50 hover:text-primary transition-all text-[11px] tracking-widest uppercase border border-transparent hover:border-primary/10"
@@ -574,17 +586,17 @@ const LoginPage = ({ onLogin }: { onLogin: (user: Employee) => void }) => {
       <AnimatePresence>
         {showInstructions && (
           <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-            <motion.div 
-              initial={{ opacity: 0 }} 
-              animate={{ opacity: 1 }} 
-              exit={{ opacity: 0 }} 
-              onClick={() => setShowInstructions(false)} 
-              className="absolute inset-0 bg-black/60 backdrop-blur-sm" 
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setShowInstructions(false)}
+              className="absolute inset-0 bg-black/60 backdrop-blur-sm"
             />
-            <motion.div 
-              initial={{ opacity: 0, scale: 0.9, y: 20 }} 
-              animate={{ opacity: 1, scale: 1, y: 0 }} 
-              exit={{ opacity: 0, scale: 0.9, y: 20 }} 
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.9, y: 20 }}
               className="bg-white rounded-[2rem] shadow-2xl w-full max-w-lg overflow-hidden relative z-10"
             >
               <div className="p-8 space-y-6">
@@ -637,7 +649,7 @@ const LoginPage = ({ onLogin }: { onLogin: (user: Employee) => void }) => {
                 </div>
 
                 <div className="pt-4">
-                  <button 
+                  <button
                     onClick={() => setShowInstructions(false)}
                     className="w-full bg-gray-900 text-white font-black py-4 rounded-2xl hover:bg-black transition-all shadow-xl shadow-black/10"
                   >
@@ -654,13 +666,12 @@ const LoginPage = ({ onLogin }: { onLogin: (user: Employee) => void }) => {
 };
 
 const SidebarItem = ({ icon: Icon, label, active, onClick, badge }: any) => (
-  <button 
+  <button
     onClick={onClick}
-    className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-xl transition-all duration-200 group relative ${
-      active 
-        ? 'bg-primary-light text-primary font-semibold' 
+    className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-xl transition-all duration-200 group relative ${active
+        ? 'bg-primary-light text-primary font-semibold'
         : 'text-gray-500 hover:bg-gray-50 hover:text-gray-900'
-    }`}
+      }`}
   >
     <Icon size={20} className={active ? 'text-primary' : 'text-gray-400 group-hover:text-gray-600'} />
     <span className="text-sm flex-1 text-left">{label}</span>
@@ -677,34 +688,34 @@ const MaterialGroups = ({ user, onBack }: { user: Employee, onBack?: () => void 
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [showMaterialModal, setShowMaterialModal] = useState(false);
   const [showMaterialDetailModal, setShowMaterialDetailModal] = useState(false);
-  
+
   const [groups, setGroups] = useState<any[]>([]);
   const [materials, setMaterials] = useState<any[]>([]);
   const [warehouses, setWarehouses] = useState<any[]>([]);
   const [selectedGroup, setSelectedGroup] = useState<any>(null);
   const [selectedMaterial, setSelectedMaterial] = useState<any>(null);
-  
+
   const [loading, setLoading] = useState(true);
   const [materialsLoading, setMaterialsLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [isEditingMaterial, setIsEditingMaterial] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
-  
+
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [itemToDelete, setItemToDelete] = useState<string | null>(null);
   const [deleteType, setDeleteType] = useState<'group' | 'material'>('group');
 
   const initialFormState = { id: '', name: '', notes: '' };
-  const initialMaterialFormState = { 
-    id: '', 
-    name: '', 
-    group_id: '', 
+  const initialMaterialFormState = {
+    id: '',
+    name: '',
+    group_id: '',
     warehouse_id: '',
-    specification: '', 
-    unit: '', 
-    description: '', 
-    image_url: '' 
+    specification: '',
+    unit: '',
+    description: '',
+    image_url: ''
   };
 
   const [formData, setFormData] = useState(initialFormState);
@@ -737,7 +748,8 @@ const MaterialGroups = ({ user, onBack }: { user: Employee, onBack?: () => void 
       .select('*, warehouses(name)')
       .eq('group_id', groupId)
       .order('created_at', { ascending: false });
-    
+
+
     if (error) {
       console.error('Error fetching materials:', error);
       alert('Lỗi tải vật tư: ' + error.message);
@@ -862,7 +874,7 @@ const MaterialGroups = ({ user, onBack }: { user: Employee, onBack?: () => void 
 
   const uniqueMaterialIds = Array.from(new Set(materials.map(m => m.id)));
 
-  const filteredGroups = groups.filter(g => 
+  const filteredGroups = groups.filter(g =>
     g.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     g.id.toLowerCase().includes(searchTerm.toLowerCase())
   );
@@ -877,7 +889,7 @@ const MaterialGroups = ({ user, onBack }: { user: Employee, onBack?: () => void 
           </h2>
           <p className="text-xs text-gray-500 mt-1">Quản lý phân loại danh mục vật tư hệ thống</p>
         </div>
-        <button 
+        <button
           onClick={() => { setFormData(initialFormState); setIsEditing(false); setShowModal(true); }}
           className="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-xl text-sm font-bold hover:bg-primary-hover transition-colors shadow-lg shadow-primary/20"
         >
@@ -910,12 +922,12 @@ const MaterialGroups = ({ user, onBack }: { user: Employee, onBack?: () => void 
           <label className="text-[10px] font-bold text-gray-400 uppercase">Tìm kiếm nhanh</label>
           <div className="relative">
             <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-            <input 
-              type="text" 
-              placeholder="Gõ để tìm..." 
+            <input
+              type="text"
+              placeholder="Gõ để tìm..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-9 pr-3 py-2 rounded-lg border border-gray-200 text-xs outline-none focus:ring-2 focus:ring-primary/20" 
+              className="w-full pl-9 pr-3 py-2 rounded-lg border border-gray-200 text-xs outline-none focus:ring-2 focus:ring-primary/20"
             />
           </div>
         </div>
@@ -939,8 +951,8 @@ const MaterialGroups = ({ user, onBack }: { user: Employee, onBack?: () => void 
                 <tr><td colSpan={4} className="px-4 py-8 text-center text-gray-400 italic">Chưa có nhóm vật tư nào</td></tr>
               ) : (
                 filteredGroups.map((item) => (
-                  <tr 
-                    key={item.id} 
+                  <tr
+                    key={item.id}
                     onClick={() => handleRowClick(item)}
                     className="hover:bg-gray-50 transition-colors group cursor-pointer"
                   >
@@ -965,7 +977,7 @@ const MaterialGroups = ({ user, onBack }: { user: Employee, onBack?: () => void 
       <AnimatePresence>
         {showDeleteModal && (
           <div className="fixed inset-0 z-[120] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
-            <motion.div 
+            <motion.div
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
@@ -988,7 +1000,7 @@ const MaterialGroups = ({ user, onBack }: { user: Employee, onBack?: () => void 
       <AnimatePresence>
         {showModal && (
           <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm overflow-y-auto">
-            <motion.div 
+            <motion.div
               initial={{ opacity: 0, scale: 0.95, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 20 }}
@@ -1009,30 +1021,30 @@ const MaterialGroups = ({ user, onBack }: { user: Employee, onBack?: () => void 
                 <form onSubmit={handleSubmit} className="p-6 space-y-4">
                   <div className="space-y-1">
                     <label className="text-[10px] font-bold text-gray-400 uppercase">Tên nhóm vật tư *</label>
-                    <input 
+                    <input
                       required
-                      type="text" 
+                      type="text"
                       placeholder="Ví dụ: Tôn, sắt, thép..."
                       value={formData.name}
-                      onChange={(e) => setFormData({...formData, name: e.target.value})}
-                      className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20" 
+                      onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                      className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20"
                     />
                   </div>
                   <div className="space-y-1">
                     <label className="text-[10px] font-bold text-gray-400 uppercase">Ghi chú</label>
-                    <textarea 
+                    <textarea
                       rows={3}
                       placeholder="Thông tin thêm về nhóm này..."
                       value={formData.notes}
-                      onChange={(e) => setFormData({...formData, notes: e.target.value})}
-                      className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20 resize-none" 
+                      onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+                      className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20 resize-none"
                     />
                   </div>
 
                   <div className="mt-8 flex justify-end gap-3 flex-shrink-0">
                     <button type="button" onClick={() => setShowModal(false)} className="px-6 py-2 rounded-xl text-sm font-bold text-gray-500 hover:bg-gray-100 transition-colors">Hủy</button>
-                    <button 
-                      type="submit" 
+                    <button
+                      type="submit"
                       disabled={submitting}
                       className="px-6 py-2 rounded-xl text-sm font-bold bg-primary text-white hover:bg-primary-hover transition-colors shadow-lg shadow-primary/20 disabled:opacity-50"
                     >
@@ -1050,7 +1062,7 @@ const MaterialGroups = ({ user, onBack }: { user: Employee, onBack?: () => void 
       <AnimatePresence>
         {showDetailModal && selectedGroup && (
           <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
-            <motion.div 
+            <motion.div
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
@@ -1082,7 +1094,7 @@ const MaterialGroups = ({ user, onBack }: { user: Employee, onBack?: () => void 
                       <h4 className="text-sm font-bold text-gray-700 uppercase tracking-wider">Danh mục vật tư trong nhóm</h4>
                       <span className="px-2 py-0.5 bg-primary text-white text-[10px] font-bold rounded-full">{materials.length}</span>
                     </div>
-                    <button 
+                    <button
                       onClick={() => { setMaterialFormData(initialMaterialFormState); setIsEditingMaterial(false); setShowMaterialModal(true); }}
                       className="flex items-center gap-2 px-3 py-1.5 bg-blue-600 text-white rounded-lg text-xs font-bold hover:bg-blue-700 transition-colors"
                     >
@@ -1130,20 +1142,20 @@ const MaterialGroups = ({ user, onBack }: { user: Employee, onBack?: () => void 
               </div>
 
               <div className="p-6 bg-gray-50 border-t border-gray-100 flex items-center justify-between">
-                <button 
+                <button
                   onClick={(e) => handleDeleteClick(e, selectedGroup.id)}
                   className="flex items-center gap-2 px-6 py-2 bg-red-500 text-white rounded-xl text-sm font-bold hover:bg-red-600 transition-colors shadow-lg shadow-red-500/20"
                 >
                   <Trash2 size={16} /> Xóa
                 </button>
                 <div className="flex gap-3">
-                  <button 
+                  <button
                     onClick={(e) => handleEdit(e, selectedGroup)}
                     className="flex items-center gap-2 px-6 py-2 bg-yellow-500 text-white rounded-xl text-sm font-bold hover:bg-yellow-600 transition-colors shadow-lg shadow-yellow-500/20"
                   >
                     <Edit size={16} /> Sửa
                   </button>
-                  <button 
+                  <button
                     onClick={() => setShowDetailModal(false)}
                     className="flex items-center gap-2 px-6 py-2 bg-gray-500 text-white rounded-xl text-sm font-bold hover:bg-gray-600 transition-colors shadow-lg shadow-gray-500/20"
                   >
@@ -1159,7 +1171,7 @@ const MaterialGroups = ({ user, onBack }: { user: Employee, onBack?: () => void 
       <AnimatePresence>
         {showMaterialModal && (
           <div className="fixed inset-0 z-[130] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm overflow-y-auto">
-            <motion.div 
+            <motion.div
               initial={{ opacity: 0, scale: 0.95, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 20 }}
@@ -1178,136 +1190,136 @@ const MaterialGroups = ({ user, onBack }: { user: Employee, onBack?: () => void 
 
               <div className="flex-1 overflow-y-auto custom-scrollbar">
                 <form onSubmit={handleMaterialSubmit} className="p-6 grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-1">
-                  <label className="text-[10px] font-bold text-gray-400 uppercase">Mã vật tư (ID) *</label>
-                  <div className="relative">
-                    <input 
-                      list="material-ids-group"
-                      required
-                      type="text" 
-                      value={materialFormData.id}
-                      onChange={(e) => {
-                        const val = e.target.value;
-                        setMaterialFormData({...materialFormData, id: val});
-                        const existing = materials.find(m => m.id === val);
-                        if (existing) {
-                          setMaterialFormData(existing);
-                        }
-                      }}
-                      className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-blue-500/20" 
-                    />
-                    <datalist id="material-ids-group">
-                      {uniqueMaterialIds.map(id => <option key={id} value={id} />)}
-                    </datalist>
-                  </div>
-                </div>
-                <div className="space-y-1">
-                  <label className="text-[10px] font-bold text-gray-400 uppercase">Tên vật tư *</label>
-                  <input 
-                    required
-                    type="text" 
-                    value={materialFormData.name}
-                    onChange={(e) => setMaterialFormData({...materialFormData, name: e.target.value})}
-                    className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-blue-500/20" 
-                  />
-                </div>
-                <div className="space-y-1">
-                  <label className="text-[10px] font-bold text-gray-400 uppercase">Kho lưu trữ</label>
-                  <select 
-                    value={materialFormData.warehouse_id}
-                    onChange={(e) => setMaterialFormData({...materialFormData, warehouse_id: e.target.value})}
-                    className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-blue-500/20"
-                  >
-                    <option value="">-- Chọn kho --</option>
-                    {warehouses.map(w => <option key={w.id} value={w.id}>{w.name}</option>)}
-                  </select>
-                </div>
-                <div className="space-y-1">
-                  <label className="text-[10px] font-bold text-gray-400 uppercase">Quy cách</label>
-                  <input 
-                    type="text" 
-                    value={materialFormData.specification}
-                    onChange={(e) => setMaterialFormData({...materialFormData, specification: e.target.value})}
-                    className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-blue-500/20" 
-                  />
-                </div>
-                <div className="space-y-1">
-                  <label className="text-[10px] font-bold text-gray-400 uppercase">Đơn vị tính</label>
-                  <input 
-                    type="text" 
-                    value={materialFormData.unit}
-                    onChange={(e) => setMaterialFormData({...materialFormData, unit: e.target.value})}
-                    className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-blue-500/20" 
-                  />
-                </div>
-                <div className="col-span-1 md:col-span-2 space-y-1">
-                  <label className="text-[10px] font-bold text-gray-400 uppercase">Mô tả</label>
-                  <textarea 
-                    rows={2}
-                    value={materialFormData.description}
-                    onChange={(e) => setMaterialFormData({...materialFormData, description: e.target.value})}
-                    className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-blue-500/20 resize-none" 
-                  />
-                </div>
-                <div className="col-span-1 md:col-span-2 space-y-3">
-                  <label className="text-[10px] font-bold text-gray-400 uppercase">Hình ảnh vật tư</label>
-                  <div className="flex items-center gap-4">
-                    <div className="w-16 h-16 rounded-xl bg-gray-50 border-2 border-dashed border-gray-200 flex items-center justify-center overflow-hidden group relative">
-                      {materialFormData.image_url ? (
-                        <>
-                          <img src={materialFormData.image_url} alt="Preview" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
-                          <button 
-                            type="button"
-                            onClick={() => setMaterialFormData({...materialFormData, image_url: ''})}
-                            className="absolute inset-0 bg-black/40 text-white opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center"
-                          >
-                            <X size={14} />
-                          </button>
-                        </>
-                      ) : (
-                        <ImageIcon className="text-gray-300" size={20} />
-                      )}
-                    </div>
-                    <div className="flex-1 space-y-2">
-                      <input 
-                        type="file" 
-                        id="group-material-image"
-                        accept="image/*"
-                        onChange={handleMaterialImageUpload}
-                        className="hidden"
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-gray-400 uppercase">Mã vật tư (ID) *</label>
+                    <div className="relative">
+                      <input
+                        list="material-ids-group"
+                        required
+                        type="text"
+                        value={materialFormData.id}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          setMaterialFormData({ ...materialFormData, id: val });
+                          const existing = materials.find(m => m.id === val);
+                          if (existing) {
+                            setMaterialFormData(existing);
+                          }
+                        }}
+                        className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-blue-500/20"
                       />
-                      <label 
-                        htmlFor="group-material-image"
-                        className="inline-flex items-center gap-2 px-3 py-1.5 bg-gray-100 text-gray-600 rounded-lg text-[10px] font-bold hover:bg-gray-200 cursor-pointer transition-colors"
-                      >
-                        <ImageIcon size={12} /> Tải ảnh
-                      </label>
+                      <datalist id="material-ids-group">
+                        {uniqueMaterialIds.map(id => <option key={id} value={id} />)}
+                      </datalist>
                     </div>
                   </div>
-                </div>
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-gray-400 uppercase">Tên vật tư *</label>
+                    <input
+                      required
+                      type="text"
+                      value={materialFormData.name}
+                      onChange={(e) => setMaterialFormData({ ...materialFormData, name: e.target.value })}
+                      className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-blue-500/20"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-gray-400 uppercase">Kho lưu trữ</label>
+                    <select
+                      value={materialFormData.warehouse_id}
+                      onChange={(e) => setMaterialFormData({ ...materialFormData, warehouse_id: e.target.value })}
+                      className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-blue-500/20"
+                    >
+                      <option value="">-- Chọn kho --</option>
+                      {warehouses.map(w => <option key={w.id} value={w.id}>{w.name}</option>)}
+                    </select>
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-gray-400 uppercase">Quy cách</label>
+                    <input
+                      type="text"
+                      value={materialFormData.specification}
+                      onChange={(e) => setMaterialFormData({ ...materialFormData, specification: e.target.value })}
+                      className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-blue-500/20"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-gray-400 uppercase">Đơn vị tính</label>
+                    <input
+                      type="text"
+                      value={materialFormData.unit}
+                      onChange={(e) => setMaterialFormData({ ...materialFormData, unit: e.target.value })}
+                      className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-blue-500/20"
+                    />
+                  </div>
+                  <div className="col-span-1 md:col-span-2 space-y-1">
+                    <label className="text-[10px] font-bold text-gray-400 uppercase">Mô tả</label>
+                    <textarea
+                      rows={2}
+                      value={materialFormData.description}
+                      onChange={(e) => setMaterialFormData({ ...materialFormData, description: e.target.value })}
+                      className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-blue-500/20 resize-none"
+                    />
+                  </div>
+                  <div className="col-span-1 md:col-span-2 space-y-3">
+                    <label className="text-[10px] font-bold text-gray-400 uppercase">Hình ảnh vật tư</label>
+                    <div className="flex items-center gap-4">
+                      <div className="w-16 h-16 rounded-xl bg-gray-50 border-2 border-dashed border-gray-200 flex items-center justify-center overflow-hidden group relative">
+                        {materialFormData.image_url ? (
+                          <>
+                            <img src={materialFormData.image_url} alt="Preview" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                            <button
+                              type="button"
+                              onClick={() => setMaterialFormData({ ...materialFormData, image_url: '' })}
+                              className="absolute inset-0 bg-black/40 text-white opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center"
+                            >
+                              <X size={14} />
+                            </button>
+                          </>
+                        ) : (
+                          <ImageIcon className="text-gray-300" size={20} />
+                        )}
+                      </div>
+                      <div className="flex-1 space-y-2">
+                        <input
+                          type="file"
+                          id="group-material-image"
+                          accept="image/*"
+                          onChange={handleMaterialImageUpload}
+                          className="hidden"
+                        />
+                        <label
+                          htmlFor="group-material-image"
+                          className="inline-flex items-center gap-2 px-3 py-1.5 bg-gray-100 text-gray-600 rounded-lg text-[10px] font-bold hover:bg-gray-200 cursor-pointer transition-colors"
+                        >
+                          <ImageIcon size={12} /> Tải ảnh
+                        </label>
+                      </div>
+                    </div>
+                  </div>
 
-                <div className="col-span-1 md:col-span-2 mt-4 flex justify-end gap-3">
-                  <button type="button" onClick={() => setShowMaterialModal(false)} className="px-6 py-2 rounded-xl text-sm font-bold text-gray-500 hover:bg-gray-100 transition-colors">Hủy</button>
-                  <button 
-                    type="submit" 
-                    disabled={submitting}
-                    className="px-6 py-2 rounded-xl text-sm font-bold bg-blue-600 text-white hover:bg-blue-700 transition-colors shadow-lg shadow-blue-600/20 disabled:opacity-50"
-                  >
-                    {submitting ? 'Đang lưu...' : 'Lưu vật tư'}
-                  </button>
-                </div>
-              </form>
-            </div>
-          </motion.div>
-        </div>
-      )}
-    </AnimatePresence>
+                  <div className="col-span-1 md:col-span-2 mt-4 flex justify-end gap-3">
+                    <button type="button" onClick={() => setShowMaterialModal(false)} className="px-6 py-2 rounded-xl text-sm font-bold text-gray-500 hover:bg-gray-100 transition-colors">Hủy</button>
+                    <button
+                      type="submit"
+                      disabled={submitting}
+                      className="px-6 py-2 rounded-xl text-sm font-bold bg-blue-600 text-white hover:bg-blue-700 transition-colors shadow-lg shadow-blue-600/20 disabled:opacity-50"
+                    >
+                      {submitting ? 'Đang lưu...' : 'Lưu vật tư'}
+                    </button>
+                  </div>
+                </form>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
 
       {/* Material Detail Modal (The Eye) */}
       <AnimatePresence>
         {showMaterialDetailModal && selectedMaterial && (
           <div className="fixed inset-0 z-[140] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
-            <motion.div 
+            <motion.div
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
@@ -1359,20 +1371,20 @@ const MaterialGroups = ({ user, onBack }: { user: Employee, onBack?: () => void 
               </div>
 
               <div className="p-6 bg-gray-50 border-t border-gray-100 flex items-center justify-between">
-                <button 
+                <button
                   onClick={() => { setShowMaterialDetailModal(false); handleDeleteMaterialClick(selectedMaterial.id); }}
                   className="flex items-center gap-2 px-6 py-2 bg-red-500 text-white rounded-xl text-sm font-bold hover:bg-red-600 transition-colors shadow-lg shadow-red-500/20"
                 >
                   <Trash2 size={16} /> Xóa
                 </button>
                 <div className="flex gap-3">
-                  <button 
+                  <button
                     onClick={() => { setShowMaterialDetailModal(false); handleEditMaterial(selectedMaterial); }}
                     className="flex items-center gap-2 px-6 py-2 bg-yellow-500 text-white rounded-xl text-sm font-bold hover:bg-yellow-600 transition-colors shadow-lg shadow-yellow-500/20"
                   >
                     <Edit size={16} /> Sửa
                   </button>
-                  <button 
+                  <button
                     onClick={() => setShowMaterialDetailModal(false)}
                     className="flex items-center gap-2 px-6 py-2 bg-gray-500 text-white rounded-xl text-sm font-bold hover:bg-gray-600 transition-colors shadow-lg shadow-gray-500/20"
                   >
@@ -1400,7 +1412,7 @@ const Materials = ({ user, onBack, onNavigate }: { user: Employee, onBack?: () =
   const [submitting, setSubmitting] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [groupFilter, setGroupFilter] = useState('');
-  
+
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [itemToDelete, setItemToDelete] = useState<string | null>(null);
 
@@ -1430,16 +1442,22 @@ const Materials = ({ user, onBack, onNavigate }: { user: Employee, onBack?: () =
       console.log('Fetching materials...');
       const { data, error } = await supabase
         .from('materials')
-        .select('*') 
+        .select('*, material_groups(name)')
+        .neq('status', 'Đã xóa')
         .order('name', { ascending: true });
-      
+
       if (error) {
         console.error('Error fetching materials:', error);
         // If error is related to missing columns, try a simpler select
         if (error.message.includes('column')) {
-           const { data: simpleData, error: simpleError } = await supabase.from('materials').select('id, name').order('name');
-           if (simpleError) throw simpleError;
-           setMaterials(simpleData || []);
+          const { data: simpleData, error: simpleError } = await supabase.from('materials').select('id, name').neq('status', 'Đã xóa').order('name');
+          if (simpleError) {
+             const { data: ultraSimpleData, error: ultraSimpleError } = await supabase.from('materials').select('id, name').order('name');
+             if (ultraSimpleError) throw ultraSimpleError;
+             setMaterials(ultraSimpleData || []);
+          } else {
+             setMaterials(simpleData || []);
+          }
         } else {
           throw error;
         }
@@ -1466,31 +1484,34 @@ const Materials = ({ user, onBack, onNavigate }: { user: Employee, onBack?: () =
   };
 
   const generateNextMaterialCode = async () => {
+    const random = Math.floor(100 + Math.random() * 900);
     try {
       const { data } = await supabase
         .from('materials')
         .select('code')
-        .like('code', 'MAT%')
+        .like('code', 'VAT%')
         .order('code', { ascending: false })
         .limit(1);
 
       if (data && data.length > 0 && data[0].code) {
         const lastCode = data[0].code;
-        const lastNumber = parseInt(lastCode.replace('MAT', ''));
-        if (!isNaN(lastNumber)) {
-          const nextNumber = lastNumber + 1;
-          return `MAT${nextNumber.toString().padStart(3, '0')}`;
+        const match = lastCode.match(/VAT(\d+)/);
+        if (match && match[1]) {
+          const nextNumber = parseInt(match[1]) + 1;
+          return `VAT${nextNumber.toString().padStart(3, '0')}-${random}`;
         }
       }
-      return 'MAT001';
+      return `VAT001-${random}`;
     } catch (err) {
       console.error('Error generating material code:', err);
-      return 'MAT001';
+      return `VAT001-${random}`;
     }
   };
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
+    console.log('--- Material handleSubmit triggered ---');
+    console.log('Submitting form data:', formData);
     setSubmitting(true);
     try {
       // Resolve group_id if it's a name
@@ -1510,18 +1531,24 @@ const Materials = ({ user, onBack, onNavigate }: { user: Employee, onBack?: () =
         }
       }
 
-      const { id, ...dbPayload } = { 
-        ...formData, 
-        group_id: finalGroupId,
-        status: formData.status || 'Đang sử dụng' 
+      const dbPayload = {
+        code: formData.code,
+        name: formData.name,
+        group_id: finalGroupId || null, // Convert empty string to null safely
+        warehouse_id: formData.warehouse_id || null, // Convert empty string to null safely
+        specification: formData.specification,
+        unit: formData.unit,
+        description: formData.description,
+        image_url: formData.image_url,
+        status: formData.status || 'Đang sử dụng'
       };
 
-      if (isEditing && id) {
-        const { error } = await supabase.from('materials').update(dbPayload).eq('id', id);
+      if (isEditing && formData.id) {
+        const { error } = await supabase.from('materials').update(dbPayload).eq('id', formData.id);
         if (error) throw error;
       } else {
-        const nextCode = formData.code || await generateNextMaterialCode();
-        const { error } = await supabase.from('materials').insert([{ ...dbPayload, code: nextCode }]);
+        dbPayload.code = dbPayload.code || await generateNextMaterialCode();
+        const { error } = await supabase.from('materials').insert([dbPayload]);
         if (error) throw error;
       }
       setShowModal(false);
@@ -1569,10 +1596,11 @@ const Materials = ({ user, onBack, onNavigate }: { user: Employee, onBack?: () =
   };
 
   const filteredMaterials = materials.filter(m => {
+    if (m.status === 'Đã xóa') return false;
     const name = m.name || '';
     const code = m.code || '';
-    const matchesSearch = name.toLowerCase().includes(searchTerm.toLowerCase()) || 
-                         code.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesSearch = name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      code.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesGroup = groupFilter === '' || m.group_id === groupFilter;
     return matchesSearch && matchesGroup;
   });
@@ -1589,12 +1617,12 @@ const Materials = ({ user, onBack, onNavigate }: { user: Employee, onBack?: () =
           </h2>
           <p className="text-xs text-gray-500 mt-1">Quản lý toàn bộ danh sách vật tư, thiết bị trong hệ thống</p>
         </div>
-        <button 
-          onClick={async () => { 
+        <button
+          onClick={async () => {
             const nextCode = await generateNextMaterialCode();
-            setFormData({ ...initialFormState, code: nextCode }); 
-            setIsEditing(false); 
-            setShowModal(true); 
+            setFormData({ ...initialFormState, code: nextCode });
+            setIsEditing(false);
+            setShowModal(true);
           }}
           className="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-xl text-sm font-bold hover:bg-primary-hover transition-colors shadow-lg shadow-primary/20"
         >
@@ -1605,7 +1633,7 @@ const Materials = ({ user, onBack, onNavigate }: { user: Employee, onBack?: () =
       <div className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
         <div className="space-y-1">
           <label className="text-[10px] font-bold text-gray-400 uppercase">Nhóm vật tư</label>
-          <select 
+          <select
             value={groupFilter}
             onChange={(e) => setGroupFilter(e.target.value)}
             className="w-full px-3 py-2 rounded-lg border border-gray-200 text-xs outline-none focus:ring-2 focus:ring-primary/20"
@@ -1618,17 +1646,17 @@ const Materials = ({ user, onBack, onNavigate }: { user: Employee, onBack?: () =
           <label className="text-[10px] font-bold text-gray-400 uppercase">Tìm kiếm nhanh</label>
           <div className="relative">
             <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-            <input 
-              type="text" 
-              placeholder="Tìm theo tên hoặc mã vật tư..." 
+            <input
+              type="text"
+              placeholder="Tìm theo tên hoặc mã vật tư..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-9 pr-3 py-2 rounded-lg border border-gray-200 text-xs outline-none focus:ring-2 focus:ring-primary/20" 
+              className="w-full pl-9 pr-3 py-2 rounded-lg border border-gray-200 text-xs outline-none focus:ring-2 focus:ring-primary/20"
             />
           </div>
         </div>
         <div className="flex items-end">
-          <button 
+          <button
             onClick={fetchMaterials}
             className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-gray-100 text-gray-600 rounded-lg text-xs font-bold hover:bg-gray-200 transition-colors"
           >
@@ -1657,8 +1685,8 @@ const Materials = ({ user, onBack, onNavigate }: { user: Employee, onBack?: () =
                 <tr><td colSpan={6} className="px-4 py-8 text-center text-gray-400 italic">Không tìm thấy vật tư nào</td></tr>
               ) : (
                 filteredMaterials.map((item) => (
-                  <tr 
-                    key={item.id} 
+                  <tr
+                    key={item.id}
                     className="hover:bg-gray-50 transition-colors group cursor-pointer"
                     onClick={() => { setSelectedMaterial(item); setShowDetailModal(true); }}
                   >
@@ -1673,7 +1701,7 @@ const Materials = ({ user, onBack, onNavigate }: { user: Employee, onBack?: () =
                         {item.name}
                       </div>
                     </td>
-                    <td className="px-4 py-3 text-xs text-gray-500">{item.group_id || '-'}</td>
+                    <td className="px-4 py-3 text-xs text-gray-500">{item.material_groups?.name || '-'}</td>
                     <td className="px-4 py-3 text-xs text-gray-500">{item.specification || '-'}</td>
                     <td className="px-4 py-3 text-xs text-gray-500">{item.unit || '-'}</td>
                     <td className="px-4 py-3 text-center">
@@ -1694,7 +1722,7 @@ const Materials = ({ user, onBack, onNavigate }: { user: Employee, onBack?: () =
       <AnimatePresence>
         {showDeleteModal && (
           <div className="fixed inset-0 z-[120] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
-            <motion.div 
+            <motion.div
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
@@ -1717,7 +1745,7 @@ const Materials = ({ user, onBack, onNavigate }: { user: Employee, onBack?: () =
       <AnimatePresence>
         {showModal && (
           <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm overflow-y-auto">
-            <motion.div 
+            <motion.div
               initial={{ opacity: 0, scale: 0.95, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 20 }}
@@ -1740,66 +1768,66 @@ const Materials = ({ user, onBack, onNavigate }: { user: Employee, onBack?: () =
                     <div className="space-y-4">
                       <div className="space-y-1">
                         <label className="text-[10px] font-bold text-gray-400 uppercase">Mã vật tư</label>
-                        <input 
+                        <input
                           required
-                          type="text" 
+                          type="text"
                           disabled={isEditing}
                           value={formData.code}
-                          onChange={(e) => setFormData({...formData, code: e.target.value})}
-                          className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20 disabled:bg-gray-50" 
+                          onChange={(e) => setFormData({ ...formData, code: e.target.value })}
+                          className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20 disabled:bg-gray-50"
                         />
                       </div>
                       <div className="space-y-1">
                         <label className="text-[10px] font-bold text-gray-400 uppercase">Tên vật tư *</label>
-                        <input 
+                        <input
                           required
-                          type="text" 
+                          type="text"
                           placeholder="Ví dụ: Tôn kẽm 0.4mm"
                           value={formData.name}
-                          onChange={(e) => setFormData({...formData, name: e.target.value})}
-                          className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20" 
+                          onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                          className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20"
                         />
                       </div>
-                      
+
                       <CreatableSelect
                         label="Nhóm vật tư *"
                         value={formData.group_id}
                         options={groups}
-                        onChange={(val) => setFormData({...formData, group_id: val})}
-                        onCreate={(val) => setFormData({...formData, group_id: val})}
+                        onChange={(val) => setFormData({ ...formData, group_id: val })}
+                        onCreate={(val) => setFormData({ ...formData, group_id: val })}
                         placeholder="Chọn nhóm..."
                         required
                       />
                     </div>
 
                     <div className="space-y-4">
-                      <CreatableSelect 
+                      <CreatableSelect
                         label="Đơn vị tính"
                         value={formData.unit}
                         options={Array.from(new Set(materials.map(m => m.unit))).filter(Boolean).map((u: any) => ({ id: String(u), name: String(u) }))}
-                        onChange={(val) => setFormData({...formData, unit: val})}
-                        onCreate={(val) => setFormData({...formData, unit: val})}
+                        onChange={(val) => setFormData({ ...formData, unit: val })}
+                        onCreate={(val) => setFormData({ ...formData, unit: val })}
                         placeholder="Chọn hoặc nhập mới..."
                       />
 
                       <div className="space-y-1">
                         <label className="text-[10px] font-bold text-gray-400 uppercase">Quy cách / Kích thước</label>
-                        <input 
-                          type="text" 
+                        <input
+                          type="text"
                           placeholder="Ví dụ: 1200mm x 2400mm"
                           value={formData.specification}
-                          onChange={(e) => setFormData({...formData, specification: e.target.value})}
-                          className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20" 
+                          onChange={(e) => setFormData({ ...formData, specification: e.target.value })}
+                          className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20"
                         />
                       </div>
                       <div className="space-y-1">
                         <label className="text-[10px] font-bold text-gray-400 uppercase">Mô tả chi tiết</label>
-                        <textarea 
+                        <textarea
                           rows={3}
                           placeholder="Thông tin thêm về vật tư..."
                           value={formData.description}
-                          onChange={(e) => setFormData({...formData, description: e.target.value})}
-                          className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20 resize-none" 
+                          onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                          className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20 resize-none"
                         />
                       </div>
                     </div>
@@ -1810,9 +1838,9 @@ const Materials = ({ user, onBack, onNavigate }: { user: Employee, onBack?: () =
                           {formData.image_url ? (
                             <>
                               <img src={formData.image_url} alt="Preview" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
-                              <button 
+                              <button
                                 type="button"
-                                onClick={() => setFormData({...formData, image_url: ''})}
+                                onClick={() => setFormData({ ...formData, image_url: '' })}
                                 className="absolute inset-0 bg-black/40 text-white opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center"
                               >
                                 <X size={16} />
@@ -1823,14 +1851,14 @@ const Materials = ({ user, onBack, onNavigate }: { user: Employee, onBack?: () =
                           )}
                         </div>
                         <div className="flex-1 space-y-2">
-                          <input 
-                            type="file" 
+                          <input
+                            type="file"
                             id="material-image"
                             accept="image/*"
                             onChange={handleImageUpload}
                             className="hidden"
                           />
-                          <label 
+                          <label
                             htmlFor="material-image"
                             className="inline-flex items-center gap-2 px-4 py-2 bg-gray-100 text-gray-600 rounded-xl text-xs font-bold hover:bg-gray-200 cursor-pointer transition-colors"
                           >
@@ -1844,8 +1872,8 @@ const Materials = ({ user, onBack, onNavigate }: { user: Employee, onBack?: () =
 
                   <div className="mt-8 flex justify-end gap-3 flex-shrink-0">
                     <button type="button" onClick={() => setShowModal(false)} className="px-6 py-2 rounded-xl text-sm font-bold text-gray-500 hover:bg-gray-100 transition-colors">Hủy</button>
-                    <button 
-                      type="submit" 
+                    <button
+                      type="submit"
                       disabled={submitting}
                       className="px-6 py-2 rounded-xl text-sm font-bold bg-primary text-white hover:bg-primary-hover transition-colors shadow-lg shadow-primary/20 disabled:opacity-50"
                     >
@@ -1863,7 +1891,7 @@ const Materials = ({ user, onBack, onNavigate }: { user: Employee, onBack?: () =
       <AnimatePresence>
         {showDetailModal && selectedMaterial && (
           <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
-            <motion.div 
+            <motion.div
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
@@ -1925,20 +1953,20 @@ const Materials = ({ user, onBack, onNavigate }: { user: Employee, onBack?: () =
               </div>
 
               <div className="p-6 bg-gray-50 border-t border-gray-100 flex items-center justify-between">
-                <button 
+                <button
                   onClick={() => { setShowDetailModal(false); handleDeleteClick(selectedMaterial.id); }}
                   className="flex items-center gap-2 px-6 py-2 bg-red-500 text-white rounded-xl text-sm font-bold hover:bg-red-600 transition-colors shadow-lg shadow-red-500/20"
                 >
                   <Trash2 size={16} /> Xóa
                 </button>
                 <div className="flex gap-3">
-                  <button 
+                  <button
                     onClick={() => { setShowDetailModal(false); handleEdit(selectedMaterial); }}
                     className="flex items-center gap-2 px-6 py-2 bg-yellow-500 text-white rounded-xl text-sm font-bold hover:bg-yellow-600 transition-colors shadow-lg shadow-yellow-500/20"
                   >
                     <Edit size={16} /> Sửa
                   </button>
-                  <button 
+                  <button
                     onClick={() => setShowDetailModal(false)}
                     className="flex items-center gap-2 px-6 py-2 bg-gray-500 text-white rounded-xl text-sm font-bold hover:bg-gray-600 transition-colors shadow-lg shadow-gray-500/20"
                   >
@@ -1972,13 +2000,13 @@ const Placeholder = ({ title, onBack }: { title: string, onBack?: () => void }) 
 const PageBreadcrumb = ({ title, onBack }: { title: string, onBack?: () => void }) => {
   if (!onBack) return null;
   return (
-    <motion.div 
+    <motion.div
       initial={{ opacity: 0, x: -10 }}
       animate={{ opacity: 1, x: 0 }}
       className="flex items-center gap-3 mb-6"
     >
-      <button 
-        onClick={onBack} 
+      <button
+        onClick={onBack}
         className="flex items-center justify-center w-9 h-9 rounded-xl bg-white border border-gray-200 text-gray-500 hover:text-primary hover:border-primary/30 hover:bg-primary/5 transition-all group shadow-sm active:scale-95"
         title="Quay lại"
       >
@@ -2064,7 +2092,7 @@ const Warehouses = ({ user, onBack }: { user: Employee, onBack?: () => void }) =
         .select('*, users(full_name)')
         .or('status.is.null,status.neq.Đã xóa')
         .order('created_at', { ascending: false });
-      
+
       if (error) {
         console.error('Error fetching warehouses with join:', error);
         // Fallback to simple fetch if join fails
@@ -2073,7 +2101,7 @@ const Warehouses = ({ user, onBack }: { user: Employee, onBack?: () => void }) =
           .select('*')
           .or('status.is.null,status.neq.Đã xóa')
           .order('created_at', { ascending: false });
-        
+
         if (simpleError) throw simpleError;
         setWarehouses(simpleData || []);
       } else {
@@ -2191,12 +2219,12 @@ const Warehouses = ({ user, onBack }: { user: Employee, onBack?: () => void }) =
           </h2>
           <p className="text-xs text-gray-500 mt-1">Quản lý hệ thống bãi đúc và kho bãi công trình</p>
         </div>
-        <button 
-          onClick={async () => { 
+        <button
+          onClick={async () => {
             const nextCode = await generateNextWarehouseCode();
-            setFormData({ ...initialFormState, code: nextCode }); 
-            setIsEditing(false); 
-            setShowModal(true); 
+            setFormData({ ...initialFormState, code: nextCode });
+            setIsEditing(false);
+            setShowModal(true);
           }}
           className="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-xl text-sm font-bold hover:bg-primary-hover transition-colors shadow-lg shadow-primary/20"
         >
@@ -2265,7 +2293,7 @@ const Warehouses = ({ user, onBack }: { user: Employee, onBack?: () => void }) =
                       <div className="flex items-center gap-2">
                         <span className="truncate max-w-[100px]">{item.coordinates}</span>
                         {item.coordinates && (
-                          <button 
+                          <button
                             onClick={() => openInGoogleMaps(item.coordinates)}
                             className="p-1 text-primary hover:bg-primary/10 rounded transition-colors"
                             title="Chỉ đường Google Maps"
@@ -2295,7 +2323,7 @@ const Warehouses = ({ user, onBack }: { user: Employee, onBack?: () => void }) =
       <AnimatePresence>
         {showDeleteModal && (
           <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
-            <motion.div 
+            <motion.div
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
@@ -2318,7 +2346,7 @@ const Warehouses = ({ user, onBack }: { user: Employee, onBack?: () => void }) =
       <AnimatePresence>
         {showModal && (
           <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm overflow-y-auto">
-            <motion.div 
+            <motion.div
               initial={{ opacity: 0, scale: 0.95, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 20 }}
@@ -2341,42 +2369,42 @@ const Warehouses = ({ user, onBack }: { user: Employee, onBack?: () => void }) =
                     <div className="space-y-4">
                       <div className="space-y-1">
                         <label className="text-[10px] font-bold text-gray-400 uppercase">Mã kho</label>
-                        <input 
+                        <input
                           required
-                          type="text" 
+                          type="text"
                           disabled={isEditing}
                           placeholder="Ví dụ: WH001"
                           value={formData.code}
-                          onChange={(e) => setFormData({...formData, code: e.target.value})}
-                          className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20 disabled:bg-gray-50" 
+                          onChange={(e) => setFormData({ ...formData, code: e.target.value })}
+                          className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20 disabled:bg-gray-50"
                         />
                       </div>
                       <div className="space-y-1">
                         <label className="text-[10px] font-bold text-gray-400 uppercase">Tên kho *</label>
-                        <input 
+                        <input
                           required
-                          type="text" 
+                          type="text"
                           placeholder="Nhập tên kho..."
                           value={formData.name}
-                          onChange={(e) => setFormData({...formData, name: e.target.value})}
-                          className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20" 
+                          onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                          className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20"
                         />
                       </div>
                       <div className="space-y-1">
                         <label className="text-[10px] font-bold text-gray-400 uppercase">Địa chỉ</label>
-                        <input 
-                          type="text" 
+                        <input
+                          type="text"
                           placeholder="Địa chỉ cụ thể..."
                           value={formData.address}
-                          onChange={(e) => setFormData({...formData, address: e.target.value})}
-                          className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20" 
+                          onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+                          className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20"
                         />
                       </div>
                       <div className="space-y-1">
                         <label className="text-[10px] font-bold text-gray-400 uppercase">Nhân viên phụ trách</label>
-                        <select 
+                        <select
                           value={formData.manager_id}
-                          onChange={(e) => setFormData({...formData, manager_id: e.target.value})}
+                          onChange={(e) => setFormData({ ...formData, manager_id: e.target.value })}
                           className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20"
                         >
                           <option value="">-- Chọn nhân sự --</option>
@@ -2390,33 +2418,33 @@ const Warehouses = ({ user, onBack }: { user: Employee, onBack?: () => void }) =
                         <label className="text-[10px] font-bold text-gray-400 uppercase">Tọa độ / Link Google Maps</label>
                         <div className="relative">
                           <MapPin size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-                          <input 
-                            type="text" 
+                          <input
+                            type="text"
                             placeholder="10.43, 106.59 hoặc dán link..."
                             value={formData.coordinates}
-                            onChange={(e) => setFormData({...formData, coordinates: e.target.value})}
-                            className="w-full pl-10 pr-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20" 
+                            onChange={(e) => setFormData({ ...formData, coordinates: e.target.value })}
+                            className="w-full pl-10 pr-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20"
                           />
                         </div>
                       </div>
                       <div className="space-y-1">
                         <label className="text-[10px] font-bold text-gray-400 uppercase">Ghi chú</label>
-                        <textarea 
+                        <textarea
                           rows={3}
                           placeholder="Thông tin thêm..."
                           value={formData.notes}
-                          onChange={(e) => setFormData({...formData, notes: e.target.value})}
-                          className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20 resize-none" 
+                          onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+                          className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20 resize-none"
                         />
                       </div>
                       <div className="space-y-1">
                         <label className="text-[10px] font-bold text-gray-400 uppercase">Sức chứa</label>
-                        <input 
-                          type="text" 
+                        <input
+                          type="text"
                           placeholder="Ví dụ: 1000 tấn"
                           value={formData.capacity}
-                          onChange={(e) => setFormData({...formData, capacity: e.target.value})}
-                          className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20" 
+                          onChange={(e) => setFormData({ ...formData, capacity: e.target.value })}
+                          className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20"
                         />
                       </div>
                     </div>
@@ -2424,8 +2452,8 @@ const Warehouses = ({ user, onBack }: { user: Employee, onBack?: () => void }) =
 
                   <div className="mt-8 flex justify-end gap-3 flex-shrink-0">
                     <button type="button" onClick={() => setShowModal(false)} className="px-8 py-2.5 rounded-xl text-sm font-bold text-gray-500 hover:bg-gray-100 transition-colors">Hủy</button>
-                    <button 
-                      type="submit" 
+                    <button
+                      type="submit"
                       disabled={submitting}
                       className="px-8 py-2.5 rounded-xl text-sm font-bold bg-primary text-white hover:bg-primary-hover transition-colors shadow-lg shadow-primary/20 disabled:opacity-50"
                     >
@@ -2441,19 +2469,19 @@ const Warehouses = ({ user, onBack }: { user: Employee, onBack?: () => void }) =
     </div>
   );
 };
-const CustomCombobox = ({ 
-  label, 
-  value, 
-  onChange, 
-  options, 
-  placeholder, 
+const CustomCombobox = ({
+  label,
+  value,
+  onChange,
+  options,
+  placeholder,
   required = false,
   onCreateNew
-}: { 
-  label: string, 
-  value: string, 
-  onChange: (val: string) => void, 
-  options: any[], 
+}: {
+  label: string,
+  value: string,
+  onChange: (val: string) => void,
+  options: any[],
   placeholder: string,
   required?: boolean,
   onCreateNew?: (name: string) => void
@@ -2464,8 +2492,8 @@ const CustomCombobox = ({
 
   const filteredOptions = useMemo(() => {
     const search = searchTerm.toLowerCase();
-    return options.filter(opt => 
-      (opt.name || '').toLowerCase().includes(search) || 
+    return options.filter(opt =>
+      (opt.name || '').toLowerCase().includes(search) ||
       (opt.code || '').toLowerCase().includes(search)
     );
   }, [searchTerm, options]);
@@ -2516,15 +2544,15 @@ const CustomCombobox = ({
           <ChevronDown size={16} className={`transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`} />
         </button>
       </div>
-      
+
       <AnimatePresence>
         {isOpen && (
-            <motion.div
-              initial={{ opacity: 0, y: -5 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -5 }}
-              className="absolute left-0 right-0 mt-1 bg-white rounded-xl shadow-2xl border border-gray-100 max-h-60 overflow-y-auto py-1 z-[210] custom-scrollbar"
-            >
+          <motion.div
+            initial={{ opacity: 0, y: -5 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -5 }}
+            className="absolute left-0 right-0 mt-1 bg-white rounded-xl shadow-2xl border border-gray-100 max-h-60 overflow-y-auto py-1 z-[210] custom-scrollbar"
+          >
             {filteredOptions.length > 0 ? (
               filteredOptions.map((opt, idx) => (
                 <button
@@ -2549,7 +2577,7 @@ const CustomCombobox = ({
                 <p className="text-xs text-gray-400 italic mb-2">Không tìm thấy kết quả</p>
               </div>
             )}
-            
+
             {onCreateNew && searchTerm && !options.find(o => o.name.toLowerCase() === searchTerm.toLowerCase()) && (
               <button
                 type="button"
@@ -2587,6 +2615,7 @@ const Costs = ({ user, onBack }: { user: Employee, onBack?: () => void }) => {
 
   const initialFormState = {
     date: new Date().toISOString().split('T')[0],
+    transaction_type: 'Chi',
     cost_type: '',
     content: '',
     warehouse_name: '',
@@ -2613,7 +2642,7 @@ const Costs = ({ user, onBack }: { user: Employee, onBack?: () => void }) => {
         .from('costs')
         .select('*, users(full_name), warehouses(name), materials(name)')
         .order('date', { ascending: false });
-      
+
       if (error) {
         console.error('Error fetching costs:', error);
         const { data: fallbackData, error: fallbackError } = await supabase.from('costs').select('*').order('date', { ascending: false });
@@ -2664,7 +2693,7 @@ const Costs = ({ user, onBack }: { user: Employee, onBack?: () => void }) => {
   const ensureValueExists = async (table: string, name: string, currentList: any[], fetchFn: () => void) => {
     if (!name) return null;
     if (isUUID(name)) return name;
-    
+
     // Nếu là bảng costs thì không cần lưu vào bảng danh mục riêng
     if (table === 'costs') return null;
 
@@ -2695,7 +2724,7 @@ const Costs = ({ user, onBack }: { user: Employee, onBack?: () => void }) => {
     try {
       // Resolve warehouse_id
       const warehouse_id = await ensureValueExists('warehouses', formData.warehouse_name, warehouses, fetchWarehouses);
-      
+
       // Resolve content/material
       const material_id = await ensureValueExists('materials', formData.content, materials, fetchMaterials);
 
@@ -2709,6 +2738,7 @@ const Costs = ({ user, onBack }: { user: Employee, onBack?: () => void }) => {
 
       const payload: any = {
         date: formData.date,
+        transaction_type: formData.transaction_type,
         cost_code: finalCode,
         employee_id: user.id,
         cost_type: formData.cost_type,
@@ -2749,6 +2779,7 @@ const Costs = ({ user, onBack }: { user: Employee, onBack?: () => void }) => {
   const handleEdit = (item: any) => {
     setFormData({
       date: item.date,
+      transaction_type: item.transaction_type || 'Chi',
       cost_type: item.cost_type,
       content: item.content || '',
       warehouse_name: item.warehouses?.name || '',
@@ -2786,10 +2817,11 @@ const Costs = ({ user, onBack }: { user: Employee, onBack?: () => void }) => {
 
   const exportToExcel = () => {
     const data = costs.map(item => ({
-      'Mã chi phí': item.cost_code,
-      'Ngày chi': item.date,
+      'Mã chứng từ': item.cost_code,
+      'Ngày': item.date,
+      'Loại giao dịch': item.transaction_type || 'Chi',
       'Người lập': item.users?.full_name || item.employee_id,
-      'Loại chi phí': item.cost_type,
+      'Hạng mục': item.cost_type,
       'Nội dung': item.content,
       'Vật tư': item.materials?.name || '',
       'Kho': item.warehouses?.name || '',
@@ -2811,12 +2843,12 @@ const Costs = ({ user, onBack }: { user: Employee, onBack?: () => void }) => {
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h2 className="text-xl font-bold text-gray-800 flex items-center gap-2">
-            <Wallet className="text-primary" /> Quản lý Chi phí
+            <Wallet className="text-primary" /> Tiền vào - Tiền ra
           </h2>
-          <p className="text-xs text-gray-500 mt-1">Theo dõi và quản lý các khoản chi phí phát sinh</p>
+          <p className="text-xs text-gray-500 mt-1">Theo dõi các khoản thu chi và lợi nhuận</p>
         </div>
         <div className="flex gap-2">
-          <motion.button 
+          <motion.button
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
             onClick={exportToExcel}
@@ -2824,12 +2856,51 @@ const Costs = ({ user, onBack }: { user: Employee, onBack?: () => void }) => {
           >
             <FileSpreadsheet size={18} className="text-green-600" /> Xuất Excel
           </motion.button>
-          <button 
+          <button
             onClick={() => { setIsEditing(false); setFormData(initialFormState); setShowModal(true); }}
             className="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-xl text-sm font-bold hover:bg-primary-hover transition-colors shadow-lg shadow-primary/20"
           >
-            <Plus size={18} /> Nhập chi phí
+            <Plus size={18} /> Nhập giao dịch
           </button>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="bg-white p-4 rounded-2xl shadow-sm border border-green-100 flex items-center gap-4">
+          <div className="w-12 h-12 bg-green-50 text-green-600 rounded-full flex items-center justify-center shrink-0">
+            <ArrowDownCircle size={24} />
+          </div>
+          <div>
+            <p className="text-xs text-gray-500 font-bold uppercase">Tổng Thu</p>
+            <p className="text-xl font-black text-green-600">
+              {formatCurrency(costs.filter(c => c.transaction_type === 'Thu').reduce((sum, c) => sum + Number(c.total_amount || 0), 0))}
+            </p>
+          </div>
+        </div>
+        <div className="bg-white p-4 rounded-2xl shadow-sm border border-red-100 flex items-center gap-4">
+          <div className="w-12 h-12 bg-red-50 text-red-600 rounded-full flex items-center justify-center shrink-0">
+            <ArrowUpCircle size={24} />
+          </div>
+          <div>
+            <p className="text-xs text-gray-500 font-bold uppercase">Tổng Chi</p>
+            <p className="text-xl font-black text-red-600">
+              {formatCurrency(costs.filter(c => c.transaction_type !== 'Thu').reduce((sum, c) => sum + Number(c.total_amount || 0), 0))}
+            </p>
+          </div>
+        </div>
+        <div className="bg-white p-4 rounded-2xl shadow-sm border border-blue-100 flex items-center gap-4">
+          <div className="w-12 h-12 bg-blue-50 text-blue-600 rounded-full flex items-center justify-center shrink-0">
+            <Wallet size={24} />
+          </div>
+          <div>
+            <p className="text-xs text-gray-500 font-bold uppercase">Lợi Nhuận Gộp</p>
+            <p className="text-xl font-black text-blue-600">
+              {formatCurrency(
+                costs.filter(c => c.transaction_type === 'Thu').reduce((sum, c) => sum + Number(c.total_amount || 0), 0) -
+                costs.filter(c => c.transaction_type !== 'Thu').reduce((sum, c) => sum + Number(c.total_amount || 0), 0)
+              )}
+            </p>
+          </div>
         </div>
       </div>
 
@@ -2869,15 +2940,16 @@ const Costs = ({ user, onBack }: { user: Employee, onBack?: () => void }) => {
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="bg-primary text-white">
-                <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider border-r border-white/10">Ngày chi</th>
+                <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider border-r border-white/10">Ngày</th>
+                <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider border-r border-white/10">Loại GD</th>
                 <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider border-r border-white/10">Tên kho</th>
-                <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider border-r border-white/10">Loại chi phí</th>
-                <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider border-r border-white/10">Nội dung chi</th>
+                <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider border-r border-white/10">Hạng mục</th>
+                <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider border-r border-white/10">Nội dung</th>
                 <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider border-r border-white/10 text-center">SL</th>
                 <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider border-r border-white/10 text-center">ĐVT</th>
                 <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider border-r border-white/10 text-right">Số tiền</th>
                 <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider border-r border-white/10">Ghi chú</th>
-                <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider">Người chi</th>
+                <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider">Người lập</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
@@ -2887,19 +2959,24 @@ const Costs = ({ user, onBack }: { user: Employee, onBack?: () => void }) => {
                 <tr><td colSpan={9} className="px-4 py-8 text-center text-gray-400 italic">Chưa có dữ liệu chi phí</td></tr>
               ) : (
                 costs.map((item) => (
-                  <tr 
-                    key={item.id} 
+                  <tr
+                    key={item.id}
                     onClick={() => { setSelectedCost(item); setShowDetailModal(true); }}
                     className="hover:bg-gray-50 transition-colors cursor-pointer group"
                   >
                     <td className="px-4 py-3 text-xs text-gray-600">{new Date(item.date).toLocaleDateString('vi-VN')}</td>
+                    <td className="px-4 py-3 text-xs font-bold">
+                      <span className={`px-2 py-0.5 rounded-full ${item.transaction_type === 'Thu' ? 'bg-green-100 text-green-600' : 'bg-red-100 text-red-600'}`}>
+                        {item.transaction_type || 'Chi'}
+                      </span>
+                    </td>
                     <td className="px-4 py-3 text-xs text-gray-600 font-medium">{item.warehouses?.name || 'N/A'}</td>
                     <td className="px-4 py-3 text-xs text-gray-600">{item.cost_type}</td>
                     <td className="px-4 py-3 text-xs text-gray-600">{item.content}</td>
                     <td className="px-4 py-3 text-xs text-gray-600 text-center">{item.quantity}</td>
                     <td className="px-4 py-3 text-xs text-gray-600 text-center">{item.unit}</td>
-                    <td className="px-4 py-3 text-xs font-bold text-primary text-right">
-                      {formatCurrency(item.total_amount)}
+                    <td className={`px-4 py-3 text-xs font-bold text-right ${item.transaction_type === 'Thu' ? 'text-green-600' : 'text-red-600'}`}>
+                      {item.transaction_type === 'Thu' ? '+' : '-'}{formatCurrency(item.total_amount)}
                     </td>
                     <td className="px-4 py-3 text-xs text-gray-400 italic truncate max-w-[150px]">{item.notes}</td>
                     <td className="px-4 py-3 text-xs text-gray-600">{item.users?.full_name}</td>
@@ -2915,7 +2992,7 @@ const Costs = ({ user, onBack }: { user: Employee, onBack?: () => void }) => {
       <AnimatePresence>
         {showDetailModal && selectedCost && (
           <div className="fixed inset-0 z-[120] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
-            <motion.div 
+            <motion.div
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
@@ -2964,13 +3041,13 @@ const Costs = ({ user, onBack }: { user: Employee, onBack?: () => void }) => {
                   </div>
                 </div>
                 <div className="flex gap-3 pt-4 border-t border-gray-100">
-                  <button 
+                  <button
                     onClick={() => handleEdit(selectedCost)}
                     className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl bg-blue-50 text-blue-600 font-bold hover:bg-blue-100 transition-colors"
                   >
                     <Edit size={18} /> Sửa
                   </button>
-                  <button 
+                  <button
                     onClick={() => { setShowDetailModal(false); handleDeleteClick(selectedCost.id); }}
                     className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl bg-red-50 text-red-600 font-bold hover:bg-red-100 transition-colors"
                   >
@@ -2987,7 +3064,7 @@ const Costs = ({ user, onBack }: { user: Employee, onBack?: () => void }) => {
       <AnimatePresence>
         {showDeleteModal && (
           <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
-            <motion.div 
+            <motion.div
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
@@ -2999,13 +3076,13 @@ const Costs = ({ user, onBack }: { user: Employee, onBack?: () => void }) => {
               <h3 className="text-lg font-bold text-gray-800 mb-2">Xác nhận xóa?</h3>
               <p className="text-sm text-gray-500 mb-6">Hành động này không thể hoàn tác. Bạn có chắc chắn muốn xóa bản ghi này?</p>
               <div className="flex gap-3">
-                <button 
+                <button
                   onClick={() => setShowDeleteModal(false)}
                   className="flex-1 px-4 py-2 rounded-xl border border-gray-200 text-sm font-bold text-gray-500 hover:bg-gray-50 transition-colors"
                 >
                   Hủy bỏ
                 </button>
-                <button 
+                <button
                   onClick={confirmDelete}
                   className="flex-1 px-4 py-2 rounded-xl bg-red-600 text-white text-sm font-bold hover:bg-red-700 transition-colors"
                 >
@@ -3021,7 +3098,7 @@ const Costs = ({ user, onBack }: { user: Employee, onBack?: () => void }) => {
       <AnimatePresence>
         {showModal && (
           <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm overflow-y-auto">
-            <motion.div 
+            <motion.div
               initial={{ opacity: 0, scale: 0.95, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 20 }}
@@ -3041,10 +3118,24 @@ const Costs = ({ user, onBack }: { user: Employee, onBack?: () => void }) => {
               <div className="flex-1 overflow-y-auto p-6 custom-scrollbar">
                 <form onSubmit={handleSubmit}>
                   <div className="bg-blue-50 p-4 rounded-2xl mb-6 flex items-start gap-3 border border-blue-100">
-                    <Info size={18} className="text-blue-600 mt-0.5" />
+                    <Info size={18} className="text-blue-600 mt-0.5 shrink-0" />
                     <p className="text-xs text-blue-700 leading-relaxed">
-                      Hệ thống tự động tạo/gom phiếu theo <strong>ngày + người lập</strong>. Thành tiền = SL × Đơn giá.
+                      Sử dụng form này để nhập tay các khoản <strong>Thu</strong> (doanh thu, thanh lý) hoặc khoản <strong>Chi</strong> (mua sắm ngoài hệ thống kho).
                     </p>
+                  </div>
+
+                  <div className="mb-6">
+                    <label className="text-[10px] font-bold text-gray-400 uppercase block mb-2">Loại giao dịch *</label>
+                    <div className="flex gap-4">
+                      <label className="flex items-center gap-2 cursor-pointer bg-green-50 px-4 py-2 rounded-xl text-sm font-bold text-green-700 border border-green-200">
+                        <input type="radio" name="transType" checked={formData.transaction_type === 'Thu'} onChange={() => setFormData({ ...formData, transaction_type: 'Thu' })} className="accent-green-600 w-4 h-4 cursor-pointer" />
+                        Khoản Thu (Tiền vào)
+                      </label>
+                      <label className="flex items-center gap-2 cursor-pointer bg-red-50 px-4 py-2 rounded-xl text-sm font-bold text-red-700 border border-red-200">
+                        <input type="radio" name="transType" checked={formData.transaction_type === 'Chi'} onChange={() => setFormData({ ...formData, transaction_type: 'Chi' })} className="accent-red-600 w-4 h-4 cursor-pointer" />
+                        Khoản Chi (Tiền ra)
+                      </label>
+                    </div>
                   </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -3052,51 +3143,51 @@ const Costs = ({ user, onBack }: { user: Employee, onBack?: () => void }) => {
                       <div className="grid grid-cols-2 gap-4">
                         <div className="space-y-1">
                           <label className="text-[10px] font-bold text-gray-400 uppercase">Ngày chi *</label>
-                          <input 
-                            type="date" 
+                          <input
+                            type="date"
                             required
                             value={formData.date}
-                            onChange={(e) => setFormData({...formData, date: e.target.value})}
-                            className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20" 
+                            onChange={(e) => setFormData({ ...formData, date: e.target.value })}
+                            className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20"
                           />
                         </div>
                         <div className="space-y-1">
                           <label className="text-[10px] font-bold text-gray-400 uppercase">Người lập</label>
-                          <input 
-                            type="text" 
+                          <input
+                            type="text"
                             readOnly
                             value={user.full_name}
-                            className="w-full px-4 py-2 rounded-xl border border-gray-100 bg-gray-50 text-sm text-gray-500 outline-none" 
+                            className="w-full px-4 py-2 rounded-xl border border-gray-100 bg-gray-50 text-sm text-gray-500 outline-none"
                           />
                         </div>
                       </div>
 
-                      <CreatableSelect 
+                      <CreatableSelect
                         label="Loại chi phí *"
                         value={formData.cost_type}
                         options={costTypes}
-                        onChange={(val) => setFormData({...formData, cost_type: val})}
-                        onCreate={(val) => setFormData({...formData, cost_type: val})}
+                        onChange={(val) => setFormData({ ...formData, cost_type: val })}
+                        onCreate={(val) => setFormData({ ...formData, cost_type: val })}
                         placeholder="Chọn loại chi phí..."
                         required
                       />
 
-                      <CreatableSelect 
+                      <CreatableSelect
                         label="Tên kho *"
                         value={formData.warehouse_name}
                         options={warehouses}
-                        onChange={(val) => setFormData({...formData, warehouse_name: val})}
-                        onCreate={(val) => setFormData({...formData, warehouse_name: val})}
+                        onChange={(val) => setFormData({ ...formData, warehouse_name: val })}
+                        onCreate={(val) => setFormData({ ...formData, warehouse_name: val })}
                         placeholder="Chọn kho..."
                         required
                       />
 
-                      <CreatableSelect 
+                      <CreatableSelect
                         label="Nội dung chi *"
                         value={formData.content}
                         options={materials}
-                        onChange={(val) => setFormData({...formData, content: val})}
-                        onCreate={(val) => setFormData({...formData, content: val})}
+                        onChange={(val) => setFormData({ ...formData, content: val })}
+                        onCreate={(val) => setFormData({ ...formData, content: val })}
                         placeholder="Chọn nội dung..."
                         required
                       />
@@ -3104,37 +3195,37 @@ const Costs = ({ user, onBack }: { user: Employee, onBack?: () => void }) => {
 
                     <div className="space-y-4">
                       <div className="grid grid-cols-2 gap-4">
-                        <NumericInput 
+                        <NumericInput
                           label="Số lượng"
                           value={formData.quantity}
-                          onChange={(val) => setFormData({...formData, quantity: val})}
+                          onChange={(val) => setFormData({ ...formData, quantity: val })}
                         />
-                        <CreatableSelect 
+                        <CreatableSelect
                           label="Đơn vị tính"
                           value={formData.unit}
                           options={units}
-                          onChange={(val) => setFormData({...formData, unit: val})}
-                          onCreate={(val) => setFormData({...formData, unit: val})}
+                          onChange={(val) => setFormData({ ...formData, unit: val })}
+                          onCreate={(val) => setFormData({ ...formData, unit: val })}
                           placeholder="Chọn/Nhập..."
                         />
                       </div>
 
-                      <NumericInput 
+                      <NumericInput
                         label="Số tiền *"
                         required
                         value={formData.total_amount}
-                        onChange={(val) => setFormData({...formData, total_amount: val})}
+                        onChange={(val) => setFormData({ ...formData, total_amount: val })}
                         inputClassName="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20 font-bold text-primary"
                       />
 
                       <div className="space-y-1">
                         <label className="text-[10px] font-bold text-gray-400 uppercase">Ghi chú</label>
-                        <textarea 
+                        <textarea
                           rows={3}
                           placeholder="Ghi chú thêm..."
                           value={formData.notes}
-                          onChange={(e) => setFormData({...formData, notes: e.target.value})}
-                          className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20 resize-none" 
+                          onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+                          className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20 resize-none"
                         />
                       </div>
                     </div>
@@ -3142,8 +3233,8 @@ const Costs = ({ user, onBack }: { user: Employee, onBack?: () => void }) => {
 
                   <div className="mt-8 flex justify-end gap-3">
                     <button type="button" onClick={() => setShowModal(false)} className="px-8 py-2.5 rounded-xl text-sm font-bold text-gray-500 hover:bg-gray-100 transition-colors">Hủy</button>
-                    <button 
-                      type="submit" 
+                    <button
+                      type="submit"
                       disabled={submitting}
                       className="px-8 py-2.5 rounded-xl text-sm font-bold bg-primary text-white hover:bg-primary-hover transition-colors shadow-lg shadow-primary/20 disabled:opacity-50"
                     >
@@ -3268,8 +3359,8 @@ const CostFilter = ({ user, onBack }: { user: Employee, onBack?: () => void }) =
 
   return (
     <div className="p-4 md:p-6 space-y-6 pb-32">
-      <PageBreadcrumb 
-        title="Lọc chi phí" 
+      <PageBreadcrumb
+        title="Lọc chi phí"
         onBack={onBack}
       />
 
@@ -3281,7 +3372,7 @@ const CostFilter = ({ user, onBack }: { user: Employee, onBack?: () => void }) =
               <h3 className="font-bold text-gray-800 flex items-center gap-2">
                 <Filter size={18} className="text-primary" /> Lọc chi phí
               </h3>
-              <motion.button 
+              <motion.button
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
                 onClick={resetFilters}
@@ -3303,52 +3394,52 @@ const CostFilter = ({ user, onBack }: { user: Employee, onBack?: () => void }) =
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-1">
                   <label className="text-[10px] font-bold text-gray-400 uppercase">Từ ngày</label>
-                  <input 
-                    type="date" 
+                  <input
+                    type="date"
                     value={filters.fromDate}
-                    onChange={(e) => setFilters({...filters, fromDate: e.target.value})}
+                    onChange={(e) => setFilters({ ...filters, fromDate: e.target.value })}
                     className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20"
                   />
                 </div>
                 <div className="space-y-1">
                   <label className="text-[10px] font-bold text-gray-400 uppercase">Đến ngày</label>
-                  <input 
-                    type="date" 
+                  <input
+                    type="date"
                     value={filters.toDate}
-                    onChange={(e) => setFilters({...filters, toDate: e.target.value})}
+                    onChange={(e) => setFilters({ ...filters, toDate: e.target.value })}
                     className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20"
                   />
                 </div>
               </div>
 
-              <CustomCombobox 
+              <CustomCombobox
                 label="Nhóm chi phí"
                 value={filters.category}
-                onChange={(val) => setFilters({...filters, category: val})}
+                onChange={(val) => setFilters({ ...filters, category: val })}
                 options={categories}
                 placeholder="Chọn nhóm chi phí..."
               />
 
-              <CustomCombobox 
+              <CustomCombobox
                 label="Chọn kho"
                 value={filters.warehouse}
-                onChange={(val) => setFilters({...filters, warehouse: val})}
+                onChange={(val) => setFilters({ ...filters, warehouse: val })}
                 options={warehouses}
                 placeholder="Chọn kho..."
               />
 
-              <CustomCombobox 
+              <CustomCombobox
                 label="Chọn nhân viên"
                 value={filters.employee}
-                onChange={(val) => setFilters({...filters, employee: val})}
+                onChange={(val) => setFilters({ ...filters, employee: val })}
                 options={employees}
                 placeholder="Chọn nhân viên..."
               />
 
-              <CustomCombobox 
+              <CustomCombobox
                 label="Nội dung chi"
                 value={filters.content}
-                onChange={(val) => setFilters({...filters, content: val})}
+                onChange={(val) => setFilters({ ...filters, content: val })}
                 options={contents}
                 placeholder="Chọn nội dung chi..."
               />
@@ -3364,7 +3455,7 @@ const CostFilter = ({ user, onBack }: { user: Employee, onBack?: () => void }) =
                 </div>
               </div>
 
-              <button 
+              <button
                 onClick={handleFilter}
                 disabled={loading}
                 className="w-full py-3 rounded-xl bg-primary text-white font-bold text-sm shadow-lg shadow-primary/20 hover:bg-primary-hover transition-all flex items-center justify-center gap-2"
@@ -3401,7 +3492,7 @@ const CostFilter = ({ user, onBack }: { user: Employee, onBack?: () => void }) =
               ) : (
                 <div className="space-y-3">
                   {costs.map((item, idx) => (
-                    <motion.div 
+                    <motion.div
                       key={item.id}
                       initial={{ opacity: 0, y: 10 }}
                       animate={{ opacity: 1, y: 0 }}
@@ -3444,7 +3535,7 @@ const CostFilter = ({ user, onBack }: { user: Employee, onBack?: () => void }) =
       <AnimatePresence>
         {showDetailModal && selectedCost && (
           <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm overflow-y-auto">
-            <motion.div 
+            <motion.div
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
@@ -3484,7 +3575,7 @@ const CostFilter = ({ user, onBack }: { user: Employee, onBack?: () => void }) =
               </div>
 
               <div className="p-6 border-t border-gray-100 flex justify-end">
-                <button 
+                <button
                   onClick={() => setShowDetailModal(false)}
                   className="px-8 py-2 rounded-xl bg-primary text-white text-sm font-bold hover:bg-primary-hover transition-colors shadow-lg shadow-primary/20"
                 >
@@ -3504,12 +3595,12 @@ const CostReport = ({ user, onBack }: { user: Employee, onBack?: () => void }) =
   const [costs, setCosts] = useState<any[]>([]);
   const [selectedGroup, setSelectedGroup] = useState<any>(null);
   const [selectedItem, setSelectedItem] = useState<any>(null);
-  
+
   // New states for entry flow
   const [showMasterModal, setShowMasterModal] = useState(false);
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [submitting, setSubmitting] = useState(false);
-  
+
   const [warehouses, setWarehouses] = useState<any[]>([]);
   const [materials, setMaterials] = useState<any[]>([]);
   const [costTypes, setCostTypes] = useState<any[]>([]);
@@ -3550,7 +3641,7 @@ const CostReport = ({ user, onBack }: { user: Employee, onBack?: () => void }) =
       .from('costs')
       .select('*, users(full_name), warehouses(name), materials(name)')
       .order('date', { ascending: false });
-    
+
     if (error) {
       console.error('Error fetching costs:', error);
     } else if (data) {
@@ -3683,7 +3774,7 @@ const CostReport = ({ user, onBack }: { user: Employee, onBack?: () => void }) =
     setSubmitting(true);
     try {
       const costCode = generateCostCode(masterForm.date, masterForm.employee_id);
-      
+
       const itemsToInsert = await Promise.all(masterForm.items.map(async (item) => {
         // Ensure warehouse exists
         let warehouse_id = null;
@@ -3760,9 +3851,9 @@ const CostReport = ({ user, onBack }: { user: Employee, onBack?: () => void }) =
     const date = current.date;
     const employeeId = current.employee_id;
     const employeeName = current.users?.full_name || 'N/A';
-    
+
     const existingGroup = acc.find(g => g.date === date && g.employee_id === employeeId);
-    
+
     if (existingGroup) {
       existingGroup.total_amount += current.total_amount;
       existingGroup.items.push(current);
@@ -3782,14 +3873,14 @@ const CostReport = ({ user, onBack }: { user: Employee, onBack?: () => void }) =
     <div className="p-4 md:p-6 space-y-6 pb-44">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <PageBreadcrumb title="Báo cáo chi phí" onBack={onBack} />
-        <button 
+        <button
           onClick={handleAddReport}
           className="flex items-center justify-center gap-2 px-6 py-2.5 bg-primary text-white rounded-xl text-sm font-bold hover:bg-primary-hover transition-all shadow-lg shadow-primary/20"
         >
           <Plus size={18} /> Thêm báo cáo
         </button>
       </div>
-      
+
       <div className="flex flex-col lg:flex-row gap-6">
         {/* Left Side: Summary List */}
         <div className={`flex-1 bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden ${selectedGroup ? 'hidden lg:block' : 'block'}`}>
@@ -3810,7 +3901,7 @@ const CostReport = ({ user, onBack }: { user: Employee, onBack?: () => void }) =
                   <tr><td colSpan={4} className="px-4 py-8 text-center text-gray-400 italic">Chưa có dữ liệu chi phí</td></tr>
                 ) : (
                   groupedData.map((group, idx) => (
-                    <tr 
+                    <tr
                       key={`${group.date}-${group.employee_id}-${idx}`}
                       onClick={() => { setSelectedGroup(group); setSelectedItem(null); }}
                       className={`hover:bg-primary/5 cursor-pointer transition-colors ${selectedGroup?.date === group.date && selectedGroup?.employee_id === group.employee_id ? 'bg-primary/5' : ''}`}
@@ -3819,7 +3910,7 @@ const CostReport = ({ user, onBack }: { user: Employee, onBack?: () => void }) =
                       <td className="px-4 py-3 text-sm font-medium text-gray-800">{group.employee_name}</td>
                       <td className="px-4 py-3 text-sm font-bold text-red-600 text-right">{formatCurrency(group.total_amount)}</td>
                       <td className="px-4 py-3 text-gray-400 flex items-center gap-2">
-                        <button 
+                        <button
                           onClick={(e) => { e.stopPropagation(); handleEditReport(group); }}
                           className="p-1.5 hover:bg-blue-50 text-blue-500 rounded-lg transition-colors"
                         >
@@ -3856,7 +3947,7 @@ const CostReport = ({ user, onBack }: { user: Employee, onBack?: () => void }) =
                   </button>
                 </div>
               </div>
-              
+
               <div className="overflow-x-auto">
                 <table className="w-full text-left border-collapse">
                   <thead>
@@ -3868,8 +3959,8 @@ const CostReport = ({ user, onBack }: { user: Employee, onBack?: () => void }) =
                   </thead>
                   <tbody className="divide-y divide-gray-50">
                     {selectedGroup.items.map((item: any) => (
-                      <tr 
-                        key={item.id} 
+                      <tr
+                        key={item.id}
                         onClick={() => setSelectedItem(item)}
                         className={`hover:bg-gray-50 cursor-pointer transition-colors ${selectedItem?.id === item.id ? 'bg-gray-50' : ''}`}
                       >
@@ -3885,7 +3976,7 @@ const CostReport = ({ user, onBack }: { user: Employee, onBack?: () => void }) =
 
             {/* Item Details (Level 2) */}
             {selectedItem && (
-              <motion.div 
+              <motion.div
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 space-y-6"
@@ -3935,7 +4026,7 @@ const CostReport = ({ user, onBack }: { user: Employee, onBack?: () => void }) =
       <AnimatePresence>
         {showMasterModal && (
           <div className="fixed inset-0 z-[150] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm overflow-y-auto">
-            <motion.div 
+            <motion.div
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
@@ -3960,11 +4051,11 @@ const CostReport = ({ user, onBack }: { user: Employee, onBack?: () => void }) =
                   </div>
                   <div className="space-y-1">
                     <label className="text-[10px] font-bold text-gray-400 uppercase">Ngày chi</label>
-                    <input 
-                      type="date" 
-                      value={masterForm.date} 
-                      onChange={(e) => setMasterForm({...masterForm, date: e.target.value})}
-                      className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20" 
+                    <input
+                      type="date"
+                      value={masterForm.date}
+                      onChange={(e) => setMasterForm({ ...masterForm, date: e.target.value })}
+                      className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20"
                     />
                   </div>
                   <div className="space-y-1">
@@ -3976,7 +4067,7 @@ const CostReport = ({ user, onBack }: { user: Employee, onBack?: () => void }) =
                 <div className="space-y-4">
                   <div className="flex items-center justify-between">
                     <h4 className="text-sm font-bold text-gray-800 uppercase tracking-wider">Hạng mục chi</h4>
-                    <button 
+                    <button
                       onClick={handleAddItem}
                       className="flex items-center gap-1 text-primary hover:text-primary-hover font-bold text-sm transition-colors"
                     >
@@ -4033,7 +4124,7 @@ const CostReport = ({ user, onBack }: { user: Employee, onBack?: () => void }) =
 
               <div className="p-6 border-t border-gray-100 flex justify-end gap-3">
                 <button onClick={() => setShowMasterModal(false)} className="px-6 py-2 rounded-xl text-sm font-bold text-gray-500 hover:bg-gray-100 transition-colors">Hủy</button>
-                <button 
+                <button
                   onClick={handleSaveAll}
                   disabled={submitting}
                   className="px-8 py-2 rounded-xl bg-primary text-white text-sm font-bold hover:bg-primary-hover transition-colors shadow-lg shadow-primary/20 disabled:opacity-50"
@@ -4050,7 +4141,7 @@ const CostReport = ({ user, onBack }: { user: Employee, onBack?: () => void }) =
       <AnimatePresence>
         {showDetailModal && (
           <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm overflow-y-auto">
-            <motion.div 
+            <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: 20 }}
@@ -4072,26 +4163,26 @@ const CostReport = ({ user, onBack }: { user: Employee, onBack?: () => void }) =
                       <input type="text" readOnly value={generateCostCode(masterForm.date, masterForm.employee_id)} className="w-full px-4 py-2 rounded-xl border border-gray-100 bg-gray-50 text-sm text-gray-500 outline-none" />
                     </div>
 
-                    <CreatableSelect 
+                    <CreatableSelect
                       label="Nội dung chi *"
                       value={detailForm.content}
                       options={materials}
-                      onChange={(val) => setDetailForm({...detailForm, content: val})}
-                      onCreate={(val) => setDetailForm({...detailForm, content: val})}
+                      onChange={(val) => setDetailForm({ ...detailForm, content: val })}
+                      onCreate={(val) => setDetailForm({ ...detailForm, content: val })}
                       placeholder="Chọn nội dung..."
                       required
                     />
 
                     <div className="grid grid-cols-2 gap-4">
-                      <NumericInput 
+                      <NumericInput
                         label="Đơn giá"
                         value={detailForm.unit_price}
-                        onChange={(val) => setDetailForm({...detailForm, unit_price: val})}
+                        onChange={(val) => setDetailForm({ ...detailForm, unit_price: val })}
                       />
-                      <NumericInput 
+                      <NumericInput
                         label="Số lượng"
                         value={detailForm.quantity}
-                        onChange={(val) => setDetailForm({...detailForm, quantity: val})}
+                        onChange={(val) => setDetailForm({ ...detailForm, quantity: val })}
                       />
                     </div>
 
@@ -4104,31 +4195,31 @@ const CostReport = ({ user, onBack }: { user: Employee, onBack?: () => void }) =
                   </div>
 
                   <div className="space-y-4">
-                    <CreatableSelect 
+                    <CreatableSelect
                       label="Loại chi phí *"
                       value={detailForm.cost_type}
                       options={costTypes}
-                      onChange={(val) => setDetailForm({...detailForm, cost_type: val})}
-                      onCreate={(val) => setDetailForm({...detailForm, cost_type: val})}
+                      onChange={(val) => setDetailForm({ ...detailForm, cost_type: val })}
+                      onCreate={(val) => setDetailForm({ ...detailForm, cost_type: val })}
                       placeholder="Chọn loại chi phí..."
                       required
                     />
 
                     <div className="grid grid-cols-2 gap-4">
-                      <CreatableSelect 
+                      <CreatableSelect
                         label="Đơn vị tính"
                         value={detailForm.unit}
                         options={units}
-                        onChange={(val) => setDetailForm({...detailForm, unit: val})}
-                        onCreate={(val) => setDetailForm({...detailForm, unit: val})}
+                        onChange={(val) => setDetailForm({ ...detailForm, unit: val })}
+                        onCreate={(val) => setDetailForm({ ...detailForm, unit: val })}
                         placeholder="Chọn/Nhập..."
                       />
-                      <CreatableSelect 
+                      <CreatableSelect
                         label="Tên kho"
                         value={detailForm.warehouse_name}
                         options={warehouses}
-                        onChange={(val) => setDetailForm({...detailForm, warehouse_name: val})}
-                        onCreate={(val) => setDetailForm({...detailForm, warehouse_name: val})}
+                        onChange={(val) => setDetailForm({ ...detailForm, warehouse_name: val })}
+                        onCreate={(val) => setDetailForm({ ...detailForm, warehouse_name: val })}
                         placeholder="Chọn kho..."
                       />
                     </div>
@@ -4138,10 +4229,10 @@ const CostReport = ({ user, onBack }: { user: Employee, onBack?: () => void }) =
                         <label className="text-[10px] font-bold text-gray-400 uppercase">Loại hình chi</label>
                         <div className="flex gap-2">
                           {['Chi phí', 'Nhập kho'].map(cat => (
-                            <button 
+                            <button
                               key={cat}
                               type="button"
-                              onClick={() => setDetailForm({...detailForm, cost_category: cat})}
+                              onClick={() => setDetailForm({ ...detailForm, cost_category: cat })}
                               className={`flex-1 py-1.5 rounded-lg text-[10px] font-bold transition-colors ${detailForm.cost_category === cat ? 'bg-primary text-white' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'}`}
                             >
                               {cat}
@@ -4151,9 +4242,9 @@ const CostReport = ({ user, onBack }: { user: Employee, onBack?: () => void }) =
                       </div>
                       <div className="space-y-1">
                         <label className="text-[10px] font-bold text-gray-400 uppercase">Tình trạng nhập kho</label>
-                        <select 
-                          value={detailForm.stock_status} 
-                          onChange={(e) => setDetailForm({...detailForm, stock_status: e.target.value})}
+                        <select
+                          value={detailForm.stock_status}
+                          onChange={(e) => setDetailForm({ ...detailForm, stock_status: e.target.value })}
                           className="w-full px-3 py-2 rounded-xl border border-gray-200 text-xs outline-none focus:ring-2 focus:ring-primary/20"
                         >
                           <option value="Chưa nhập">Chưa nhập</option>
@@ -4164,11 +4255,11 @@ const CostReport = ({ user, onBack }: { user: Employee, onBack?: () => void }) =
 
                     <div className="space-y-1">
                       <label className="text-[10px] font-bold text-gray-400 uppercase">Ghi chú</label>
-                      <textarea 
-                        rows={3} 
-                        value={detailForm.notes} 
-                        onChange={(e) => setDetailForm({...detailForm, notes: e.target.value})}
-                        className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20 resize-none" 
+                      <textarea
+                        rows={3}
+                        value={detailForm.notes}
+                        onChange={(e) => setDetailForm({ ...detailForm, notes: e.target.value })}
+                        className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20 resize-none"
                         placeholder="Ghi chú thêm..."
                       />
                     </div>
@@ -4185,7 +4276,7 @@ const CostReport = ({ user, onBack }: { user: Employee, onBack?: () => void }) =
 
               <div className="p-6 border-t border-gray-100 flex justify-end gap-3">
                 <button onClick={() => setShowDetailModal(false)} className="px-6 py-2 rounded-xl text-sm font-bold text-gray-500 hover:bg-gray-100 transition-colors">Hủy</button>
-                <button 
+                <button
                   onClick={handleSaveDetail}
                   className="px-8 py-2 rounded-xl bg-primary text-white text-sm font-bold hover:bg-primary-hover transition-colors shadow-lg shadow-primary/20"
                 >
@@ -4234,7 +4325,7 @@ const Dashboard = ({ user, onNavigate }: { user: Employee, onNavigate: (page: st
         const { count: matCount } = await supabase.from('materials').select('*', { count: 'exact', head: true });
         const { count: whCount } = await supabase.from('warehouses').select('*', { count: 'exact', head: true });
         const { count: groupCount } = await supabase.from('material_groups').select('*', { count: 'exact', head: true });
-        
+
         const [siP, soP, trP, siT, soT, trT] = await Promise.all([
           supabase.from('stock_in').select('*', { count: 'exact', head: true }).eq('status', 'Chờ duyệt'),
           supabase.from('stock_out').select('*', { count: 'exact', head: true }).eq('status', 'Chờ duyệt'),
@@ -4243,7 +4334,7 @@ const Dashboard = ({ user, onNavigate }: { user: Employee, onNavigate: (page: st
           supabase.from('stock_out').select('*', { count: 'exact', head: true }),
           supabase.from('transfers').select('*', { count: 'exact', head: true })
         ]);
-        
+
         setCounts({
           employees: empCount || 0,
           materials: matCount || 0,
@@ -4296,13 +4387,13 @@ const Dashboard = ({ user, onNavigate }: { user: Employee, onNavigate: (page: st
     { label: 'KHO BÃI', value: counts.warehouses, icon: Warehouse, color: 'bg-orange-50 text-orange-600', page: 'warehouses' },
     (user.role === 'Admin' || user.role === 'Admin App')
       ? { label: 'PHIẾU DUYỆT', value: counts.pendingSlips, icon: ClipboardCheck, color: 'bg-purple-50 text-purple-600', page: 'pending-approvals' }
-      : { 
-          label: 'CHẤM CÔNG', 
-          value: hasClockedIn ? 'ĐÃ CHẤM' : 'CHƯA CHẤM', 
-          icon: CalendarCheck, 
-          color: hasClockedIn ? 'bg-green-50 text-green-600' : 'bg-red-50 text-red-600', 
-          page: 'attendance' 
-        },
+      : {
+        label: 'CHẤM CÔNG',
+        value: hasClockedIn ? 'ĐÃ CHẤM' : 'CHƯA CHẤM',
+        icon: CalendarCheck,
+        color: hasClockedIn ? 'bg-green-50 text-green-600' : 'bg-red-50 text-red-600',
+        page: 'attendance'
+      },
   ];
 
   const sections = [
@@ -4378,7 +4469,7 @@ const Dashboard = ({ user, onNavigate }: { user: Employee, onNavigate: (page: st
         </h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {stats.map((stat, idx) => (
-            <motion.div 
+            <motion.div
               key={idx}
               whileHover={{ scale: 1.02 }}
               onClick={() => onNavigate(stat.page, stat.params)}
@@ -4403,7 +4494,7 @@ const Dashboard = ({ user, onNavigate }: { user: Employee, onNavigate: (page: st
           </h2>
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
             {section.items.map((item, iIdx) => (
-              <motion.div 
+              <motion.div
                 key={iIdx}
                 whileHover={{ y: -4 }}
                 onClick={() => onNavigate(item.page)}
@@ -4425,7 +4516,7 @@ const Dashboard = ({ user, onNavigate }: { user: Employee, onNavigate: (page: st
           <h2 className="text-xs font-bold text-primary flex items-center gap-2 uppercase tracking-wider">
             <Package size={16} /> TỒN KHO NHANH
           </h2>
-          <button 
+          <button
             onClick={() => onNavigate('inventory-report')}
             className="text-[10px] font-bold text-primary hover:underline flex items-center gap-1"
           >
@@ -4487,21 +4578,21 @@ const PendingApprovals = ({ user, onBack, onNavigate, onRefreshCount }: { user: 
         supabase.from('transfers').select('*, from_wh:warehouses!from_warehouse_id(name), to_wh:warehouses!to_warehouse_id(name), materials(name, unit)').eq('status', 'Chờ duyệt')
       ]);
 
-      const siData = (si.data || []).map(item => ({ 
-        ...item, 
-        type: 'Nhập kho', 
+      const siData = (si.data || []).map(item => ({
+        ...item,
+        type: 'Nhập kho',
         table: 'stock_in',
         isEdit: item.notes?.startsWith('[SỬA]')
       }));
-      const soData = (so.data || []).map(item => ({ 
-        ...item, 
-        type: 'Xuất kho', 
+      const soData = (so.data || []).map(item => ({
+        ...item,
+        type: 'Xuất kho',
         table: 'stock_out',
         isEdit: item.notes?.startsWith('[SỬA]')
       }));
-      const trData = (tr.data || []).map(item => ({ 
-        ...item, 
-        type: 'Luân chuyển', 
+      const trData = (tr.data || []).map(item => ({
+        ...item,
+        type: 'Luân chuyển',
         table: 'transfers',
         isEdit: item.notes?.startsWith('[SỬA]')
       }));
@@ -4550,7 +4641,7 @@ const PendingApprovals = ({ user, onBack, onNavigate, onRefreshCount }: { user: 
         .eq('warehouse_id', warehouseId)
         .eq('material_id', materialId)
         .maybeSingle();
-      
+
       if (fetchError) {
         console.error('Error fetching inventory:', fetchError);
         return;
@@ -4605,16 +4696,14 @@ const PendingApprovals = ({ user, onBack, onNavigate, onRefreshCount }: { user: 
                   <tr key={slip.id} className="hover:bg-gray-50/50 transition-colors">
                     <td className="px-6 py-4">
                       <div className="flex flex-col gap-1">
-                        <span className={`px-2 py-1 rounded-lg text-[10px] font-bold w-fit ${
-                          slip.type === 'Nhập kho' ? 'bg-blue-50 text-blue-600' :
-                          slip.type === 'Xuất kho' ? 'bg-orange-50 text-orange-600' :
-                          'bg-purple-50 text-purple-600'
-                        }`}>
+                        <span className={`px-2 py-1 rounded-lg text-[10px] font-bold w-fit ${slip.type === 'Nhập kho' ? 'bg-blue-50 text-blue-600' :
+                            slip.type === 'Xuất kho' ? 'bg-orange-50 text-orange-600' :
+                              'bg-purple-50 text-purple-600'
+                          }`}>
                           {slip.type}
                         </span>
-                        <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-md w-fit ${
-                          slip.isEdit ? 'bg-amber-100 text-amber-700' : 'bg-green-100 text-green-700'
-                        }`}>
+                        <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-md w-fit ${slip.isEdit ? 'bg-amber-100 text-amber-700' : 'bg-green-100 text-green-700'
+                          }`}>
                           {slip.isEdit ? 'SỬA PHIẾU' : 'NHẬP MỚI'}
                         </span>
                       </div>
@@ -4626,7 +4715,7 @@ const PendingApprovals = ({ user, onBack, onNavigate, onRefreshCount }: { user: 
                     <td className="px-6 py-4">
                       <div className="text-sm font-medium text-gray-800">{slip.materials?.name}</div>
                       <div className="text-[10px] text-primary font-bold">
-                        {slip.type === 'Luân chuyển' 
+                        {slip.type === 'Luân chuyển'
                           ? `${slip.from_wh?.name} → ${slip.to_wh?.name}`
                           : slip.warehouses?.name
                         }
@@ -4641,21 +4730,21 @@ const PendingApprovals = ({ user, onBack, onNavigate, onRefreshCount }: { user: 
                     </td>
                     <td className="px-6 py-4">
                       <div className="flex items-center justify-center gap-2">
-                        <button 
+                        <button
                           onClick={() => handleApprove(slip.id, 'Đã duyệt', slip.table)}
                           className="p-2 bg-green-50 text-green-600 rounded-lg hover:bg-green-100 transition-colors"
                           title="Duyệt phiếu"
                         >
                           <Check size={18} />
                         </button>
-                        <button 
+                        <button
                           onClick={() => handleApprove(slip.id, 'Từ chối', slip.table)}
                           className="p-2 bg-red-50 text-red-600 rounded-lg hover:bg-red-100 transition-colors"
                           title="Từ chối"
                         >
                           <X size={18} />
                         </button>
-                        <button 
+                        <button
                           onClick={() => onNavigate(slip.table === 'stock_in' ? 'stock-in' : slip.table === 'stock_out' ? 'stock-out' : 'transfer')}
                           className="p-2 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition-colors"
                           title="Xem chi tiết"
@@ -4714,12 +4803,12 @@ const HRRecords = ({ user, onBack }: { user: Employee, onBack?: () => void }) =>
   const fetchEmployees = async () => {
     setLoading(true);
     let query = supabase.from('users').select('*').neq('status', 'Đã xóa');
-    
+
     // Hide Admin App from non-Admin App users
     if (user.role !== 'Admin App') {
       query = query.neq('role', 'Admin App');
     }
-    
+
     const { data, error } = await query.order('created_at', { ascending: false });
     if (data) setEmployees(data);
     setLoading(false);
@@ -4782,7 +4871,7 @@ const HRRecords = ({ user, onBack }: { user: Employee, onBack?: () => void }) =>
 
   const confirmDelete = async () => {
     if (!itemToDelete) return;
-    
+
     // Check if trying to delete an Admin App account
     const target = employees.find(e => e.id === itemToDelete);
     if (target?.role === 'Admin App' && user.role !== 'Admin App') {
@@ -4844,7 +4933,7 @@ const HRRecords = ({ user, onBack }: { user: Employee, onBack?: () => void }) =>
   const filteredEmployees = employees.filter(emp => {
     const matchesSearch = emp.full_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       (emp.code && emp.code.toLowerCase().includes(searchTerm.toLowerCase()));
-    
+
     // Hide Admin App accounts from non-Admin App users
     if (user.role !== 'Admin App' && emp.role === 'Admin App') {
       return false;
@@ -4859,7 +4948,7 @@ const HRRecords = ({ user, onBack }: { user: Employee, onBack?: () => void }) =>
         <h2 className="text-lg font-bold text-gray-800 flex items-center gap-2">
           <Users size={20} className="text-primary" /> Hồ sơ Nhân sự
         </h2>
-        <button 
+        <button
           onClick={async () => {
             const nextCode = await generateNextEmployeeCode();
             setFormData({ ...initialFormState, code: nextCode });
@@ -4876,9 +4965,9 @@ const HRRecords = ({ user, onBack }: { user: Employee, onBack?: () => void }) =>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
           <div className="relative lg:col-span-1">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
-            <input 
-              type="text" 
-              placeholder="Tìm kiếm nhanh..." 
+            <input
+              type="text"
+              placeholder="Tìm kiếm nhanh..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="w-full pl-10 pr-4 py-2 rounded-lg border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
@@ -4927,29 +5016,27 @@ const HRRecords = ({ user, onBack }: { user: Employee, onBack?: () => void }) =>
                   <td className="p-3">{emp.department || '-'}</td>
                   <td className="p-3">{emp.position || '-'}</td>
                   <td className="p-3">
-                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
-                      emp.role === 'Admin App' ? 'bg-purple-100 text-purple-600' :
-                      emp.role === 'Admin' ? 'bg-blue-100 text-blue-600' : 'bg-gray-100 text-gray-600'
-                    }`}>
+                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${emp.role === 'Admin App' ? 'bg-purple-100 text-purple-600' :
+                        emp.role === 'Admin' ? 'bg-blue-100 text-blue-600' : 'bg-gray-100 text-gray-600'
+                      }`}>
                       {emp.role}
                     </span>
                   </td>
                   <td className="p-3">
-                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
-                      emp.status === 'Đang làm việc' || emp.status === 'Hoạt động' ? 'bg-green-100 text-green-600' : 'bg-red-100 text-red-600'
-                    }`}>
+                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${emp.status === 'Đang làm việc' || emp.status === 'Hoạt động' ? 'bg-green-100 text-green-600' : 'bg-red-100 text-red-600'
+                      }`}>
                       {emp.status}
                     </span>
                   </td>
                   <td className="p-3">
                     <div className="flex gap-2">
-                      <button 
+                      <button
                         onClick={() => handleEdit(emp)}
                         className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
                       >
                         <Edit size={14} />
                       </button>
-                      <button 
+                      <button
                         onClick={() => handleDeleteClick(emp.id)}
                         className="p-1.5 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
                       >
@@ -4968,7 +5055,7 @@ const HRRecords = ({ user, onBack }: { user: Employee, onBack?: () => void }) =>
       <AnimatePresence>
         {showDeleteModal && (
           <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
-            <motion.div 
+            <motion.div
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
@@ -4980,13 +5067,13 @@ const HRRecords = ({ user, onBack }: { user: Employee, onBack?: () => void }) =>
               <h3 className="text-lg font-bold text-gray-800 mb-2">Xác nhận xóa?</h3>
               <p className="text-sm text-gray-500 mb-6">Bạn có chắc chắn muốn xóa nhân sự <strong>{employees.find(e => e.id === itemToDelete)?.code || itemToDelete.slice(0, 8)}</strong>? Dữ liệu liên quan có thể bị ảnh hưởng.</p>
               <div className="flex gap-3">
-                <button 
+                <button
                   onClick={() => setShowDeleteModal(false)}
                   className="flex-1 px-4 py-2 rounded-xl border border-gray-200 text-sm font-bold text-gray-500 hover:bg-gray-50 transition-colors"
                 >
                   Hủy bỏ
                 </button>
-                <button 
+                <button
                   onClick={confirmDelete}
                   className="flex-1 px-4 py-2 rounded-xl bg-red-600 text-white text-sm font-bold hover:bg-red-700 transition-colors"
                 >
@@ -5001,7 +5088,7 @@ const HRRecords = ({ user, onBack }: { user: Employee, onBack?: () => void }) =>
       <AnimatePresence>
         {showModal && (
           <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm overflow-y-auto">
-            <motion.div 
+            <motion.div
               initial={{ opacity: 0, scale: 0.95, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 20 }}
@@ -5011,121 +5098,121 @@ const HRRecords = ({ user, onBack }: { user: Employee, onBack?: () => void }) =>
                 <h3 className="font-bold">{isEditing ? 'Cập Nhật Nhân Sự' : 'Thêm Mới Nhân Sự'}</h3>
                 <button onClick={() => setShowModal(false)} className="hover:bg-white/20 p-1 rounded-full"><X size={20} /></button>
               </div>
-              
+
               <div className="flex-1 overflow-y-auto custom-scrollbar">
                 <form onSubmit={handleSubmit}>
                   <div className="p-6">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                       <div className="space-y-1">
                         <label className="text-[10px] font-bold text-gray-400 uppercase">Mã nhân viên</label>
-                        <input 
+                        <input
                           required
-                          type="text" 
+                          type="text"
                           disabled={isEditing}
                           value={formData.code}
-                          onChange={(e) => setFormData({...formData, code: e.target.value})}
-                          className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20 disabled:bg-gray-50" 
+                          onChange={(e) => setFormData({ ...formData, code: e.target.value })}
+                          className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20 disabled:bg-gray-50"
                         />
                       </div>
                       <div className="space-y-1">
                         <label className="text-[10px] font-bold text-gray-400 uppercase">Họ và tên</label>
-                        <input 
+                        <input
                           required
-                          type="text" 
+                          type="text"
                           value={formData.full_name}
-                          onChange={(e) => setFormData({...formData, full_name: e.target.value})}
-                          className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20" 
+                          onChange={(e) => setFormData({ ...formData, full_name: e.target.value })}
+                          className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20"
                         />
                       </div>
                       <div className="space-y-1">
                         <label className="text-[10px] font-bold text-gray-400 uppercase">Email</label>
-                        <input 
-                          type="email" 
+                        <input
+                          type="email"
                           value={formData.email}
-                          onChange={(e) => setFormData({...formData, email: e.target.value})}
-                          className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20" 
+                          onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                          className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20"
                         />
                       </div>
                       <div className="space-y-1">
                         <label className="text-[10px] font-bold text-gray-400 uppercase">Số điện thoại</label>
-                        <input 
-                          type="text" 
+                        <input
+                          type="text"
                           value={formData.phone}
-                          onChange={(e) => setFormData({...formData, phone: e.target.value})}
-                          className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20" 
+                          onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                          className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20"
                         />
                       </div>
                       <div className="space-y-1">
                         <label className="text-[10px] font-bold text-gray-400 uppercase">CMND / CCCD</label>
-                        <input 
-                          type="text" 
+                        <input
+                          type="text"
                           value={formData.id_card}
-                          onChange={(e) => setFormData({...formData, id_card: e.target.value})}
-                          className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20" 
+                          onChange={(e) => setFormData({ ...formData, id_card: e.target.value })}
+                          className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20"
                         />
                       </div>
                       <div className="space-y-1">
                         <label className="text-[10px] font-bold text-gray-400 uppercase">Ngày sinh</label>
-                        <input 
-                          type="date" 
+                        <input
+                          type="date"
                           value={formData.dob}
-                          onChange={(e) => setFormData({...formData, dob: e.target.value})}
-                          className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20" 
+                          onChange={(e) => setFormData({ ...formData, dob: e.target.value })}
+                          className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20"
                         />
                       </div>
                       <div className="space-y-1">
                         <label className="text-[10px] font-bold text-gray-400 uppercase">Ngày vào làm</label>
-                        <input 
-                          type="date" 
+                        <input
+                          type="date"
                           value={formData.join_date}
-                          onChange={(e) => setFormData({...formData, join_date: e.target.value})}
-                          className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20" 
+                          onChange={(e) => setFormData({ ...formData, join_date: e.target.value })}
+                          className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20"
                         />
                       </div>
                       <div className="space-y-1">
                         <label className="text-[10px] font-bold text-gray-400 uppercase">Mã số thuế</label>
-                        <input 
-                          type="text" 
+                        <input
+                          type="text"
                           value={formData.tax_id}
-                          onChange={(e) => setFormData({...formData, tax_id: e.target.value})}
-                          className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20" 
+                          onChange={(e) => setFormData({ ...formData, tax_id: e.target.value })}
+                          className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20"
                         />
                       </div>
                       {user.role === 'Admin App' && (
                         <div className="space-y-1">
                           <label className="text-[10px] font-bold text-gray-400 uppercase">Mật khẩu ứng dụng</label>
-                          <input 
+                          <input
                             required
-                            type="text" 
+                            type="text"
                             value={formData.app_pass}
-                            onChange={(e) => setFormData({...formData, app_pass: e.target.value})}
-                            className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20" 
+                            onChange={(e) => setFormData({ ...formData, app_pass: e.target.value })}
+                            className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20"
                           />
                         </div>
                       )}
                       <div className="space-y-1">
                         <label className="text-[10px] font-bold text-gray-400 uppercase">Bộ phận</label>
-                        <input 
-                          type="text" 
+                        <input
+                          type="text"
                           value={formData.department}
-                          onChange={(e) => setFormData({...formData, department: e.target.value})}
-                          className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20" 
+                          onChange={(e) => setFormData({ ...formData, department: e.target.value })}
+                          className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20"
                         />
                       </div>
                       <div className="space-y-1">
                         <label className="text-[10px] font-bold text-gray-400 uppercase">Chức vụ</label>
-                        <input 
-                          type="text" 
+                        <input
+                          type="text"
                           value={formData.position}
-                          onChange={(e) => setFormData({...formData, position: e.target.value})}
-                          className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20" 
+                          onChange={(e) => setFormData({ ...formData, position: e.target.value })}
+                          className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20"
                         />
                       </div>
                       <div className="space-y-1">
                         <label className="text-[10px] font-bold text-gray-400 uppercase">Có tính lương</label>
-                        <select 
+                        <select
                           value={formData.has_salary ? 'true' : 'false'}
-                          onChange={(e) => setFormData({...formData, has_salary: e.target.value === 'true'})}
+                          onChange={(e) => setFormData({ ...formData, has_salary: e.target.value === 'true' })}
                           className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20"
                         >
                           <option value="false">Không</option>
@@ -5134,9 +5221,9 @@ const HRRecords = ({ user, onBack }: { user: Employee, onBack?: () => void }) =>
                       </div>
                       <div className="space-y-1">
                         <label className="text-[10px] font-bold text-gray-400 uppercase">Phân quyền</label>
-                        <select 
+                        <select
                           value={formData.role}
-                          onChange={(e) => setFormData({...formData, role: e.target.value as any})}
+                          onChange={(e) => setFormData({ ...formData, role: e.target.value as any })}
                           className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20"
                         >
                           <option value="User">User</option>
@@ -5146,45 +5233,45 @@ const HRRecords = ({ user, onBack }: { user: Employee, onBack?: () => void }) =>
                       </div>
                       <div className="space-y-1">
                         <label className="text-[10px] font-bold text-gray-400 uppercase">Quyền xem dữ liệu</label>
-                        <input 
-                          type="text" 
+                        <input
+                          type="text"
                           value={formData.data_view_permission}
-                          onChange={(e) => setFormData({...formData, data_view_permission: e.target.value})}
-                          className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20" 
+                          onChange={(e) => setFormData({ ...formData, data_view_permission: e.target.value })}
+                          className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20"
                         />
                       </div>
                       <div className="space-y-1">
                         <label className="text-[10px] font-bold text-gray-400 uppercase">Ảnh cá nhân (URL)</label>
-                        <input 
-                          type="text" 
+                        <input
+                          type="text"
                           value={formData.avatar_url}
-                          onChange={(e) => setFormData({...formData, avatar_url: e.target.value})}
-                          className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20" 
+                          onChange={(e) => setFormData({ ...formData, avatar_url: e.target.value })}
+                          className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20"
                         />
                       </div>
                       <div className="space-y-1">
                         <label className="text-[10px] font-bold text-gray-400 uppercase">Ngày nghỉ việc</label>
-                        <input 
-                          type="date" 
+                        <input
+                          type="date"
                           value={formData.resign_date}
-                          onChange={(e) => setFormData({...formData, resign_date: e.target.value})}
-                          className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20" 
+                          onChange={(e) => setFormData({ ...formData, resign_date: e.target.value })}
+                          className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20"
                         />
                       </div>
                       <div className="space-y-1">
                         <label className="text-[10px] font-bold text-gray-400 uppercase">Ngân sách đầu kỳ</label>
-                        <input 
-                          type="number" 
+                        <input
+                          type="number"
                           value={formData.initial_budget}
-                          onChange={(e) => setFormData({...formData, initial_budget: parseFloat(e.target.value)})}
-                          className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20" 
+                          onChange={(e) => setFormData({ ...formData, initial_budget: parseFloat(e.target.value) })}
+                          className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20"
                         />
                       </div>
                       <div className="space-y-1">
                         <label className="text-[10px] font-bold text-gray-400 uppercase">Trạng thái</label>
-                        <select 
+                        <select
                           value={formData.status}
-                          onChange={(e) => setFormData({...formData, status: e.target.value})}
+                          onChange={(e) => setFormData({ ...formData, status: e.target.value })}
                           className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20"
                         >
                           <option value="Đang làm việc">Đang làm việc</option>
@@ -5196,8 +5283,8 @@ const HRRecords = ({ user, onBack }: { user: Employee, onBack?: () => void }) =>
 
                   <div className="p-6 bg-gray-50 flex justify-end gap-3 flex-shrink-0">
                     <button type="button" onClick={() => setShowModal(false)} className="px-6 py-2 rounded-xl text-sm font-bold text-gray-500 hover:bg-gray-200 transition-colors">Hủy bỏ</button>
-                    <button 
-                      type="submit" 
+                    <button
+                      type="submit"
                       disabled={submitting}
                       className="px-6 py-2 rounded-xl text-sm font-bold bg-primary text-white hover:bg-primary-hover transition-colors disabled:opacity-50"
                     >
@@ -5240,7 +5327,7 @@ const Attendance = ({ user, onBack }: { user: Employee, onBack?: () => void }) =
         .select('*')
         .gte('date', startDate)
         .lte('date', endDate);
-      
+
       if (attData) setAttendance(attData);
     } catch (err) {
       console.error('Error fetching attendance:', err);
@@ -5391,15 +5478,15 @@ const Attendance = ({ user, onBack }: { user: Employee, onBack?: () => void }) =
                         const att = getStatus(emp.id, d);
                         return (
                           <td key={d} className="p-0.5 border-r border-gray-50 relative group/cell">
-                            <button 
-                              onClick={() => toggleAttendance(emp.id, d)} 
+                            <button
+                              onClick={() => toggleAttendance(emp.id, d)}
                               onContextMenu={(e) => { e.preventDefault(); openEditModal(emp.id, d); }}
                               className={`w-full aspect-square flex flex-col items-center justify-center rounded-lg text-[10px] font-black transition-all ${getStatusColor(att?.status)}`}
                             >
                               <span>{getStatusLabel(att?.status)}</span>
                               {att?.overtime_hours > 0 && <span className="text-[7px] leading-none mt-0.5">+{att.overtime_hours}h</span>}
                             </button>
-                            <button 
+                            <button
                               onClick={() => openEditModal(emp.id, d)}
                               className="absolute -top-1.5 -right-1.5 bg-white shadow-md border border-gray-100 rounded-full p-1 transition-all z-20 hover:scale-110 active:scale-90"
                             >
@@ -5422,7 +5509,7 @@ const Attendance = ({ user, onBack }: { user: Employee, onBack?: () => void }) =
       <AnimatePresence>
         {showEditModal && editingAtt && (
           <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
-            <motion.div 
+            <motion.div
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
@@ -5437,7 +5524,7 @@ const Attendance = ({ user, onBack }: { user: Employee, onBack?: () => void }) =
                   <label className="text-[10px] font-bold text-gray-400 uppercase">Trạng thái công</label>
                   <div className="grid grid-cols-3 gap-2 mt-1">
                     {['present', 'half-day', 'absent'].map(s => (
-                      <button 
+                      <button
                         key={s}
                         onClick={() => setEditFormData({ ...editFormData, status: s })}
                         className={`py-2 rounded-xl text-xs font-bold border transition-all ${editFormData.status === s ? 'bg-primary text-white border-primary' : 'bg-white text-gray-500 border-gray-200'}`}
@@ -5447,7 +5534,7 @@ const Attendance = ({ user, onBack }: { user: Employee, onBack?: () => void }) =
                     ))}
                   </div>
                 </div>
-                <NumericInput 
+                <NumericInput
                   label="Giờ tăng ca (h)"
                   value={editFormData.overtime}
                   onChange={(val) => setEditFormData({ ...editFormData, overtime: val })}
@@ -5622,23 +5709,23 @@ const Advances = ({ user, onBack }: { user: Employee, onBack?: () => void }) => 
               <form onSubmit={handleSubmit} className="p-6 space-y-4">
                 <div className="space-y-1">
                   <label className="text-[10px] font-bold text-gray-400 uppercase">Nhân viên *</label>
-                  <select required value={formData.employee_id} onChange={(e) => setFormData({...formData, employee_id: e.target.value})} className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20">
+                  <select required value={formData.employee_id} onChange={(e) => setFormData({ ...formData, employee_id: e.target.value })} className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20">
                     <option value="">-- Chọn nhân viên --</option>
                     {employees.map(e => <option key={e.id} value={e.id}>{e.full_name}</option>)}
                   </select>
                 </div>
                 <div className="space-y-1">
                   <label className="text-[10px] font-bold text-gray-400 uppercase">Ngày *</label>
-                  <input type="date" required value={formData.date} onChange={(e) => setFormData({...formData, date: e.target.value})} className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20" />
+                  <input type="date" required value={formData.date} onChange={(e) => setFormData({ ...formData, date: e.target.value })} className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20" />
                 </div>
-                <NumericInput 
+                <NumericInput
                   label="Số tiền *"
                   required
                   value={formData.amount}
-                  onChange={(val) => setFormData({...formData, amount: val})}
+                  onChange={(val) => setFormData({ ...formData, amount: val })}
                 />
                 {activeTab === 'allowances' && (
-                  <CreatableSelect 
+                  <CreatableSelect
                     label="Loại phụ cấp"
                     value={formData.type}
                     options={[
@@ -5647,14 +5734,14 @@ const Advances = ({ user, onBack }: { user: Employee, onBack?: () => void }) => 
                       { id: 'phone', name: 'Điện thoại' },
                       { id: 'other', name: 'Khác' }
                     ]}
-                    onChange={(val) => setFormData({...formData, type: val})}
-                    onCreate={(val) => setFormData({...formData, type: val})}
+                    onChange={(val) => setFormData({ ...formData, type: val })}
+                    onCreate={(val) => setFormData({ ...formData, type: val })}
                     placeholder="Chọn hoặc nhập loại mới..."
                   />
                 )}
                 <div className="space-y-1">
                   <label className="text-[10px] font-bold text-gray-400 uppercase">Ghi chú / Lý do</label>
-                  <textarea rows={3} value={formData.reason} onChange={(e) => setFormData({...formData, reason: e.target.value})} className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20 resize-none" />
+                  <textarea rows={3} value={formData.reason} onChange={(e) => setFormData({ ...formData, reason: e.target.value })} className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20 resize-none" />
                 </div>
                 <button type="submit" disabled={submitting} className="w-full py-3 bg-primary text-white rounded-xl font-bold hover:bg-primary-hover transition-colors shadow-lg shadow-primary/20 disabled:opacity-50">
                   {submitting ? 'Đang lưu...' : 'Lưu dữ liệu'}
@@ -5704,7 +5791,7 @@ const MonthlySalary = ({ user, onBack }: { user: Employee, onBack?: () => void }
         const totalOT = empAtt.reduce((sum, a) => sum + Number(a.overtime_hours || 0), 0);
         const totalAdv = empAdv.reduce((sum, a) => sum + Number(a.amount || 0), 0);
         const totalAll = empAll.reduce((sum, a) => sum + Number(a.amount || 0), 0);
-        
+
         const hourlyRate = Number(set.daily_rate || 0) / 8;
         const earnedSalary = totalDays * Number(set.daily_rate || 0);
         const otSalary = totalOT * hourlyRate;
@@ -5789,7 +5876,7 @@ const MonthlySalary = ({ user, onBack }: { user: Employee, onBack?: () => void }
                   <td className="px-4 py-3 text-right text-xs font-medium text-red-600">-{formatCurrency(s.totalAdv)}</td>
                   <td className="px-4 py-3 text-right text-xs font-black text-primary">{formatCurrency(s.netSalary)}</td>
                   <td className="px-4 py-3 text-center">
-                    <button 
+                    <button
                       onClick={() => { setSelectedSalary(s); setShowDetailModal(true); }}
                       className="p-1.5 text-primary hover:bg-primary/10 rounded-lg transition-colors"
                       title="Xem chi tiết"
@@ -5808,7 +5895,7 @@ const MonthlySalary = ({ user, onBack }: { user: Employee, onBack?: () => void }
       <AnimatePresence>
         {showDetailModal && selectedSalary && (
           <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm overflow-y-auto">
-            <motion.div 
+            <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: 20 }}
@@ -5821,7 +5908,7 @@ const MonthlySalary = ({ user, onBack }: { user: Employee, onBack?: () => void }
                 </div>
                 <button onClick={() => setShowDetailModal(false)} className="p-2 hover:bg-gray-100 rounded-full transition-colors"><X size={20} /></button>
               </div>
-              
+
               <div className="p-8 space-y-8">
                 {/* Header Info */}
                 <div className="flex items-center gap-4 bg-gray-50 p-6 rounded-2xl border border-gray-100">
@@ -5873,7 +5960,7 @@ const MonthlySalary = ({ user, onBack }: { user: Employee, onBack?: () => void }
                 {/* Footer Notes */}
                 <div className="p-4 bg-amber-50 rounded-xl border border-amber-100">
                   <p className="text-[10px] text-amber-700 leading-relaxed italic">
-                    * Bảng lương này được tính toán tự động dựa trên dữ liệu chấm công và các khoản phát sinh trong tháng. 
+                    * Bảng lương này được tính toán tự động dựa trên dữ liệu chấm công và các khoản phát sinh trong tháng.
                     Mọi thắc mắc vui lòng liên hệ bộ phận kế toán.
                   </p>
                 </div>
@@ -5920,7 +6007,7 @@ const SalarySettings = ({ user, onBack }: { user: Employee, onBack?: () => void 
     }
     const { data: empData } = await empQuery.order('full_name');
     const { data: setData } = await supabase.from('salary_settings').select('*');
-    
+
     if (empData) {
       const combined = empData.map(e => ({
         ...e,
@@ -6003,11 +6090,11 @@ const SalarySettings = ({ user, onBack }: { user: Employee, onBack?: () => void 
                 <button onClick={() => setShowModal(false)} className="p-2 hover:bg-white/10 rounded-full transition-colors"><X size={20} /></button>
               </div>
               <form onSubmit={handleSubmit} className="p-6 space-y-4">
-                <NumericInput 
+                <NumericInput
                   label="Lương theo ngày công *"
                   required
                   value={formData.daily_rate}
-                  onChange={(val) => setFormData({...formData, daily_rate: val})}
+                  onChange={(val) => setFormData({ ...formData, daily_rate: val })}
                 />
                 <button type="submit" disabled={submitting} className="w-full py-3 bg-primary text-white rounded-xl font-bold hover:bg-primary-hover transition-colors shadow-lg shadow-primary/20 disabled:opacity-50">
                   Cập nhật
@@ -6061,11 +6148,11 @@ const StockIn = ({ user, onBack, initialStatus }: { user: Employee, onBack?: () 
     setLoading(true);
     try {
       let query = supabase.from('stock_in').select('*, warehouses(name), materials(name, unit)').order('created_at', { ascending: false });
-      
+
       if (statusFilter !== 'Tất cả') {
         query = query.eq('status', statusFilter);
       }
-      
+
       const { data, error } = await query;
       if (error) {
         console.error('Error fetching stock_in:', error);
@@ -6088,12 +6175,12 @@ const StockIn = ({ user, onBack, initialStatus }: { user: Employee, onBack?: () 
   }, [statusFilter]);
 
   const fetchWarehouses = async () => {
-    const { data } = await supabase.from('warehouses').select('*').order('name');
+    const { data } = await supabase.from('warehouses').select('*').or('status.is.null,status.neq.Đã xóa').order('name');
     if (data) setWarehouses(data);
   };
 
   const fetchMaterials = async () => {
-    const { data } = await supabase.from('materials').select('*').order('name');
+    const { data } = await supabase.from('materials').select('*').neq('status', 'Đã xóa').order('name');
     if (data) setMaterials(data);
   };
 
@@ -6126,17 +6213,10 @@ const StockIn = ({ user, onBack, initialStatus }: { user: Employee, onBack?: () 
         if (matByName) {
           finalMaterialId = matByName.id;
         } else {
-          const random = Math.floor(100 + Math.random() * 900);
-          const code = `VT${(materials.length + 1).toString().padStart(3, '0')}-${random}`;
-          const { data: newMat, error: matErr } = await supabase.from('materials').insert([{ name: formData.material_id, unit: formData.unit, code }]).select();
-          if (matErr) throw matErr;
-          if (newMat) {
-            finalMaterialId = newMat[0].id;
-            fetchMaterials();
-          }
+          throw new Error('Bạn phải chọn vật tư từ Danh mục, không được tự nhập mới!');
         }
       }
-      
+
       const payload = {
         ...formData,
         warehouse_id: finalWarehouseId,
@@ -6154,15 +6234,41 @@ const StockIn = ({ user, onBack, initialStatus }: { user: Employee, onBack?: () 
       } else {
         const { error } = await supabase.from('stock_in').insert([payload]);
         if (error) throw error;
+
+        // ✅ Cập nhật tồn kho: cộng số lượng vào bảng inventory
+        const finalUnit = (formData as any).unit || materials.find((m: any) => m.id === finalMaterialId)?.unit || '';
+        const { data: existingInv } = await supabase
+          .from('inventory')
+          .select('*')
+          .eq('material_id', finalMaterialId)
+          .eq('warehouse_id', finalWarehouseId)
+          .maybeSingle();
+
+        if (existingInv) {
+          await supabase.from('inventory').update({
+            quantity: Number(existingInv.quantity) + Number(formData.quantity),
+            unit: finalUnit || existingInv.unit,
+            updated_at: new Date().toISOString()
+          }).eq('id', existingInv.id);
+        } else {
+          await supabase.from('inventory').insert([{
+            material_id: finalMaterialId,
+            warehouse_id: finalWarehouseId,
+            quantity: formData.quantity,
+            unit: finalUnit,
+            updated_at: new Date().toISOString()
+          }]);
+        }
       }
-      
+
       setShowModal(false);
       fetchSlips();
       setFormData(initialFormState);
       setIsEditing(false);
       setSelectedSlip(null);
+      alert(isEditing ? 'Cập nhật phiếu nhập thành công!' : 'Nhập kho thành công! Tồn kho đã được cập nhật.');
     } catch (err: any) {
-      alert('Lỗi: ' + err.message);
+      alert('Lỗi: ' + (err as any).message); // Removed unsupported `toast`
     } finally {
       setSubmitting(false);
     }
@@ -6171,7 +6277,7 @@ const StockIn = ({ user, onBack, initialStatus }: { user: Employee, onBack?: () 
   const handleRowClick = async (slip: any) => {
     setSelectedSlip(slip);
     setShowDetailModal(true);
-    
+
     // Fetch material history
     setLoadingHistory(true);
     try {
@@ -6211,6 +6317,37 @@ const StockIn = ({ user, onBack, initialStatus }: { user: Employee, onBack?: () 
     try {
       const { error } = await supabase.from('stock_in').update({ status }).eq('id', id);
       if (error) throw error;
+      
+      // ✅ Nếu Duyệt phiếu Nhập kho -> Tự động ghi nhận khoản Chi vào "Báo cáo chi phí"
+      if (status === 'Đã duyệt') {
+        const { data: slip } = await supabase.from('stock_in').select('*, users(id)').eq('id', id).maybeSingle();
+        if (slip && slip.total_amount > 0) {
+          const dateObj = new Date(slip.date);
+          const d = String(dateObj.getDate()).padStart(2, '0');
+          const m = String(dateObj.getMonth() + 1).padStart(2, '0');
+          const y = String(dateObj.getFullYear()).slice(-2);
+          const random = Math.floor(1000 + Math.random() * 9000);
+          const userPrefix = slip.users?.id?.slice(0, 4) || 'SYS';
+          const costCode = `CP-${userPrefix.toUpperCase()}-${d}${m}${y}-${random}`;
+
+          await supabase.from('costs').insert([{
+            transaction_type: 'Chi',
+            cost_code: costCode,
+            date: slip.date,
+            employee_id: user.id, // User who approved it
+            cost_type: 'Vật tư',
+            content: `Nhập kho từ phiếu ${slip.import_code}`,
+            material_id: slip.material_id,
+            warehouse_id: slip.warehouse_id,
+            quantity: slip.quantity,
+            unit: slip.unit,
+            unit_price: slip.unit_price,
+            total_amount: slip.total_amount,
+            notes: 'Tự động tạo từ hệ thống Nhập Kho'
+          }]);
+        }
+      }
+
       fetchSlips();
       setShowDetailModal(false);
     } catch (err: any) {
@@ -6221,24 +6358,23 @@ const StockIn = ({ user, onBack, initialStatus }: { user: Employee, onBack?: () 
   return (
     <div className="p-4 md:p-6 space-y-6 pb-44">
       <PageBreadcrumb title="Nhập kho" onBack={onBack} />
-      
+
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div className="flex items-center gap-2 overflow-x-auto pb-2 md:pb-0 no-scrollbar">
           {['Tất cả', 'Chờ duyệt', 'Đã duyệt', 'Từ chối'].map((status) => (
             <button
               key={status}
               onClick={() => setStatusFilter(status)}
-              className={`px-4 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all ${
-                statusFilter === status 
-                  ? 'bg-primary text-white shadow-lg shadow-primary/20' 
+              className={`px-4 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all ${statusFilter === status
+                  ? 'bg-primary text-white shadow-lg shadow-primary/20'
                   : 'bg-white text-gray-500 hover:bg-gray-50 border border-gray-100'
-              }`}
+                }`}
             >
               {status}
             </button>
           ))}
         </div>
-        <button 
+        <button
           onClick={() => {
             setFormData({
               ...initialFormState,
@@ -6272,8 +6408,8 @@ const StockIn = ({ user, onBack, initialStatus }: { user: Employee, onBack?: () 
                 <tr><td colSpan={5} className="px-4 py-8 text-center text-gray-400 italic">Chưa có phiếu nhập nào</td></tr>
               ) : (
                 slips.map((item) => (
-                  <tr 
-                    key={item.id} 
+                  <tr
+                    key={item.id}
                     onClick={() => handleRowClick(item)}
                     className="hover:bg-gray-50 transition-colors cursor-pointer group"
                   >
@@ -6289,11 +6425,10 @@ const StockIn = ({ user, onBack, initialStatus }: { user: Employee, onBack?: () 
                     <td className="px-4 py-3 text-xs text-primary font-bold">{formatCurrency(item.total_amount || 0)}</td>
                     <td className="px-4 py-3 text-xs">
                       <div className="flex items-center justify-between">
-                        <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
-                          item.status === 'Đã duyệt' ? 'bg-green-100 text-green-600' : 
-                          item.status === 'Từ chối' ? 'bg-red-100 text-red-600' : 
-                          'bg-yellow-100 text-yellow-600'
-                        }`}>
+                        <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${item.status === 'Đã duyệt' ? 'bg-green-100 text-green-600' :
+                            item.status === 'Từ chối' ? 'bg-red-100 text-red-600' :
+                              'bg-yellow-100 text-yellow-600'
+                          }`}>
                           {item.status || 'Chờ duyệt'}
                         </span>
                         <ChevronRight size={14} className="text-gray-300 group-hover:text-primary transition-colors" />
@@ -6311,7 +6446,7 @@ const StockIn = ({ user, onBack, initialStatus }: { user: Employee, onBack?: () 
       <AnimatePresence>
         {showDetailModal && selectedSlip && (
           <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
-            <motion.div 
+            <motion.div
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
@@ -6321,7 +6456,7 @@ const StockIn = ({ user, onBack, initialStatus }: { user: Employee, onBack?: () 
                 <h3 className="text-lg font-bold text-gray-800">Chi tiết vật tư nhập</h3>
                 <button onClick={() => setShowDetailModal(false)} className="p-2 hover:bg-gray-100 rounded-full transition-colors"><X size={20} /></button>
               </div>
-              
+
               <div className="flex-1 overflow-y-auto p-8 space-y-6">
                 <div className="flex flex-col items-center gap-4 mb-8">
                   <div className="w-16 h-16 bg-primary/10 text-primary rounded-full flex items-center justify-center">
@@ -6395,7 +6530,7 @@ const StockIn = ({ user, onBack, initialStatus }: { user: Employee, onBack?: () 
               </div>
 
               <div className="p-6 bg-gray-50 border-t border-gray-100 flex justify-end gap-3 rounded-b-3xl">
-                <button 
+                <button
                   onClick={handleEdit}
                   className="px-6 py-2 bg-blue-100 text-blue-600 rounded-xl text-sm font-bold hover:bg-blue-200 transition-colors flex items-center gap-2"
                 >
@@ -6403,13 +6538,13 @@ const StockIn = ({ user, onBack, initialStatus }: { user: Employee, onBack?: () 
                 </button>
                 {(user.role === 'Admin' || user.role === 'Admin App') && selectedSlip.status === 'Chờ duyệt' && (
                   <>
-                    <button 
+                    <button
                       onClick={() => handleApprove(selectedSlip.id, 'Từ chối')}
                       className="px-6 py-2 bg-red-100 text-red-600 rounded-xl text-sm font-bold hover:bg-red-200 transition-colors"
                     >
                       Từ chối
                     </button>
-                    <button 
+                    <button
                       onClick={() => handleApprove(selectedSlip.id, 'Đã duyệt')}
                       className="px-6 py-2 bg-green-600 text-white rounded-xl text-sm font-bold hover:bg-green-700 transition-colors"
                     >
@@ -6417,7 +6552,7 @@ const StockIn = ({ user, onBack, initialStatus }: { user: Employee, onBack?: () 
                     </button>
                   </>
                 )}
-                <button 
+                <button
                   onClick={() => setShowDetailModal(false)}
                   className="px-6 py-2 bg-gray-500 text-white rounded-xl text-sm font-bold hover:bg-gray-600 transition-colors"
                 >
@@ -6432,7 +6567,7 @@ const StockIn = ({ user, onBack, initialStatus }: { user: Employee, onBack?: () 
       <AnimatePresence>
         {showModal && (
           <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm overflow-y-auto">
-            <motion.div 
+            <motion.div
               initial={{ opacity: 0, scale: 0.95, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 20 }}
@@ -6451,31 +6586,31 @@ const StockIn = ({ user, onBack, initialStatus }: { user: Employee, onBack?: () 
                   <div className="space-y-4">
                     <div className="space-y-1">
                       <label className="text-[10px] font-bold text-gray-400 uppercase">Ngày nhập *</label>
-                      <input type="date" required value={formData.date} onChange={(e) => setFormData({...formData, date: e.target.value})} className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20" />
+                      <input type="date" required value={formData.date} onChange={(e) => setFormData({ ...formData, date: e.target.value })} className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20" />
                     </div>
-                    
-                    <CreatableSelect 
+
+                    <CreatableSelect
                       label="Tên vật tư nhập *"
                       value={formData.material_id}
                       options={materials}
                       onChange={(val) => {
                         const mat = materials.find(m => m.id === val);
                         setFormData({
-                          ...formData, 
+                          ...formData,
                           material_id: val,
                           unit: mat?.unit || formData.unit
                         });
                       }}
-                      onCreate={(val) => setFormData({...formData, material_id: val})}
+                      onCreateNew={() => alert('Vui lòng chọn vật tư có trong Danh mục. Để thêm vật tư mới, hãy vào mục Danh mục vật tư.')}
                       placeholder="Chọn vật tư..."
                       required
                     />
 
-                    <NumericInput 
+                    <NumericInput
                       label="Số lượng nhập *"
                       required
                       value={formData.quantity}
-                      onChange={(val) => setFormData({...formData, quantity: val})}
+                      onChange={(val) => setFormData({ ...formData, quantity: val })}
                       showControls
                     />
 
@@ -6488,32 +6623,32 @@ const StockIn = ({ user, onBack, initialStatus }: { user: Employee, onBack?: () 
                   </div>
 
                   <div className="space-y-4">
-                    <CreatableSelect 
+                    <CreatableSelect
                       label="Tên kho nhập *"
                       value={formData.warehouse_id}
                       options={warehouses}
-                      onChange={(val) => setFormData({...formData, warehouse_id: val})}
-                      onCreate={(val) => setFormData({...formData, warehouse_id: val})}
+                      onChange={(val) => setFormData({ ...formData, warehouse_id: val })}
+                      onCreate={(val) => setFormData({ ...formData, warehouse_id: val })}
                       placeholder="Chọn kho..."
                       required
                     />
 
                     <div className="space-y-1">
                       <label className="text-[10px] font-bold text-gray-400 uppercase">Đơn vị tính</label>
-                      <input type="text" value={formData.unit} onChange={(e) => setFormData({...formData, unit: e.target.value})} className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20" />
+                      <input type="text" value={formData.unit} onChange={(e) => setFormData({ ...formData, unit: e.target.value })} className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20" />
                     </div>
 
-                    <NumericInput 
+                    <NumericInput
                       label="Đơn giá"
                       value={formData.unit_price}
-                      onChange={(val) => setFormData({...formData, unit_price: val})}
+                      onChange={(val) => setFormData({ ...formData, unit_price: val })}
                       showControls
                       step={1000}
                     />
 
                     <div className="space-y-1">
                       <label className="text-[10px] font-bold text-gray-400 uppercase">Diễn giải</label>
-                      <textarea rows={2} value={formData.notes} onChange={(e) => setFormData({...formData, notes: e.target.value})} className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20 resize-none" />
+                      <textarea rows={2} value={formData.notes} onChange={(e) => setFormData({ ...formData, notes: e.target.value })} className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20 resize-none" />
                     </div>
                   </div>
 
@@ -6574,7 +6709,7 @@ const StockOut = ({ user, onBack }: { user: Employee, onBack?: () => void }) => 
   const checkStock = async () => {
     const wh = warehouses.find(w => w.name === formData.warehouse_id || w.id === formData.warehouse_id);
     const mat = materials.find(m => m.name === formData.material_id || m.id === formData.material_id);
-    
+
     if (!wh?.id || !mat?.id) return;
 
     try {
@@ -6615,12 +6750,12 @@ const StockOut = ({ user, onBack }: { user: Employee, onBack?: () => void }) => 
   };
 
   const fetchWarehouses = async () => {
-    const { data } = await supabase.from('warehouses').select('*').order('name');
+    const { data } = await supabase.from('warehouses').select('*').or('status.is.null,status.neq.Đã xóa').order('name');
     if (data) setWarehouses(data);
   };
 
   const fetchMaterials = async () => {
-    const { data } = await supabase.from('materials').select('*').order('name');
+    const { data } = await supabase.from('materials').select('*').neq('status', 'Đã xóa').order('name');
     if (data) setMaterials(data);
   };
 
@@ -6653,14 +6788,7 @@ const StockOut = ({ user, onBack }: { user: Employee, onBack?: () => void }) => 
         if (matByName) {
           finalMaterialId = matByName.id;
         } else {
-          const random = Math.floor(100 + Math.random() * 900);
-          const code = `VT${(materials.length + 1).toString().padStart(3, '0')}-${random}`;
-          const { data: newMat, error: matErr } = await supabase.from('materials').insert([{ name: formData.material_id, code }]).select();
-          if (matErr) throw matErr;
-          if (newMat) {
-            finalMaterialId = newMat[0].id;
-            fetchMaterials();
-          }
+          throw new Error('Bạn phải chọn vật tư từ Danh mục, không được tự nhập mới!');
         }
       }
 
@@ -6679,6 +6807,30 @@ const StockOut = ({ user, onBack }: { user: Employee, onBack?: () => void }) => 
       } else {
         const { error } = await supabase.from('stock_out').insert([payload]);
         if (error) throw error;
+
+        // ✅ Cập nhật tồn kho (trừ SL)
+        const { data: existingInv } = await supabase
+          .from('inventory')
+          .select('*')
+          .eq('material_id', finalMaterialId)
+          .eq('warehouse_id', finalWarehouseId)
+          .maybeSingle();
+
+        if (existingInv) {
+          await supabase.from('inventory').update({
+            quantity: Number(existingInv.quantity) - Number(formData.quantity),
+            updated_at: new Date().toISOString()
+          }).eq('id', existingInv.id);
+        } else {
+          // Fallback if not exists
+          await supabase.from('inventory').insert([{
+            material_id: finalMaterialId,
+            warehouse_id: finalWarehouseId,
+            quantity: -Number(formData.quantity),
+            unit: materials.find((m: any) => m.id === finalMaterialId)?.unit || '',
+            updated_at: new Date().toISOString()
+          }]);
+        }
       }
 
       setShowModal(false);
@@ -6690,6 +6842,48 @@ const StockOut = ({ user, onBack }: { user: Employee, onBack?: () => void }) => 
       alert('Lỗi: ' + err.message);
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  const handleApprove = async (id: string, status: string) => {
+    try {
+      const { error } = await supabase.from('stock_out').update({ status }).eq('id', id);
+      if (error) throw error;
+      
+      if (status === 'Đã duyệt') {
+        const { data: slip } = await supabase.from('stock_out').select('*, users(id)').eq('id', id).maybeSingle();
+        if (slip && slip.total_amount > 0) {
+          const dateObj = new Date(slip.date);
+          const d = String(dateObj.getDate()).padStart(2, '0');
+          const m = String(dateObj.getMonth() + 1).padStart(2, '0');
+          const y = String(dateObj.getFullYear()).slice(-2);
+          const random = Math.floor(1000 + Math.random() * 9000);
+          const userPrefix = slip.users?.id?.slice(0, 4) || 'SYS';
+          const costCode = `CP-${userPrefix.toUpperCase()}-${d}${m}${y}-${random}`;
+
+          await supabase.from('costs').insert([{
+            transaction_type: 'Thu',
+            cost_code: costCode,
+            date: slip.date,
+            employee_id: user.id, // User who approved it
+            cost_type: 'Doanh thu',
+            content: `Xuất kho từ phiếu ${slip.export_code || slip.id.slice(0,8)}`,
+            material_id: slip.material_id,
+            warehouse_id: slip.warehouse_id,
+            quantity: slip.quantity,
+            unit: slip.unit,
+            unit_price: slip.unit_price,
+            total_amount: slip.total_amount,
+            notes: 'Tự động tạo từ hệ thống Xuất Kho'
+          }]);
+        }
+      }
+
+      fetchSlips();
+      setShowDetailModal(false);
+      alert('Cập nhật trạng thái thành công!');
+    } catch (err: any) {
+      alert('Lỗi: ' + err.message);
     }
   };
 
@@ -6722,7 +6916,7 @@ const StockOut = ({ user, onBack }: { user: Employee, onBack?: () => void }) => 
           </h2>
           <p className="text-xs text-gray-500 mt-1">Quản lý phiếu xuất vật tư khỏi kho</p>
         </div>
-        <button 
+        <button
           onClick={() => setShowModal(true)}
           className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-xl text-sm font-bold hover:bg-red-700 transition-colors shadow-lg shadow-red-600/20"
         >
@@ -6748,22 +6942,21 @@ const StockOut = ({ user, onBack }: { user: Employee, onBack?: () => void }) => 
               <tr><td colSpan={5} className="px-4 py-8 text-center text-gray-400 italic">Chưa có phiếu xuất nào</td></tr>
             ) : (
               slips.map((item) => (
-                  <tr key={item.id} onClick={() => handleRowClick(item)} className="hover:bg-gray-50 transition-colors cursor-pointer">
-                    <td className="px-4 py-3 text-xs text-gray-600">{new Date(item.date).toLocaleDateString('vi-VN')}</td>
-                    <td className="px-4 py-3 text-xs text-gray-600 font-medium">
-                      <p>{item.warehouses?.name}</p>
-                      <p className="text-[10px] text-gray-400">#{item.warehouses?.code}</p>
-                    </td>
-                    <td className="px-4 py-3 text-xs text-gray-600">
-                      <p>{item.materials?.name}</p>
-                      <p className="text-[10px] text-gray-400">#{item.materials?.code}</p>
-                    </td>
-                    <td className="px-4 py-3 text-xs text-red-600 text-center font-bold">-{item.quantity}</td>
+                <tr key={item.id} onClick={() => handleRowClick(item)} className="hover:bg-gray-50 transition-colors cursor-pointer">
+                  <td className="px-4 py-3 text-xs text-gray-600">{new Date(item.date).toLocaleDateString('vi-VN')}</td>
+                  <td className="px-4 py-3 text-xs text-gray-600 font-medium">
+                    <p>{item.warehouses?.name}</p>
+                    <p className="text-[10px] text-gray-400">#{item.warehouses?.code}</p>
+                  </td>
+                  <td className="px-4 py-3 text-xs text-gray-600">
+                    <p>{item.materials?.name}</p>
+                    <p className="text-[10px] text-gray-400">#{item.materials?.code}</p>
+                  </td>
+                  <td className="px-4 py-3 text-xs text-red-600 text-center font-bold">-{item.quantity}</td>
                   <td className="px-4 py-3 text-xs">
-                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
-                      item.status === 'Đã duyệt' ? 'bg-green-100 text-green-600' :
-                      item.status === 'Từ chối' ? 'bg-red-100 text-red-600' : 'bg-amber-100 text-amber-600'
-                    }`}>
+                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${item.status === 'Đã duyệt' ? 'bg-green-100 text-green-600' :
+                        item.status === 'Từ chối' ? 'bg-red-100 text-red-600' : 'bg-amber-100 text-amber-600'
+                      }`}>
                       {item.status || 'Chờ duyệt'}
                     </span>
                   </td>
@@ -6777,7 +6970,7 @@ const StockOut = ({ user, onBack }: { user: Employee, onBack?: () => void }) => 
       <AnimatePresence>
         {showDetailModal && selectedSlip && (
           <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
-            <motion.div 
+            <motion.div
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
@@ -6788,17 +6981,15 @@ const StockOut = ({ user, onBack }: { user: Employee, onBack?: () => void }) => 
                 <button onClick={() => setShowDetailModal(false)} className="p-2 hover:bg-white/10 rounded-full transition-colors"><X size={20} /></button>
               </div>
               <div className="p-6 space-y-4">
-                <div className="grid grid-cols-2 gap-4">
                   <div>
                     <p className="text-[10px] font-bold text-gray-400 uppercase">Ngày xuất</p>
                     <p className="text-sm font-bold text-gray-800">{formatDate(selectedSlip.date)}</p>
                   </div>
                   <div>
                     <p className="text-[10px] font-bold text-gray-400 uppercase">Trạng thái</p>
-                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
-                      selectedSlip.status === 'Đã duyệt' ? 'bg-green-100 text-green-600' :
-                      selectedSlip.status === 'Từ chối' ? 'bg-red-100 text-red-600' : 'bg-amber-100 text-amber-600'
-                    }`}>
+                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${selectedSlip.status === 'Đã duyệt' ? 'bg-green-100 text-green-600' :
+                        selectedSlip.status === 'Từ chối' ? 'bg-red-100 text-red-600' : 'bg-amber-100 text-amber-600'
+                      }`}>
                       {selectedSlip.status || 'Chờ duyệt'}
                     </span>
                   </div>
@@ -6816,20 +7007,43 @@ const StockOut = ({ user, onBack }: { user: Employee, onBack?: () => void }) => 
                     <p className="text-[10px] font-bold text-gray-400 uppercase">Số lượng</p>
                     <p className="text-sm font-bold text-red-600">-{formatNumber(selectedSlip.quantity)}</p>
                   </div>
-                </div>
-                <div>
-                  <p className="text-[10px] font-bold text-gray-400 uppercase">Ghi chú</p>
-                  <p className="text-sm text-gray-600 italic">{selectedSlip.notes || 'Không có ghi chú'}</p>
-                </div>
-                
+                  <div>
+                    <p className="text-[10px] font-bold text-gray-400 uppercase">Đơn giá bán</p>
+                    <p className="text-sm font-medium text-gray-800">{formatCurrency(selectedSlip.unit_price || 0)}</p>
+                  </div>
+                  <div className="col-span-2">
+                    <p className="text-[10px] font-bold text-gray-400 uppercase">Thành tiền (Doanh thu)</p>
+                    <p className="text-sm font-bold text-green-600">{formatCurrency(selectedSlip.total_amount || 0)}</p>
+                  </div>
+                  <div className="col-span-2">
+                    <p className="text-[10px] font-bold text-gray-400 uppercase">Ghi chú</p>
+                    <p className="text-sm text-gray-600 italic">{selectedSlip.notes || 'Không có ghi chú'}</p>
+                  </div>
+
                 <div className="flex gap-3 pt-4 border-t border-gray-100">
-                  <button 
+                  <button
                     onClick={handleEdit}
                     className="flex-1 flex items-center justify-center gap-2 py-2 bg-blue-50 text-blue-600 rounded-xl text-sm font-bold hover:bg-blue-100 transition-colors"
                   >
                     <Edit size={18} /> Chỉnh sửa
                   </button>
-                  <button 
+                  {((user.role === 'Admin' || user.role === 'Admin App') && selectedSlip.status === 'Chờ duyệt') && (
+                    <>
+                      <button
+                        onClick={() => handleApprove(selectedSlip.id, 'Từ chối')}
+                        className="flex-1 py-2 bg-red-100 text-red-600 rounded-xl text-sm font-bold hover:bg-red-200 transition-colors"
+                      >
+                        Từ chối
+                      </button>
+                      <button
+                        onClick={() => handleApprove(selectedSlip.id, 'Đã duyệt')}
+                        className="flex-1 py-2 bg-green-600 text-white rounded-xl text-sm font-bold hover:bg-green-700 transition-colors"
+                      >
+                        Duyệt phiếu
+                      </button>
+                    </>
+                  )}
+                  <button
                     onClick={() => setShowDetailModal(false)}
                     className="flex-1 py-2 bg-gray-100 text-gray-500 rounded-xl text-sm font-bold hover:bg-gray-200 transition-colors"
                   >
@@ -6845,7 +7059,7 @@ const StockOut = ({ user, onBack }: { user: Employee, onBack?: () => void }) => 
       <AnimatePresence>
         {showModal && (
           <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm overflow-y-auto">
-            <motion.div 
+            <motion.div
               initial={{ opacity: 0, scale: 0.95, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 20 }}
@@ -6864,25 +7078,25 @@ const StockOut = ({ user, onBack }: { user: Employee, onBack?: () => void }) => 
                   <div className="space-y-4">
                     <div className="space-y-1">
                       <label className="text-[10px] font-bold text-gray-400 uppercase">Ngày xuất *</label>
-                      <input type="date" required value={formData.date} onChange={(e) => setFormData({...formData, date: e.target.value})} className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-red-600/20" />
+                      <input type="date" required value={formData.date} onChange={(e) => setFormData({ ...formData, date: e.target.value })} className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-red-600/20" />
                     </div>
-                    
-                    <CreatableSelect 
+
+                    <CreatableSelect
                       label="Kho xuất *"
                       value={formData.warehouse_id}
                       options={warehouses}
-                      onChange={(val) => setFormData({...formData, warehouse_id: val})}
-                      onCreate={(val) => setFormData({...formData, warehouse_id: val})}
+                      onChange={(val) => setFormData({ ...formData, warehouse_id: val })}
+                      onCreate={(val) => setFormData({ ...formData, warehouse_id: val })}
                       placeholder="Chọn kho..."
                       required
                     />
 
-                    <CreatableSelect 
+                    <CreatableSelect
                       label="Vật tư *"
                       value={formData.material_id}
                       options={materials}
-                      onChange={(val) => setFormData({...formData, material_id: val})}
-                      onCreate={(val) => setFormData({...formData, material_id: val})}
+                      onChange={(val) => setFormData({ ...formData, material_id: val })}
+                      onCreateNew={() => alert('Vui lòng chọn vật tư có trong Danh mục. Để thêm vật tư mới, hãy vào mục Danh mục vật tư.')}
                       placeholder="Chọn vật tư..."
                       required
                     />
@@ -6896,16 +7110,16 @@ const StockOut = ({ user, onBack }: { user: Employee, onBack?: () => void }) => 
                   </div>
 
                   <div className="space-y-4">
-                    <NumericInput 
+                    <NumericInput
                       label="Số lượng xuất *"
                       required
                       value={formData.quantity}
-                      onChange={(val) => setFormData({...formData, quantity: val})}
+                      onChange={(val) => setFormData({ ...formData, quantity: val })}
                     />
 
                     <div className="space-y-1">
                       <label className="text-[10px] font-bold text-gray-400 uppercase">Ghi chú / Mục đích xuất</label>
-                      <textarea rows={4} value={formData.notes} onChange={(e) => setFormData({...formData, notes: e.target.value})} className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-red-600/20 resize-none" />
+                      <textarea rows={4} value={formData.notes} onChange={(e) => setFormData({ ...formData, notes: e.target.value })} className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-red-600/20 resize-none" />
                     </div>
                   </div>
 
@@ -6967,7 +7181,7 @@ const Transfer = ({ user, onBack }: { user: Employee, onBack?: () => void }) => 
     try {
       const fromWh = warehouses.find(w => w.name === formData.from_warehouse_id || w.id === formData.from_warehouse_id);
       const mat = materials.find(m => m.name === formData.material_id || m.id === formData.material_id);
-      
+
       if (!fromWh?.id || !mat?.id) return;
 
       const [si, so, tr_out, tr_in] = await Promise.all([
@@ -6979,7 +7193,7 @@ const Transfer = ({ user, onBack }: { user: Employee, onBack?: () => void }) => 
 
       const totalIn = (si.data || []).reduce((sum, item) => sum + item.quantity, 0) + (tr_in.data || []).reduce((sum, item) => sum + item.quantity, 0);
       const totalOut = (so.data || []).reduce((sum, item) => sum + item.quantity, 0) + (tr_out.data || []).reduce((sum, item) => sum + item.quantity, 0);
-      
+
       setAvailableStock(totalIn - totalOut);
     } catch (err) {
       console.error('Error checking stock:', err);
@@ -7006,12 +7220,12 @@ const Transfer = ({ user, onBack }: { user: Employee, onBack?: () => void }) => 
   };
 
   const fetchWarehouses = async () => {
-    const { data } = await supabase.from('warehouses').select('*').order('name');
+    const { data } = await supabase.from('warehouses').select('*').or('status.is.null,status.neq.Đã xóa').order('name');
     if (data) setWarehouses(data);
   };
 
   const fetchMaterials = async () => {
-    const { data } = await supabase.from('materials').select('*').order('name');
+    const { data } = await supabase.from('materials').select('*').neq('status', 'Đã xóa').order('name');
     if (data) setMaterials(data);
   };
 
@@ -7066,14 +7280,7 @@ const Transfer = ({ user, onBack }: { user: Employee, onBack?: () => void }) => 
         if (matByName) {
           finalMaterialId = matByName.id;
         } else {
-          const random = Math.floor(100 + Math.random() * 900);
-          const code = `VT${(materials.length + 1).toString().padStart(3, '0')}-${random}`;
-          const { data: newMat, error: matErr } = await supabase.from('materials').insert([{ name: formData.material_id, code }]).select();
-          if (matErr) throw matErr;
-          if (newMat) {
-            finalMaterialId = newMat[0].id;
-            fetchMaterials();
-          }
+          throw new Error('Bạn phải chọn vật tư từ Danh mục, không được tự nhập mới!');
         }
       }
 
@@ -7093,6 +7300,25 @@ const Transfer = ({ user, onBack }: { user: Employee, onBack?: () => void }) => 
       } else {
         const { error } = await supabase.from('transfers').insert([payload]);
         if (error) throw error;
+
+        // ✅ Cập nhật tồn kho
+        const unit = materials.find((m: any) => m.id === finalMaterialId)?.unit || '';
+
+        // Trừ kho nguồn
+        const { data: fromInv } = await supabase.from('inventory').select('*').eq('material_id', finalMaterialId).eq('warehouse_id', finalFromWhId).maybeSingle();
+        if (fromInv) {
+          await supabase.from('inventory').update({ quantity: Number(fromInv.quantity) - Number(formData.quantity), updated_at: new Date().toISOString() }).eq('id', fromInv.id);
+        } else {
+          await supabase.from('inventory').insert([{ material_id: finalMaterialId, warehouse_id: finalFromWhId, quantity: -Number(formData.quantity), unit, updated_at: new Date().toISOString() }]);
+        }
+
+        // Cộng kho đích
+        const { data: toInv } = await supabase.from('inventory').select('*').eq('material_id', finalMaterialId).eq('warehouse_id', finalToWhId).maybeSingle();
+        if (toInv) {
+          await supabase.from('inventory').update({ quantity: Number(toInv.quantity) + Number(formData.quantity), updated_at: new Date().toISOString() }).eq('id', toInv.id);
+        } else {
+          await supabase.from('inventory').insert([{ material_id: finalMaterialId, warehouse_id: finalToWhId, quantity: Number(formData.quantity), unit, updated_at: new Date().toISOString() }]);
+        }
       }
 
       setShowModal(false);
@@ -7149,7 +7375,7 @@ const Transfer = ({ user, onBack }: { user: Employee, onBack?: () => void }) => 
           </h2>
           <p className="text-xs text-gray-500 mt-1">Điều chuyển vật tư giữa các kho</p>
         </div>
-        <button 
+        <button
           onClick={() => setShowModal(true)}
           className="flex items-center gap-2 px-4 py-2 bg-orange-500 text-white rounded-xl text-sm font-bold hover:bg-orange-600 transition-colors shadow-lg shadow-orange-500/20"
         >
@@ -7175,7 +7401,7 @@ const Transfer = ({ user, onBack }: { user: Employee, onBack?: () => void }) => 
               <tr><td colSpan={5} className="px-4 py-8 text-center text-gray-400 italic">Chưa có phiếu chuyển nào</td></tr>
             ) : (
               slips.map((item) => (
-                  <tr key={item.id} onClick={() => handleRowClick(item)} className="hover:bg-gray-50 transition-colors cursor-pointer">
+                <tr key={item.id} onClick={() => handleRowClick(item)} className="hover:bg-gray-50 transition-colors cursor-pointer">
                   <td className="px-4 py-3 text-xs text-gray-600">{new Date(item.date).toLocaleDateString('vi-VN')}</td>
                   <td className="px-4 py-3 text-xs text-gray-600">
                     <p>{item.from_wh?.name}</p>
@@ -7191,10 +7417,9 @@ const Transfer = ({ user, onBack }: { user: Employee, onBack?: () => void }) => 
                   </td>
                   <td className="px-4 py-3 text-xs text-orange-600 text-center font-bold">{item.quantity}</td>
                   <td className="px-4 py-3 text-xs">
-                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
-                      item.status === 'Đã duyệt' ? 'bg-green-100 text-green-600' :
-                      item.status === 'Từ chối' ? 'bg-red-100 text-red-600' : 'bg-amber-100 text-amber-600'
-                    }`}>
+                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${item.status === 'Đã duyệt' ? 'bg-green-100 text-green-600' :
+                        item.status === 'Từ chối' ? 'bg-red-100 text-red-600' : 'bg-amber-100 text-amber-600'
+                      }`}>
                       {item.status || 'Chờ duyệt'}
                     </span>
                   </td>
@@ -7208,7 +7433,7 @@ const Transfer = ({ user, onBack }: { user: Employee, onBack?: () => void }) => 
       <AnimatePresence>
         {showDetailModal && selectedSlip && (
           <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
-            <motion.div 
+            <motion.div
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
@@ -7226,10 +7451,9 @@ const Transfer = ({ user, onBack }: { user: Employee, onBack?: () => void }) => 
                   </div>
                   <div>
                     <p className="text-[10px] font-bold text-gray-400 uppercase">Trạng thái</p>
-                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
-                      selectedSlip.status === 'Đã duyệt' ? 'bg-green-100 text-green-600' :
-                      selectedSlip.status === 'Từ chối' ? 'bg-red-100 text-red-600' : 'bg-amber-100 text-amber-600'
-                    }`}>
+                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${selectedSlip.status === 'Đã duyệt' ? 'bg-green-100 text-green-600' :
+                        selectedSlip.status === 'Từ chối' ? 'bg-red-100 text-red-600' : 'bg-amber-100 text-amber-600'
+                      }`}>
                       {selectedSlip.status || 'Chờ duyệt'}
                     </span>
                   </div>
@@ -7257,21 +7481,21 @@ const Transfer = ({ user, onBack }: { user: Employee, onBack?: () => void }) => 
                   <p className="text-[10px] font-bold text-gray-400 uppercase">Ghi chú</p>
                   <p className="text-sm text-gray-600 italic">{selectedSlip.notes || 'Không có ghi chú'}</p>
                 </div>
-                
+
                 <div className="flex gap-3 pt-4 border-t border-gray-100">
-                  <button 
+                  <button
                     onClick={handleEdit}
                     className="flex-1 flex items-center justify-center gap-2 py-2 bg-blue-50 text-blue-600 rounded-xl text-sm font-bold hover:bg-blue-100 transition-colors"
                   >
                     <Edit size={18} /> Chỉnh sửa
                   </button>
-                  <button 
+                  <button
                     onClick={handleDelete}
                     className="flex-1 flex items-center justify-center gap-2 py-2 bg-red-50 text-red-600 rounded-xl text-sm font-bold hover:bg-red-100 transition-colors"
                   >
                     <Trash2 size={18} /> Xóa phiếu
                   </button>
-                  <button 
+                  <button
                     onClick={() => setShowDetailModal(false)}
                     className="flex-1 py-2 bg-gray-100 text-gray-500 rounded-xl text-sm font-bold hover:bg-gray-200 transition-colors"
                   >
@@ -7287,7 +7511,7 @@ const Transfer = ({ user, onBack }: { user: Employee, onBack?: () => void }) => 
       <AnimatePresence>
         {showModal && (
           <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm overflow-y-auto">
-            <motion.div 
+            <motion.div
               initial={{ opacity: 0, scale: 0.95, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 20 }}
@@ -7306,47 +7530,47 @@ const Transfer = ({ user, onBack }: { user: Employee, onBack?: () => void }) => 
                   <div className="space-y-4">
                     <div className="space-y-1">
                       <label className="text-[10px] font-bold text-gray-400 uppercase">Ngày chuyển *</label>
-                      <input type="date" required value={formData.date} onChange={(e) => setFormData({...formData, date: e.target.value})} className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-orange-500/20" />
+                      <input type="date" required value={formData.date} onChange={(e) => setFormData({ ...formData, date: e.target.value })} className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-orange-500/20" />
                     </div>
-                    
-                    <CreatableSelect 
+
+                    <CreatableSelect
                       label="Từ kho *"
                       value={formData.from_warehouse_id}
                       options={warehouses}
-                      onChange={(val) => setFormData({...formData, from_warehouse_id: val})}
-                      onCreate={(val) => setFormData({...formData, from_warehouse_id: val})}
+                      onChange={(val) => setFormData({ ...formData, from_warehouse_id: val })}
+                      onCreate={(val) => setFormData({ ...formData, from_warehouse_id: val })}
                       placeholder="Chọn kho nguồn..."
                       required
                     />
 
-                    <CreatableSelect 
+                    <CreatableSelect
                       label="Đến kho *"
                       value={formData.to_warehouse_id}
                       options={warehouses}
-                      onChange={(val) => setFormData({...formData, to_warehouse_id: val})}
-                      onCreate={(val) => setFormData({...formData, to_warehouse_id: val})}
+                      onChange={(val) => setFormData({ ...formData, to_warehouse_id: val })}
+                      onCreate={(val) => setFormData({ ...formData, to_warehouse_id: val })}
                       placeholder="Chọn kho đích..."
                       required
                     />
                   </div>
 
                   <div className="space-y-4">
-                    <CreatableSelect 
+                    <CreatableSelect
                       label="Vật tư điều chuyển *"
                       value={formData.material_id}
                       options={materials}
-                      onChange={(val) => setFormData({...formData, material_id: val})}
-                      onCreate={(val) => setFormData({...formData, material_id: val})}
+                      onChange={(val) => setFormData({ ...formData, material_id: val })}
+                      onCreateNew={() => alert('Vui lòng chọn vật tư có trong Danh mục. Để thêm vật tư mới, hãy vào mục Danh mục vật tư.')}
                       placeholder="Chọn vật tư..."
                       required
                     />
 
                     <div className="space-y-1">
-                      <NumericInput 
+                      <NumericInput
                         label="Số lượng chuyển *"
                         required
                         value={formData.quantity}
-                        onChange={(val) => setFormData({...formData, quantity: val})}
+                        onChange={(val) => setFormData({ ...formData, quantity: val })}
                         error={availableStock !== null && formData.quantity > availableStock}
                       />
                       {availableStock !== null && (
@@ -7358,7 +7582,7 @@ const Transfer = ({ user, onBack }: { user: Employee, onBack?: () => void }) => 
 
                     <div className="space-y-1">
                       <label className="text-[10px] font-bold text-gray-400 uppercase">Ghi chú</label>
-                      <textarea rows={3} value={formData.notes} onChange={(e) => setFormData({...formData, notes: e.target.value})} className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-orange-500/20 resize-none" />
+                      <textarea rows={3} value={formData.notes} onChange={(e) => setFormData({ ...formData, notes: e.target.value })} className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-orange-500/20 resize-none" />
                     </div>
                   </div>
 
@@ -7400,10 +7624,10 @@ const InventoryReport = ({ user, onBack }: { user: Employee, onBack?: () => void
   const fetchReport = async () => {
     setLoading(true);
     try {
-      const { data: materials } = await supabase.from('materials').select('*').order('name');
+      const { data: materials } = await supabase.from('materials').select('*').neq('status', 'Đã xóa').order('name');
       const { data: whs } = await supabase.from('warehouses').select('*').order('name');
       const { data: inventory } = await supabase.from('inventory').select('*');
-      
+
       if (!materials || !whs || !inventory) return;
 
       const reportData = materials.map(mat => {
@@ -7473,8 +7697,8 @@ const InventoryReport = ({ user, onBack }: { user: Employee, onBack?: () => void
 
       <div className="space-y-4">
         <div className="w-full md:w-64">
-          <select 
-            value={selectedWarehouse} 
+          <select
+            value={selectedWarehouse}
             onChange={(e) => setSelectedWarehouse(e.target.value)}
             className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20"
           >
@@ -7607,7 +7831,7 @@ const DeletedMaterials = ({ onBack }: { onBack: () => void }) => {
                   <td className="px-4 py-3 text-xs text-gray-600">{item.material_groups?.name}</td>
                   <td className="px-4 py-3 text-xs text-gray-600">{item.unit}</td>
                   <td className="px-4 py-3 text-right">
-                    <button 
+                    <button
                       onClick={() => handleRestore(item.id)}
                       className="p-2 bg-green-50 text-green-600 rounded-lg hover:bg-green-100 transition-colors"
                       title="Khôi phục"
@@ -7693,7 +7917,7 @@ const DeletedWarehouses = ({ onBack }: { onBack: () => void }) => {
                   <td className="px-4 py-3 text-xs text-gray-600">{item.address}</td>
                   <td className="px-4 py-3 text-xs text-gray-600">{item.users?.full_name}</td>
                   <td className="px-4 py-3 text-right">
-                    <button 
+                    <button
                       onClick={() => handleRestore(item.id)}
                       className="p-2 bg-green-50 text-green-600 rounded-lg hover:bg-green-100 transition-colors"
                       title="Khôi phục"
@@ -7786,10 +8010,9 @@ const DeletedSlips = ({ onBack }: { onBack: () => void }) => {
               slips.map((item) => (
                 <tr key={`${item.table}-${item.id}`} className="hover:bg-gray-50/50 transition-colors">
                   <td className="px-4 py-3">
-                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
-                      item.type === 'Nhập kho' ? 'bg-blue-100 text-blue-600' :
-                      item.type === 'Xuất kho' ? 'bg-red-100 text-red-600' : 'bg-orange-100 text-orange-600'
-                    }`}>
+                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${item.type === 'Nhập kho' ? 'bg-blue-100 text-blue-600' :
+                        item.type === 'Xuất kho' ? 'bg-red-100 text-red-600' : 'bg-orange-100 text-orange-600'
+                      }`}>
                       {item.type}
                     </span>
                   </td>
@@ -7800,7 +8023,7 @@ const DeletedSlips = ({ onBack }: { onBack: () => void }) => {
                   <td className="px-4 py-3 text-xs text-gray-800 font-medium">{item.materials?.name}</td>
                   <td className="px-4 py-3 text-xs text-center font-bold text-gray-700">{formatNumber(item.quantity)}</td>
                   <td className="px-4 py-3 text-right">
-                    <button 
+                    <button
                       onClick={() => handleRestore(item.id, item.table)}
                       className="p-2 bg-green-50 text-green-600 rounded-lg hover:bg-green-100 transition-colors"
                       title="Khôi phục"
@@ -7821,18 +8044,18 @@ const DeletedSlips = ({ onBack }: { onBack: () => void }) => {
 const BottomNav = ({ currentPage, onNavigate, user, pendingCount }: { currentPage: string, onNavigate: (page: string) => void, user: Employee, pendingCount: number }) => {
   const navItems = (user.role === 'Admin' || user.role === 'Admin App')
     ? [
-        { id: 'dashboard', label: 'Trang chủ', icon: Home },
-        { id: 'pending-approvals', label: 'Phiếu duyệt', icon: ClipboardCheck, badge: pendingCount },
-        { id: 'attendance', label: 'Chấm công', icon: CalendarCheck },
-        { id: 'hr-records', label: 'Nhân sự', icon: UserCircle },
-      ]
+      { id: 'dashboard', label: 'Trang chủ', icon: Home },
+      { id: 'pending-approvals', label: 'Phiếu duyệt', icon: ClipboardCheck, badge: pendingCount },
+      { id: 'attendance', label: 'Chấm công', icon: CalendarCheck },
+      { id: 'hr-records', label: 'Nhân sự', icon: UserCircle },
+    ]
     : [
-        { id: 'dashboard', label: 'Trang chủ', icon: Home },
-        { id: 'stock-in', label: 'Nhập kho', icon: ArrowDownCircle },
-        { id: 'stock-out', label: 'Xuất kho', icon: ArrowUpCircle },
-        { id: 'transfer', label: 'Luân chuyển', icon: ArrowLeftRight },
-        { id: 'cost-report', label: 'Báo cáo chi phí', icon: FileText },
-      ];
+      { id: 'dashboard', label: 'Trang chủ', icon: Home },
+      { id: 'stock-in', label: 'Nhập kho', icon: ArrowDownCircle },
+      { id: 'stock-out', label: 'Xuất kho', icon: ArrowUpCircle },
+      { id: 'transfer', label: 'Luân chuyển', icon: ArrowLeftRight },
+      { id: 'cost-report', label: 'Báo cáo chi phí', icon: FileText },
+    ];
 
   return (
     <div className="lg:hidden fixed bottom-5 left-1/2 -translate-x-1/2 w-[92%] max-w-md bg-white/90 backdrop-blur-md border border-gray-100 flex items-center justify-around py-2 px-2 z-40 shadow-[0_8px_25px_rgba(0,0,0,0.1)] rounded-full">
@@ -7840,9 +8063,8 @@ const BottomNav = ({ currentPage, onNavigate, user, pendingCount }: { currentPag
         <button
           key={item.id}
           onClick={() => onNavigate(item.id)}
-          className={`flex flex-col items-center gap-0.5 flex-1 transition-all relative ${
-            currentPage === item.id ? 'text-primary scale-105' : 'text-gray-400'
-          }`}
+          className={`flex flex-col items-center gap-0.5 flex-1 transition-all relative ${currentPage === item.id ? 'text-primary scale-105' : 'text-gray-400'
+            }`}
         >
           <item.icon size={20} className={currentPage === item.id ? 'text-primary' : 'text-gray-400'} />
           <span className="text-[8px] font-bold uppercase tracking-tighter">{item.label}</span>
@@ -7879,7 +8101,7 @@ const Notes = ({ user, onBack }: { user: Employee, onBack: () => void }) => {
   const [showAddNew, setShowAddNew] = useState(false);
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [warehouses, setWarehouses] = useState<any[]>([]);
-  
+
   const [filters, setFilters] = useState({
     fromDate: '',
     toDate: '',
@@ -7955,13 +8177,13 @@ const Notes = ({ user, onBack }: { user: Employee, onBack: () => void }) => {
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <PageBreadcrumb title="Nhật ký / Ghi chú" onBack={onBack} />
         <div className="flex items-center gap-2">
-          <button 
+          <button
             onClick={() => setShowQuickNote(true)}
             className="flex items-center gap-2 px-4 py-2 bg-amber-500 text-white rounded-xl text-sm font-bold hover:bg-amber-600 transition-all shadow-lg shadow-amber-500/20"
           >
             <FileText size={18} /> Ghi chú nhanh
           </button>
-          <button 
+          <button
             onClick={() => setShowAddNew(true)}
             className="flex items-center gap-2 px-4 py-2 bg-white text-gray-700 border border-gray-200 rounded-xl text-sm font-bold hover:bg-gray-50 transition-all shadow-sm"
           >
@@ -7974,27 +8196,27 @@ const Notes = ({ user, onBack }: { user: Employee, onBack: () => void }) => {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
           <div>
             <label className="text-[10px] font-bold text-gray-400 uppercase">Từ ngày</label>
-            <input 
-              type="date" 
+            <input
+              type="date"
               value={filters.fromDate}
-              onChange={e => setFilters({...filters, fromDate: e.target.value})}
-              className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm focus:ring-2 focus:ring-primary/20 outline-none mt-1" 
+              onChange={e => setFilters({ ...filters, fromDate: e.target.value })}
+              className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm focus:ring-2 focus:ring-primary/20 outline-none mt-1"
             />
           </div>
           <div>
             <label className="text-[10px] font-bold text-gray-400 uppercase">Đến ngày</label>
-            <input 
-              type="date" 
+            <input
+              type="date"
               value={filters.toDate}
-              onChange={e => setFilters({...filters, toDate: e.target.value})}
-              className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm focus:ring-2 focus:ring-primary/20 outline-none mt-1" 
+              onChange={e => setFilters({ ...filters, toDate: e.target.value })}
+              className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm focus:ring-2 focus:ring-primary/20 outline-none mt-1"
             />
           </div>
           <div>
             <label className="text-[10px] font-bold text-gray-400 uppercase">Nhân sự</label>
-            <select 
+            <select
               value={filters.employee}
-              onChange={e => setFilters({...filters, employee: e.target.value})}
+              onChange={e => setFilters({ ...filters, employee: e.target.value })}
               className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm focus:ring-2 focus:ring-primary/20 outline-none mt-1"
             >
               <option value="">-- Tất cả --</option>
@@ -8003,9 +8225,9 @@ const Notes = ({ user, onBack }: { user: Employee, onBack: () => void }) => {
           </div>
           <div>
             <label className="text-[10px] font-bold text-gray-400 uppercase">Kho</label>
-            <select 
+            <select
               value={filters.warehouse}
-              onChange={e => setFilters({...filters, warehouse: e.target.value})}
+              onChange={e => setFilters({ ...filters, warehouse: e.target.value })}
               className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm focus:ring-2 focus:ring-primary/20 outline-none mt-1"
             >
               <option value="">-- Tất cả kho --</option>
@@ -8016,12 +8238,12 @@ const Notes = ({ user, onBack }: { user: Employee, onBack: () => void }) => {
             <label className="text-[10px] font-bold text-gray-400 uppercase">Tìm kiếm nhanh</label>
             <div className="relative mt-1">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
-              <input 
-                type="text" 
-                placeholder="Gõ để tìm..." 
+              <input
+                type="text"
+                placeholder="Gõ để tìm..."
                 value={filters.search}
-                onChange={e => setFilters({...filters, search: e.target.value})}
-                className="w-full pl-10 pr-4 py-2 rounded-xl border border-gray-200 text-sm focus:ring-2 focus:ring-primary/20 outline-none" 
+                onChange={e => setFilters({ ...filters, search: e.target.value })}
+                className="w-full pl-10 pr-4 py-2 rounded-xl border border-gray-200 text-sm focus:ring-2 focus:ring-primary/20 outline-none"
               />
             </div>
           </div>
@@ -8087,28 +8309,28 @@ const Notes = ({ user, onBack }: { user: Employee, onBack: () => void }) => {
               <div className="p-6 space-y-4 max-h-[70vh] overflow-y-auto">
                 <div>
                   <label className="text-[10px] font-bold text-gray-400 uppercase">Nội dung <span className="text-red-500">*</span></label>
-                  <textarea 
+                  <textarea
                     value={formData.content}
-                    onChange={e => setFormData({...formData, content: e.target.value})}
-                    className="w-full px-4 py-3 rounded-xl border border-gray-200 text-sm focus:ring-2 focus:ring-primary/20 outline-none mt-1 min-h-[100px]" 
+                    onChange={e => setFormData({ ...formData, content: e.target.value })}
+                    className="w-full px-4 py-3 rounded-xl border border-gray-200 text-sm focus:ring-2 focus:ring-primary/20 outline-none mt-1 min-h-[100px]"
                     placeholder="Nhập nội dung ghi chú..."
                   />
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="text-[10px] font-bold text-gray-400 uppercase">Ngày</label>
-                    <input 
-                      type="date" 
+                    <input
+                      type="date"
                       value={formData.date}
-                      onChange={e => setFormData({...formData, date: e.target.value})}
-                      className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm focus:ring-2 focus:ring-primary/20 outline-none mt-1" 
+                      onChange={e => setFormData({ ...formData, date: e.target.value })}
+                      className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm focus:ring-2 focus:ring-primary/20 outline-none mt-1"
                     />
                   </div>
                   <div>
                     <label className="text-[10px] font-bold text-gray-400 uppercase">Thời tiết</label>
-                    <select 
+                    <select
                       value={formData.weather}
-                      onChange={e => setFormData({...formData, weather: e.target.value})}
+                      onChange={e => setFormData({ ...formData, weather: e.target.value })}
                       className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm focus:ring-2 focus:ring-primary/20 outline-none mt-1"
                     >
                       <option value="">-- Chọn --</option>
@@ -8118,12 +8340,12 @@ const Notes = ({ user, onBack }: { user: Employee, onBack: () => void }) => {
                 </div>
                 <div>
                   <label className="text-[10px] font-bold text-gray-400 uppercase">Đối tượng liên quan</label>
-                  <input 
-                    type="text" 
-                    placeholder="VD: Chuẩn bị vật tư..." 
+                  <input
+                    type="text"
+                    placeholder="VD: Chuẩn bị vật tư..."
                     value={formData.related_object}
-                    onChange={e => setFormData({...formData, related_object: e.target.value})}
-                    className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm focus:ring-2 focus:ring-primary/20 outline-none mt-1" 
+                    onChange={e => setFormData({ ...formData, related_object: e.target.value })}
+                    className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm focus:ring-2 focus:ring-primary/20 outline-none mt-1"
                   />
                 </div>
                 <div>
@@ -8131,16 +8353,16 @@ const Notes = ({ user, onBack }: { user: Employee, onBack: () => void }) => {
                   <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 mt-2 max-h-40 overflow-y-auto p-2 border border-gray-100 rounded-xl">
                     {employees.map(emp => (
                       <label key={emp.id} className="flex items-center gap-2 cursor-pointer hover:bg-gray-50 p-1 rounded transition-colors">
-                        <input 
-                          type="checkbox" 
+                        <input
+                          type="checkbox"
                           checked={formData.related_personnel.includes(emp.id)}
                           onChange={e => {
-                            const newPersonnel = e.target.checked 
+                            const newPersonnel = e.target.checked
                               ? [...formData.related_personnel, emp.id]
                               : formData.related_personnel.filter(id => id !== emp.id);
-                            setFormData({...formData, related_personnel: newPersonnel});
+                            setFormData({ ...formData, related_personnel: newPersonnel });
                           }}
-                          className="rounded border-gray-300 text-primary focus:ring-primary" 
+                          className="rounded border-gray-300 text-primary focus:ring-primary"
                         />
                         <span className="text-xs text-gray-600 truncate">{emp.full_name}</span>
                       </label>
@@ -8149,7 +8371,7 @@ const Notes = ({ user, onBack }: { user: Employee, onBack: () => void }) => {
                 </div>
               </div>
               <div className="p-6 bg-gray-50 flex gap-3">
-                <button 
+                <button
                   onClick={handleSave}
                   className="flex-1 py-3 bg-amber-500 text-white rounded-xl font-bold text-sm hover:bg-amber-600 transition-all shadow-lg shadow-amber-500/20 flex items-center justify-center gap-2"
                 >
@@ -8176,23 +8398,23 @@ const Notes = ({ user, onBack }: { user: Employee, onBack: () => void }) => {
                 <div className="space-y-4">
                   <div>
                     <label className="text-[10px] font-bold text-gray-400 uppercase">Đối tượng liên quan</label>
-                    <input type="text" value={formData.related_object} onChange={e => setFormData({...formData, related_object: e.target.value})} className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm focus:ring-2 focus:ring-primary/20 outline-none mt-1" />
+                    <input type="text" value={formData.related_object} onChange={e => setFormData({ ...formData, related_object: e.target.value })} className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm focus:ring-2 focus:ring-primary/20 outline-none mt-1" />
                   </div>
                   <div>
                     <label className="text-[10px] font-bold text-gray-400 uppercase">Mã ghi chú</label>
-                    <input type="text" value={formData.note_code} onChange={e => setFormData({...formData, note_code: e.target.value})} className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm focus:ring-2 focus:ring-primary/20 outline-none mt-1" />
+                    <input type="text" value={formData.note_code} onChange={e => setFormData({ ...formData, note_code: e.target.value })} className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm focus:ring-2 focus:ring-primary/20 outline-none mt-1" />
                   </div>
                   <div>
                     <label className="text-[10px] font-bold text-gray-400 uppercase">Ngày tạo</label>
-                    <input type="date" value={formData.date} onChange={e => setFormData({...formData, date: e.target.value})} className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm focus:ring-2 focus:ring-primary/20 outline-none mt-1" />
+                    <input type="date" value={formData.date} onChange={e => setFormData({ ...formData, date: e.target.value })} className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm focus:ring-2 focus:ring-primary/20 outline-none mt-1" />
                   </div>
                   <div>
                     <label className="text-[10px] font-bold text-gray-400 uppercase">Nội dung</label>
-                    <textarea value={formData.content} onChange={e => setFormData({...formData, content: e.target.value})} className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm focus:ring-2 focus:ring-primary/20 outline-none mt-1 min-h-[80px]" />
+                    <textarea value={formData.content} onChange={e => setFormData({ ...formData, content: e.target.value })} className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm focus:ring-2 focus:ring-primary/20 outline-none mt-1 min-h-[80px]" />
                   </div>
                   <div>
                     <label className="text-[10px] font-bold text-gray-400 uppercase">Thời tiết</label>
-                    <select value={formData.weather} onChange={e => setFormData({...formData, weather: e.target.value})} className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm focus:ring-2 focus:ring-primary/20 outline-none mt-1">
+                    <select value={formData.weather} onChange={e => setFormData({ ...formData, weather: e.target.value })} className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm focus:ring-2 focus:ring-primary/20 outline-none mt-1">
                       <option value="">-- Chọn --</option>
                       {WEATHER_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
                     </select>
@@ -8201,11 +8423,11 @@ const Notes = ({ user, onBack }: { user: Employee, onBack: () => void }) => {
                 <div className="space-y-4">
                   <div>
                     <label className="text-[10px] font-bold text-gray-400 uppercase">Mã đối tượng</label>
-                    <input type="text" value={formData.object_code} onChange={e => setFormData({...formData, object_code: e.target.value})} className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm focus:ring-2 focus:ring-primary/20 outline-none mt-1" />
+                    <input type="text" value={formData.object_code} onChange={e => setFormData({ ...formData, object_code: e.target.value })} className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm focus:ring-2 focus:ring-primary/20 outline-none mt-1" />
                   </div>
                   <div>
                     <label className="text-[10px] font-bold text-gray-400 uppercase">Vị trí / Tọa độ</label>
-                    <input type="text" value={formData.location} onChange={e => setFormData({...formData, location: e.target.value})} className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm focus:ring-2 focus:ring-primary/20 outline-none mt-1" placeholder="0.000000, 0.000000" />
+                    <input type="text" value={formData.location} onChange={e => setFormData({ ...formData, location: e.target.value })} className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm focus:ring-2 focus:ring-primary/20 outline-none mt-1" placeholder="0.000000, 0.000000" />
                   </div>
                   <div>
                     <label className="text-[10px] font-bold text-gray-400 uppercase">Người tạo</label>
@@ -8235,7 +8457,7 @@ const Reminders = ({ user, onBack }: { user: Employee, onBack: () => void }) => 
   const [showSetReminder, setShowSetReminder] = useState(false);
   const [showAddNew, setShowAddNew] = useState(false);
   const [employees, setEmployees] = useState<Employee[]>([]);
-  
+
   const [filters, setFilters] = useState({
     fromDate: '',
     toDate: '',
@@ -8302,13 +8524,13 @@ const Reminders = ({ user, onBack }: { user: Employee, onBack: () => void }) => 
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <PageBreadcrumb title="Thiết lập Lịch nhắc" onBack={onBack} />
         <div className="flex items-center gap-2">
-          <button 
+          <button
             onClick={() => setShowSetReminder(true)}
             className="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-xl text-sm font-bold hover:bg-primary-dark transition-all shadow-lg shadow-primary/20"
           >
             <Bell size={18} /> Đặt lịch nhắc
           </button>
-          <button 
+          <button
             onClick={() => setShowAddNew(true)}
             className="flex items-center gap-2 px-4 py-2 bg-white text-gray-700 border border-gray-200 rounded-xl text-sm font-bold hover:bg-gray-50 transition-all shadow-sm"
           >
@@ -8321,15 +8543,15 @@ const Reminders = ({ user, onBack }: { user: Employee, onBack: () => void }) => 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
           <div>
             <label className="text-[10px] font-bold text-gray-400 uppercase">Từ ngày</label>
-            <input type="date" value={filters.fromDate} onChange={e => setFilters({...filters, fromDate: e.target.value})} className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm focus:ring-2 focus:ring-primary/20 outline-none mt-1" />
+            <input type="date" value={filters.fromDate} onChange={e => setFilters({ ...filters, fromDate: e.target.value })} className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm focus:ring-2 focus:ring-primary/20 outline-none mt-1" />
           </div>
           <div>
             <label className="text-[10px] font-bold text-gray-400 uppercase">Đến ngày</label>
-            <input type="date" value={filters.toDate} onChange={e => setFilters({...filters, toDate: e.target.value})} className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm focus:ring-2 focus:ring-primary/20 outline-none mt-1" />
+            <input type="date" value={filters.toDate} onChange={e => setFilters({ ...filters, toDate: e.target.value })} className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm focus:ring-2 focus:ring-primary/20 outline-none mt-1" />
           </div>
           <div>
             <label className="text-[10px] font-bold text-gray-400 uppercase">Nhân sự</label>
-            <select value={filters.employee} onChange={e => setFilters({...filters, employee: e.target.value})} className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm focus:ring-2 focus:ring-primary/20 outline-none mt-1">
+            <select value={filters.employee} onChange={e => setFilters({ ...filters, employee: e.target.value })} className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm focus:ring-2 focus:ring-primary/20 outline-none mt-1">
               <option value="">-- Tất cả --</option>
               {employees.map(e => <option key={e.id} value={e.id}>{e.full_name}</option>)}
             </select>
@@ -8344,7 +8566,7 @@ const Reminders = ({ user, onBack }: { user: Employee, onBack: () => void }) => 
             <label className="text-[10px] font-bold text-gray-400 uppercase">Tìm kiếm nhanh</label>
             <div className="relative mt-1">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
-              <input type="text" placeholder="Gõ để tìm..." value={filters.search} onChange={e => setFilters({...filters, search: e.target.value})} className="w-full pl-10 pr-4 py-2 rounded-xl border border-gray-200 text-sm focus:ring-2 focus:ring-primary/20 outline-none" />
+              <input type="text" placeholder="Gõ để tìm..." value={filters.search} onChange={e => setFilters({ ...filters, search: e.target.value })} className="w-full pl-10 pr-4 py-2 rounded-xl border border-gray-200 text-sm focus:ring-2 focus:ring-primary/20 outline-none" />
             </div>
           </div>
         </div>
@@ -8414,45 +8636,45 @@ const Reminders = ({ user, onBack }: { user: Employee, onBack: () => void }) => 
               <div className="p-6 space-y-4">
                 <div>
                   <label className="text-[10px] font-bold text-gray-400 uppercase">Tiêu đề <span className="text-red-500">*</span></label>
-                  <input 
-                    type="text" 
-                    placeholder="VD: Họp giao ban sáng..." 
+                  <input
+                    type="text"
+                    placeholder="VD: Họp giao ban sáng..."
                     value={formData.title}
-                    onChange={e => setFormData({...formData, title: e.target.value})}
-                    className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm focus:ring-2 focus:ring-primary/20 outline-none mt-1" 
+                    onChange={e => setFormData({ ...formData, title: e.target.value })}
+                    className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm focus:ring-2 focus:ring-primary/20 outline-none mt-1"
                   />
                 </div>
                 <div>
                   <label className="text-[10px] font-bold text-gray-400 uppercase">Nội dung chi tiết</label>
-                  <textarea 
-                    placeholder="Mô tả thêm..." 
+                  <textarea
+                    placeholder="Mô tả thêm..."
                     value={formData.content}
-                    onChange={e => setFormData({...formData, content: e.target.value})}
-                    className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm focus:ring-2 focus:ring-primary/20 outline-none mt-1 min-h-[100px]" 
+                    onChange={e => setFormData({ ...formData, content: e.target.value })}
+                    className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm focus:ring-2 focus:ring-primary/20 outline-none mt-1 min-h-[100px]"
                   />
                 </div>
                 <div>
                   <label className="text-[10px] font-bold text-gray-400 uppercase">Thời gian nhắc <span className="text-red-500">*</span></label>
-                  <input 
-                    type="datetime-local" 
+                  <input
+                    type="datetime-local"
                     value={formData.reminder_time}
-                    onChange={e => setFormData({...formData, reminder_time: e.target.value})}
-                    className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm focus:ring-2 focus:ring-primary/20 outline-none mt-1" 
+                    onChange={e => setFormData({ ...formData, reminder_time: e.target.value })}
+                    className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm focus:ring-2 focus:ring-primary/20 outline-none mt-1"
                   />
                 </div>
                 <div className="flex items-center gap-3 p-3 bg-primary/5 rounded-xl border border-primary/10">
-                  <input 
-                    type="checkbox" 
+                  <input
+                    type="checkbox"
                     id="notify"
                     checked={formData.browser_notification}
-                    onChange={e => setFormData({...formData, browser_notification: e.target.checked})}
-                    className="w-5 h-5 rounded border-gray-300 text-primary focus:ring-primary" 
+                    onChange={e => setFormData({ ...formData, browser_notification: e.target.checked })}
+                    className="w-5 h-5 rounded border-gray-300 text-primary focus:ring-primary"
                   />
                   <label htmlFor="notify" className="text-sm text-gray-700 font-medium cursor-pointer">Nhắc qua thông báo trình duyệt</label>
                 </div>
               </div>
               <div className="p-6 bg-gray-50 flex gap-3">
-                <button 
+                <button
                   onClick={handleSave}
                   className="flex-1 py-3 bg-primary text-white rounded-xl font-bold text-sm hover:bg-primary-dark transition-all shadow-lg shadow-primary/20 flex items-center justify-center gap-2"
                 >
@@ -8493,7 +8715,7 @@ const Reminders = ({ user, onBack }: { user: Employee, onBack: () => void }) => 
                 <div className="space-y-4">
                   <div>
                     <label className="text-[10px] font-bold text-gray-400 uppercase">Mã nhắc nhở</label>
-                    <input type="text" value={formData.reminder_code} onChange={e => setFormData({...formData, reminder_code: e.target.value})} className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm focus:ring-2 focus:ring-primary/20 outline-none mt-1" />
+                    <input type="text" value={formData.reminder_code} onChange={e => setFormData({ ...formData, reminder_code: e.target.value })} className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm focus:ring-2 focus:ring-primary/20 outline-none mt-1" />
                   </div>
                   <div>
                     <label className="text-[10px] font-bold text-gray-400 uppercase">Người nhắc</label>
@@ -8501,7 +8723,7 @@ const Reminders = ({ user, onBack }: { user: Employee, onBack: () => void }) => 
                   </div>
                   <div>
                     <label className="text-[10px] font-bold text-gray-400 uppercase">Tiêu đề</label>
-                    <input type="text" value={formData.title} onChange={e => setFormData({...formData, title: e.target.value})} className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm focus:ring-2 focus:ring-primary/20 outline-none mt-1" />
+                    <input type="text" value={formData.title} onChange={e => setFormData({ ...formData, title: e.target.value })} className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm focus:ring-2 focus:ring-primary/20 outline-none mt-1" />
                   </div>
                 </div>
               </div>
@@ -8541,7 +8763,7 @@ const Backup = ({ onBack }: { onBack: () => void }) => {
   const [selectedTables, setSelectedTables] = useState<string[]>(BACKUP_TABLES.map(t => t.id));
   const [isBackingUp, setIsBackingUp] = useState(false);
   const [backupStatus, setBackupStatus] = useState('');
-  
+
   // SMTP Config
   const [smtpConfig, setSmtpConfig] = useState(() => {
     const saved = localStorage.getItem('smtp_config');
@@ -8556,7 +8778,7 @@ const Backup = ({ onBack }: { onBack: () => void }) => {
   const [showSmtp, setShowSmtp] = useState(false);
 
   const toggleTable = (id: string) => {
-    setSelectedTables(prev => 
+    setSelectedTables(prev =>
       prev.includes(id) ? prev.filter(t => t !== id) : [...prev, id]
     );
   };
@@ -8578,7 +8800,7 @@ const Backup = ({ onBack }: { onBack: () => void }) => {
 
     setIsBackingUp(true);
     setBackupStatus('Đang truy xuất dữ liệu...');
-    
+
     try {
       const workbook = utils.book_new();
       for (const tableId of selectedTables) {
@@ -8596,7 +8818,7 @@ const Backup = ({ onBack }: { onBack: () => void }) => {
       if (email && smtpConfig.user && smtpConfig.pass) {
         setBackupStatus(`Đang gửi email qua SMTP (${smtpConfig.host}) tới ${email}...`);
         const fileData = write(workbook, { type: 'base64', bookType: 'xlsx' });
-        
+
         const response = await fetch('/api/send-backup', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -8607,7 +8829,7 @@ const Backup = ({ onBack }: { onBack: () => void }) => {
             smtpConfig
           })
         });
-        
+
         if (!response.ok) {
           const errorData = await response.json();
           throw new Error(errorData.error || 'Failed to send email');
@@ -8616,7 +8838,7 @@ const Backup = ({ onBack }: { onBack: () => void }) => {
 
       setBackupStatus('Đang tải file về máy...');
       writeFile(workbook, fileName);
-      
+
       setBackupStatus('Hoàn tất!');
       alert('Sao lưu thành công! File đã được tải về' + (email ? ` và gửi tới email ${email}.` : '.'));
     } catch (err: any) {
@@ -8631,7 +8853,7 @@ const Backup = ({ onBack }: { onBack: () => void }) => {
   return (
     <div className="p-4 md:p-6 space-y-6">
       <PageBreadcrumb title="Sao lưu dữ liệu" onBack={onBack} />
-      
+
       <div className="bg-white rounded-[2rem] shadow-xl border border-gray-100 p-8 max-w-4xl mx-auto space-y-8 relative overflow-hidden">
         {isBackingUp && (
           <div className="absolute inset-0 z-50 bg-white/80 backdrop-blur-sm flex flex-col items-center justify-center gap-6">
@@ -8658,7 +8880,7 @@ const Backup = ({ onBack }: { onBack: () => void }) => {
               <p className="text-xs text-gray-400 font-medium">Tùy chỉnh dữ liệu và lịch trình sao lưu</p>
             </div>
           </div>
-          <button 
+          <button
             onClick={() => setShowSmtp(!showSmtp)}
             className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${showSmtp ? 'bg-primary text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
           >
@@ -8670,7 +8892,7 @@ const Backup = ({ onBack }: { onBack: () => void }) => {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           <div className="space-y-6">
             {showSmtp ? (
-              <motion.div 
+              <motion.div
                 initial={{ opacity: 0, height: 0 }}
                 animate={{ opacity: 1, height: 'auto' }}
                 className="space-y-4 bg-gray-50 p-6 rounded-3xl border border-gray-100"
@@ -8681,20 +8903,20 @@ const Backup = ({ onBack }: { onBack: () => void }) => {
                 <div className="grid grid-cols-2 gap-4">
                   <div className="col-span-2">
                     <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1 ml-1">SMTP Host</label>
-                    <input 
-                      type="text" 
+                    <input
+                      type="text"
                       value={smtpConfig.host}
-                      onChange={e => setSmtpConfig({...smtpConfig, host: e.target.value})}
+                      onChange={e => setSmtpConfig({ ...smtpConfig, host: e.target.value })}
                       className="w-full px-4 py-2.5 rounded-xl border border-gray-200 bg-white outline-none focus:ring-2 focus:ring-primary/20 text-sm"
                       placeholder="smtp.gmail.com"
                     />
                   </div>
                   <div>
                     <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1 ml-1">Port</label>
-                    <input 
-                      type="text" 
+                    <input
+                      type="text"
                       value={smtpConfig.port}
-                      onChange={e => setSmtpConfig({...smtpConfig, port: e.target.value})}
+                      onChange={e => setSmtpConfig({ ...smtpConfig, port: e.target.value })}
                       className="w-full px-4 py-2.5 rounded-xl border border-gray-200 bg-white outline-none focus:ring-2 focus:ring-primary/20 text-sm"
                       placeholder="465"
                     />
@@ -8704,10 +8926,10 @@ const Backup = ({ onBack }: { onBack: () => void }) => {
                       <div className={`w-6 h-6 rounded-lg border-2 flex items-center justify-center transition-all ${smtpConfig.secure ? 'bg-primary border-primary shadow-lg shadow-green-900/20' : 'bg-white border-gray-200 group-hover:border-primary/50'}`}>
                         {smtpConfig.secure && <Check size={14} className="text-white" />}
                       </div>
-                      <input 
-                        type="checkbox" 
+                      <input
+                        type="checkbox"
                         checked={smtpConfig.secure}
-                        onChange={e => setSmtpConfig({...smtpConfig, secure: e.target.checked})}
+                        onChange={e => setSmtpConfig({ ...smtpConfig, secure: e.target.checked })}
                         className="hidden"
                       />
                       <span className="text-xs font-bold text-gray-600">SSL/TLS</span>
@@ -8715,20 +8937,20 @@ const Backup = ({ onBack }: { onBack: () => void }) => {
                   </div>
                   <div className="col-span-2">
                     <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1 ml-1">Email (User)</label>
-                    <input 
-                      type="email" 
+                    <input
+                      type="email"
                       value={smtpConfig.user}
-                      onChange={e => setSmtpConfig({...smtpConfig, user: e.target.value})}
+                      onChange={e => setSmtpConfig({ ...smtpConfig, user: e.target.value })}
                       className="w-full px-4 py-2.5 rounded-xl border border-gray-200 bg-white outline-none focus:ring-2 focus:ring-primary/20 text-sm"
                       placeholder="your-email@gmail.com"
                     />
                   </div>
                   <div className="col-span-2">
                     <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1 ml-1">Mật khẩu ứng dụng (App Password)</label>
-                    <input 
-                      type="password" 
+                    <input
+                      type="password"
                       value={smtpConfig.pass}
-                      onChange={e => setSmtpConfig({...smtpConfig, pass: e.target.value})}
+                      onChange={e => setSmtpConfig({ ...smtpConfig, pass: e.target.value })}
                       className="w-full px-4 py-2.5 rounded-xl border border-gray-200 bg-white outline-none focus:ring-2 focus:ring-primary/20 text-sm"
                       placeholder="••••••••••••••••"
                     />
@@ -8742,8 +8964,8 @@ const Backup = ({ onBack }: { onBack: () => void }) => {
                   <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2 ml-1 flex items-center gap-2">
                     <Mail size={14} className="text-primary" /> Email nhận backup
                   </label>
-                  <input 
-                    type="email" 
+                  <input
+                    type="email"
                     value={email}
                     onChange={e => setEmail(e.target.value)}
                     placeholder="Nhập email nhận file..."
@@ -8759,7 +8981,7 @@ const Backup = ({ onBack }: { onBack: () => void }) => {
                     <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2 ml-1 flex items-center gap-2">
                       <RefreshCw size={14} className="text-primary" /> Tần suất
                     </label>
-                    <select 
+                    <select
                       value={frequency}
                       onChange={e => setFrequency(e.target.value)}
                       className="w-full px-4 py-3.5 rounded-2xl border border-gray-100 bg-gray-50/50 focus:bg-white focus:ring-4 focus:ring-primary/10 focus:border-primary outline-none transition-all text-sm font-medium"
@@ -8774,8 +8996,8 @@ const Backup = ({ onBack }: { onBack: () => void }) => {
                     <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2 ml-1 flex items-center gap-2">
                       <Clock size={14} className="text-primary" /> Giờ backup
                     </label>
-                    <input 
-                      type="time" 
+                    <input
+                      type="time"
                       value={time}
                       onChange={e => setTime(e.target.value)}
                       className="w-full px-4 py-3.5 rounded-2xl border border-gray-100 bg-gray-50/50 focus:bg-white focus:ring-4 focus:ring-primary/10 focus:border-primary outline-none transition-all text-sm font-medium"
@@ -8795,7 +9017,7 @@ const Backup = ({ onBack }: { onBack: () => void }) => {
                       </p>
                     </div>
                   </div>
-                  
+
                   <div className="space-y-3 pl-14">
                     <div className="flex items-start gap-3">
                       <div className="w-5 h-5 rounded-full bg-amber-200 text-amber-800 text-[10px] flex items-center justify-center font-bold shrink-0 mt-0.5">1</div>
@@ -8841,8 +9063,8 @@ const Backup = ({ onBack }: { onBack: () => void }) => {
                   <div className={`w-5 h-5 rounded-md border-2 flex items-center justify-center transition-all ${selectedTables.includes(table.id) ? 'bg-primary border-primary' : 'bg-white border-gray-200 group-hover:border-primary/50'}`}>
                     {selectedTables.includes(table.id) && <Check size={12} className="text-white" />}
                   </div>
-                  <input 
-                    type="checkbox" 
+                  <input
+                    type="checkbox"
                     className="hidden"
                     checked={selectedTables.includes(table.id)}
                     onChange={() => toggleTable(table.id)}
@@ -8855,19 +9077,19 @@ const Backup = ({ onBack }: { onBack: () => void }) => {
         </div>
 
         <div className="flex flex-col sm:flex-row gap-4 pt-8 border-t border-gray-50">
-          <button 
+          <button
             onClick={handleSave}
             className="flex-1 bg-gray-900 text-white font-black py-4 rounded-2xl hover:bg-black transition-all flex items-center justify-center gap-3 shadow-xl shadow-black/10"
           >
             <Save size={20} /> LƯU CẤU HÌNH
           </button>
-          <button 
+          <button
             onClick={handleBackupNow}
             className="flex-1 bg-primary text-white font-black py-4 rounded-2xl hover:bg-primary-dark transition-all flex items-center justify-center gap-3 shadow-xl shadow-primary/20"
           >
             <Play size={20} /> BẮT ĐẦU SAO LƯU
           </button>
-          <button 
+          <button
             onClick={onBack}
             className="px-10 bg-gray-100 text-gray-500 font-black py-4 rounded-2xl hover:bg-gray-200 transition-all"
           >
@@ -8886,10 +9108,10 @@ const BackupNow = ({ onBack }: { onBack: () => void }) => {
   const handleFullBackup = async () => {
     setLoading(true);
     setStatus('Đang chuẩn bị dữ liệu...');
-    
+
     try {
       const workbook = utils.book_new();
-      
+
       for (const table of BACKUP_TABLES) {
         setStatus(`Đang tải bảng: ${table.label}...`);
         const { data, error } = await supabase.from(table.id).select('*');
@@ -8897,13 +9119,13 @@ const BackupNow = ({ onBack }: { onBack: () => void }) => {
           console.error(`Error fetching ${table.id}:`, error);
           continue;
         }
-        
+
         if (data && data.length > 0) {
           const worksheet = utils.json_to_sheet(data);
           utils.book_append_sheet(workbook, worksheet, table.label.substring(0, 31));
         }
       }
-      
+
       setStatus('Đang tạo file Excel...');
       const fileName = `CDX_Full_Backup_${new Date().toISOString().split('T')[0]}.xlsx`;
 
@@ -8914,7 +9136,7 @@ const BackupNow = ({ onBack }: { onBack: () => void }) => {
       if (email && smtpConfig && smtpConfig.user && smtpConfig.pass) {
         setStatus(`Đang gửi email tới ${email}...`);
         const fileData = write(workbook, { type: 'base64', bookType: 'xlsx' });
-        
+
         const response = await fetch('/api/send-backup', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -8925,7 +9147,7 @@ const BackupNow = ({ onBack }: { onBack: () => void }) => {
             smtpConfig
           })
         });
-        
+
         if (!response.ok) {
           const errorData = await response.json();
           throw new Error(errorData.error || 'Failed to send email');
@@ -8933,7 +9155,7 @@ const BackupNow = ({ onBack }: { onBack: () => void }) => {
       }
 
       writeFile(workbook, fileName);
-      
+
       setStatus('Hoàn tất!');
       alert('Sao lưu toàn bộ dữ liệu thành công!' + (email ? ` Đã gửi tới email ${email}.` : ''));
     } catch (err: any) {
@@ -8947,12 +9169,12 @@ const BackupNow = ({ onBack }: { onBack: () => void }) => {
   return (
     <div className="p-4 md:p-6 space-y-6">
       <PageBreadcrumb title="Sao lưu toàn phần" onBack={onBack} />
-      
+
       <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-12 flex flex-col items-center justify-center text-center max-w-2xl mx-auto space-y-6">
         <div className={`p-8 rounded-full ${loading ? 'bg-primary/10 animate-pulse' : 'bg-primary/10'}`}>
           <Download size={64} className="text-primary" />
         </div>
-        
+
         <div className="space-y-2">
           <h2 className="text-2xl font-bold text-gray-800">Sao lưu toàn bộ dữ liệu</h2>
           <p className="text-gray-500 max-w-md">
@@ -8962,7 +9184,7 @@ const BackupNow = ({ onBack }: { onBack: () => void }) => {
 
         {loading && (
           <div className="w-full max-w-xs bg-gray-100 rounded-full h-2 overflow-hidden">
-            <motion.div 
+            <motion.div
               initial={{ width: 0 }}
               animate={{ width: '100%' }}
               transition={{ duration: 2, repeat: Infinity }}
@@ -8974,7 +9196,7 @@ const BackupNow = ({ onBack }: { onBack: () => void }) => {
         <p className="text-sm font-medium text-primary h-5">{status}</p>
 
         <div className="flex gap-4 w-full">
-          <button 
+          <button
             onClick={handleFullBackup}
             disabled={loading}
             className="flex-1 bg-primary text-white font-bold py-4 rounded-xl hover:bg-primary-hover transition-all flex items-center justify-center gap-3 shadow-lg shadow-green-900/20 disabled:opacity-50"
@@ -8982,7 +9204,7 @@ const BackupNow = ({ onBack }: { onBack: () => void }) => {
             <Download size={20} />
             {loading ? 'ĐANG SAO LƯU...' : 'BẮT ĐẦU SAO LƯU'}
           </button>
-          <button 
+          <button
             onClick={onBack}
             disabled={loading}
             className="px-8 bg-gray-100 text-gray-600 font-bold py-4 rounded-xl hover:bg-gray-200 transition-all disabled:opacity-50"
@@ -9327,28 +9549,28 @@ CREATE POLICY "Admins can manage allowances" ON allowances FOR ALL USING (get_us
   return (
     <div className="p-4 md:p-6 space-y-6 pb-44">
       <PageBreadcrumb title="Cấu hình Database" onBack={onBack} />
-      
+
       <div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
         <div className="p-6 border-b border-gray-50 flex items-center justify-between bg-gray-50/50">
           <div>
             <h3 className="text-lg font-bold text-gray-800">SQL Schema cho Supabase</h3>
             <p className="text-xs text-gray-500 mt-1">Sử dụng mã SQL này trong Supabase SQL Editor để khởi tạo các bảng.</p>
           </div>
-          <button 
+          <button
             onClick={copyToClipboard}
             className="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-xl text-sm font-bold hover:bg-primary-hover transition-colors shadow-lg shadow-primary/20"
           >
             <ClipboardCheck size={18} /> Sao chép SQL
           </button>
         </div>
-        
+
         <div className="p-6">
           <div className="bg-gray-900 rounded-2xl p-6 overflow-x-auto">
             <pre className="text-green-400 text-xs font-mono leading-relaxed">
               {sqlSchema}
             </pre>
           </div>
-          
+
           <div className="mt-8 p-6 bg-amber-50 rounded-2xl border border-amber-100 space-y-4">
             <div className="flex gap-4">
               <div className="p-3 bg-amber-100 rounded-2xl text-amber-600 h-fit">
@@ -9568,13 +9790,13 @@ export default function App() {
       case 'deleted-warehouses': return <DeletedWarehouses onBack={goBack} />;
       case 'deleted-slips': return <DeletedSlips onBack={goBack} />;
       case 'material-groups': return <MaterialGroups user={user} onBack={goBack} />;
-      case 'backup-settings': 
+      case 'backup-settings':
         if (user.role !== 'Admin App') return <Dashboard user={user} onNavigate={navigateTo} />;
         return <Backup onBack={goBack} />;
-      case 'backup-now': 
+      case 'backup-now':
         if (user.role !== 'Admin App') return <Dashboard user={user} onNavigate={navigateTo} />;
         return <BackupNow onBack={goBack} />;
-      case 'database-setup': 
+      case 'database-setup':
         if (user.role !== 'Admin App') return <Dashboard user={user} onNavigate={navigateTo} />;
         return <DatabaseSetup onBack={goBack} />;
       default: return (
@@ -9594,8 +9816,8 @@ export default function App() {
       {/* Header */}
       <header className="bg-primary text-white h-14 flex items-center justify-between px-4 sticky top-0 z-50 shadow-md">
         <div className="flex items-center gap-2">
-          <button 
-            onClick={() => setIsSidebarOpen(!isSidebarOpen)} 
+          <button
+            onClick={() => setIsSidebarOpen(!isSidebarOpen)}
             className="flex items-center gap-2 hover:bg-white/10 p-1.5 rounded-xl transition-all active:scale-95"
           >
             <div className="w-8 h-8 bg-white rounded-md flex items-center justify-center p-1 shadow-sm">
@@ -9603,10 +9825,10 @@ export default function App() {
             </div>
             <h1 className="font-bold text-sm tracking-wide hidden sm:block">QUẢN LÝ KHO CDX</h1>
           </button>
-          
+
           <div className="h-6 w-px bg-white/20 mx-1 hidden sm:block" />
-          
-          <button 
+
+          <button
             onClick={() => navigateTo('dashboard')}
             className="hover:bg-white/10 p-2 rounded-xl transition-colors flex items-center gap-2 group"
             title="Về trang chủ"
@@ -9614,7 +9836,7 @@ export default function App() {
             <Home size={20} className="group-hover:scale-110 transition-transform" />
           </button>
 
-          <button 
+          <button
             onClick={() => {
               fetchPendingCount();
               setRefreshKey(prev => prev + 1);
@@ -9627,7 +9849,7 @@ export default function App() {
         </div>
 
         <div className="flex items-center gap-2 sm:gap-4 relative">
-          <div 
+          <div
             onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
             className="flex items-center gap-2 bg-white/10 px-2 sm:px-3 py-1 rounded-full border border-white/20 cursor-pointer hover:bg-white/20 transition-colors"
           >
@@ -9660,7 +9882,7 @@ export default function App() {
                     </div>
                   </div>
                   <div className="p-2">
-                    <button 
+                    <button
                       onClick={() => {
                         navigateTo('hr-records');
                         setIsUserMenuOpen(false);
@@ -9671,7 +9893,7 @@ export default function App() {
                       <span>Hồ sơ cá nhân</span>
                     </button>
                     <div className="h-px bg-gray-100 my-2 mx-2" />
-                    <button 
+                    <button
                       onClick={() => setUser(null)}
                       className="w-full flex items-center gap-3 px-3 py-2 rounded-xl text-sm text-red-600 hover:bg-red-50 transition-colors"
                     >
@@ -9690,7 +9912,7 @@ export default function App() {
         {/* Sidebar Overlay for Mobile */}
         <AnimatePresence>
           {isSidebarOpen && (
-            <motion.div 
+            <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
@@ -9703,7 +9925,7 @@ export default function App() {
         {/* Sidebar */}
         <AnimatePresence mode="wait">
           {isSidebarOpen && (
-            <motion.aside 
+            <motion.aside
               initial={{ x: -280, opacity: 0 }}
               animate={{ x: 0, opacity: 1 }}
               exit={{ x: -280, opacity: 0 }}
@@ -9716,30 +9938,30 @@ export default function App() {
                 </div>
 
                 <div className="space-y-6">
-                  <SidebarItem 
-                    icon={LayoutDashboard} 
-                    label="Trang chủ" 
-                    active={currentPage === 'dashboard'} 
+                  <SidebarItem
+                    icon={LayoutDashboard}
+                    label="Trang chủ"
+                    active={currentPage === 'dashboard'}
                     onClick={() => {
                       navigateTo('dashboard');
                       if (window.innerWidth < 1024) setIsSidebarOpen(false);
-                    }} 
+                    }}
                   />
 
                   {filteredMenuGroups.map((group, idx) => (
                     <div key={idx} className="space-y-1">
                       <p className="text-[10px] font-bold text-gray-300 px-4 mb-2 tracking-wider">{group.title}</p>
                       {group.items.map((item) => (
-                        <SidebarItem 
+                        <SidebarItem
                           key={item.id}
-                          icon={item.icon} 
-                          label={item.label} 
-                          active={currentPage === item.id} 
+                          icon={item.icon}
+                          label={item.label}
+                          active={currentPage === item.id}
                           badge={item.badge}
                           onClick={() => {
                             navigateTo(item.id);
                             if (window.innerWidth < 1024) setIsSidebarOpen(false);
-                          }} 
+                          }}
                         />
                       ))}
                     </div>
@@ -9753,7 +9975,7 @@ export default function App() {
         {/* Main Content */}
         <main key={refreshKey} className="flex-1 overflow-y-auto relative bg-[#F8F9FA] pb-44 lg:pb-0">
           {renderContent()}
-          
+
           <footer className="p-4 text-center text-[10px] text-gray-400 border-t border-gray-100 mt-auto">
             HỆ THỐNG QUẢN LÝ CÔNG TY CON ĐƯỜNG XANH © 2026
           </footer>

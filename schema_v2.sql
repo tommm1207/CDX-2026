@@ -114,7 +114,7 @@ CREATE TABLE IF NOT EXISTS public.stock_out (
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- 8. Transfers (Luân chuyển kho)
+-- 8. Transfers (Điều chuyển kho)
 CREATE TABLE IF NOT EXISTS public.transfers (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     transfer_code TEXT,
@@ -128,6 +128,17 @@ CREATE TABLE IF NOT EXISTS public.transfers (
     status TEXT DEFAULT 'Chờ duyệt',
     notes TEXT,
     created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- 9. Inventory (Tồn kho hiện tại — cập nhật mỗi khi nhập/xuất/chuyển kho)
+CREATE TABLE IF NOT EXISTS public.inventory (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    material_id TEXT REFERENCES public.materials(id) ON DELETE CASCADE,
+    warehouse_id UUID REFERENCES public.warehouses(id) ON DELETE CASCADE,
+    quantity NUMERIC DEFAULT 0,
+    unit TEXT,
+    updated_at TIMESTAMPTZ DEFAULT NOW(),
+    UNIQUE(material_id, warehouse_id)
 );
 
 -- 9. Attendance (Chấm công)

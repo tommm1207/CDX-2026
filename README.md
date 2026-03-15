@@ -1,6 +1,7 @@
-# Hệ thống Quản lý Thi công CDX - 2026
-
-![CDX Banner](https://cdx-2026.vercel.app/banner.png)
+<div align="center">
+  <img src="https://cdx-2026.vercel.app/logo.png" width="150" alt="CDX Logo" />
+  <h1>Hệ thống Quản lý Thi công CDX - 2026</h1>
+</div>
 
 Hệ thống quản lý toàn diện dành cho các công trình thi công, bao gồm quản lý kho vật tư, tài chính dự án, nhân sự và tiền lương. Được tối ưu hóa cho di động dưới dạng Progressive Web App (PWA).
 

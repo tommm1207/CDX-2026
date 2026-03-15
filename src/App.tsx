@@ -80,7 +80,6 @@ import { Notes } from './components/notes/Notes';
 import { Reminders } from './components/reminders/Reminders';
 import { Backup } from './components/settings/Backup';
 import { BackupNow } from './components/settings/BackupNow';
-import { DatabaseSetup } from './components/settings/DatabaseSetup';
 
 const LOGO_URL = "/logo.png";
 
@@ -242,14 +241,13 @@ export default function App() {
         { id: 'partners', label: 'Khách hàng & nhà cung cấp', icon: Handshake },
       ]
     },
+        { id: 'reminders', label: 'Thiết lập Lịch nhắc', icon: Bell },
+        { id: 'trash', label: 'Thùng rác', icon: Trash2 },
+      ]
+    },
     {
       title: 'HỆ THỐNG',
       items: [
-        { id: 'hr-records', label: 'Quản lý nhân sự', icon: UserCircle },
-        { id: 'notes', label: 'Nhật ký / Ghi chú', icon: FileText },
-        { id: 'notifications', label: 'Thông báo', icon: BellRing },
-        { id: 'reminders', label: 'Thiết lập Lịch nhắc', icon: Bell },
-        { id: 'database-setup', label: 'Cấu hình Database', icon: Settings2 },
         { id: 'backup-settings', label: 'Backup', icon: Settings },
         { id: 'backup-now', label: 'Sao lưu ngay', icon: Download },
       ]
@@ -305,9 +303,6 @@ export default function App() {
       case 'backup-now':
         if (user.role !== 'Admin' && user.role !== 'Admin App') return <Dashboard user={user} onNavigate={navigateTo} />;
         return <BackupNow onBack={goBack} />;
-      case 'database-setup':
-        if (user.role !== 'Admin' && user.role !== 'Admin App') return <Dashboard user={user} onNavigate={navigateTo} />;
-        return <DatabaseSetup onBack={goBack} />;
       default: return (
         <div className="p-4 md:p-6 space-y-6">
           <PageBreadcrumb title={currentPage} onBack={goBack} />

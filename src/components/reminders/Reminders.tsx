@@ -40,7 +40,7 @@ export const Reminders = ({ user, onBack }: { user: Employee, onBack: () => void
     if (user.role !== 'Admin App') {
       empQuery = empQuery.neq('role', 'Admin App');
     }
-    const { data: empData } = await empQuery.order('full_name');
+    const { data: empData } = await empQuery.order('code');
     if (empData) setEmployees(empData);
     setLoading(false);
   };

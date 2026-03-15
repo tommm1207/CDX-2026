@@ -30,7 +30,7 @@ export const SalarySettings = ({ user, onBack }: { user: Employee, onBack?: () =
     if (user.role !== 'Admin App') {
       empQuery = empQuery.neq('role', 'Admin App');
     }
-    const { data: empData } = await empQuery.order('full_name');
+    const { data: empData } = await empQuery.order('code');
     const { data: setData } = await supabase.from('salary_settings').select('*');
 
     if (empData) {

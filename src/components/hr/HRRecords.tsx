@@ -49,7 +49,7 @@ export const HRRecords = ({ user, onBack }: { user: Employee, onBack?: () => voi
       query = query.neq('role', 'Admin App');
     }
 
-    const { data, error } = await query.order('created_at', { ascending: false });
+    const { data, error } = await query.order('code');
     if (data) setEmployees(data);
     setLoading(false);
   };

@@ -20,7 +20,7 @@ export const Attendance = ({ user, onBack }: { user: Employee, onBack?: () => vo
   const fetchData = async () => {
     setLoading(true);
     try {
-      const { data: empData } = await supabase.from('users').select('*').neq('status', 'Nghỉ việc').neq('role', 'Admin App').order('full_name');
+      const { data: empData } = await supabase.from('users').select('*').neq('status', 'Nghỉ việc').neq('role', 'Admin App').order('code');
       if (empData) setEmployees(empData);
 
       const startDate = `${selectedYear}-${String(selectedMonth).padStart(2, '0')}-01`;

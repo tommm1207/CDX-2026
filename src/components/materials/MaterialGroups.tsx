@@ -84,22 +84,22 @@ export const MaterialGroups = ({ user, onBack }: { user: Employee, onBack?: () =
       const { data } = await supabase
         .from('material_groups')
         .select('code')
-        .like('code', 'MAT%')
+        .like('code', 'VAT%')
         .order('code', { ascending: false })
         .limit(1);
 
       if (data && data.length > 0 && data[0].code) {
         const lastCode = data[0].code;
-        const match = lastCode.match(/MAT(\d+)/);
+        const match = lastCode.match(/VAT(\d+)/);
         if (match && match[1]) {
           const nextNumber = parseInt(match[1]) + 1;
-          return `MAT${nextNumber.toString().padStart(3, '0')}-${random}`;
+          return `VAT${nextNumber.toString().padStart(3, '0')}`;
         }
       }
-      return `MAT001-${random}`;
+      return `VAT001`;
     } catch (err) {
       console.error('Error generating group code:', err);
-      return `MAT001-${random}`;
+      return `VAT001`;
     }
   };
 

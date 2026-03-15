@@ -72,28 +72,38 @@ export const MaterialCatalog = ({ user, onBack, onNavigate }: { user: Employee, 
     if (data) setWarehouses(data);
   };
 
-  const generateNextMaterialCode = async () => {
-    const random = Math.floor(100 + Math.random() * 900);
+  const generateNextMaterialCode = async (groupId: string) => {
+    if (!groupId) return '';
     try {
+      // Get the group code first
+      const { data: groupData } = await supabase
+        .from('material_groups')
+        .select('code')
+        .eq('id', groupId)
+        .single();
+
+      if (!groupData || !groupData.code) return '';
+
+      const groupPrefix = groupData.code;
       const { data } = await supabase
         .from('materials')
         .select('code')
-        .like('code', 'VAT%')
+        .eq('group_id', groupId)
         .order('code', { ascending: false })
         .limit(1);
 
       if (data && data.length > 0 && data[0].code) {
         const lastCode = data[0].code;
-        const match = lastCode.match(/VAT(\d+)/);
-        if (match && match[1]) {
-          const nextNumber = parseInt(match[1]) + 1;
-          return `VAT${nextNumber.toString().padStart(3, '0')}-${random}`;
+        const parts = lastCode.split('-');
+        const lastNum = parseInt(parts[parts.length - 1]);
+        if (!isNaN(lastNum)) {
+          return `${groupPrefix}-${(lastNum + 1).toString().padStart(3, '0')}`;
         }
       }
-      return `VAT001-${random}`;
+      return `${groupPrefix}-001`;
     } catch (err) {
       console.error('Error generating material code:', err);
-      return `VAT001-${random}`;
+      return '';
     }
   };
 
@@ -136,7 +146,7 @@ export const MaterialCatalog = ({ user, onBack, onNavigate }: { user: Employee, 
         const { error } = await supabase.from('materials').update(dbPayload).eq('id', formData.id);
         if (error) throw error;
       } else {
-        dbPayload.code = dbPayload.code || await generateNextMaterialCode();
+        dbPayload.code = formData.code || await generateNextMaterialCode(finalGroupId);
         const { error } = await supabase.from('materials').insert([dbPayload]);
         if (error) throw error;
       }
@@ -205,8 +215,7 @@ export const MaterialCatalog = ({ user, onBack, onNavigate }: { user: Employee, 
         </div>
         <button
           onClick={async () => {
-            const nextCode = await generateNextMaterialCode();
-            setFormData({ ...initialFormState, code: nextCode });
+            setFormData({ ...initialFormState });
             setIsEditing(false);
             setShowModal(true);
           }}
@@ -378,8 +387,16 @@ export const MaterialCatalog = ({ user, onBack, onNavigate }: { user: Employee, 
                         label="Nhóm vật tư *"
                         value={formData.group_id}
                         options={groups}
-                        onChange={(val) => setFormData({ ...formData, group_id: val })}
-                        onCreate={(val) => setFormData({ ...formData, group_id: val })}
+                        onChange={async (val) => {
+                          let nextCode = formData.code;
+                          if (!isEditing && val && isUUID(val)) {
+                            nextCode = await generateNextMaterialCode(val);
+                          }
+                          setFormData({ ...formData, group_id: val, code: nextCode });
+                        }}
+                        onCreate={async (val) => {
+                          setFormData({ ...formData, group_id: val });
+                        }}
                         placeholder="Chọn nhóm..."
                         required
                       />

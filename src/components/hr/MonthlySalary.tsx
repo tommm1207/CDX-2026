@@ -19,7 +19,7 @@ export const MonthlySalary = ({ user, onBack }: { user: Employee, onBack?: () =>
   const fetchSalaries = async () => {
     setLoading(true);
     try {
-      const { data: employees } = await supabase.from('users').select('*').neq('status', 'Nghỉ việc').neq('role', 'Admin App').order('code');
+      const { data: employees } = await supabase.from('users').select('*').neq('status', 'Nghỉ việc').neq('role', 'Admin App').eq('has_salary', true).order('code');
       if (!employees) return;
 
       const { data: settings } = await supabase.from('salary_settings').select('*');

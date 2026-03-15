@@ -26,7 +26,7 @@ export const SalarySettings = ({ user, onBack }: { user: Employee, onBack?: () =
 
   const fetchData = async () => {
     setLoading(true);
-    let empQuery = supabase.from('users').select('*').neq('status', 'Nghỉ việc');
+    let empQuery = supabase.from('users').select('*').neq('status', 'Nghỉ việc').eq('has_salary', true);
     if (user.role !== 'Admin App') {
       empQuery = empQuery.neq('role', 'Admin App');
     }

@@ -187,7 +187,7 @@ export const Attendance = ({ user, onBack }: { user: Employee, onBack?: () => vo
                             <button
                               onClick={() => toggleAttendance(emp.id, d)}
                               onContextMenu={(e) => { e.preventDefault(); openEditModal(emp.id, d); }}
-                              className={`w-full aspect-square flex flex-col items-center justify-center rounded-lg text-[10px] font-black transition-all ${getStatusColor(att?.status)}`}
+                              className={`w-full aspect-square flex flex-col items-center justify-center rounded-lg text-[10px] font-black transition-all ${getStatusColor(att?.status)} ${user.role === 'User' ? 'cursor-default' : 'cursor-pointer hover:brightness-95 active:scale-95'}`}
                             >
                               <span>{getStatusLabel(att?.status)}</span>
                               {att?.overtime_hours > 0 && <span className="text-[7px] leading-none mt-0.5">+{att.overtime_hours}h</span>}

@@ -365,7 +365,7 @@ export const MaterialCatalog = ({ user, onBack, onNavigate }: { user: Employee, 
                         <input
                           required
                           type="text"
-                          disabled={isEditing}
+                          disabled
                           value={formData.code}
                           onChange={(e) => setFormData({ ...formData, code: e.target.value })}
                           className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20 disabled:bg-gray-50"

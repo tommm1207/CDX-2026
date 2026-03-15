@@ -28,7 +28,7 @@ export const MaterialGroups = ({ user, onBack }: { user: Employee, onBack?: () =
   const [itemToDelete, setItemToDelete] = useState<string | null>(null);
   const [deleteType, setDeleteType] = useState<'group' | 'material'>('group');
 
-  const initialFormState = { id: '', name: '', notes: '' };
+  const initialFormState = { id: '', code: '', name: '', notes: '' };
   const initialMaterialFormState = {
     id: '',
     name: '',
@@ -164,6 +164,7 @@ export const MaterialGroups = ({ user, onBack }: { user: Employee, onBack?: () =
     e.stopPropagation();
     setFormData({
       id: item.id,
+      code: item.code || '',
       name: item.name,
       notes: item.notes || ''
     });
@@ -251,7 +252,12 @@ export const MaterialGroups = ({ user, onBack }: { user: Employee, onBack?: () =
           <p className="text-xs text-gray-500 mt-1">Quản lý phân loại danh mục vật tư hệ thống</p>
         </div>
         <button
-          onClick={() => { setFormData(initialFormState); setIsEditing(false); setShowModal(true); }}
+          onClick={async () => {
+            const nextCode = await generateNextGroupCode();
+            setFormData({ ...initialFormState, code: nextCode });
+            setIsEditing(false);
+            setShowModal(true);
+          }}
           className="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-xl text-sm font-bold hover:bg-primary-hover transition-colors shadow-lg shadow-primary/20"
         >
           <Plus size={18} /> Thêm mới
@@ -379,6 +385,17 @@ export const MaterialGroups = ({ user, onBack }: { user: Employee, onBack?: () =
 
               <div className="flex-1 overflow-y-auto custom-scrollbar">
                 <form onSubmit={handleSubmit} className="p-6 space-y-4">
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-gray-400 uppercase">Mã nhóm vật tư</label>
+                    <input
+                      required
+                      disabled
+                      type="text"
+                      placeholder="Hệ thống tự động sinh..."
+                      value={formData.code}
+                      className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20 bg-gray-50"
+                    />
+                  </div>
                   <div className="space-y-1">
                     <label className="text-[10px] font-bold text-gray-400 uppercase">Tên nhóm vật tư *</label>
                     <input

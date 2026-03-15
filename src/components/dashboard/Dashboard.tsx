@@ -10,11 +10,14 @@ import {
   CheckCircle2,
   AlertCircle,
   ArrowRight,
-  FileText
+  FileText,
+  CalendarCheck,
+  ArrowLeftRight
 } from 'lucide-react';
 import { supabase } from '../../supabaseClient';
 import { Employee } from '../../types';
 import { formatCurrency, formatNumber } from '../../utils/format';
+import { AttendanceTable } from '../hr/AttendanceTable';
 
 export const Dashboard = ({ user, onNavigate }: { user: Employee, onNavigate: (page: string, params?: any) => void }) => {
   const [stats, setStats] = useState({
@@ -25,6 +28,13 @@ export const Dashboard = ({ user, onNavigate }: { user: Employee, onNavigate: (p
   });
   const [recentActivities, setRecentActivities] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+
+  // Attendance data for Users
+  const [employees, setEmployees] = useState<Employee[]>([]);
+  const [attendance, setAttendance] = useState<any[]>([]);
+  const [loadingAttendance, setLoadingAttendance] = useState(false);
+  const selectedMonth = new Date().getMonth() + 1;
+  const selectedYear = new Date().getFullYear();
 
   useEffect(() => {
     const fetchDashboardData = async () => {
@@ -62,13 +72,38 @@ export const Dashboard = ({ user, onNavigate }: { user: Employee, onNavigate: (p
       }
     };
 
+    const fetchAttendanceData = async () => {
+      if (user.role !== 'User') return;
+      setLoadingAttendance(true);
+      try {
+        const { data: empData } = await supabase.from('users').select('*').neq('status', 'Nghỉ việc').neq('role', 'Admin App').order('code');
+        if (empData) setEmployees(empData);
+
+        const startDate = `${selectedYear}-${String(selectedMonth).padStart(2, '0')}-01`;
+        const endDate = new Date(selectedYear, selectedMonth, 0).toISOString().split('T')[0];
+
+        const { data: attData } = await supabase
+          .from('attendance')
+          .select('*')
+          .gte('date', startDate)
+          .lte('date', endDate);
+
+        if (attData) setAttendance(attData);
+      } catch (err) {
+        console.error('Error fetching attendance:', err);
+      } finally {
+        setLoadingAttendance(false);
+      }
+    };
+
     fetchDashboardData();
-  }, []);
+    fetchAttendanceData();
+  }, [user.role, selectedMonth, selectedYear]);
 
   const menuActions = [
     { id: 'stock-in', label: 'Nhập kho', icon: ArrowDownCircle, color: 'bg-blue-500', description: 'Tạo phiếu nhập vật tư mới' },
     { id: 'stock-out', label: 'Xuất kho', icon: ArrowUpCircle, color: 'bg-orange-500', description: 'Tạo phiếu xuất kho vật tư' },
-    { id: 'attendance', label: 'Chấm công', icon: CheckCircle2, color: 'bg-green-600', description: 'Điểm danh nhân sự hôm nay' },
+    { id: 'transfer', label: 'Luân chuyển kho', icon: ArrowLeftRight, color: 'bg-green-600', description: 'Chuyển vật tư giữa các kho' },
     { id: 'cost-report', label: 'Báo cáo chi phí', icon: FileText, color: 'bg-primary', description: 'Ghi chép chi tiêu dự án' },
   ];
 
@@ -100,7 +135,7 @@ export const Dashboard = ({ user, onNavigate }: { user: Employee, onNavigate: (p
       {/* Quick Actions */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
         {menuActions.map((action, idx) => (
-          (user.role === 'Admin' || user.role === 'Admin App' || ['stock-in', 'stock-out', 'attendance', 'cost-report'].includes(action.id)) && (
+          (user.role === 'Admin' || user.role === 'Admin App' || ['stock-in', 'stock-out', 'transfer', 'cost-report'].includes(action.id)) && (
             <motion.div
               key={action.id}
               whileHover={{ y: -5, scale: 1.02 }}
@@ -125,88 +160,132 @@ export const Dashboard = ({ user, onNavigate }: { user: Employee, onNavigate: (p
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
         {/* Main Stats */}
         <div className="xl:col-span-2 space-y-8">
-
-          {/* Pending Approvals Widget */}
-          <div className="bg-white rounded-[2.5rem] border border-gray-100 shadow-sm overflow-hidden">
-            <div className="p-8 pb-4 flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-amber-50 text-amber-600 rounded-xl flex items-center justify-center">
-                  <Bell size={20} className="animate-bounce" />
+          {user.role === 'User' ? (
+            <div className="space-y-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h2 className="text-xl font-bold text-gray-800 flex items-center gap-2">
+                    <CalendarCheck className="text-primary" /> Bảng theo dõi chấm công
+                  </h2>
+                  <p className="text-xs text-gray-500 mt-1">Tháng {selectedMonth}/{selectedYear}</p>
                 </div>
-                <h2 className="text-lg font-black text-gray-800 uppercase tracking-tight">Phiếu đang chờ duyệt</h2>
+                <button 
+                  onClick={() => onNavigate('attendance')}
+                  className="text-xs font-bold text-primary hover:underline underline-offset-4"
+                >
+                  XEM CHI TIẾT
+                </button>
               </div>
-              <span className="px-4 py-1.5 bg-red-100 text-red-600 text-xs font-black rounded-full border-2 border-red-50">
-                {stats.pendingApprovals} PHIẾU
-              </span>
+              <AttendanceTable
+                employees={employees}
+                days={Array.from({ length: new Date(selectedYear, selectedMonth, 0).getDate() }, (_, i) => i + 1)}
+                attendance={attendance}
+                loading={loadingAttendance}
+                user={user}
+                selectedMonth={selectedMonth}
+                selectedYear={selectedYear}
+              />
             </div>
-            <div className="px-8 pb-8 pt-4">
-              {stats.pendingApprovals > 0 ? (
-                <div className="bg-amber-50/50 border border-amber-100 rounded-2xl p-6 flex items-center justify-between group cursor-pointer" onClick={() => onNavigate('pending-approvals')}>
-                  <div className="flex gap-4 items-center">
-                    <div className="p-3 bg-amber-100 rounded-xl text-amber-600">
-                      <AlertCircle size={24} />
+          ) : (
+            <>
+              {/* Pending Approvals Widget */}
+              <div className="bg-white rounded-[2.5rem] border border-gray-100 shadow-sm overflow-hidden">
+                <div className="p-8 pb-4 flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 bg-amber-50 text-amber-600 rounded-xl flex items-center justify-center">
+                      <Bell size={20} className="animate-bounce" />
                     </div>
-                    <div>
-                      <p className="text-sm font-bold text-amber-900">Yêu cầu phê duyệt mới</p>
-                      <p className="text-xs text-amber-700 font-medium">Bạn có {stats.pendingApprovals} phiếu nhập/xuất/chi đang chờ xử lý.</p>
-                    </div>
+                    <h2 className="text-lg font-black text-gray-800 uppercase tracking-tight">Phiếu đang chờ duyệt</h2>
                   </div>
-                  <button className="p-3 bg-amber-500 text-white rounded-xl shadow-lg shadow-amber-500/20 group-hover:translate-x-1 transition-transform">
-                    <ArrowRight size={20} />
-                  </button>
+                  <span className="px-4 py-1.5 bg-red-100 text-red-600 text-xs font-black rounded-full border-2 border-red-50">
+                    {stats.pendingApprovals} PHIẾU
+                  </span>
                 </div>
-              ) : (
-                <div className="flex flex-col items-center justify-center py-12 text-gray-400 border-2 border-dashed border-gray-100 rounded-[2rem]">
-                  <CheckCircle2 size={48} className="text-green-500/50 mb-4" />
-                  <p className="font-bold text-sm">Không còn phiếu nào chờ duyệt</p>
-                  <p className="text-xs font-medium">Mọi thứ đã được xử lý xong!</p>
+                <div className="px-8 pb-8 pt-4">
+                  {stats.pendingApprovals > 0 ? (
+                    <div className="bg-amber-50/50 border border-amber-100 rounded-2xl p-6 flex items-center justify-between group cursor-pointer" onClick={() => onNavigate('pending-approvals')}>
+                      <div className="flex gap-4 items-center">
+                        <div className="p-3 bg-amber-100 rounded-xl text-amber-600">
+                          <AlertCircle size={24} />
+                        </div>
+                        <div>
+                          <p className="text-sm font-bold text-amber-900">Yêu cầu phê duyệt mới</p>
+                          <p className="text-xs text-amber-700 font-medium">Bạn có {stats.pendingApprovals} phiếu nhập/xuất/chi đang chờ xử lý.</p>
+                        </div>
+                      </div>
+                      <button className="p-3 bg-amber-500 text-white rounded-xl shadow-lg shadow-amber-500/20 group-hover:translate-x-1 transition-transform">
+                        <ArrowRight size={20} />
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="flex flex-col items-center justify-center py-12 text-gray-400 border-2 border-dashed border-gray-100 rounded-[2rem]">
+                      <CheckCircle2 size={48} className="text-green-500/50 mb-4" />
+                      <p className="font-bold text-sm">Không còn phiếu nào chờ duyệt</p>
+                      <p className="text-xs font-medium">Mọi thứ đã được xử lý xong!</p>
+                    </div>
+                  )}
                 </div>
-              )}
-            </div>
-          </div>
+              </div>
+            </>
+          )}
         </div>
 
-        {/* Recent Activity Mini List */}
+        {/* Right Sidebar */}
         <div className="space-y-6">
-          <div className="bg-white rounded-[2.5rem] border border-gray-100 shadow-sm overflow-hidden h-full flex flex-col">
-            <div className="p-8 pb-4 flex items-center justify-between border-b border-gray-50">
-              <h2 className="text-lg font-black text-gray-800 uppercase tracking-tight">Ghi chép mới nhất</h2>
-              <button className="text-[10px] font-bold text-primary hover:underline underline-offset-4" onClick={() => onNavigate('costs')}>XEM TẤT CẢ</button>
-            </div>
-            <div className="flex-1 p-4 overflow-y-auto custom-scrollbar">
-              {recentActivities.length > 0 ? (
-                <div className="space-y-2">
-                  {recentActivities.map((activity, idx) => (
-                    <div key={activity.id} className="p-4 rounded-3xl hover:bg-gray-50 transition-colors border border-transparent hover:border-gray-100 flex gap-4">
-                      <div className="w-10 h-10 rounded-2xl bg-gray-100 flex items-center justify-center shrink-0">
-                        <Wallet size={18} className="text-gray-500" />
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <div className="flex justify-between items-start gap-2">
-                          <p className="text-xs font-bold text-gray-800 line-clamp-1">{activity.content}</p>
-                          <span className="text-[10px] font-black text-primary bg-primary/5 px-2 py-0.5 rounded-md shrink-0">
-                            {formatCurrency(activity.total_amount)}
-                          </span>
+          {user.role !== 'User' && (
+            <div className="bg-white rounded-[2.5rem] border border-gray-100 shadow-sm overflow-hidden h-full flex flex-col">
+              <div className="p-8 pb-4 flex items-center justify-between border-b border-gray-50">
+                <h2 className="text-lg font-black text-gray-800 uppercase tracking-tight">Ghi chép mới nhất</h2>
+                <button className="text-[10px] font-bold text-primary hover:underline underline-offset-4" onClick={() => onNavigate('costs')}>XEM TẤT CẢ</button>
+              </div>
+              <div className="flex-1 p-4 overflow-y-auto custom-scrollbar">
+                {recentActivities.length > 0 ? (
+                  <div className="space-y-2">
+                    {recentActivities.map((activity, idx) => (
+                      <div key={activity.id} className="p-4 rounded-3xl hover:bg-gray-50 transition-colors border border-transparent hover:border-gray-100 flex gap-4">
+                        <div className="w-10 h-10 rounded-2xl bg-gray-100 flex items-center justify-center shrink-0">
+                          <Wallet size={18} className="text-gray-500" />
                         </div>
-                        <div className="flex items-center gap-2 mt-1">
-                          <p className="text-[9px] text-gray-400 font-bold uppercase tracking-tight">{activity.users?.full_name}</p>
-                          <span className="w-1 h-1 bg-gray-200 rounded-full" />
-                          <p className="text-[9px] text-gray-400 font-medium">
-                            {new Date(activity.created_at).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}
-                          </p>
+                        <div className="min-w-0 flex-1">
+                          <div className="flex justify-between items-start gap-2">
+                            <p className="text-xs font-bold text-gray-800 line-clamp-1">{activity.content}</p>
+                            <span className="text-[10px] font-black text-primary bg-primary/5 px-2 py-0.5 rounded-md shrink-0">
+                              {formatCurrency(activity.total_amount)}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-2 mt-1">
+                            <p className="text-[9px] text-gray-400 font-bold uppercase tracking-tight">{activity.users?.full_name}</p>
+                            <span className="w-1 h-1 bg-gray-200 rounded-full" />
+                            <p className="text-[9px] text-gray-400 font-medium">
+                              {new Date(activity.created_at).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}
+                            </p>
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  ))}
+                    ))}
+                  </div>
+                ) : (
+                  <div className="h-full flex flex-col items-center justify-center p-8 text-center text-gray-400">
+                    <LayoutDashboard size={40} className="mb-4 opacity-10" />
+                    <p className="text-xs font-bold">Chưa có hoạt động nào</p>
+                  </div>
+                )}
+              </div>
+              <div className="p-8 pt-4">
+                <div className="bg-primary/5 rounded-3xl p-6 border border-primary/10">
+                  <p className="text-[10px] font-bold text-primary uppercase tracking-widest mb-1">Trạng thái hệ thống</p>
+                  <div className="flex items-center gap-2">
+                    <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
+                    <p className="text-sm font-black text-gray-800">Hoạt động ổn định</p>
+                  </div>
+                  <p className="text-[10px] text-gray-400 font-medium mt-2 leading-relaxed">Dữ liệu được bảo mật và sao lưu thời gian thực trên Cloud Server.</p>
                 </div>
-              ) : (
-                <div className="h-full flex flex-col items-center justify-center p-8 text-center text-gray-400">
-                  <LayoutDashboard size={40} className="mb-4 opacity-10" />
-                  <p className="text-xs font-bold">Chưa có hoạt động nào</p>
-                </div>
-              )}
+              </div>
             </div>
-            <div className="p-8 pt-4">
+          )}
+          
+          {user.role === 'User' && (
+            <div className="bg-white rounded-[2.5rem] border border-gray-100 shadow-sm p-8">
               <div className="bg-primary/5 rounded-3xl p-6 border border-primary/10">
                 <p className="text-[10px] font-bold text-primary uppercase tracking-widest mb-1">Trạng thái hệ thống</p>
                 <div className="flex items-center gap-2">
@@ -216,7 +295,7 @@ export const Dashboard = ({ user, onNavigate }: { user: Employee, onNavigate: (p
                 <p className="text-[10px] text-gray-400 font-medium mt-2 leading-relaxed">Dữ liệu được bảo mật và sao lưu thời gian thực trên Cloud Server.</p>
               </div>
             </div>
-          </div>
+          )}
         </div>
       </div>
     </div>

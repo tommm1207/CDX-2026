@@ -263,17 +263,17 @@ export default function App() {
 
   const filteredMenuGroups = menuGroups.map(group => ({
     ...group,
-    items: group.items.filter(item => {
-      if (user.role === 'User') {
-        const allowed = ['stock-in', 'stock-out', 'transfer', 'attendance', 'cost-report'];
-        return allowed.includes(item.id);
-      }
-      if (user.role !== 'Admin App') {
-        const adminOnly = ['database-setup', 'backup-now', 'backup-settings', 'salary-settings'];
-        return !adminOnly.includes(item.id);
-      }
-      return true;
-    }).map(item => item.id === 'pending-approvals' ? { ...item, badge: pendingCount } : item)
+      items: group.items.filter(item => {
+        if (user.role === 'User') {
+          const allowed = ['stock-in', 'stock-out', 'transfer', 'attendance', 'cost-report'];
+          return allowed.includes(item.id);
+        }
+        // Allow BOTH Admin and Admin App to see these tools
+        if (user.role === 'Admin' || user.role === 'Admin App') {
+          return true;
+        }
+        return false;
+      }).map(item => item.id === 'pending-approvals' ? { ...item, badge: pendingCount } : item)
   })).filter(group => group.items.length > 0);
 
   const renderContent = () => {

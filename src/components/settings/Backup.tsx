@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Settings, Mail, Zap, Check, Info, RefreshCw, Layers, Save, Play, Clock } from 'lucide-react';
 import { motion } from 'motion/react';
 import { utils, write, writeFile } from 'xlsx';
@@ -42,6 +42,24 @@ export const Backup = ({ onBack }: { onBack: () => void }) => {
   });
   const [showSmtp, setShowSmtp] = useState(false);
 
+  useEffect(() => {
+    const fetchConfig = async () => {
+      try {
+        const response = await fetch('/api/get-backup-config');
+        if (response.ok) {
+          const config = await response.json();
+          if (config.email) setEmail(config.email);
+          if (config.smtpConfig) setSmtpConfig(config.smtpConfig);
+          if (config.enabled) setEnabled(config.enabled);
+          // Note: schedule parsing could be complex, keeping it simple for now
+        }
+      } catch (err) {
+        console.error('Lỗi khi tải cấu hình backup:', err);
+      }
+    };
+    fetchConfig();
+  }, []);
+
   const toggleTable = (id: string) => {
     setSelectedTables(prev =>
       prev.includes(id) ? prev.filter(t => t !== id) : [...prev, id]
@@ -51,10 +69,40 @@ export const Backup = ({ onBack }: { onBack: () => void }) => {
   const selectAll = () => setSelectedTables(BACKUP_TABLES.map(t => t.id));
   const deselectAll = () => setSelectedTables([]);
 
-  const handleSave = () => {
+  const [enabled, setEnabled] = useState(false);
+
+  const handleSave = async () => {
     localStorage.setItem('backup_email', email);
     localStorage.setItem('smtp_config', JSON.stringify(smtpConfig));
-    alert('Đã lưu cấu hình backup và SMTP!');
+    
+    // Calculate cron schedule from time and frequency
+    // Simple version: just daily at 'time'
+    const [hours, minutes] = time.split(':');
+    let cronSchedule = `${minutes} ${hours} * * *`;
+    
+    if (frequency === 'Hàng tuần') cronSchedule = `${minutes} ${hours} * * 0`; // Sunday
+    if (frequency === 'Hàng tháng') cronSchedule = `${minutes} ${hours} 1 * *`; // 1st of month
+
+    try {
+      const response = await fetch('/api/save-backup-config', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email,
+          smtpConfig,
+          schedule: cronSchedule,
+          enabled
+        })
+      });
+
+      if (response.ok) {
+        alert('Đã lưu cấu hình và đồng bộ với Server!');
+      } else {
+        throw new Error('Không thể đồng bộ với Server');
+      }
+    } catch (err: any) {
+      alert('Đã lưu cục bộ nhưng lỗi đồng bộ Server: ' + err.message);
+    }
   };
 
   const handleBackupNow = async () => {
@@ -268,6 +316,19 @@ export const Backup = ({ onBack }: { onBack: () => void }) => {
                       className="w-full px-4 py-3.5 rounded-2xl border border-gray-100 bg-gray-50/50 focus:bg-white focus:ring-4 focus:ring-primary/10 focus:border-primary outline-none transition-all text-sm font-medium"
                     />
                   </div>
+                </div>
+
+                <div className="p-6 bg-primary/5 rounded-3xl border border-primary/10 flex items-center justify-between">
+                  <div className="space-y-1">
+                    <h4 className="text-sm font-bold text-gray-800">Tự động sao lưu trên Server</h4>
+                    <p className="text-[10px] text-gray-500">Kích hoạt tác vụ chạy ngầm trên máy chủ khi bạn không mở app</p>
+                  </div>
+                  <button
+                    onClick={() => setEnabled(!enabled)}
+                    className={`w-14 h-8 rounded-full transition-all relative ${enabled ? 'bg-primary' : 'bg-gray-200'}`}
+                  >
+                    <div className={`absolute top-1 w-6 h-6 bg-white rounded-full transition-all shadow-sm ${enabled ? 'right-1' : 'left-1'}`} />
+                  </button>
                 </div>
 
                 <div className="bg-amber-50 p-6 rounded-3xl border border-amber-100 space-y-4">

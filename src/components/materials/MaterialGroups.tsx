@@ -194,6 +194,20 @@ export const MaterialGroups = ({ user, onBack }: { user: Employee, onBack?: () =
     if (!itemToDelete) return;
     try {
       if (deleteType === 'group') {
+        // Check for linked materials first
+        const { count, error: checkError } = await supabase
+          .from('materials')
+          .select('*', { count: 'exact', head: true })
+          .eq('group_id', itemToDelete);
+
+        if (checkError) throw checkError;
+
+        if (count && count > 0) {
+          alert(`Không thể xóa nhóm này vì đang có ${count} vật tư thuộc nhóm. Vui lòng xóa hoặc chuyển các vật tư này sang nhóm khác trước.`);
+          setShowDeleteModal(false);
+          return;
+        }
+
         const { error } = await supabase.from('material_groups').delete().eq('id', itemToDelete);
         if (error) throw error;
         fetchGroups();

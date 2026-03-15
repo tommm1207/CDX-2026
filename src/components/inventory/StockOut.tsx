@@ -395,10 +395,10 @@ export const StockOut = ({ user, onBack }: { user: Employee, onBack?: () => void
                       <input 
                         type="date" 
                         required 
-                        disabled={isEditing}
+                        disabled
                         value={formData.date} 
                         onChange={(e) => setFormData({ ...formData, date: e.target.value })} 
-                        className={`w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-red-600/20 ${isEditing ? 'bg-gray-50 text-gray-400 cursor-not-allowed' : ''}`} 
+                        className="w-full px-4 py-2 rounded-xl border border-gray-100 text-sm outline-none bg-gray-50 text-gray-400 cursor-not-allowed" 
                       />
                     </div>
 

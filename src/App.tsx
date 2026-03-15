@@ -241,14 +241,20 @@ export default function App() {
         { id: 'partners', label: 'Khách hàng & nhà cung cấp', icon: Handshake },
       ]
     },
+    {
+      title: 'HỆ THỐNG',
+      items: [
+        { id: 'hr-records', label: 'Quản lý nhân sự', icon: UserCircle },
+        { id: 'notes', label: 'Nhật ký / Ghi chú', icon: FileText },
+        { id: 'notifications', label: 'Thông báo', icon: BellRing },
         { id: 'reminders', label: 'Thiết lập Lịch nhắc', icon: Bell },
         { id: 'trash', label: 'Thùng rác', icon: Trash2 },
       ]
     },
     {
-      title: 'HỆ THỐNG',
+      title: 'CÔNG CỤ SAO LƯU',
       items: [
-        { id: 'backup-settings', label: 'Backup', icon: Settings },
+        { id: 'backup-settings', label: 'Cấu hình Backup', icon: Settings },
         { id: 'backup-now', label: 'Sao lưu ngay', icon: Download },
       ]
     }
@@ -261,7 +267,7 @@ export default function App() {
           const allowed = ['stock-in', 'stock-out', 'transfer', 'attendance', 'cost-report'];
           return allowed.includes(item.id);
         }
-        // Allow BOTH Admin and Admin App to see these tools
+        // Allow Admin role to see all tools
         if (user.role === 'Admin' || user.role === 'Admin App') {
           return true;
         }

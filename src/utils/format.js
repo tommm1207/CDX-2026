@@ -1,8 +1,8 @@
-export const formatCurrency = (amount: number) => {
+export const formatCurrency = (amount) => {
   return new Intl.NumberFormat('vi-VN').format(amount) + ' đ';
 };
 
-export const formatNumber = (val: number | string) => {
+export const formatNumber = (val) => {
   if (val === undefined || val === null || val === '') return '';
   const num = typeof val === 'number' ? val : parseFloat(val.toString().replace(/\./g, '').replace(',', '.'));
   if (isNaN(num)) return '';
@@ -12,25 +12,25 @@ export const formatNumber = (val: number | string) => {
   });
 };
 
-export const parseNumber = (val: string) => {
+export const parseNumber = (val) => {
   if (!val) return 0;
   const cleanVal = val.replace(/\./g, '').replace(',', '.');
   return parseFloat(cleanVal) || 0;
 };
 
-export const formatDate = (dateStr: string) => {
+export const formatDate = (dateStr) => {
   if (!dateStr) return '';
   const [y, m, d] = dateStr.split('-');
   return `${d}/${m}/${y}`;
 };
 
-export const numberToWords = (number: number): string => {
+export const numberToWords = (number) => {
   const units = ["", "một", "hai", "ba", "bốn", "năm", "sáu", "bảy", "tám", "chín"];
   const tens = ["", "mười", "hai mươi", "ba mươi", "bốn mươi", "năm mươi", "sáu mươi", "bảy mươi", "tám mươi", "chín mươi"];
 
   if (number === 0) return "không đồng";
 
-  const readGroup = (n: number) => {
+  const readGroup = (n) => {
     let s = "";
     const h = Math.floor(n / 100);
     const t = Math.floor((n % 100) / 10);

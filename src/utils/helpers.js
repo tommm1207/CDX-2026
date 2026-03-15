@@ -1,9 +1,9 @@
-export const isUUID = (str: string) => {
+export const isUUID = (str) => {
   const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
   return uuidRegex.test(str);
 };
 
-export const generateCostCode = (date: string, employeeId: string) => {
+export const generateCostCode = (date, employeeId) => {
   if (!date || !employeeId) return '';
   const d = new Date(date);
   const dd = String(d.getDate()).padStart(2, '0');

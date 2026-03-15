@@ -3,3 +3,12 @@
 *.html linguist-detectable=true
 *.tsx linguist-detectable=true
 *.ts linguist-detectable=true
+*.js linguist-detectable=true
+*.sql linguist-detectable=true
+
+# Force specific detection for diversity
+docs/* linguist-documentation=false
+database/* linguist-documentation=false
+src/utils/*.js linguist-language=JavaScript
+index.html linguist-language=HTML
+src/index.css linguist-language=CSS

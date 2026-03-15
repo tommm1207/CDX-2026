@@ -1,0 +1,538 @@
+import { useState, useEffect, FormEvent } from 'react';
+import { Users, Plus, Search, Edit, Trash2, X } from 'lucide-react';
+import { motion, AnimatePresence } from 'motion/react';
+import { supabase } from '../../supabaseClient';
+import { Employee } from '../../types';
+import { PageBreadcrumb } from '../shared/PageBreadcrumb';
+
+export const HRRecords = ({ user, onBack }: { user: Employee, onBack?: () => void }) => {
+  const [employees, setEmployees] = useState<Employee[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [showModal, setShowModal] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+
+  const initialFormState = {
+    id: '',
+    code: '',
+    full_name: '',
+    email: '',
+    phone: '',
+    id_card: '',
+    dob: '',
+    join_date: new Date().toISOString().split('T')[0],
+    tax_id: '',
+    app_pass: '',
+    department: '',
+    position: '',
+    has_salary: false,
+    role: 'User' as 'User' | 'Admin' | 'Admin App',
+    data_view_permission: '',
+    avatar_url: '',
+    resign_date: '',
+    initial_budget: 0,
+    status: 'Đang làm việc'
+  };
+
+  const [formData, setFormData] = useState(initialFormState);
+
+  useEffect(() => {
+    fetchEmployees();
+  }, []);
+
+  const fetchEmployees = async () => {
+    setLoading(true);
+    let query = supabase.from('users').select('*').neq('status', 'Đã xóa');
+
+    if (user.role !== 'Admin App') {
+      query = query.neq('role', 'Admin App');
+    }
+
+    const { data, error } = await query.order('created_at', { ascending: false });
+    if (data) setEmployees(data);
+    setLoading(false);
+  };
+
+  const generateNextEmployeeCode = async () => {
+    try {
+      const { data } = await supabase
+        .from('users')
+        .select('code')
+        .like('code', 'cdx%')
+        .order('code', { ascending: false })
+        .limit(1);
+
+      if (data && data.length > 0) {
+        const lastCode = data[0].code;
+        const lastNumber = parseInt(lastCode.replace('cdx', ''));
+        if (!isNaN(lastNumber)) {
+          const nextNumber = lastNumber + 1;
+          return `cdx${nextNumber.toString().padStart(3, '0')}`;
+        }
+      }
+      return 'cdx001';
+    } catch (err) {
+      console.error('Error generating code:', err);
+      return 'cdx001';
+    }
+  };
+
+  const handleEdit = (emp: Employee) => {
+    if (emp.role === 'Admin App' && user.role !== 'Admin App') {
+      alert('Bạn không có quyền chỉnh sửa tài khoản Admin App');
+      return;
+    }
+    setFormData({
+      ...emp,
+      code: emp.code || '',
+      dob: emp.dob || '',
+      resign_date: emp.resign_date || '',
+      email: emp.email || '',
+      phone: emp.phone || '',
+      id_card: emp.id_card || '',
+      tax_id: emp.tax_id || '',
+      department: emp.department || '',
+      position: emp.position || '',
+      data_view_permission: emp.data_view_permission || '',
+      avatar_url: emp.avatar_url || ''
+    });
+    setIsEditing(true);
+    setShowModal(true);
+  };
+
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [itemToDelete, setItemToDelete] = useState<string | null>(null);
+
+  const handleDeleteClick = (id: string) => {
+    setItemToDelete(id);
+    setShowDeleteModal(true);
+  };
+
+  const confirmDelete = async () => {
+    if (!itemToDelete) return;
+
+    const target = employees.find(e => e.id === itemToDelete);
+    if (target?.role === 'Admin App' && user.role !== 'Admin App') {
+      alert('Bạn không có quyền xóa tài khoản Admin App');
+      return;
+    }
+
+    try {
+      const { error } = await supabase.from('users').update({ status: 'Đã xóa' }).eq('id', itemToDelete);
+      if (error) throw error;
+      fetchEmployees();
+      setShowDeleteModal(false);
+      setItemToDelete(null);
+    } catch (err: any) {
+      alert('Lỗi khi xóa nhân sự: ' + err.message);
+    }
+  };
+
+  const handleSubmit = async (e: FormEvent) => {
+    e.preventDefault();
+    setSubmitting(true);
+    try {
+      const { id, ...rest } = formData;
+      const dataToSubmit = {
+        ...rest,
+        dob: formData.dob || null,
+        join_date: formData.join_date || null,
+        resign_date: formData.resign_date || null,
+        email: formData.email || null,
+        phone: formData.phone || null,
+        id_card: formData.id_card || null,
+        tax_id: formData.tax_id || null,
+        department: formData.department || null,
+        position: formData.position || null,
+        data_view_permission: formData.data_view_permission || null,
+        avatar_url: formData.avatar_url || null
+      };
+
+      if (isEditing) {
+        const { error } = await supabase.from('users').update(dataToSubmit).eq('id', id);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase.from('users').insert([dataToSubmit]);
+        if (error) throw error;
+      }
+
+      setShowModal(false);
+      fetchEmployees();
+      setFormData(initialFormState);
+      setIsEditing(false);
+    } catch (err: any) {
+      alert('Lỗi khi lưu nhân sự: ' + err.message);
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const filteredEmployees = employees.filter(emp => {
+    const matchesSearch = emp.full_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (emp.code && emp.code.toLowerCase().includes(searchTerm.toLowerCase()));
+
+    if (user.role !== 'Admin App' && emp.role === 'Admin App') {
+      return false;
+    }
+    return matchesSearch;
+  });
+
+  return (
+    <div className="p-4 md:p-6 space-y-6 pb-44">
+      <PageBreadcrumb title="Hồ sơ Nhân sự" onBack={onBack} />
+      <div className="flex items-center justify-between">
+        <h2 className="text-lg font-bold text-gray-800 flex items-center gap-2">
+          <Users size={20} className="text-primary" /> Hồ sơ Nhân sự
+        </h2>
+        <button
+          onClick={async () => {
+            const nextCode = await generateNextEmployeeCode();
+            setFormData({ ...initialFormState, code: nextCode });
+            setIsEditing(false);
+            setShowModal(true);
+          }}
+          className="bg-primary text-white px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 hover:bg-primary-hover transition-colors"
+        >
+          <Plus size={18} /> Thêm mới
+        </button>
+      </div>
+
+      <div className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 space-y-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+          <div className="relative lg:col-span-1">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
+            <input
+              type="text"
+              placeholder="Tìm kiếm nhanh..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full pl-10 pr-4 py-2 rounded-lg border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
+            />
+          </div>
+          <select className="px-4 py-2 rounded-lg border border-gray-200 text-sm outline-none">
+            <option>-- Nhân sự --</option>
+          </select>
+          <select className="px-4 py-2 rounded-lg border border-gray-200 text-sm outline-none">
+            <option>-- Kho --</option>
+          </select>
+          <input type="date" className="px-4 py-2 rounded-lg border border-gray-200 text-sm outline-none" />
+          <input type="date" className="px-4 py-2 rounded-lg border border-gray-200 text-sm outline-none" />
+        </div>
+
+        <div className="overflow-x-auto">
+          <table className="w-full text-left border-separate border-spacing-0">
+            <thead>
+              <tr className="bg-primary text-white text-[11px] uppercase tracking-wider whitespace-nowrap">
+                <th className="p-3 first:rounded-tl-lg sticky left-0 bg-primary z-10">Mã NV</th>
+                <th className="p-3">Họ và tên</th>
+                <th className="p-3">Email</th>
+                <th className="p-3">Số điện thoại</th>
+                <th className="p-3">Ngày vào làm</th>
+                {user.role === 'Admin App' && <th className="p-3">Mật khẩu ứng dụng</th>}
+                <th className="p-3">Bộ phận</th>
+                <th className="p-3">Chức vụ</th>
+                <th className="p-3">Phân quyền</th>
+                <th className="p-3">Trạng thái</th>
+                <th className="p-3 last:rounded-tr-lg">Thao tác</th>
+              </tr>
+            </thead>
+            <tbody className="text-xs text-gray-600">
+              {loading ? (
+                <tr><td colSpan={user.role === 'Admin App' ? 11 : 10} className="p-8 text-center">Đang tải dữ liệu...</td></tr>
+              ) : filteredEmployees.length === 0 ? (
+                <tr><td colSpan={user.role === 'Admin App' ? 11 : 10} className="p-8 text-center">Không tìm thấy nhân sự nào</td></tr>
+              ) : filteredEmployees.map((emp) => (
+                <tr key={emp.id} className="border-b border-gray-50 hover:bg-gray-50 transition-colors whitespace-nowrap">
+                  <td className="p-3 font-bold text-gray-800 sticky left-0 bg-white group-hover:bg-gray-50 z-10 border-b border-gray-50">{emp.code || emp.id.slice(0, 8)}</td>
+                  <td className="p-3">{emp.full_name}</td>
+                  <td className="p-3">{emp.email || '-'}</td>
+                  <td className="p-3">{emp.phone || '-'}</td>
+                  <td className="p-3">{emp.join_date || '-'}</td>
+                  {user.role === 'Admin App' && <td className="p-3 font-mono text-blue-600">{emp.app_pass}</td>}
+                  <td className="p-3">{emp.department || '-'}</td>
+                  <td className="p-3">{emp.position || '-'}</td>
+                  <td className="p-3">
+                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${emp.role === 'Admin App' ? 'bg-purple-100 text-purple-600' :
+                        emp.role === 'Admin' ? 'bg-blue-100 text-blue-600' : 'bg-gray-100 text-gray-600'
+                      }`}>
+                      {emp.role}
+                    </span>
+                  </td>
+                  <td className="p-3">
+                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${emp.status === 'Đang làm việc' || emp.status === 'Hoạt động' ? 'bg-green-100 text-green-600' : 'bg-red-100 text-red-600'
+                      }`}>
+                      {emp.status}
+                    </span>
+                  </td>
+                  <td className="p-3">
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => handleEdit(emp)}
+                        className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                      >
+                        <Edit size={14} />
+                      </button>
+                      <button
+                        onClick={() => handleDeleteClick(emp.id)}
+                        className="p-1.5 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <AnimatePresence>
+        {showDeleteModal && (
+          <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="bg-white rounded-2xl shadow-xl p-6 max-w-sm w-full text-center"
+            >
+              <div className="w-16 h-16 bg-red-50 text-red-600 rounded-full flex items-center justify-center mx-auto mb-4">
+                <Trash2 size={32} />
+              </div>
+              <h3 className="text-lg font-bold text-gray-800 mb-2">Xác nhận xóa?</h3>
+              <p className="text-sm text-gray-500 mb-6">Bạn có chắc chắn muốn xóa nhân sự <strong>{employees.find(e => e.id === itemToDelete)?.code || itemToDelete.slice(0, 8)}</strong>? Dữ liệu liên quan có thể bị ảnh hưởng.</p>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setShowDeleteModal(false)}
+                  className="flex-1 px-4 py-2 rounded-xl border border-gray-200 text-sm font-bold text-gray-500 hover:bg-gray-50 transition-colors"
+                >
+                  Hủy bỏ
+                </button>
+                <button
+                  onClick={confirmDelete}
+                  className="flex-1 px-4 py-2 rounded-xl bg-red-600 text-white text-sm font-bold hover:bg-red-700 transition-colors"
+                >
+                  Xóa ngay
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {showModal && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm overflow-y-auto">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              className="bg-white rounded-3xl shadow-2xl w-full max-w-4xl relative z-10 my-8 max-h-[90vh] flex flex-col"
+            >
+              <div className="bg-primary p-4 flex items-center justify-between text-white rounded-t-3xl flex-shrink-0">
+                <h3 className="font-bold">{isEditing ? 'Cập Nhật Nhân Sự' : 'Thêm Mới Nhân Sự'}</h3>
+                <button onClick={() => setShowModal(false)} className="hover:bg-white/20 p-1 rounded-full"><X size={20} /></button>
+              </div>
+
+              <div className="flex-1 overflow-y-auto custom-scrollbar">
+                <form onSubmit={handleSubmit}>
+                  <div className="p-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-bold text-gray-400 uppercase">Mã nhân viên</label>
+                        <input
+                          required
+                          type="text"
+                          disabled={isEditing}
+                          value={formData.code}
+                          onChange={(e) => setFormData({ ...formData, code: e.target.value })}
+                          className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20 disabled:bg-gray-50"
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-bold text-gray-400 uppercase">Họ và tên</label>
+                        <input
+                          required
+                          type="text"
+                          value={formData.full_name}
+                          onChange={(e) => setFormData({ ...formData, full_name: e.target.value })}
+                          className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20"
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-bold text-gray-400 uppercase">Email</label>
+                        <input
+                          type="email"
+                          value={formData.email}
+                          onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                          className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20"
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-bold text-gray-400 uppercase">Số điện thoại</label>
+                        <input
+                          type="text"
+                          value={formData.phone}
+                          onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                          className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20"
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-bold text-gray-400 uppercase">CMND / CCCD</label>
+                        <input
+                          type="text"
+                          value={formData.id_card}
+                          onChange={(e) => setFormData({ ...formData, id_card: e.target.value })}
+                          className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20"
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-bold text-gray-400 uppercase">Ngày sinh</label>
+                        <input
+                          type="date"
+                          value={formData.dob}
+                          onChange={(e) => setFormData({ ...formData, dob: e.target.value })}
+                          className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20"
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-bold text-gray-400 uppercase">Ngày vào làm</label>
+                        <input
+                          type="date"
+                          value={formData.join_date}
+                          onChange={(e) => setFormData({ ...formData, join_date: e.target.value })}
+                          className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20"
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-bold text-gray-400 uppercase">Mã số thuế</label>
+                        <input
+                          type="text"
+                          value={formData.tax_id}
+                          onChange={(e) => setFormData({ ...formData, tax_id: e.target.value })}
+                          className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20"
+                        />
+                      </div>
+                      {user.role === 'Admin App' && (
+                        <div className="space-y-1">
+                          <label className="text-[10px] font-bold text-gray-400 uppercase">Mật khẩu ứng dụng</label>
+                          <input
+                            required
+                            type="text"
+                            value={formData.app_pass}
+                            onChange={(e) => setFormData({ ...formData, app_pass: e.target.value })}
+                            className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20"
+                          />
+                        </div>
+                      )}
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-bold text-gray-400 uppercase">Bộ phận</label>
+                        <input
+                          type="text"
+                          value={formData.department}
+                          onChange={(e) => setFormData({ ...formData, department: e.target.value })}
+                          className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20"
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-bold text-gray-400 uppercase">Chức vụ</label>
+                        <input
+                          type="text"
+                          value={formData.position}
+                          onChange={(e) => setFormData({ ...formData, position: e.target.value })}
+                          className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20"
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-bold text-gray-400 uppercase">Có tính lương</label>
+                        <select
+                          value={formData.has_salary ? 'true' : 'false'}
+                          onChange={(e) => setFormData({ ...formData, has_salary: e.target.value === 'true' })}
+                          className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20"
+                        >
+                          <option value="false">Không</option>
+                          <option value="true">Có</option>
+                        </select>
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-bold text-gray-400 uppercase">Phân quyền</label>
+                        <select
+                          value={formData.role}
+                          onChange={(e) => setFormData({ ...formData, role: e.target.value as any })}
+                          className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20"
+                        >
+                          <option value="User">User</option>
+                          <option value="Admin">Admin</option>
+                          {user.role === 'Admin App' && <option value="Admin App">Admin App</option>}
+                        </select>
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-bold text-gray-400 uppercase">Quyền xem dữ liệu</label>
+                        <input
+                          type="text"
+                          value={formData.data_view_permission}
+                          onChange={(e) => setFormData({ ...formData, data_view_permission: e.target.value })}
+                          className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20"
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-bold text-gray-400 uppercase">Ảnh cá nhân (URL)</label>
+                        <input
+                          type="text"
+                          value={formData.avatar_url}
+                          onChange={(e) => setFormData({ ...formData, avatar_url: e.target.value })}
+                          className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20"
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-bold text-gray-400 uppercase">Ngày nghỉ việc</label>
+                        <input
+                          type="date"
+                          value={formData.resign_date}
+                          onChange={(e) => setFormData({ ...formData, resign_date: e.target.value })}
+                          className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20"
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-bold text-gray-400 uppercase">Ngân sách đầu kỳ</label>
+                        <input
+                          type="number"
+                          value={formData.initial_budget}
+                          onChange={(e) => setFormData({ ...formData, initial_budget: parseFloat(e.target.value) })}
+                          className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20"
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-bold text-gray-400 uppercase">Trạng thái</label>
+                        <select
+                          value={formData.status}
+                          onChange={(e) => setFormData({ ...formData, status: e.target.value })}
+                          className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20"
+                        >
+                          <option value="Đang làm việc">Đang làm việc</option>
+                          <option value="Nghỉ việc">Nghỉ việc</option>
+                        </select>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="p-6 bg-gray-50 flex justify-end gap-3 flex-shrink-0">
+                    <button type="button" onClick={() => setShowModal(false)} className="px-6 py-2 rounded-xl text-sm font-bold text-gray-500 hover:bg-gray-200 transition-colors">Hủy bỏ</button>
+                    <button
+                      type="submit"
+                      disabled={submitting}
+                      className="px-6 py-2 rounded-xl text-sm font-bold bg-primary text-white hover:bg-primary-hover transition-colors disabled:opacity-50"
+                    >
+                      {submitting ? 'Đang lưu...' : 'Lưu dữ liệu'}
+                    </button>
+                  </div>
+                </form>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+};

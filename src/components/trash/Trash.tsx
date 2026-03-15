@@ -1,0 +1,36 @@
+import { motion } from 'motion/react';
+import { Package, Warehouse, Archive } from 'lucide-react';
+import { PageBreadcrumb } from '../shared/PageBreadcrumb';
+
+export const Trash = ({ onNavigate, onBack }: { onNavigate: (page: string) => void, onBack: () => void }) => {
+  const trashItems = [
+    { id: 'deleted-materials', label: 'Danh sách vật tư xóa', icon: Package, color: 'bg-red-50 text-red-600' },
+    { id: 'deleted-warehouses', label: 'Danh sách kho xóa', icon: Warehouse, color: 'bg-orange-50 text-orange-600' },
+    { id: 'deleted-slips', label: 'Phiếu nhập xuất đã xóa', icon: Archive, color: 'bg-blue-50 text-blue-600' },
+  ];
+
+  return (
+    <div className="p-4 md:p-6 space-y-6 pb-44">
+      <PageBreadcrumb title="Thùng rác" onBack={onBack} />
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+        {trashItems.map((item) => (
+          <motion.div
+            key={item.id}
+            whileHover={{ y: -4 }}
+            onClick={() => onNavigate(item.id)}
+            className="bg-white p-8 rounded-2xl shadow-sm border border-gray-100 flex flex-col items-center justify-center gap-4 cursor-pointer group"
+          >
+            <div className={`p-6 rounded-2xl ${item.color} group-hover:scale-110 transition-transform`}>
+              <item.icon size={40} />
+            </div>
+            <div className="text-center">
+              <h3 className="text-sm font-bold text-gray-800">{item.label}</h3>
+              <p className="text-[10px] text-gray-400 mt-1 uppercase tracking-wider">Xem dữ liệu đã xóa</p>
+            </div>
+          </motion.div>
+        ))}
+      </div>
+    </div>
+  );
+};

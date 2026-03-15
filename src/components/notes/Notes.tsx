@@ -357,7 +357,12 @@ export const Notes = ({ user, onBack }: { user: Employee, onBack: () => void }) 
                   </div>
                   <div>
                     <label className="text-[10px] font-bold text-gray-400 uppercase">Ghi chú thêm</label>
-                    <textarea className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm focus:ring-2 focus:ring-primary/20 outline-none mt-1 min-h-[80px]" placeholder="Ghi chú thêm..." />
+                    <textarea 
+                      value={formData.content} 
+                      onChange={e => setFormData({ ...formData, content: e.target.value })}
+                      className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm focus:ring-2 focus:ring-primary/20 outline-none mt-1 min-h-[80px]" 
+                      placeholder="Ghi chú thêm..." 
+                    />
                   </div>
                 </div>
               </div>

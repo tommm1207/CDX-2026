@@ -14,9 +14,15 @@ export const DeletedWarehouses = ({ onBack }: { onBack: () => void }) => {
   const fetchDeletedWarehouses = async () => {
     setLoading(true);
     try {
-      const { data, error } = await supabase.from('warehouses').select('*, users!manager_id(full_name)').eq('status', 'Đã xóa');
-      if (error) throw error;
-      setWarehouses(data || []);
+      const { data, error } = await supabase.from('warehouses').select('*, users(full_name)').eq('status', 'Đã xóa');
+      if (error) {
+        console.error('Error with join, trying simple select:', error);
+        const { data: simpleData, error: simpleError } = await supabase.from('warehouses').select('*').eq('status', 'Đã xóa');
+        if (simpleError) throw simpleError;
+        setWarehouses(simpleData || []);
+      } else {
+        setWarehouses(data || []);
+      }
     } catch (err) {
       console.error('Error fetching deleted warehouses:', err);
     } finally {
@@ -29,6 +35,7 @@ export const DeletedWarehouses = ({ onBack }: { onBack: () => void }) => {
     try {
       const { error } = await supabase.from('warehouses').update({ status: 'Đang hoạt động' }).eq('id', id);
       if (error) throw error;
+      alert('Đã khôi phục kho thành công!');
       fetchDeletedWarehouses();
     } catch (err: any) {
       alert('Lỗi: ' + err.message);

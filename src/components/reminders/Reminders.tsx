@@ -23,8 +23,7 @@ export const Reminders = ({ user, onBack }: { user: Employee, onBack: () => void
     title: '',
     content: '',
     reminder_time: new Date(Date.now() + 3600000).toISOString().slice(0, 16),
-    browser_notification: true,
-    reminder_code: ''
+    browser_notification: true
   });
 
   useEffect(() => {
@@ -33,7 +32,7 @@ export const Reminders = ({ user, onBack }: { user: Employee, onBack: () => void
 
   const fetchData = async () => {
     setLoading(true);
-    const { data: remData } = await supabase.from('reminders').select('*, users(full_name)').order('reminder_time', { ascending: false });
+    const { data: remData } = await supabase.from('reminders').select('*').order('reminder_time', { ascending: false });
     if (remData) setReminders(remData);
 
     let empQuery = supabase.from('users').select('*').neq('status', 'Nghỉ việc');
@@ -48,7 +47,6 @@ export const Reminders = ({ user, onBack }: { user: Employee, onBack: () => void
   const handleSave = async () => {
     const { error } = await supabase.from('reminders').insert([{
       ...formData,
-      created_by: user.id,
       status: 'pending'
     }]);
     if (!error) {
@@ -58,17 +56,17 @@ export const Reminders = ({ user, onBack }: { user: Employee, onBack: () => void
         title: '',
         content: '',
         reminder_time: new Date(Date.now() + 3600000).toISOString().slice(0, 16),
-        browser_notification: true,
-        reminder_code: ''
+        browser_notification: true
       });
       fetchData();
+    } else {
+      alert('Lỗi: ' + error.message);
     }
   };
 
   const filteredReminders = reminders.filter(r => {
     if (filters.fromDate && r.reminder_time < filters.fromDate) return false;
     if (filters.toDate && r.reminder_time > filters.toDate) return false;
-    if (filters.employee && r.created_by !== filters.employee) return false;
     if (filters.search && !r.title.toLowerCase().includes(filters.search.toLowerCase())) return false;
     return true;
   });
@@ -139,7 +137,6 @@ export const Reminders = ({ user, onBack }: { user: Employee, onBack: () => void
                 <th className="px-4 py-3 text-[10px] font-bold text-gray-400 uppercase">Đã nhắc (Trạng thái)</th>
                 <th className="px-4 py-3 text-[10px] font-bold text-gray-400 uppercase">Mã nhắc nhở</th>
                 <th className="px-4 py-3 text-[10px] font-bold text-gray-400 uppercase">Thời gian nhắc</th>
-                <th className="px-4 py-3 text-[10px] font-bold text-gray-400 uppercase">Người nhắc</th>
                 <th className="px-4 py-3 text-[10px] font-bold text-gray-400 uppercase">Nội dung</th>
                 <th className="px-4 py-3 text-[10px] font-bold text-gray-400 uppercase">Tiêu đề</th>
                 <th className="px-4 py-3 text-[10px] font-bold text-gray-400 uppercase text-center">Thao tác</th>
@@ -157,9 +154,7 @@ export const Reminders = ({ user, onBack }: { user: Employee, onBack: () => void
                       {rem.status === 'reminded' ? 'Đã nhắc' : 'Chờ nhắc'}
                     </span>
                   </td>
-                  <td className="px-4 py-3 text-sm text-gray-600 font-mono">{rem.reminder_code || 'N/A'}</td>
                   <td className="px-4 py-3 text-sm text-gray-600">{new Date(rem.reminder_time).toLocaleString('vi-VN')}</td>
-                  <td className="px-4 py-3 text-sm text-gray-600">{rem.users?.full_name}</td>
                   <td className="px-4 py-3 text-sm text-gray-600 max-w-xs truncate">{rem.content}</td>
                   <td className="px-4 py-3 text-sm font-medium text-gray-700">{rem.title}</td>
                   <td className="px-4 py-3">
@@ -253,26 +248,32 @@ export const Reminders = ({ user, onBack }: { user: Employee, onBack: () => void
                 <div className="space-y-4">
                   <div>
                     <label className="text-[10px] font-bold text-gray-400 uppercase">Đã nhắc (Trạng thái)</label>
-                    <input type="text" className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm focus:ring-2 focus:ring-primary/20 outline-none mt-1" />
+                    <input 
+                      type="text" 
+                      value="pending" 
+                      disabled 
+                      className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm bg-gray-50 mt-1" 
+                    />
                   </div>
                   <div>
                     <label className="text-[10px] font-bold text-gray-400 uppercase">Thời gian nhắc</label>
-                    <input type="date" className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm focus:ring-2 focus:ring-primary/20 outline-none mt-1" />
+                    <input 
+                      type="datetime-local" 
+                      value={formData.reminder_time}
+                      onChange={e => setFormData({ ...formData, reminder_time: e.target.value })}
+                      className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm focus:ring-2 focus:ring-primary/20 outline-none mt-1" 
+                    />
                   </div>
                   <div>
                     <label className="text-[10px] font-bold text-gray-400 uppercase">Nội dung</label>
-                    <textarea className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm focus:ring-2 focus:ring-primary/20 outline-none mt-1 min-h-[80px]" />
+                    <textarea 
+                      value={formData.content}
+                      onChange={e => setFormData({ ...formData, content: e.target.value })}
+                      className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm focus:ring-2 focus:ring-primary/20 outline-none mt-1 min-h-[80px]" 
+                    />
                   </div>
                 </div>
                 <div className="space-y-4">
-                  <div>
-                    <label className="text-[10px] font-bold text-gray-400 uppercase">Mã nhắc nhở</label>
-                    <input type="text" value={formData.reminder_code} onChange={e => setFormData({ ...formData, reminder_code: e.target.value })} className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm focus:ring-2 focus:ring-primary/20 outline-none mt-1" />
-                  </div>
-                  <div>
-                    <label className="text-[10px] font-bold text-gray-400 uppercase">Người nhắc</label>
-                    <input type="text" value={user.full_name} disabled className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm bg-gray-50 mt-1" />
-                  </div>
                   <div>
                     <label className="text-[10px] font-bold text-gray-400 uppercase">Tiêu đề</label>
                     <input type="text" value={formData.title} onChange={e => setFormData({ ...formData, title: e.target.value })} className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm focus:ring-2 focus:ring-primary/20 outline-none mt-1" />

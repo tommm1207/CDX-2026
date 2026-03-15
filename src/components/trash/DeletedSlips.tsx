@@ -40,6 +40,7 @@ export const DeletedSlips = ({ onBack }: { onBack: () => void }) => {
     try {
       const { error } = await supabase.from(table).update({ status: 'Chờ duyệt' }).eq('id', id);
       if (error) throw error;
+      alert('Đã khôi phục phiếu thành công!');
       fetchDeletedSlips();
     } catch (err: any) {
       alert('Lỗi: ' + err.message);

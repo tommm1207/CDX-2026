@@ -81,6 +81,8 @@ import { Reminders } from './components/reminders/Reminders';
 import { Backup } from './components/settings/Backup';
 import { BackupNow } from './components/settings/BackupNow';
 
+import { Notifications } from './components/notifications/Notifications';
+
 const LOGO_URL = "/logo.png";
 
 export default function App() {
@@ -295,7 +297,7 @@ export default function App() {
         if (user.role !== 'Admin' && user.role !== 'Admin App') return <Dashboard user={user} onNavigate={navigateTo} />;
         return <SalarySettings user={user} onBack={goBack} />;
       case 'notes': return <Notes user={user} onBack={goBack} />;
-      case 'notifications': return <Reminders user={user} onBack={goBack} />;
+      case 'notifications': return <Notifications user={user} onBack={goBack} />;
       case 'reminders': return <Reminders user={user} onBack={goBack} />;
       case 'partners': return <PlaceholderPage title="Khách hàng & nhà cung cấp" onBack={goBack} />;
       case 'inventory-report': return <InventoryReport user={user} onBack={goBack} />;

@@ -9,7 +9,8 @@ import {
   Bell,
   CheckCircle2,
   AlertCircle,
-  ArrowRight
+  ArrowRight,
+  FileText
 } from 'lucide-react';
 import { supabase } from '../../supabaseClient';
 import { Employee } from '../../types';
@@ -68,7 +69,7 @@ export const Dashboard = ({ user, onNavigate }: { user: Employee, onNavigate: (p
     { id: 'stock-in', label: 'Nhập kho', icon: ArrowDownCircle, color: 'bg-blue-500', description: 'Tạo phiếu nhập vật tư mới' },
     { id: 'stock-out', label: 'Xuất kho', icon: ArrowUpCircle, color: 'bg-orange-500', description: 'Tạo phiếu xuất kho vật tư' },
     { id: 'attendance', label: 'Chấm công', icon: CheckCircle2, color: 'bg-green-600', description: 'Điểm danh nhân sự hôm nay' },
-    { id: 'costs', label: 'Chi phí', icon: Wallet, color: 'bg-primary', description: 'Ghi chép chi tiêu dự án' },
+    { id: 'cost-report', label: 'Báo cáo chi phí', icon: FileText, color: 'bg-primary', description: 'Ghi chép chi tiêu dự án' },
   ];
 
   return (
@@ -99,7 +100,7 @@ export const Dashboard = ({ user, onNavigate }: { user: Employee, onNavigate: (p
       {/* Quick Actions */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
         {menuActions.map((action, idx) => (
-          (user.role === 'Admin' || user.role === 'Admin App' || ['stock-in', 'stock-out', 'attendance'].includes(action.id)) && (
+          (user.role === 'Admin' || user.role === 'Admin App' || ['stock-in', 'stock-out', 'attendance', 'cost-report'].includes(action.id)) && (
             <motion.div
               key={action.id}
               whileHover={{ y: -5, scale: 1.02 }}

@@ -86,6 +86,30 @@ const LOGO_URL = "/logo.png";
 
 export default function App() {
   const [user, setUser] = useState<Employee | null>(null);
+  
+  // Check for missing configuration
+  const isConfigMissing = !import.meta.env.VITE_SUPABASE_URL || !import.meta.env.VITE_SUPABASE_ANON_KEY;
+
+  if (isConfigMissing) {
+    return (
+      <div className="fixed inset-0 bg-white flex flex-col items-center justify-center p-6 text-center z-[999]">
+        <div className="w-16 h-16 bg-red-100 text-red-600 rounded-full flex items-center justify-center mb-4">
+          <Settings2 size={32} />
+        </div>
+        <h1 className="text-xl font-bold text-gray-900 mb-2">Thiếu cấu hình hệ thống</h1>
+        <p className="text-sm text-gray-500 max-w-sm mb-6">
+          Vui lòng thiết lập <strong>VITE_SUPABASE_URL</strong> và <strong>VITE_SUPABASE_ANON_KEY</strong> trong Vercel Environment Variables.
+        </p>
+        <button 
+          onClick={() => window.location.reload()}
+          className="px-6 py-2 bg-primary text-white rounded-xl font-bold text-sm shadow-lg shadow-primary/20"
+        >
+          Thử lại
+        </button>
+      </div>
+    );
+  }
+
   const [currentPage, setCurrentPage] = useState('dashboard');
   const [pageParams, setPageParams] = useState<any>(null);
   const [navigationHistory, setNavigationHistory] = useState<string[]>([]);

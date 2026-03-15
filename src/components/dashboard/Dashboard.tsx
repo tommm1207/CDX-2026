@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { motion } from 'motion/react';
+import { motion, AnimatePresence } from 'motion/react';
 import {
   Wallet,
   ArrowDownCircle,
@@ -12,12 +12,15 @@ import {
   ArrowRight,
   FileText,
   CalendarCheck,
-  ArrowLeftRight
+  ArrowLeftRight,
+  Plus,
+  X
 } from 'lucide-react';
 import { supabase } from '../../supabaseClient';
 import { Employee } from '../../types';
 import { formatCurrency, formatNumber } from '../../utils/format';
 import { AttendanceTable } from '../hr/AttendanceTable';
+import { NumericInput } from '../shared/NumericInput';
 
 export const Dashboard = ({ user, onNavigate }: { user: Employee, onNavigate: (page: string, params?: any) => void }) => {
   const [stats, setStats] = useState({
@@ -33,6 +36,10 @@ export const Dashboard = ({ user, onNavigate }: { user: Employee, onNavigate: (p
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [attendance, setAttendance] = useState<any[]>([]);
   const [loadingAttendance, setLoadingAttendance] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editingAtt, setEditingAtt] = useState<any>(null);
+  const [editFormData, setEditFormData] = useState({ status: 'present', overtime: 0 });
+
   const selectedMonth = new Date().getMonth() + 1;
   const selectedYear = new Date().getFullYear();
 
@@ -99,6 +106,101 @@ export const Dashboard = ({ user, onNavigate }: { user: Employee, onNavigate: (p
     fetchDashboardData();
     fetchAttendanceData();
   }, [user.role, selectedMonth, selectedYear]);
+
+  const toggleAttendance = async (empId: string, day: number) => {
+    if (user.role === 'User') return;
+    const dateStr = `${selectedYear}-${String(selectedMonth).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+    const current = attendance.find(a => a.employee_id === empId && a.date === dateStr);
+
+    if (current) {
+      let nextStatus = 'present';
+      let hours = 8;
+
+      if (current.status === 'present') {
+        nextStatus = 'half-day';
+        hours = 4;
+      } else if (current.status === 'half-day') {
+        nextStatus = 'absent';
+        hours = 0;
+      } else {
+        await supabase.from('attendance').delete().eq('id', current.id);
+        const { data: updatedAtt } = await supabase
+          .from('attendance')
+          .select('*')
+          .gte('date', `${selectedYear}-${String(selectedMonth).padStart(2, '0')}-01`)
+          .lte('date', new Date(selectedYear, selectedMonth, 0).toISOString().split('T')[0]);
+        if (updatedAtt) setAttendance(updatedAtt);
+        return;
+      }
+
+      await supabase.from('attendance').update({ status: nextStatus, hours_worked: hours, overtime_hours: current.overtime_hours || 0 }).eq('id', current.id);
+    } else {
+      await supabase.from('attendance').insert([{
+        employee_id: empId,
+        date: dateStr,
+        status: 'present',
+        hours_worked: 8,
+        overtime_hours: 0
+      }]);
+    }
+    
+    // Refresh attendance data
+    const { data: updatedAtt } = await supabase
+      .from('attendance')
+      .select('*')
+      .gte('date', `${selectedYear}-${String(selectedMonth).padStart(2, '0')}-01`)
+      .lte('date', new Date(selectedYear, selectedMonth, 0).toISOString().split('T')[0]);
+    if (updatedAtt) setAttendance(updatedAtt);
+  };
+
+  const openEditModal = (empId: string, day: number) => {
+    if (user.role === 'User') return;
+    const dateStr = `${selectedYear}-${String(selectedMonth).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+    const att = attendance.find(a => a.employee_id === empId && a.date === dateStr);
+    setEditingAtt({ empId, day, dateStr, id: att?.id });
+    setEditFormData({
+      status: att?.status || 'present',
+      overtime: att?.overtime_hours || 0
+    });
+    setShowEditModal(true);
+  };
+
+  const saveEdit = async () => {
+    const hours = editFormData.status === 'present' ? 8 : (editFormData.status === 'half-day' ? 4 : 0);
+    if (editingAtt.id) {
+      await supabase.from('attendance').update({
+        status: editFormData.status,
+        hours_worked: hours,
+        overtime_hours: editFormData.overtime
+      }).eq('id', editingAtt.id);
+    } else {
+      await supabase.from('attendance').insert([{
+        employee_id: editingAtt.empId,
+        date: editingAtt.dateStr,
+        status: editFormData.status,
+        hours_worked: hours,
+        overtime_hours: editFormData.overtime
+      }]);
+    }
+    setShowEditModal(false);
+    
+    // Refresh attendance data
+    const { data: updatedAtt } = await supabase
+      .from('attendance')
+      .select('*')
+      .gte('date', `${selectedYear}-${String(selectedMonth).padStart(2, '0')}-01`)
+      .lte('date', new Date(selectedYear, selectedMonth, 0).toISOString().split('T')[0]);
+    if (updatedAtt) setAttendance(updatedAtt);
+  };
+
+  const getStatusLabel = (status: string) => {
+    switch (status) {
+      case 'present': return 'X';
+      case 'half-day': return '1/2';
+      case 'absent': return 'V';
+      default: return '';
+    }
+  };
 
   const menuActions = [
     { id: 'stock-in', label: 'Nhập kho', icon: ArrowDownCircle, color: 'bg-blue-500', description: 'Tạo phiếu nhập vật tư mới' },
@@ -183,6 +285,8 @@ export const Dashboard = ({ user, onNavigate }: { user: Employee, onNavigate: (p
               user={user}
               selectedMonth={selectedMonth}
               selectedYear={selectedYear}
+              onToggleAttendance={toggleAttendance}
+              onOpenEditModal={openEditModal}
             />
           </div>
         </div>
@@ -241,6 +345,52 @@ export const Dashboard = ({ user, onNavigate }: { user: Employee, onNavigate: (p
           </div>
         </div>
       </div>
+      
+      {/* Edit Attendance Modal */}
+      <AnimatePresence>
+        {showEditModal && editingAtt && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="bg-white rounded-2xl shadow-xl p-6 max-w-sm w-full"
+            >
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="font-bold text-gray-800">Chi tiết ngày {editingAtt.day}</h3>
+                <button onClick={() => setShowEditModal(false)} className="p-1 hover:bg-gray-100 rounded-full"><X size={18} /></button>
+              </div>
+              <div className="space-y-4">
+                <div>
+                  <label className="text-[10px] font-bold text-gray-400 uppercase">Trạng thái công</label>
+                  <div className="grid grid-cols-3 gap-2 mt-1">
+                    {['present', 'half-day', 'absent'].map(s => (
+                      <button
+                        key={s}
+                        onClick={() => setEditFormData({ ...editFormData, status: s })}
+                        className={`py-2 rounded-xl text-xs font-bold border transition-all ${editFormData.status === s ? 'bg-primary text-white border-primary' : 'bg-white text-gray-500 border-gray-200'}`}
+                      >
+                        {getStatusLabel(s)}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <NumericInput
+                  label="Giờ tăng ca (h)"
+                  value={editFormData.overtime}
+                  onChange={(val) => setEditFormData({ ...editFormData, overtime: val })}
+                  placeholder="Ví dụ: 1.5"
+                  isDecimal={true}
+                />
+                <div className="flex gap-3 pt-2">
+                  <button onClick={() => setShowEditModal(false)} className="flex-1 py-2 rounded-xl border border-gray-200 text-sm font-bold text-gray-500">Hủy</button>
+                  <button onClick={saveEdit} className="flex-1 py-2 rounded-xl bg-primary text-white text-sm font-bold shadow-lg shadow-primary/20">Lưu</button>
+                </div>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };

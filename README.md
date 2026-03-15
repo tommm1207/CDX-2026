@@ -23,11 +23,6 @@ Hệ thống quản lý toàn diện dành cho các công trình thi công, bao 
 - **Supabase**: Backend-as-a-Service cho dữ liệu thời gian thực.
 - **Tailwind CSS**: Thiết kế giao diện chuyên nghiệp, linh hoạt.
 
-## 🔧 Cài đặt & Triển khai
-1. Cài đặt dependencies: `npm install`
-2. Thiết lập Env: `VITE_SUPABASE_URL` & `VITE_SUPABASE_ANON_KEY`
-3. Chạy dự án: `npm run dev`
-
 ---
 <div align="center">
   <p>Được phát triển bởi <b>CDX TEAM - NGUYỄN KHÔI NGUYÊN (TOM)</b></p>

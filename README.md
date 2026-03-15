@@ -1,6 +1,15 @@
 <div align="center">
   <img src="public/logo.png" width="150" alt="CDX Logo" />
   <h1>Hệ thống Quản lý Thi công CDX - 2026</h1>
+  
+  <p align="center">
+    <img src="https://img.shields.io/badge/React-20232A?style=for-the-badge&logo=react&logoColor=61DAFB" alt="React" />
+    <img src="https://img.shields.io/badge/TypeScript-007ACC?style=for-the-badge&logo=typescript&logoColor=white" alt="TypeScript" />
+    <img src="https://img.shields.io/badge/Tailwind_CSS-38B2AC?style=for-the-badge&logo=tailwind-css&logoColor=white" alt="Tailwind" />
+    <img src="https://img.shields.io/badge/Supabase-3ECF8E?style=for-the-badge&logo=supabase&logoColor=white" alt="Supabase" />
+    <img src="https://img.shields.io/badge/Vite-646CFF?style=for-the-badge&logo=vite&logoColor=white" alt="Vite" />
+    <img src="https://img.shields.io/badge/PWA-5A0FC8?style=for-the-badge&logo=pwa&logoColor=white" alt="PWA" />
+  </p>
 </div>
 
 Hệ thống quản lý toàn diện dành cho các công trình thi công, bao gồm quản lý kho vật tư, tài chính dự án, nhân sự và tiền lương. Được tối ưu hóa cho di động dưới dạng Progressive Web App (PWA).

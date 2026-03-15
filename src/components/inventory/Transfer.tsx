@@ -7,7 +7,7 @@ import { PageBreadcrumb } from '../shared/PageBreadcrumb';
 import { NumericInput } from '../shared/NumericInput';
 import { CreatableSelect } from '../shared/CreatableSelect';
 import { formatDate, formatNumber } from '../../utils/format';
-import { isUUID } from '../../utils/helpers';
+import { isUUID, generateCode } from '../../utils/helpers';
 import { getAvailableStock } from '../../utils/inventory';
 
 export const Transfer = ({ user, onBack }: { user: Employee, onBack?: () => void }) => {
@@ -29,7 +29,8 @@ export const Transfer = ({ user, onBack }: { user: Employee, onBack?: () => void
     material_id: '',
     quantity: 0,
     notes: '',
-    status: 'Chờ duyệt'
+    status: 'Chờ duyệt',
+    transfer_code: generateCode('LC')
   };
 
   const [formData, setFormData] = useState(initialFormState);
@@ -137,6 +138,7 @@ export const Transfer = ({ user, onBack }: { user: Employee, onBack?: () => void
         material_id: finalMaterialId,
         employee_id: user.id,
         status: 'Chờ duyệt',
+        transfer_code: formData.transfer_code || generateCode('LC'),
         notes: isEditing ? `[SỬA] ${formData.notes}` : formData.notes
       };
 
@@ -205,7 +207,10 @@ export const Transfer = ({ user, onBack }: { user: Employee, onBack?: () => void
         </div>
         <button
           onClick={() => {
-            setFormData(initialFormState);
+            setFormData({
+              ...initialFormState,
+              transfer_code: generateCode('LC')
+            });
             setIsEditing(false);
             setShowModal(true);
           }}

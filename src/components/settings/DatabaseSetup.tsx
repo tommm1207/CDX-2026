@@ -92,6 +92,8 @@ CREATE TABLE IF NOT EXISTS stock_out (
   warehouse_id UUID REFERENCES warehouses(id),
   material_id UUID REFERENCES materials(id),
   quantity NUMERIC NOT NULL,
+  unit_price NUMERIC DEFAULT 0,
+  total_amount NUMERIC,
   notes TEXT,
   employee_id UUID REFERENCES users(id),
   status TEXT DEFAULT 'Chờ duyệt',

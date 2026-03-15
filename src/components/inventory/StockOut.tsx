@@ -7,7 +7,7 @@ import { PageBreadcrumb } from '../shared/PageBreadcrumb';
 import { NumericInput } from '../shared/NumericInput';
 import { CreatableSelect } from '../shared/CreatableSelect';
 import { formatDate, formatCurrency, formatNumber } from '../../utils/format';
-import { isUUID } from '../../utils/helpers';
+import { isUUID, generateCode } from '../../utils/helpers';
 import { getAvailableStock } from '../../utils/inventory';
 
 export const StockOut = ({ user, onBack }: { user: Employee, onBack?: () => void }) => {
@@ -29,7 +29,8 @@ export const StockOut = ({ user, onBack }: { user: Employee, onBack?: () => void
     quantity: 0,
     unit_price: 0,
     notes: '',
-    status: 'Chờ duyệt'
+    status: 'Chờ duyệt',
+    export_code: generateCode('XK')
   };
 
   const [formData, setFormData] = useState(initialFormState);
@@ -133,6 +134,7 @@ export const StockOut = ({ user, onBack }: { user: Employee, onBack?: () => void
         employee_id: user.id,
         status: 'Chờ duyệt',
         total_amount: formData.quantity * formData.unit_price,
+        export_code: formData.export_code || generateCode('XK'),
         notes: isEditing ? `[SỬA] ${formData.notes}` : formData.notes
       };
 
@@ -231,7 +233,10 @@ export const StockOut = ({ user, onBack }: { user: Employee, onBack?: () => void
         </div>
         <button
           onClick={() => {
-            setFormData(initialFormState);
+            setFormData({
+              ...initialFormState,
+              export_code: generateCode('XK')
+            });
             setIsEditing(false);
             setShowModal(true);
           }}

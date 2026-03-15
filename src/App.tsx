@@ -224,7 +224,7 @@ export default function App() {
         { id: 'warehouses', label: 'Danh sách kho', icon: Warehouse },
         { id: 'material-groups', label: 'Nhóm vật tư', icon: Layers },
         { id: 'materials', label: 'Danh mục vật tư', icon: Package },
-        { id: 'database-setup', label: 'Cấu hình Database', icon: Settings2 },
+        { id: 'trash', label: 'Thùng rác', icon: Trash2 },
       ]
     },
     {
@@ -249,12 +249,7 @@ export default function App() {
         { id: 'notes', label: 'Nhật ký / Ghi chú', icon: FileText },
         { id: 'notifications', label: 'Thông báo', icon: BellRing },
         { id: 'reminders', label: 'Thiết lập Lịch nhắc', icon: Bell },
-        { id: 'trash', label: 'Thùng rác', icon: Trash2 },
-      ]
-    },
-    {
-      title: 'CÔNG CỤ',
-      items: [
+        { id: 'database-setup', label: 'Cấu hình Database', icon: Settings2 },
         { id: 'backup-settings', label: 'Backup', icon: Settings },
         { id: 'backup-now', label: 'Sao lưu ngay', icon: Download },
       ]
@@ -292,7 +287,9 @@ export default function App() {
       case 'cost-filter': return <CostFilter user={user} onBack={goBack} />;
       case 'advances': return <Advances user={user} onBack={goBack} />;
       case 'payroll': return <MonthlySalary user={user} onBack={goBack} />;
-      case 'salary-settings': return <SalarySettings user={user} onBack={goBack} />;
+      case 'salary-settings':
+        if (user.role !== 'Admin' && user.role !== 'Admin App') return <Dashboard user={user} onNavigate={navigateTo} />;
+        return <SalarySettings user={user} onBack={goBack} />;
       case 'notes': return <Notes user={user} onBack={goBack} />;
       case 'notifications': return <Reminders user={user} onBack={goBack} />;
       case 'reminders': return <Reminders user={user} onBack={goBack} />;
@@ -303,13 +300,13 @@ export default function App() {
       case 'deleted-slips': return <DeletedSlips onBack={goBack} />;
       case 'material-groups': return <MaterialGroups user={user} onBack={goBack} />;
       case 'backup-settings':
-        if (user.role !== 'Admin App') return <Dashboard user={user} onNavigate={navigateTo} />;
+        if (user.role !== 'Admin' && user.role !== 'Admin App') return <Dashboard user={user} onNavigate={navigateTo} />;
         return <Backup onBack={goBack} />;
       case 'backup-now':
-        if (user.role !== 'Admin App') return <Dashboard user={user} onNavigate={navigateTo} />;
+        if (user.role !== 'Admin' && user.role !== 'Admin App') return <Dashboard user={user} onNavigate={navigateTo} />;
         return <BackupNow onBack={goBack} />;
       case 'database-setup':
-        if (user.role !== 'Admin App') return <Dashboard user={user} onNavigate={navigateTo} />;
+        if (user.role !== 'Admin' && user.role !== 'Admin App') return <Dashboard user={user} onNavigate={navigateTo} />;
         return <DatabaseSetup onBack={goBack} />;
       default: return (
         <div className="p-4 md:p-6 space-y-6">

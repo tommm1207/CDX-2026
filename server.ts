@@ -38,7 +38,10 @@ const BACKUP_TABLES = [
 ];
 
 async function runAutoBackup() {
-  console.log(`[BACKUP] Starting scheduled backup at ${new Date().toLocaleString('vi-VN')}...`);
+  console.log("----------------------------------------------------------------");
+  console.log(`[DEMO] >>> AUTOMATIC BACKUP TRIGGERED AT: ${new Date().toLocaleString('vi-VN')}`);
+  console.log("----------------------------------------------------------------");
+  console.log(`[BACKUP] Starting scheduled backup...`);
   
   if (!fs.existsSync(CONFIG_PATH)) {
     console.log("[BACKUP] No configuration found. Skipping.");
@@ -103,7 +106,7 @@ async function runAutoBackup() {
 
 async function startServer() {
   const app = express();
-  const PORT = 3000;
+  const PORT = process.env.PORT || 3000;
 
   app.use(bodyParser.json({ limit: '50mb' }));
   app.use(bodyParser.urlencoded({ limit: '50mb', extended: true }));
@@ -183,7 +186,7 @@ async function startServer() {
     app.get("*", (req, res) => res.sendFile("index.html", { root: "dist" }));
   }
 
-  app.listen(PORT, "0.0.0.0", () => {
+  app.listen(Number(PORT), "0.0.0.0", () => {
     console.log(`Server running on http://localhost:${PORT}`);
   });
 }

@@ -49,6 +49,7 @@ export const Attendance = ({ user, onBack }: { user: Employee, onBack?: () => vo
   };
 
   const toggleAttendance = async (empId: string, day: number) => {
+    if (user.role === 'User') return;
     const dateStr = `${selectedYear}-${String(selectedMonth).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
     const current = getStatus(empId, day);
 
@@ -86,6 +87,7 @@ export const Attendance = ({ user, onBack }: { user: Employee, onBack?: () => vo
   const [editFormData, setEditFormData] = useState({ status: 'present', overtime: 0 });
 
   const openEditModal = (empId: string, day: number) => {
+    if (user.role === 'User') return;
     const att = getStatus(empId, day);
     const dateStr = `${selectedYear}-${String(selectedMonth).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
     setEditingAtt({ empId, day, dateStr, id: att?.id });
@@ -190,12 +192,14 @@ export const Attendance = ({ user, onBack }: { user: Employee, onBack?: () => vo
                               <span>{getStatusLabel(att?.status)}</span>
                               {att?.overtime_hours > 0 && <span className="text-[7px] leading-none mt-0.5">+{att.overtime_hours}h</span>}
                             </button>
-                            <button
-                              onClick={() => openEditModal(emp.id, d)}
-                              className="absolute -top-1.5 -right-1.5 bg-white shadow-md border border-gray-100 rounded-full p-1 transition-all z-20 hover:scale-110 active:scale-90"
-                            >
-                              <Plus size={10} className="text-primary" />
-                            </button>
+                            {user.role !== 'User' && (
+                              <button
+                                onClick={() => openEditModal(emp.id, d)}
+                                className="absolute -top-1.5 -right-1.5 bg-white shadow-md border border-gray-100 rounded-full p-1 transition-all z-20 hover:scale-110 active:scale-90"
+                              >
+                                <Plus size={10} className="text-primary" />
+                              </button>
+                            )}
                           </td>
                         );
                       })}

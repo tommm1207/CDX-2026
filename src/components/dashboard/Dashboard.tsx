@@ -124,39 +124,6 @@ export const Dashboard = ({ user, onNavigate }: { user: Employee, onNavigate: (p
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
         {/* Main Stats */}
         <div className="xl:col-span-2 space-y-8">
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
-            <div className="bg-primary p-8 rounded-[2.5rem] text-white shadow-2xl shadow-primary/20 relative overflow-hidden group">
-              <div className="absolute -right-4 -top-4 w-32 h-32 bg-white/10 rounded-full blur-2xl group-hover:scale-150 transition-transform duration-1000" />
-              <p className="text-white/60 text-xs font-black uppercase tracking-widest mb-2">Tổng chi phí dự án</p>
-              <h3 className="text-3xl font-black mb-4">{formatCurrency(stats.totalBudget)}</h3>
-              <div className="flex items-center gap-2 bg-white/20 w-fit px-3 py-1.5 rounded-full backdrop-blur-md">
-                <TrendingDown size={14} />
-                <span className="text-[10px] font-bold">Tháng này: {formatCurrency(stats.totalBudget * 0.15)}</span>
-              </div>
-            </div>
-
-            <div className="bg-white p-8 rounded-[2.5rem] border border-gray-100 shadow-sm flex flex-col justify-between group">
-              <div>
-                <div className="w-12 h-12 bg-blue-50 text-blue-600 rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
-                  <ArrowDownCircle size={28} />
-                </div>
-                <p className="text-gray-400 text-xs font-bold uppercase tracking-widest mb-1">Phiếu nhập kho</p>
-                <h3 className="text-3xl font-black text-gray-800">{stats.totalIn}</h3>
-              </div>
-              <p className="text-[10px] text-blue-600 font-bold mt-4">+12 phiếu mới tuần này</p>
-            </div>
-
-            <div className="bg-white p-8 rounded-[2.5rem] border border-gray-100 shadow-sm flex flex-col justify-between group">
-              <div>
-                <div className="w-12 h-12 bg-orange-50 text-orange-600 rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
-                  <ArrowUpCircle size={28} />
-                </div>
-                <p className="text-gray-400 text-xs font-bold uppercase tracking-widest mb-1">Phiếu xuất kho</p>
-                <h3 className="text-3xl font-black text-gray-800">{stats.totalOut}</h3>
-              </div>
-              <p className="text-[10px] text-orange-600 font-bold mt-4">+5 phiếu mới hôm nay</p>
-            </div>
-          </div>
 
           {/* Pending Approvals Widget */}
           <div className="bg-white rounded-[2.5rem] border border-gray-100 shadow-sm overflow-hidden">

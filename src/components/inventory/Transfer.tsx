@@ -8,6 +8,7 @@ import { NumericInput } from '../shared/NumericInput';
 import { CreatableSelect } from '../shared/CreatableSelect';
 import { formatDate, formatNumber } from '../../utils/format';
 import { isUUID } from '../../utils/helpers';
+import { getAvailableStock } from '../../utils/inventory';
 
 export const Transfer = ({ user, onBack }: { user: Employee, onBack?: () => void }) => {
   const [slips, setSlips] = useState<any[]>([]);
@@ -40,31 +41,22 @@ export const Transfer = ({ user, onBack }: { user: Employee, onBack?: () => void
   }, []);
 
   useEffect(() => {
-    if (formData.from_warehouse_id && formData.material_id) {
+    if (formData.from_warehouse_id && formData.material_id && formData.date) {
       checkStock();
     } else {
       setAvailableStock(null);
     }
-  }, [formData.from_warehouse_id, formData.material_id]);
+  }, [formData.from_warehouse_id, formData.material_id, formData.date]);
 
   const checkStock = async () => {
     try {
       const fromWh = warehouses.find(w => w.name === formData.from_warehouse_id || w.id === formData.from_warehouse_id);
       const mat = materials.find(m => m.name === formData.material_id || m.id === formData.material_id);
 
-      if (!fromWh?.id || !mat?.id) return;
+      if (!fromWh?.id || !mat?.id || !formData.date) return;
 
-      const [si, so, tr_out, tr_in] = await Promise.all([
-        supabase.from('stock_in').select('quantity').eq('warehouse_id', fromWh.id).eq('material_id', mat.id).eq('status', 'Đã duyệt'),
-        supabase.from('stock_out').select('quantity').eq('warehouse_id', fromWh.id).eq('material_id', mat.id).eq('status', 'Đã duyệt'),
-        supabase.from('transfers').select('quantity').eq('from_warehouse_id', fromWh.id).eq('material_id', mat.id).eq('status', 'Đã duyệt'),
-        supabase.from('transfers').select('quantity').eq('to_warehouse_id', fromWh.id).eq('material_id', mat.id).eq('status', 'Đã duyệt')
-      ]);
-
-      const totalIn = (si.data || []).reduce((sum, item) => sum + item.quantity, 0) + (tr_in.data || []).reduce((sum, item) => sum + item.quantity, 0);
-      const totalOut = (so.data || []).reduce((sum, item) => sum + item.quantity, 0) + (tr_out.data || []).reduce((sum, item) => sum + item.quantity, 0);
-
-      setAvailableStock(totalIn - totalOut);
+      const stock = await getAvailableStock(mat.id, fromWh.id, formData.date);
+      setAvailableStock(stock);
     } catch (err) {
       console.error('Error checking stock:', err);
     }
@@ -155,20 +147,6 @@ export const Transfer = ({ user, onBack }: { user: Employee, onBack?: () => void
         const { error } = await supabase.from('transfers').insert([payload]);
         if (error) throw error;
 
-        const unit = materials.find((m: any) => m.id === finalMaterialId)?.unit || '';
-        const { data: fromInv } = await supabase.from('inventory').select('*').eq('material_id', finalMaterialId).eq('warehouse_id', finalFromWhId).maybeSingle();
-        if (fromInv) {
-          await supabase.from('inventory').update({ quantity: Number(fromInv.quantity) - Number(formData.quantity), updated_at: new Date().toISOString() }).eq('id', fromInv.id);
-        } else {
-          await supabase.from('inventory').insert([{ material_id: finalMaterialId, warehouse_id: finalFromWhId, quantity: -Number(formData.quantity), unit, updated_at: new Date().toISOString() }]);
-        }
-
-        const { data: toInv } = await supabase.from('inventory').select('*').eq('material_id', finalMaterialId).eq('warehouse_id', finalToWhId).maybeSingle();
-        if (toInv) {
-          await supabase.from('inventory').update({ quantity: Number(toInv.quantity) + Number(formData.quantity), updated_at: new Date().toISOString() }).eq('id', toInv.id);
-        } else {
-          await supabase.from('inventory').insert([{ material_id: finalMaterialId, warehouse_id: finalToWhId, quantity: Number(formData.quantity), unit, updated_at: new Date().toISOString() }]);
-        }
       }
 
       setShowModal(false);
@@ -373,7 +351,14 @@ export const Transfer = ({ user, onBack }: { user: Employee, onBack?: () => void
                   <div className="space-y-4">
                     <div className="space-y-1">
                       <label className="text-[10px] font-bold text-gray-400 uppercase">Ngày chuyển *</label>
-                      <input type="date" required value={formData.date} onChange={(e) => setFormData({ ...formData, date: e.target.value })} className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-orange-500/20" />
+                      <input 
+                        type="date" 
+                        required 
+                        disabled={isEditing}
+                        value={formData.date} 
+                        onChange={(e) => setFormData({ ...formData, date: e.target.value })} 
+                        className={`w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-orange-500/20 ${isEditing ? 'bg-gray-50 text-gray-400 cursor-not-allowed' : ''}`} 
+                      />
                     </div>
                     <CreatableSelect
                       label="Từ kho *"

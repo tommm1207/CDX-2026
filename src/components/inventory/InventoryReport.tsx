@@ -3,13 +3,15 @@ import { BarChart3 } from 'lucide-react';
 import { supabase } from '../../supabaseClient';
 import { Employee } from '../../types';
 import { PageBreadcrumb } from '../shared/PageBreadcrumb';
-import { formatNumber } from '../../utils/format';
+import { formatNumber, formatDate } from '../../utils/format';
+import { getInventoryData } from '../../utils/inventory';
 
 export const InventoryReport = ({ user, onBack }: { user: Employee, onBack?: () => void }) => {
   const [report, setReport] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [warehouses, setWarehouses] = useState<any[]>([]);
   const [selectedWarehouse, setSelectedWarehouse] = useState<string>('');
+  const [selectedDate, setSelectedDate] = useState<string>(new Date().toISOString().split('T')[0]);
 
   useEffect(() => {
     fetchWarehouses();
@@ -17,7 +19,7 @@ export const InventoryReport = ({ user, onBack }: { user: Employee, onBack?: () 
 
   useEffect(() => {
     fetchReport();
-  }, [selectedWarehouse]);
+  }, [selectedWarehouse, selectedDate]);
 
   const fetchWarehouses = async () => {
     const { data } = await supabase.from('warehouses').select('*').or('status.is.null,status.neq.Đã xóa').order('name');
@@ -29,24 +31,28 @@ export const InventoryReport = ({ user, onBack }: { user: Employee, onBack?: () 
     try {
       const { data: materials } = await supabase.from('materials').select('*').order('name');
       const { data: whs } = await supabase.from('warehouses').select('*').order('name');
-      const { data: inventory } = await supabase.from('inventory').select('*');
+      
+      const inventoryData = await getInventoryData(undefined, selectedDate);
 
-      if (!materials || !whs || !inventory) return;
+      if (!materials || !whs) return;
 
       const reportData = materials.map(mat => {
-        const matInventory = inventory.filter(i => i.material_id === mat.id);
-        const balance = matInventory.reduce((sum, i) => sum + (i.quantity || 0), 0);
-        const breakdown = matInventory.map(i => ({
-          whName: whs.find(w => w.id === i.warehouse_id)?.name || 'N/A',
-          balance: i.quantity
-        })).filter(b => b.balance !== 0);
+        const matInv = inventoryData[mat.id] || { totalIn: 0, totalOut: 0, breakdown: {} };
+        const balance = Object.values(matInv.breakdown).reduce((sum, qty) => sum + qty, 0);
+        
+        const breakdown = Object.entries(matInv.breakdown)
+          .map(([whId, qty]) => ({
+            whName: whs.find(w => w.id === whId)?.name || 'N/A',
+            balance: qty,
+            whId
+          }))
+          .filter(b => b.balance !== 0);
 
         if (selectedWarehouse) {
-          const whInv = matInventory.find(i => i.warehouse_id === selectedWarehouse);
-          const whQty = whInv?.quantity || 0;
+          const whQty = matInv.breakdown[selectedWarehouse] || 0;
           return {
             ...mat,
-            totalIn: 0,
+            totalIn: 0, 
             totalOut: 0,
             balance: whQty,
             breakdown: whQty !== 0 ? [{ whName: whs.find(w => w.id === selectedWarehouse)?.name, balance: whQty }] : []
@@ -55,18 +61,21 @@ export const InventoryReport = ({ user, onBack }: { user: Employee, onBack?: () 
 
         return {
           ...mat,
-          totalIn: 0,
-          totalOut: 0,
+          totalIn: matInv.totalIn,
+          totalOut: matInv.totalOut,
           balance,
           breakdown
         };
       }).filter(item => item.balance !== 0);
 
+      // Group materials with same name (handle duplicates in DB)
       const groupedReport: any[] = [];
       reportData.forEach(item => {
         const existing = groupedReport.find(g => g.name.toLowerCase().trim() === item.name.toLowerCase().trim() && g.unit === item.unit);
         if (existing) {
           existing.balance += item.balance;
+          existing.totalIn += item.totalIn;
+          existing.totalOut += item.totalOut;
           item.breakdown.forEach((b: any) => {
             const exWh = existing.breakdown.find((eb: any) => eb.whName === b.whName);
             if (exWh) exWh.balance += b.balance;
@@ -98,7 +107,9 @@ export const InventoryReport = ({ user, onBack }: { user: Employee, onBack?: () 
       </div>
 
       <div className="space-y-4">
+      <div className="flex flex-col md:flex-row items-center gap-4">
         <div className="w-full md:w-64">
+          <label className="text-[10px] font-bold text-gray-400 uppercase mb-1 block">Kho hàng</label>
           <select
             value={selectedWarehouse}
             onChange={(e) => setSelectedWarehouse(e.target.value)}
@@ -110,6 +121,16 @@ export const InventoryReport = ({ user, onBack }: { user: Employee, onBack?: () 
             ))}
           </select>
         </div>
+        <div className="w-full md:w-64">
+          <label className="text-[10px] font-bold text-gray-400 uppercase mb-1 block">Tính đến ngày</label>
+          <input
+            type="date"
+            value={selectedDate}
+            onChange={(e) => setSelectedDate(e.target.value)}
+            className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20"
+          />
+        </div>
+      </div>
 
         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
           <div className="overflow-x-auto">

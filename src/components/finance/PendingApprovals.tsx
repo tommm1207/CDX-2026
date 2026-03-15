@@ -46,24 +46,6 @@ export const PendingApprovals = ({ user, onBack, onNavigate, onRefreshCount }: {
       const { error } = await supabase.from(slip.table).update({ status: 'Đã duyệt' }).eq('id', slip.id);
       if (error) throw error;
 
-      // Special logic for inventory impact if needed
-      if (slip.table === 'stock_in') {
-        const { data: currentInv } = await supabase.from('inventory').select('quantity').eq('warehouse_id', slip.warehouse_id).eq('material_id', slip.material_id).single();
-        const newQty = (currentInv?.quantity || 0) + slip.quantity;
-        await supabase.from('inventory').upsert({ warehouse_id: slip.warehouse_id, material_id: slip.material_id, quantity: newQty }, { onConflict: 'warehouse_id,material_id' });
-      } else if (slip.table === 'stock_out') {
-        const { data: currentInv } = await supabase.from('inventory').select('quantity').eq('warehouse_id', slip.warehouse_id).eq('material_id', slip.material_id).single();
-        const newQty = (currentInv?.quantity || 0) - slip.quantity;
-        await supabase.from('inventory').upsert({ warehouse_id: slip.warehouse_id, material_id: slip.material_id, quantity: newQty }, { onConflict: 'warehouse_id,material_id' });
-      } else if (slip.table === 'transfers') {
-        // From WH
-        const { data: fInv } = await supabase.from('inventory').select('quantity').eq('warehouse_id', slip.from_warehouse_id).eq('material_id', slip.material_id).single();
-        await supabase.from('inventory').upsert({ warehouse_id: slip.from_warehouse_id, material_id: slip.material_id, quantity: (fInv?.quantity || 0) - slip.quantity }, { onConflict: 'warehouse_id,material_id' });
-        // To WH
-        const { data: tInv } = await supabase.from('inventory').select('quantity').eq('warehouse_id', slip.to_warehouse_id).eq('material_id', slip.material_id).single();
-        await supabase.from('inventory').upsert({ warehouse_id: slip.to_warehouse_id, material_id: slip.material_id, quantity: (tInv?.quantity || 0) + slip.quantity }, { onConflict: 'warehouse_id,material_id' });
-      }
-
       fetchPendingSlips();
       onRefreshCount();
     } catch (err: any) {

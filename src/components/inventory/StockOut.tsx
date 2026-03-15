@@ -8,6 +8,7 @@ import { NumericInput } from '../shared/NumericInput';
 import { CreatableSelect } from '../shared/CreatableSelect';
 import { formatDate, formatCurrency, formatNumber } from '../../utils/format';
 import { isUUID } from '../../utils/helpers';
+import { getAvailableStock } from '../../utils/inventory';
 
 export const StockOut = ({ user, onBack }: { user: Employee, onBack?: () => void }) => {
   const [slips, setSlips] = useState<any[]>([]);
@@ -40,31 +41,22 @@ export const StockOut = ({ user, onBack }: { user: Employee, onBack?: () => void
   }, []);
 
   useEffect(() => {
-    if (formData.warehouse_id && formData.material_id) {
+    if (formData.warehouse_id && formData.material_id && formData.date) {
       checkStock();
     } else {
       setAvailableStock(null);
     }
-  }, [formData.warehouse_id, formData.material_id]);
+  }, [formData.warehouse_id, formData.material_id, formData.date]);
 
   const checkStock = async () => {
     const wh = warehouses.find(w => w.name === formData.warehouse_id || w.id === formData.warehouse_id);
     const mat = materials.find(m => m.name === formData.material_id || m.id === formData.material_id);
 
-    if (!wh?.id || !mat?.id) return;
+    if (!wh?.id || !mat?.id || !formData.date) return;
 
     try {
-      const { data: inData } = await supabase.from('stock_in').select('quantity').eq('warehouse_id', wh.id).eq('material_id', mat.id).eq('status', 'Đã duyệt');
-      const { data: outData } = await supabase.from('stock_out').select('quantity').eq('warehouse_id', wh.id).eq('material_id', mat.id).eq('status', 'Đã duyệt');
-      const { data: transFrom } = await supabase.from('transfers').select('quantity').eq('from_warehouse_id', wh.id).eq('material_id', mat.id).eq('status', 'Đã duyệt');
-      const { data: transTo } = await supabase.from('transfers').select('quantity').eq('to_warehouse_id', wh.id).eq('material_id', mat.id).eq('status', 'Đã duyệt');
-
-      const totalIn = (inData || []).reduce((sum, item) => sum + Number(item.quantity), 0);
-      const totalOut = (outData || []).reduce((sum, item) => sum + Number(item.quantity), 0);
-      const totalTransFrom = (transFrom || []).reduce((sum, item) => sum + Number(item.quantity), 0);
-      const totalTransTo = (transTo || []).reduce((sum, item) => sum + Number(item.quantity), 0);
-
-      setAvailableStock(totalIn - totalOut - totalTransFrom + totalTransTo);
+      const stock = await getAvailableStock(mat.id, wh.id, formData.date);
+      setAvailableStock(stock);
     } catch (err) {
       console.error('Error checking stock:', err);
     }
@@ -151,27 +143,6 @@ export const StockOut = ({ user, onBack }: { user: Employee, onBack?: () => void
         const { error } = await supabase.from('stock_out').insert([payload]);
         if (error) throw error;
 
-        const { data: existingInv } = await supabase
-          .from('inventory')
-          .select('*')
-          .eq('material_id', finalMaterialId)
-          .eq('warehouse_id', finalWarehouseId)
-          .maybeSingle();
-
-        if (existingInv) {
-          await supabase.from('inventory').update({
-            quantity: Number(existingInv.quantity) - Number(formData.quantity),
-            updated_at: new Date().toISOString()
-          }).eq('id', existingInv.id);
-        } else {
-          await supabase.from('inventory').insert([{
-            material_id: finalMaterialId,
-            warehouse_id: finalWarehouseId,
-            quantity: -Number(formData.quantity),
-            unit: materials.find((m: any) => m.id === finalMaterialId)?.unit || '',
-            updated_at: new Date().toISOString()
-          }]);
-        }
       }
 
       setShowModal(false);
@@ -421,7 +392,14 @@ export const StockOut = ({ user, onBack }: { user: Employee, onBack?: () => void
                   <div className="space-y-4">
                     <div className="space-y-1">
                       <label className="text-[10px] font-bold text-gray-400 uppercase">Ngày xuất *</label>
-                      <input type="date" required value={formData.date} onChange={(e) => setFormData({ ...formData, date: e.target.value })} className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-red-600/20" />
+                      <input 
+                        type="date" 
+                        required 
+                        disabled={isEditing}
+                        value={formData.date} 
+                        onChange={(e) => setFormData({ ...formData, date: e.target.value })} 
+                        className={`w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-red-600/20 ${isEditing ? 'bg-gray-50 text-gray-400 cursor-not-allowed' : ''}`} 
+                      />
                     </div>
 
                     <CreatableSelect

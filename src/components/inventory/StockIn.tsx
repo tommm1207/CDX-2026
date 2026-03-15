@@ -131,29 +131,6 @@ export const StockIn = ({ user, onBack, initialStatus }: { user: Employee, onBac
         const { error } = await supabase.from('stock_in').insert([payload]);
         if (error) throw error;
 
-        const finalUnit = (formData as any).unit || materials.find((m: any) => m.id === finalMaterialId)?.unit || '';
-        const { data: existingInv } = await supabase
-          .from('inventory')
-          .select('*')
-          .eq('material_id', finalMaterialId)
-          .eq('warehouse_id', finalWarehouseId)
-          .maybeSingle();
-
-        if (existingInv) {
-          await supabase.from('inventory').update({
-            quantity: Number(existingInv.quantity) + Number(formData.quantity),
-            unit: finalUnit || existingInv.unit,
-            updated_at: new Date().toISOString()
-          }).eq('id', existingInv.id);
-        } else {
-          await supabase.from('inventory').insert([{
-            material_id: finalMaterialId,
-            warehouse_id: finalWarehouseId,
-            quantity: formData.quantity,
-            unit: finalUnit,
-            updated_at: new Date().toISOString()
-          }]);
-        }
       }
 
       setShowModal(false);
@@ -478,7 +455,14 @@ export const StockIn = ({ user, onBack, initialStatus }: { user: Employee, onBac
                   <div className="space-y-4">
                     <div className="space-y-1">
                       <label className="text-[10px] font-bold text-gray-400 uppercase">Ngày nhập *</label>
-                      <input type="date" required value={formData.date} onChange={(e) => setFormData({ ...formData, date: e.target.value })} className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20" />
+                      <input 
+                        type="date" 
+                        required 
+                        disabled={isEditing}
+                        value={formData.date} 
+                        onChange={(e) => setFormData({ ...formData, date: e.target.value })} 
+                        className={`w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20 ${isEditing ? 'bg-gray-50 text-gray-400 cursor-not-allowed' : ''}`} 
+                      />
                     </div>
 
                     <CreatableSelect

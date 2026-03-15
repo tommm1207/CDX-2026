@@ -37,7 +37,6 @@ export const CostReport = ({ user, onBack }: { user: Employee, onBack?: () => vo
     unit_price: 0,
     quantity: 1,
     total_amount: 0,
-    cost_type: '',
     unit: '',
     warehouse_name: '',
     notes: '',
@@ -138,7 +137,6 @@ export const CostReport = ({ user, onBack }: { user: Employee, onBack?: () => vo
       unit_price: 0,
       quantity: 1,
       total_amount: 0,
-      cost_type: '',
       unit: '',
       warehouse_name: '',
       notes: '',
@@ -229,7 +227,6 @@ export const CostReport = ({ user, onBack }: { user: Employee, onBack?: () => vo
           unit_price: item.unit_price,
           total_amount: item.total_amount,
           notes: item.notes,
-          cost_type: item.cost_type,
           stock_status: item.stock_status
         };
 

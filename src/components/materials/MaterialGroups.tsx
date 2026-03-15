@@ -78,6 +78,31 @@ export const MaterialGroups = ({ user, onBack }: { user: Employee, onBack?: () =
     setMaterialsLoading(false);
   };
 
+  const generateNextGroupCode = async () => {
+    const random = Math.floor(100 + Math.random() * 900);
+    try {
+      const { data } = await supabase
+        .from('material_groups')
+        .select('code')
+        .like('code', 'MAT%')
+        .order('code', { ascending: false })
+        .limit(1);
+
+      if (data && data.length > 0 && data[0].code) {
+        const lastCode = data[0].code;
+        const match = lastCode.match(/MAT(\d+)/);
+        if (match && match[1]) {
+          const nextNumber = parseInt(match[1]) + 1;
+          return `MAT${nextNumber.toString().padStart(3, '0')}-${random}`;
+        }
+      }
+      return `MAT001-${random}`;
+    } catch (err) {
+      console.error('Error generating group code:', err);
+      return `MAT001-${random}`;
+    }
+  };
+
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setSubmitting(true);
@@ -89,7 +114,9 @@ export const MaterialGroups = ({ user, onBack }: { user: Employee, onBack?: () =
         }).eq('id', formData.id);
         if (error) throw error;
       } else {
+        const generatedCode = await generateNextGroupCode();
         const { error } = await supabase.from('material_groups').insert([{
+          code: generatedCode,
           name: formData.name,
           notes: formData.notes
         }]);
@@ -280,7 +307,7 @@ export const MaterialGroups = ({ user, onBack }: { user: Employee, onBack?: () =
                     <td className="px-4 py-3 text-xs text-gray-600 font-medium">{item.name}</td>
                     <td className="px-4 py-3 text-xs text-gray-500 italic">{item.notes || '-'}</td>
                     <td className="px-4 py-3 text-center">
-                      <div className="flex items-center justify-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <div className="flex items-center justify-center gap-1 transition-opacity">
                         <button onClick={(e) => handleEdit(e, item)} className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"><Edit size={14} /></button>
                         <button onClick={(e) => handleDeleteClick(e, item.id)} className="p-1.5 text-red-600 hover:bg-red-50 rounded-lg transition-colors"><Trash2 size={14} /></button>
                       </div>

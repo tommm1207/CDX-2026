@@ -72,7 +72,6 @@ import { PlaceholderPage } from './components/materials/PlaceholderPage';
 
 // Trash Components
 import { Trash } from './components/trash/Trash';
-import { DeletedMaterials } from './components/trash/DeletedMaterials';
 import { DeletedWarehouses } from './components/trash/DeletedWarehouses';
 import { DeletedSlips } from './components/trash/DeletedSlips';
 
@@ -276,7 +275,6 @@ export default function App() {
       case 'partners': return <PlaceholderPage title="Khách hàng & nhà cung cấp" onBack={goBack} />;
       case 'inventory-report': return <InventoryReport user={user} onBack={goBack} />;
       case 'trash': return <Trash onNavigate={navigateTo} onBack={goBack} />;
-      case 'deleted-materials': return <DeletedMaterials onBack={goBack} />;
       case 'deleted-warehouses': return <DeletedWarehouses onBack={goBack} />;
       case 'deleted-slips': return <DeletedSlips onBack={goBack} />;
       case 'material-groups': return <MaterialGroups user={user} onBack={goBack} />;

@@ -95,7 +95,7 @@ export const StockOut = ({ user, onBack }: { user: Employee, onBack?: () => void
   };
 
   const fetchMaterials = async () => {
-    const { data } = await supabase.from('materials').select('*').neq('status', 'Đã xóa').order('name');
+    const { data } = await supabase.from('materials').select('*').order('name');
     if (data) setMaterials(data);
   };
 
@@ -128,6 +128,10 @@ export const StockOut = ({ user, onBack }: { user: Employee, onBack?: () => void
         } else {
           throw new Error('Bạn phải chọn vật tư từ Danh mục, không được tự nhập mới!');
         }
+      }
+
+      if (availableStock !== null && Number(formData.quantity) > availableStock) {
+        throw new Error(`Số lượng xuất (${formData.quantity}) vượt quá tồn kho hiện tại (${availableStock})!`);
       }
 
       const payload = {
@@ -435,7 +439,7 @@ export const StockOut = ({ user, onBack }: { user: Employee, onBack?: () => void
                       value={formData.material_id}
                       options={materials}
                       onChange={(val) => setFormData({ ...formData, material_id: val })}
-                      onCreateNew={() => alert('Vui lòng chọn vật tư có trong Danh mục. Để thêm vật tư mới, hãy vào mục Danh mục vật tư.')}
+                      onCreate={() => alert('Vui lòng chọn vật tư có trong Danh mục. Để thêm vật tư mới, hãy vào mục Danh mục vật tư.')}
                       placeholder="Chọn vật tư..."
                       required
                     />

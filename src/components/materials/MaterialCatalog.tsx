@@ -30,8 +30,7 @@ export const MaterialCatalog = ({ user, onBack, onNavigate }: { user: Employee, 
     specification: '',
     unit: '',
     description: '',
-    image_url: '',
-    status: 'Đang sử dụng'
+    image_url: ''
   };
 
   const [formData, setFormData] = useState(initialFormState);
@@ -48,28 +47,15 @@ export const MaterialCatalog = ({ user, onBack, onNavigate }: { user: Employee, 
       const { data, error } = await supabase
         .from('materials')
         .select('*, material_groups(name)')
-        .neq('status', 'Đã xóa')
         .order('name', { ascending: true });
 
       if (error) {
-        console.error('Error fetching materials:', error);
-        if (error.message.includes('column')) {
-          const { data: simpleData, error: simpleError } = await supabase.from('materials').select('id, name').neq('status', 'Đã xóa').order('name');
-          if (simpleError) {
-             const { data: ultraSimpleData, error: ultraSimpleError } = await supabase.from('materials').select('id, name').order('name');
-             if (ultraSimpleError) throw ultraSimpleError;
-             setMaterials(ultraSimpleData || []);
-          } else {
-             setMaterials(simpleData || []);
-          }
-        } else {
-          throw error;
-        }
+        throw error;
       } else {
         setMaterials(data || []);
       }
     } catch (err: any) {
-      console.error('Final error fetching materials:', err);
+      console.error('Error fetching materials:', err);
       alert('Lỗi tải danh mục vật tư: ' + err.message);
     } finally {
       setLoading(false);
@@ -143,8 +129,7 @@ export const MaterialCatalog = ({ user, onBack, onNavigate }: { user: Employee, 
         specification: formData.specification,
         unit: formData.unit,
         description: formData.description,
-        image_url: formData.image_url,
-        status: formData.status || 'Đang sử dụng'
+        image_url: formData.image_url
       };
 
       if (isEditing && formData.id) {
@@ -179,7 +164,7 @@ export const MaterialCatalog = ({ user, onBack, onNavigate }: { user: Employee, 
   const confirmDelete = async () => {
     if (!itemToDelete) return;
     try {
-      const { error } = await supabase.from('materials').update({ status: 'Đã xóa' }).eq('id', itemToDelete);
+      const { error } = await supabase.from('materials').delete().eq('id', itemToDelete);
       if (error) throw error;
       fetchMaterials();
     } catch (err: any) {
@@ -200,7 +185,6 @@ export const MaterialCatalog = ({ user, onBack, onNavigate }: { user: Employee, 
   };
 
   const filteredMaterials = materials.filter(m => {
-    if (m.status === 'Đã xóa') return false;
     const name = m.name || '';
     const code = m.code || '';
     const matchesSearch = name.toLowerCase().includes(searchTerm.toLowerCase()) ||

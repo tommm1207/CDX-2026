@@ -1,5 +1,5 @@
 import { useState, useEffect, FormEvent, useRef, useMemo } from 'react';
-import { Wallet, Plus, Search, Edit, Trash2, X, FileSpreadsheet, Info, ChevronDown } from 'lucide-react';
+import { Wallet, Plus, Search, Edit, Trash2, X, FileSpreadsheet, Info, ChevronDown, ArrowDownCircle, ArrowUpCircle } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { utils, writeFile } from 'xlsx';
 import { supabase } from '../../supabaseClient';

@@ -4,7 +4,6 @@ import { PageBreadcrumb } from '../shared/PageBreadcrumb';
 
 export const Trash = ({ onNavigate, onBack }: { onNavigate: (page: string) => void, onBack: () => void }) => {
   const trashItems = [
-    { id: 'deleted-materials', label: 'Danh sách vật tư xóa', icon: Package, color: 'bg-red-50 text-red-600' },
     { id: 'deleted-warehouses', label: 'Danh sách kho xóa', icon: Warehouse, color: 'bg-orange-50 text-orange-600' },
     { id: 'deleted-slips', label: 'Phiếu nhập xuất đã xóa', icon: Archive, color: 'bg-blue-50 text-blue-600' },
   ];

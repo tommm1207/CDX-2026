@@ -95,7 +95,7 @@ export const Transfer = ({ user, onBack }: { user: Employee, onBack?: () => void
   };
 
   const fetchMaterials = async () => {
-    const { data } = await supabase.from('materials').select('*').neq('status', 'Đã xóa').order('name');
+    const { data } = await supabase.from('materials').select('*').order('name');
     if (data) setMaterials(data);
   };
 
@@ -400,7 +400,7 @@ export const Transfer = ({ user, onBack }: { user: Employee, onBack?: () => void
                       value={formData.material_id}
                       options={materials}
                       onChange={(val) => setFormData({ ...formData, material_id: val })}
-                      onCreateNew={() => alert('Vui lòng chọn vật tư có trong Danh mục!')}
+                      onCreate={(val) => alert('Vui lòng chọn vật tư có trong Danh mục!')}
                       placeholder="Chọn vật tư..."
                       required
                     />

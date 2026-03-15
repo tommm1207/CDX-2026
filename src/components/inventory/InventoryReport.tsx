@@ -27,7 +27,7 @@ export const InventoryReport = ({ user, onBack }: { user: Employee, onBack?: () 
   const fetchReport = async () => {
     setLoading(true);
     try {
-      const { data: materials } = await supabase.from('materials').select('*').neq('status', 'Đã xóa').order('name');
+      const { data: materials } = await supabase.from('materials').select('*').order('name');
       const { data: whs } = await supabase.from('warehouses').select('*').order('name');
       const { data: inventory } = await supabase.from('inventory').select('*');
 

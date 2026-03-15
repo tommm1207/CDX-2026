@@ -78,7 +78,7 @@ export const StockIn = ({ user, onBack, initialStatus }: { user: Employee, onBac
   };
 
   const fetchMaterials = async () => {
-    const { data } = await supabase.from('materials').select('*').neq('status', 'Đã xóa').order('name');
+    const { data } = await supabase.from('materials').select('*').order('name');
     if (data) setMaterials(data);
   };
 
@@ -493,7 +493,7 @@ export const StockIn = ({ user, onBack, initialStatus }: { user: Employee, onBac
                           unit: mat?.unit || formData.unit
                         });
                       }}
-                      onCreateNew={() => alert('Vui lòng chọn vật tư có trong Danh mục. Để thêm vật tư mới, hãy vào mục Danh mục vật tư.')}
+                      onCreate={() => alert('Vui lòng chọn vật tư có trong Danh mục. Để thêm vật tư mới, hãy vào mục Danh mục vật tư.')}
                       placeholder="Chọn vật tư..."
                       required
                     />

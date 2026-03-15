@@ -128,7 +128,7 @@ CREATE TABLE IF NOT EXISTS costs (
   unit_price NUMERIC DEFAULT 0,
   total_amount NUMERIC NOT NULL,
   notes TEXT,
-  cost_category TEXT DEFAULT 'Chi phí',
+  cost_type TEXT DEFAULT 'Chi phí',
   stock_status TEXT DEFAULT 'Chưa nhập',
   status TEXT DEFAULT 'Chờ duyệt',
   created_at TIMESTAMPTZ DEFAULT now()

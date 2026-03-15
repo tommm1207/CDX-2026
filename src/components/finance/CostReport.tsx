@@ -41,7 +41,7 @@ export const CostReport = ({ user, onBack }: { user: Employee, onBack?: () => vo
     unit: '',
     warehouse_name: '',
     notes: '',
-    cost_category: 'Chi phí',
+    cost_type: 'Chi phí',
     stock_status: 'Chưa nhập'
   });
 
@@ -124,7 +124,7 @@ export const CostReport = ({ user, onBack }: { user: Employee, onBack?: () => vo
       items: group.items.map((item: any) => ({
         ...item,
         warehouse_name: item.warehouses?.name || '',
-        cost_category: item.cost_category || 'Chi phí',
+        cost_type: item.cost_type || 'Chi phí',
         stock_status: item.stock_status || 'Chưa nhập'
       }))
     });
@@ -142,7 +142,7 @@ export const CostReport = ({ user, onBack }: { user: Employee, onBack?: () => vo
       unit: '',
       warehouse_name: '',
       notes: '',
-      cost_category: 'Chi phí',
+      cost_type: 'Chi phí',
       stock_status: 'Chưa nhập'
     });
     setShowDetailModal(true);
@@ -229,7 +229,7 @@ export const CostReport = ({ user, onBack }: { user: Employee, onBack?: () => vo
           unit_price: item.unit_price,
           total_amount: item.total_amount,
           notes: item.notes,
-          cost_category: item.cost_category,
+          cost_type: item.cost_type,
           stock_status: item.stock_status
         };
 
@@ -420,7 +420,7 @@ export const CostReport = ({ user, onBack }: { user: Employee, onBack?: () => vo
                   <DetailItem label="Tên kho" value={selectedItem.warehouses?.name || 'N/A'} />
                   <DetailItem label="Người chi" value={selectedItem.users?.full_name} />
                   <DetailItem label="TT" value={String(selectedGroup.items.indexOf(selectedItem) + 1).padStart(2, '0')} />
-                  <DetailItem label="Loại hình chi" value={selectedItem.cost_category || 'N/A'} />
+                  <DetailItem label="Loại hình chi" value={selectedItem.cost_type || 'N/A'} />
                   <DetailItem label="Tình trạng nhập kho" value={selectedItem.stock_status || 'N/A'} />
                   <DetailItem label="Ghi chú" value={selectedItem.notes || 'Không có ghi chú'} className="col-span-full" />
                   <div className="col-span-full pt-4 border-t border-gray-50">
@@ -641,8 +641,8 @@ export const CostReport = ({ user, onBack }: { user: Employee, onBack?: () => vo
                             <button
                               key={cat}
                               type="button"
-                              onClick={() => setDetailForm({ ...detailForm, cost_category: cat })}
-                              className={`flex-1 py-1.5 rounded-lg text-[10px] font-bold transition-colors ${detailForm.cost_category === cat ? 'bg-primary text-white' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'}`}
+                              onClick={() => setDetailForm({ ...detailForm, cost_type: cat })}
+                              className={`flex-1 py-1.5 rounded-lg text-[10px] font-bold transition-colors ${detailForm.cost_type === cat ? 'bg-primary text-white' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'}`}
                             >
                               {cat}
                             </button>
@@ -684,8 +684,9 @@ export const CostReport = ({ user, onBack }: { user: Employee, onBack?: () => vo
               </div>
 
               <div className="p-6 border-t border-gray-100 flex justify-end gap-3">
-                <button onClick={() => setShowDetailModal(false)} className="px-6 py-2 rounded-xl text-sm font-bold text-gray-500 hover:bg-gray-100 transition-colors">Hủy</button>
+                <button type="button" onClick={() => setShowDetailModal(false)} className="px-6 py-2 rounded-xl text-sm font-bold text-gray-500 hover:bg-gray-100 transition-colors">Hủy</button>
                 <button
+                  type="button"
                   onClick={handleSaveDetail}
                   className="px-8 py-2 rounded-xl bg-primary text-white text-sm font-bold hover:bg-primary-hover transition-all shadow-lg shadow-primary/20"
                 >

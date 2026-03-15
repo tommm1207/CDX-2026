@@ -36,9 +36,9 @@ export const CostFilter = ({ user, onBack }: { user: Employee, onBack?: () => vo
 
   const fetchFilterOptions = async () => {
     // Fetch unique categories
-    const { data: catData } = await supabase.from('costs').select('cost_category');
+    const { data: catData } = await supabase.from('costs').select('cost_type');
     if (catData) {
-      const unique = Array.from(new Set(catData.map(i => i.cost_category).filter(Boolean)))
+      const unique = Array.from(new Set(catData.map(i => i.cost_type).filter(Boolean)))
         .map((name, id) => ({ id, name }));
       setCategories(unique);
     }
@@ -73,7 +73,7 @@ export const CostFilter = ({ user, onBack }: { user: Employee, onBack?: () => vo
         .gte('date', filters.fromDate)
         .lte('date', filters.toDate);
 
-      if (filters.category) query = query.ilike('cost_category', `%${filters.category}%`);
+      if (filters.category) query = query.ilike('cost_type', `%${filters.category}%`);
       if (filters.warehouse) {
         const wh = warehouses.find(w => w.name === filters.warehouse);
         if (wh) query = query.eq('warehouse_id', wh.id);
@@ -312,7 +312,7 @@ export const CostFilter = ({ user, onBack }: { user: Employee, onBack?: () => vo
                   <DetailItem label="Ngày chi" value={formatDate(selectedCost.date)} />
                   <DetailItem label="Người chi" value={selectedCost.users?.full_name} />
                   <DetailItem label="Nội dung" value={selectedCost.content} className="col-span-2" />
-                  <DetailItem label="Nhóm chi phí" value={selectedCost.cost_category} />
+                  <DetailItem label="Nhóm chi phí" value={selectedCost.cost_type} />
                   <DetailItem label="Loại hình" value={selectedCost.cost_type} />
                   <DetailItem label="Kho" value={selectedCost.warehouses?.name || 'N/A'} />
                   <DetailItem label="Đơn vị tính" value={selectedCost.unit} />

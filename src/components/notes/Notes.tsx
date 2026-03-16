@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { supabase } from '../../supabaseClient';
 import { Employee } from '../../types';
 import { PageBreadcrumb } from '../shared/PageBreadcrumb';
+import { ToastType } from '../shared/Toast';
 
 export const WEATHER_OPTIONS = [
   { value: 'sunny', label: '☀️ Nắng nóng gay gắt' },
@@ -18,8 +19,6 @@ export const WEATHER_OPTIONS = [
   { value: 'pleasant', label: '🌤️ Trời trong xanh, nắng dịu' },
 ];
 
-import { ToastType } from '../shared/Toast';
-
 export const Notes = ({ user, onBack, addToast }: { user: Employee, onBack: () => void, addToast?: (msg: string, type?: ToastType) => void }) => {
   const [notes, setNotes] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -27,6 +26,8 @@ export const Notes = ({ user, onBack, addToast }: { user: Employee, onBack: () =
   const [showAddNew, setShowAddNew] = useState(false);
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [warehouses, setWarehouses] = useState<any[]>([]);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   const [filters, setFilters] = useState({
     fromDate: '',
@@ -74,13 +75,26 @@ export const Notes = ({ user, onBack, addToast }: { user: Employee, onBack: () =
       return;
     }
 
-    const { error } = await supabase.from('notes').insert([{
-      ...formData,
-      created_by: user.id
-    }]);
-    if (!error) {
+    try {
+      if (editingId) {
+        const { error } = await supabase.from('notes').update({
+          ...formData,
+          created_by: user.id
+        }).eq('id', editingId);
+        if (error) throw error;
+        if (addToast) addToast('Cập nhật ghi chú thành công!', 'success');
+      } else {
+        const { error } = await supabase.from('notes').insert([{
+          ...formData,
+          created_by: user.id
+        }]);
+        if (error) throw error;
+        if (addToast) addToast('Lưu ghi chú thành công!', 'success');
+      }
+
       setShowQuickNote(false);
       setShowAddNew(false);
+      setEditingId(null);
       setFormData({
         content: '',
         date: new Date().toISOString().split('T')[0],
@@ -92,9 +106,41 @@ export const Notes = ({ user, onBack, addToast }: { user: Employee, onBack: () =
         related_personnel: []
       });
       fetchData();
-      if (addToast) addToast('Lưu ghi chú thành công!', 'success');
-    } else {
-      if (addToast) addToast('Lỗi khi lưu ghi chú', 'error');
+    } catch (error: any) {
+      if (addToast) addToast('Lỗi: ' + error.message, 'error');
+    }
+  };
+
+  const handleEdit = (note: any) => {
+    setFormData({
+      content: note.content || '',
+      date: note.date || new Date().toISOString().split('T')[0],
+      weather: note.weather || '',
+      related_object: note.related_object || '',
+      object_code: note.object_code || '',
+      note_code: note.note_code || '',
+      location: note.location || '',
+      related_personnel: note.related_personnel || []
+    });
+    setEditingId(note.id);
+    setShowAddNew(true);
+  };
+
+  const confirmDelete = (id: string) => {
+    setDeletingId(id);
+  };
+
+  const executeDelete = async () => {
+    if (!deletingId) return;
+    try {
+      const { error } = await supabase.from('notes').delete().eq('id', deletingId);
+      if (error) throw error;
+      if (addToast) addToast('Đã xóa ghi chú thành công!', 'success');
+      setDeletingId(null);
+      fetchData();
+    } catch (error: any) {
+      if (addToast) addToast('Lỗi khi xóa: ' + error.message, 'error');
+      setDeletingId(null);
     }
   };
 
@@ -118,7 +164,20 @@ export const Notes = ({ user, onBack, addToast }: { user: Employee, onBack: () =
             <FileText size={18} /> Ghi chú nhanh
           </button>
           <button
-            onClick={() => setShowAddNew(true)}
+            onClick={() => {
+              setEditingId(null);
+              setFormData({
+                content: '',
+                date: new Date().toISOString().split('T')[0],
+                weather: '',
+                related_object: '',
+                object_code: '',
+                note_code: '',
+                location: '',
+                related_personnel: []
+              });
+              setShowAddNew(true);
+            }}
             className="flex items-center gap-2 px-4 py-2 bg-white text-gray-700 border border-gray-200 rounded-xl text-sm font-bold hover:bg-gray-50 transition-all shadow-sm"
           >
             <Plus size={18} /> Thêm mới
@@ -217,8 +276,8 @@ export const Notes = ({ user, onBack, addToast }: { user: Employee, onBack: () =
                   <td className="px-4 py-3 text-sm text-gray-600">{note.location || '0.000000, 0.000000'}</td>
                   <td className="px-4 py-3">
                     <div className="flex items-center justify-center gap-2">
-                      <button className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition-all"><Edit size={14} /></button>
-                      <button className="p-1.5 text-red-600 hover:bg-red-50 rounded-lg transition-all"><Trash2 size={14} /></button>
+                      <button onClick={() => handleEdit(note)} className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition-all"><Edit size={14} /></button>
+                      <button onClick={() => confirmDelete(note.id)} className="p-1.5 text-red-600 hover:bg-red-50 rounded-lg transition-all"><Trash2 size={14} /></button>
                     </div>
                   </td>
                 </tr>
@@ -272,14 +331,17 @@ export const Notes = ({ user, onBack, addToast }: { user: Employee, onBack: () =
                   </div>
                 </div>
                 <div>
-                  <label className="text-[10px] font-bold text-gray-400 uppercase">Đối tượng liên quan</label>
-                  <input
-                    type="text"
-                    placeholder="VD: Chuẩn bị vật tư..."
+                  <label className="text-[10px] font-bold text-gray-400 uppercase">Nhân sự liên quan</label>
+                  <select
                     value={formData.related_object}
                     onChange={e => setFormData({ ...formData, related_object: e.target.value })}
                     className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm focus:ring-2 focus:ring-primary/20 outline-none mt-1"
-                  />
+                  >
+                    <option value="">-- Chọn nhân sự --</option>
+                    {employees.map(emp => (
+                      <option key={emp.id} value={emp.full_name}>{emp.full_name}</option>
+                    ))}
+                  </select>
                 </div>
                 <div>
                   <label className="text-[10px] font-bold text-gray-400 uppercase">Nhân sự liên quan</label>
@@ -323,14 +385,23 @@ export const Notes = ({ user, onBack, addToast }: { user: Employee, onBack: () =
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setShowAddNew(false)} className="absolute inset-0 bg-black/40 backdrop-blur-sm" />
             <motion.div initial={{ opacity: 0, scale: 0.95, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95, y: 20 }} className="bg-white rounded-3xl shadow-2xl w-full max-w-4xl overflow-hidden relative z-10">
               <div className="p-6 border-b border-gray-50 flex items-center justify-between bg-primary">
-                <h3 className="text-lg font-bold text-white uppercase tracking-wide">Thêm Mới</h3>
-                <button onClick={() => setShowAddNew(false)} className="p-2 hover:bg-white/10 rounded-full transition-colors"><X size={20} className="text-white" /></button>
+                <h3 className="text-lg font-bold text-white uppercase tracking-wide">{editingId ? 'Chỉnh sửa ghi chú' : 'Thêm Mới'}</h3>
+                <button onClick={() => { setShowAddNew(false); setEditingId(null); }} className="p-2 hover:bg-white/10 rounded-full transition-colors"><X size={20} className="text-white" /></button>
               </div>
               <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-6 max-h-[70vh] overflow-y-auto">
                 <div className="space-y-4">
                   <div>
-                    <label className="text-[10px] font-bold text-gray-400 uppercase">Đối tượng liên quan</label>
-                    <input type="text" value={formData.related_object} onChange={e => setFormData({ ...formData, related_object: e.target.value })} className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm focus:ring-2 focus:ring-primary/20 outline-none mt-1" />
+                    <label className="text-[10px] font-bold text-gray-400 uppercase">Nhân sự liên quan</label>
+                    <select 
+                      value={formData.related_object} 
+                      onChange={e => setFormData({ ...formData, related_object: e.target.value })} 
+                      className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm focus:ring-2 focus:ring-primary/20 outline-none mt-1"
+                    >
+                      <option value="">-- Chọn nhân sự --</option>
+                      {employees.map(emp => (
+                        <option key={emp.id} value={emp.full_name}>{emp.full_name}</option>
+                      ))}
+                    </select>
                   </div>
                   <div>
                     <label className="text-[10px] font-bold text-gray-400 uppercase">Mã ghi chú</label>
@@ -365,20 +436,35 @@ export const Notes = ({ user, onBack, addToast }: { user: Employee, onBack: () =
                     <label className="text-[10px] font-bold text-gray-400 uppercase">Người tạo</label>
                     <input type="text" value={user.full_name} disabled className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm bg-gray-50 mt-1" />
                   </div>
-                  <div>
-                    <label className="text-[10px] font-bold text-gray-400 uppercase">Ghi chú thêm</label>
-                    <textarea 
-                      value={formData.content} 
-                      onChange={e => setFormData({ ...formData, content: e.target.value })}
-                      className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm focus:ring-2 focus:ring-primary/20 outline-none mt-1 min-h-[80px]" 
-                      placeholder="Ghi chú thêm..." 
-                    />
-                  </div>
+                  <div className="flex-1" />
                 </div>
               </div>
               <div className="p-6 bg-gray-50 flex justify-end gap-3">
-                <button onClick={() => setShowAddNew(false)} className="px-6 py-2.5 text-gray-500 font-bold text-sm hover:bg-gray-100 rounded-xl transition-all">Hủy bỏ</button>
-                <button onClick={handleSave} className="px-8 py-2.5 bg-primary text-white rounded-xl font-bold text-sm hover:bg-primary-dark transition-all shadow-lg shadow-primary/20">Lưu dữ liệu</button>
+                <button onClick={() => { setShowAddNew(false); setEditingId(null); }} className="px-6 py-2.5 text-gray-500 font-bold text-sm hover:bg-gray-100 rounded-xl transition-all">Hủy bỏ</button>
+                <button onClick={handleSave} className="px-8 py-2.5 bg-primary text-white rounded-xl font-bold text-sm hover:bg-primary-dark transition-all shadow-lg shadow-primary/20">
+                  {editingId ? 'Cập nhật dữ liệu' : 'Lưu dữ liệu'}
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {deletingId && (
+          <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setDeletingId(null)} className="absolute inset-0 bg-black/40 backdrop-blur-sm" />
+            <motion.div initial={{ opacity: 0, scale: 0.95, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95, y: 20 }} className="bg-white rounded-3xl shadow-2xl overflow-hidden relative z-10 w-full max-w-sm">
+              <div className="p-6 text-center space-y-4">
+                <div className="w-16 h-16 bg-red-100 text-red-500 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <Trash2 size={32} />
+                </div>
+                <h3 className="text-xl font-bold text-gray-900">Xác nhận xóa?</h3>
+                <p className="text-gray-500 text-sm">Bạn có chắc chắn muốn xóa ghi chú này không? Hành động này không thể hoàn tác.</p>
+                <div className="flex gap-3 pt-4">
+                  <button onClick={() => setDeletingId(null)} className="flex-1 px-4 py-3 bg-gray-100 text-gray-700 rounded-xl font-bold hover:bg-gray-200 transition-colors">Hủy</button>
+                  <button onClick={executeDelete} className="flex-1 px-4 py-3 bg-red-500 text-white rounded-xl font-bold hover:bg-red-600 transition-colors shadow-lg shadow-red-500/30">Xác nhận Xóa</button>
+                </div>
               </div>
             </motion.div>
           </div>

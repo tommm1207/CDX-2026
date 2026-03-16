@@ -20,7 +20,9 @@ export const Transfer = ({ user, onBack }: { user: Employee, onBack?: () => void
   const [materials, setMaterials] = useState<any[]>([]);
   const [submitting, setSubmitting] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [availableStock, setAvailableStock] = useState<number | null>(null);
+  const [stockLoading, setStockLoading] = useState(false);
 
   const initialFormState = {
     date: new Date().toISOString().split('T')[0],
@@ -47,7 +49,7 @@ export const Transfer = ({ user, onBack }: { user: Employee, onBack?: () => void
     } else {
       setAvailableStock(null);
     }
-  }, [formData.from_warehouse_id, formData.material_id, formData.date]);
+  }, [formData.from_warehouse_id, formData.material_id, formData.date, editingId]);
 
   const checkStock = async () => {
     try {
@@ -56,10 +58,13 @@ export const Transfer = ({ user, onBack }: { user: Employee, onBack?: () => void
 
       if (!fromWh?.id || !mat?.id || !formData.date) return;
 
-      const stock = await getAvailableStock(mat.id, fromWh.id, formData.date);
+      setStockLoading(true);
+      const stock = await getAvailableStock(mat.id, fromWh.id, formData.date, editingId || undefined);
       setAvailableStock(stock);
     } catch (err) {
       console.error('Error checking stock:', err);
+    } finally {
+      setStockLoading(false);
     }
   };
 
@@ -94,10 +99,7 @@ export const Transfer = ({ user, onBack }: { user: Employee, onBack?: () => void
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
-    if (availableStock !== null && formData.quantity > availableStock) {
-      alert(`Số lượng chuyển (${formData.quantity}) vượt quá tồn kho hiện tại (${availableStock})`);
-      return;
-    }
+
     setSubmitting(true);
     try {
       let finalFromWhId = formData.from_warehouse_id;
@@ -131,6 +133,12 @@ export const Transfer = ({ user, onBack }: { user: Employee, onBack?: () => void
         else throw new Error('Bạn phải chọn vật tư từ Danh mục!');
       }
 
+      // Final stock check
+      const stockAtDate = await getAvailableStock(finalMaterialId, finalFromWhId, formData.date, editingId || undefined);
+      if (formData.quantity > stockAtDate) {
+        throw new Error(`Số lượng chuyển (${formData.quantity}) vượt quá tồn kho hiện tại (${stockAtDate}) tại ngày ${formData.date}`);
+      }
+
       const payload = {
         ...formData,
         from_warehouse_id: finalFromWhId,
@@ -155,6 +163,8 @@ export const Transfer = ({ user, onBack }: { user: Employee, onBack?: () => void
       fetchSlips();
       setFormData(initialFormState);
       setIsEditing(false);
+      setEditingId(null);
+      setAvailableStock(null);
       setSelectedSlip(null);
     } catch (err: any) {
       alert('Lỗi: ' + err.message);
@@ -179,6 +189,7 @@ export const Transfer = ({ user, onBack }: { user: Employee, onBack?: () => void
       status: 'Chờ duyệt'
     });
     setIsEditing(true);
+    setEditingId(selectedSlip.id);
     setShowDetailModal(false);
     setShowModal(true);
   };
@@ -188,6 +199,7 @@ export const Transfer = ({ user, onBack }: { user: Employee, onBack?: () => void
     try {
       const { error } = await supabase.from('transfers').update({ status: 'Đã xóa' }).eq('id', selectedSlip.id);
       if (error) throw error;
+      setAvailableStock(null);
       setShowDetailModal(false);
       fetchSlips();
     } catch (err: any) {
@@ -203,7 +215,7 @@ export const Transfer = ({ user, onBack }: { user: Employee, onBack?: () => void
           <h2 className="text-xl font-bold text-gray-800 flex items-center gap-2">
             <ArrowLeftRight className="text-orange-500" /> Luân chuyển kho
           </h2>
-          <p className="text-xs text-gray-500 mt-1">Điều chuyển vật tư giữa các kho</p>
+          <p className="text-xs text-gray-500 mt-1">Luân chuyển vật tư giữa các kho</p>
         </div>
         <button
           onClick={() => {
@@ -212,6 +224,8 @@ export const Transfer = ({ user, onBack }: { user: Employee, onBack?: () => void
               transfer_code: generateCode('LC')
             });
             setIsEditing(false);
+            setEditingId(null); // Reset editingId when creating new
+            setAvailableStock(null); // Reset available stock
             setShowModal(true);
           }}
           className="flex items-center gap-2 px-4 py-2 bg-orange-500 text-white rounded-xl text-sm font-bold hover:bg-orange-600 transition-colors shadow-lg shadow-orange-500/20"
@@ -278,7 +292,7 @@ export const Transfer = ({ user, onBack }: { user: Employee, onBack?: () => void
               className="bg-white rounded-3xl shadow-2xl w-full max-w-lg overflow-hidden"
             >
               <div className="bg-orange-500 p-6 text-white flex items-center justify-between">
-                <h3 className="font-bold text-lg">Chi tiết phiếu điều chuyển</h3>
+                <h3 className="font-bold text-lg">Chi tiết phiếu luân chuyển</h3>
                 <button onClick={() => setShowDetailModal(false)} className="p-2 hover:bg-white/10 rounded-full transition-colors"><X size={20} /></button>
               </div>
               <div className="p-6 space-y-4">
@@ -346,7 +360,7 @@ export const Transfer = ({ user, onBack }: { user: Employee, onBack?: () => void
               <div className="bg-orange-500 p-6 text-white flex items-center justify-between rounded-t-3xl flex-shrink-0">
                 <div className="flex items-center gap-3">
                   <div className="p-2 bg-white/20 rounded-xl"><ArrowLeftRight size={24} /></div>
-                  <h3 className="font-bold text-lg">Điều chuyển kho</h3>
+                  <h3 className="font-bold text-lg">Luân chuyển kho</h3>
                 </div>
                 <button onClick={() => setShowModal(false)} className="p-2 hover:bg-white/10 rounded-full transition-colors"><X size={20} /></button>
               </div>
@@ -359,11 +373,11 @@ export const Transfer = ({ user, onBack }: { user: Employee, onBack?: () => void
                       <input 
                         type="date" 
                         required 
-                        disabled
                         value={formData.date} 
                         onChange={(e) => setFormData({ ...formData, date: e.target.value })} 
-                        className="w-full px-4 py-2 rounded-xl border border-gray-100 text-sm outline-none bg-gray-50 text-gray-400 cursor-not-allowed" 
+                        className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-orange-500/20" 
                       />
+                      <p className="text-[10px] text-gray-400">Tồn kho sẽ được kiểm tra tại ngày này</p>
                     </div>
                     <CreatableSelect
                       label="Từ kho *"
@@ -386,7 +400,7 @@ export const Transfer = ({ user, onBack }: { user: Employee, onBack?: () => void
                   </div>
                   <div className="space-y-4">
                     <CreatableSelect
-                      label="Vật tư điều chuyển *"
+                      label="Vật tư luân chuyển *"
                       value={formData.material_id}
                       options={materials}
                       onChange={(val) => setFormData({ ...formData, material_id: val })}
@@ -401,10 +415,29 @@ export const Transfer = ({ user, onBack }: { user: Employee, onBack?: () => void
                         value={formData.quantity}
                         onChange={(val) => setFormData({ ...formData, quantity: val })}
                       />
-                      {availableStock !== null && (
-                        <p className={`text-[10px] font-bold mt-1 ${availableStock <= 0 ? 'text-red-500' : 'text-green-600'}`}>
-                          Tồn kho hiện tại: {formatNumber(availableStock)}
-                        </p>
+                      {stockLoading && (
+                        <div className="p-3 bg-gray-50 rounded-xl border border-gray-100 mt-1">
+                          <p className="text-[10px] font-bold text-gray-400 uppercase animate-pulse">Đang kiểm tra tồn kho...</p>
+                        </div>
+                      )}
+                      {!stockLoading && availableStock !== null && (
+                        <div className={`p-3 rounded-xl border mt-1 ${
+                          availableStock <= 0
+                            ? 'bg-red-50 border-red-100'
+                            : availableStock <= 5
+                            ? 'bg-amber-50 border-amber-100'
+                            : 'bg-blue-50 border-blue-100'
+                        }`}>
+                          <p className={`text-[10px] font-bold uppercase ${
+                            availableStock <= 0 ? 'text-red-400' : availableStock <= 5 ? 'text-amber-400' : 'text-blue-400'
+                          }`}>Tồn kho tại ngày {formData.date}</p>
+                          <p className={`text-sm font-bold ${
+                            availableStock <= 0 ? 'text-red-600' : availableStock <= 5 ? 'text-amber-600' : 'text-blue-600'
+                          }`}>
+                            {formatNumber(availableStock)} {materials.find(m => m.id === formData.material_id || m.name === formData.material_id)?.unit}
+                            {availableStock <= 0 && ' ⚠ Không đủ tồn kho!'}
+                          </p>
+                        </div>
                       )}
                     </div>
                     <div className="space-y-1">
@@ -414,7 +447,12 @@ export const Transfer = ({ user, onBack }: { user: Employee, onBack?: () => void
                   </div>
                   <div className="md:col-span-2 flex justify-end gap-3 mt-4">
                     <button type="button" onClick={() => setShowModal(false)} className="px-6 py-2 rounded-xl text-sm font-bold text-gray-500 hover:bg-gray-100 transition-colors">Hủy</button>
-                    <button type="submit" disabled={submitting} className="px-8 py-2 rounded-xl bg-orange-500 text-white text-sm font-bold hover:bg-orange-600 transition-colors shadow-lg shadow-orange-500/20 disabled:opacity-50">
+                    <button 
+                      type="submit" 
+                      disabled={submitting || (availableStock !== null && Number(formData.quantity) > availableStock)} 
+                      title={availableStock !== null && Number(formData.quantity) > availableStock ? `Không đủ tồn kho (tồn: ${availableStock})` : undefined}
+                      className="px-8 py-2 rounded-xl bg-orange-500 text-white text-sm font-bold hover:bg-orange-600 transition-colors shadow-lg shadow-orange-500/20 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
                       {submitting ? 'Đang lưu...' : (isEditing ? 'Cập nhật' : 'Lưu phiếu chuyển')}
                     </button>
                   </div>

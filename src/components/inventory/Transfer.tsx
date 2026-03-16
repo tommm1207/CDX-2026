@@ -195,10 +195,11 @@ export const Transfer = ({ user, onBack }: { user: Employee, onBack?: () => void
   };
 
   const handleDelete = async () => {
-    if (!selectedSlip || !confirm('Bạn có chắc chắn muốn xóa phiếu này?')) return;
+    if (!selectedSlip || !confirm('Bạn có chắc chắn muốn chuyển phiếu này vào thùng rác?')) return;
     try {
       const { error } = await supabase.from('transfers').update({ status: 'Đã xóa' }).eq('id', selectedSlip.id);
       if (error) throw error;
+      alert('Đã chuyển phiếu vào thùng rác');
       setAvailableStock(null);
       setShowDetailModal(false);
       fetchSlips();
@@ -336,7 +337,7 @@ export const Transfer = ({ user, onBack }: { user: Employee, onBack?: () => void
                     <Edit size={18} /> Chỉnh sửa
                   </button>
                   <button onClick={handleDelete} className="flex-1 flex items-center justify-center gap-2 py-2 bg-red-50 text-red-600 rounded-xl text-sm font-bold hover:bg-red-100 transition-colors">
-                    <Trash2 size={18} /> Xóa phiếu
+                    <Trash2 size={18} /> Chuyển vào thùng rác
                   </button>
                   <button onClick={() => setShowDetailModal(false)} className="flex-1 py-2 bg-gray-100 text-gray-500 rounded-xl text-sm font-bold hover:bg-gray-200 transition-colors">
                     Đóng

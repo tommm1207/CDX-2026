@@ -232,19 +232,22 @@ export const Dashboard = ({ user, onNavigate, addToast }: DashboardProps) => {
           </h1>
           <p className="text-gray-500 font-medium">Chúc bạn một ngày làm việc hiệu quả tại CDX.</p>
         </div>
-        <div className="flex items-center gap-3 bg-white p-2 rounded-2xl shadow-sm border border-gray-100">
-          <div className="w-12 h-12 bg-primary/10 rounded-xl flex items-center justify-center text-primary">
-            <LayoutDashboard size={24} />
-          </div>
-          <div className="pr-4 border-r border-gray-100">
-            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest leading-none mb-1">Dự án</p>
-            <p className="text-sm font-black text-gray-800 leading-none">CDX - 2026</p>
-          </div>
-          <div className="pl-2">
-            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest leading-none mb-1">Vai trò</p>
-            <p className="text-sm font-black text-primary leading-none uppercase">{user.role}</p>
-          </div>
-        </div>
+          <button 
+            onClick={() => onNavigate('user-manual')}
+            className="flex items-center gap-3 bg-primary p-2 rounded-2xl shadow-lg shadow-primary/20 hover:bg-primary-hover transition-all"
+          >
+            <div className="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center text-white">
+              <FileText size={24} />
+            </div>
+            <div className="pr-4 border-r border-white/20 text-left">
+              <p className="text-[10px] font-bold text-white/70 uppercase tracking-widest leading-none mb-1">Tài liệu</p>
+              <p className="text-sm font-black text-white leading-none">Hướng dẫn app</p>
+            </div>
+            <div className="pl-2 text-left">
+              <p className="text-[10px] font-bold text-white/70 uppercase tracking-widest leading-none mb-1">Vai trò</p>
+              <p className="text-sm font-black text-white leading-none uppercase">{user.role}</p>
+            </div>
+          </button>
       </div>
 
       {/* Quick Actions */}

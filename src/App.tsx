@@ -85,6 +85,7 @@ import { Backup } from './components/settings/Backup';
 import { BackupNow } from './components/settings/BackupNow';
 
 import { Notifications } from './components/notifications/Notifications';
+import { UserManual } from './components/shared/UserManual';
 
 const LOGO_URL = "/logo.png";
 
@@ -309,7 +310,7 @@ export default function App() {
       case 'transfer': return <Transfer user={user} onBack={goBack} />;
       case 'cost-report': return <CostReport user={user} onBack={goBack} />;
       case 'cost-filter': return <CostFilter user={user} onBack={goBack} />;
-      case 'advances': return <Advances user={user} onBack={goBack} />;
+      case 'advances': return <Advances user={user} onBack={goBack} addToast={addToast} />;
       case 'payroll': return <MonthlySalary user={user} onBack={goBack} />;
       case 'salary-settings':
         if (user.role !== 'Admin' && user.role !== 'Admin App') return <Dashboard user={user} onNavigate={navigateTo} />;
@@ -320,6 +321,7 @@ export default function App() {
       case 'partners': return <PlaceholderPage title="Khách hàng & nhà cung cấp" onBack={goBack} />;
       case 'inventory-report': return <InventoryReport user={user} onBack={goBack} />;
       case 'trash': return <Trash onNavigate={navigateTo} onBack={goBack} />;
+      case 'user-manual': return <UserManual user={user} onBack={goBack} />;
       case 'deleted-warehouses': return <DeletedWarehouses onBack={goBack} />;
       case 'deleted-slips': return <DeletedSlips onBack={goBack} />;
       case 'deleted-employees': return <DeletedEmployees onBack={goBack} addToast={addToast} />;

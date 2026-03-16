@@ -213,6 +213,7 @@ export const Costs = ({ user, onBack }: { user: Employee, onBack?: () => void })
       const { error } = await supabase.from('costs').update({ status: 'Đã xóa' }).eq('id', itemToDelete);
       if (error) throw error;
       fetchCosts();
+      alert('Đã chuyển vào thùng rác');
       setShowDeleteModal(false);
       setItemToDelete(null);
     } catch (err: any) {
@@ -454,7 +455,7 @@ export const Costs = ({ user, onBack }: { user: Employee, onBack?: () => void })
                     onClick={() => { setShowDetailModal(false); handleDeleteClick(selectedCost.id); }}
                     className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl bg-red-50 text-red-600 font-bold hover:bg-red-100 transition-colors"
                   >
-                    <Trash2 size={18} /> Xóa
+                    <Trash2 size={18} /> Chuyển vào thùng rác
                   </button>
                 </div>
               </div>
@@ -475,8 +476,8 @@ export const Costs = ({ user, onBack }: { user: Employee, onBack?: () => void })
               <div className="w-16 h-16 bg-red-50 text-red-600 rounded-full flex items-center justify-center mx-auto mb-4">
                 <Trash2 size={32} />
               </div>
-              <h3 className="text-lg font-bold text-gray-800 mb-2">Xác nhận xóa?</h3>
-              <p className="text-sm text-gray-500 mb-6">Hành động này không thể hoàn tác. Bạn có chắc chắn muốn xóa bản ghi này?</p>
+              <h3 className="text-lg font-bold text-gray-800 mb-2">Chuyển vào thùng rác?</h3>
+              <p className="text-sm text-gray-500 mb-6">Bạn có chắc chắn muốn chuyển bản ghi này vào thùng rác?</p>
               <div className="flex gap-3">
                 <button
                   onClick={() => setShowDeleteModal(false)}
@@ -484,12 +485,12 @@ export const Costs = ({ user, onBack }: { user: Employee, onBack?: () => void })
                 >
                   Hủy bỏ
                 </button>
-                <button
-                  onClick={confirmDelete}
-                  className="flex-1 px-4 py-2 rounded-xl bg-red-600 text-white text-sm font-bold hover:bg-red-700 transition-colors"
-                >
-                  Xóa ngay
-                </button>
+                  <button
+                    onClick={confirmDelete}
+                    className="flex-1 px-4 py-2 rounded-xl bg-red-600 text-white text-sm font-bold hover:bg-red-700 transition-colors"
+                  >
+                    Di chuyển
+                  </button>
               </div>
             </motion.div>
           </div>

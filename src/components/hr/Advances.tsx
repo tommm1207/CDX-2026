@@ -1,5 +1,5 @@
 import { useState, useEffect, FormEvent } from 'react';
-import { Plus, X, Edit2, Trash2 } from 'lucide-react';
+import { Plus, X, Edit2, Trash2, AlertTriangle } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { supabase } from '../../supabaseClient';
 import { Employee } from '../../types';
@@ -8,7 +8,7 @@ import { NumericInput } from '../shared/NumericInput';
 import { CreatableSelect } from '../shared/CreatableSelect';
 import { formatDate, formatCurrency } from '../../utils/format';
 
-export const Advances = ({ user, onBack }: { user: Employee, onBack?: () => void }) => {
+export const Advances = ({ user, onBack, addToast }: { user: Employee, onBack?: () => void, addToast?: (msg: string, type?: any) => void }) => {
   const [advances, setAdvances] = useState<any[]>([]);
   const [allowances, setAllowances] = useState<any[]>([]);
   const [employees, setEmployees] = useState<Employee[]>([]);
@@ -28,6 +28,8 @@ export const Advances = ({ user, onBack }: { user: Employee, onBack?: () => void
   const [formData, setFormData] = useState(initialFormState);
   const [isEditing, setIsEditing] = useState(false);
   const [selectedItem, setSelectedItem] = useState<any>(null);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   useEffect(() => {
     fetchData();
@@ -55,7 +57,7 @@ export const Advances = ({ user, onBack }: { user: Employee, onBack?: () => void
         amount: formData.amount,
         date: formData.date,
         type: activeTab === 'advances' ? 'Tạm ứng' : formData.type,
-        notes: formData.reason
+        reason: formData.reason // Changed from notes to reason to match initialFormState and common pattern
       };
 
       if (isEditing && selectedItem) {
@@ -71,6 +73,8 @@ export const Advances = ({ user, onBack }: { user: Employee, onBack?: () => void
       setFormData(initialFormState);
       setIsEditing(false);
       setSelectedItem(null);
+      if (addToast) addToast('Đã lưu dữ liệu thành công!', 'success');
+      else alert('Đã lưu dữ liệu thành công!');
     } catch (err: any) {
       alert('Lỗi: ' + err.message);
     } finally {
@@ -84,24 +88,49 @@ export const Advances = ({ user, onBack }: { user: Employee, onBack?: () => void
       employee_id: item.employee_id,
       amount: item.amount,
       date: item.date,
-      reason: item.notes || '',
+      reason: item.reason || item.notes || '',
       type: item.type
     });
     setIsEditing(true);
     setShowModal(true);
   };
 
-  const handleDelete = async (id: string) => {
-    if (!confirm('Bạn có chắc chắn muốn xóa?')) return;
+  const handleDelete = async () => {
+    if (!deletingId) return;
+    
     try {
-      const { error } = await supabase.from(activeTab === 'advances' ? 'advances' : 'allowances').delete().eq('id', id);
-      if (error) throw error;
+      console.log(`[CDX] Attempting to delete from ${activeTab}...`);
+      if (addToast) addToast('Đang thực hiện xóa...', 'info');
+      
+      const table = activeTab === 'advances' ? 'advances' : 'allowances';
+      const { error, status } = await supabase
+        .from(table)
+        .delete()
+        .eq('id', deletingId);
+      
+      if (error) {
+        console.error(`[CDX] Error deleting from ${table}:`, error);
+        throw new Error(`${error.message} (Status: ${status})`);
+      }
+      
+      console.log('[CDX] Deletion successful');
+      if (addToast) addToast('Xóa thành công!', 'success');
+      
+      setShowDeleteModal(false);
+      setDeletingId(null);
       fetchData();
     } catch (err: any) {
-      alert('Lỗi: ' + err.message);
+      console.error('[CDX] Deletion failed:', err);
+      if (addToast) addToast('Không thể xóa: ' + err.message, 'error');
+      else alert('Không thể xóa: ' + err.message);
     }
   };
 
+  const confirmDelete = (id: string) => {
+    console.log('[CDX] confirmDelete called for ID:', id);
+    setDeletingId(id);
+    setShowDeleteModal(true);
+  };
   return (
     <div className="p-4 md:p-6 space-y-6 pb-44">
       <PageBreadcrumb title="Tạm ứng & Phụ cấp" onBack={onBack} />
@@ -146,9 +175,30 @@ export const Advances = ({ user, onBack }: { user: Employee, onBack?: () => void
                   <td className="px-4 py-3 text-xs text-gray-500 italic">
                     <div className="flex items-center justify-between">
                       <span>{item.reason || item.notes || item.type || '-'}</span>
-                      <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <button onClick={() => handleEdit(item)} className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"><Edit2 size={14} /></button>
-                        <button onClick={() => handleDelete(item.id)} className="p-1.5 text-red-600 hover:bg-red-50 rounded-lg transition-colors"><Trash2 size={14} /></button>
+                      <div className="flex items-center gap-1">
+                        <button 
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleEdit(item);
+                          }} 
+                          className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors border border-blue-100" 
+                          title="Sửa"
+                        >
+                          <Edit2 size={14} />
+                        </button>
+                        <button 
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            console.log('[CDX] Delete button clicked for item:', item.id);
+                            confirmDelete(item.id);
+                          }} 
+                          className="p-1.5 text-red-600 hover:bg-red-50 rounded-lg transition-colors border border-red-100" 
+                          title="Xóa"
+                        >
+                          <Trash2 size={14} />
+                        </button>
                       </div>
                     </div>
                   </td>
@@ -208,6 +258,44 @@ export const Advances = ({ user, onBack }: { user: Employee, onBack?: () => void
                   {submitting ? 'Đang lưu...' : 'Lưu dữ liệu'}
                 </button>
               </form>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {showDeleteModal && (
+          <div className="fixed inset-0 z-[120] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
+            <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} className="bg-white rounded-3xl shadow-2xl w-full max-w-sm overflow-hidden p-6 text-center space-y-4">
+              <div className="w-16 h-16 bg-red-50 text-red-600 rounded-2xl flex items-center justify-center mx-auto mb-2 border border-red-100">
+                <AlertTriangle size={32} />
+              </div>
+              <div>
+                <h3 className="text-xl font-bold text-gray-900">Xóa vĩnh viễn</h3>
+                <p className="text-sm text-gray-500 mt-2">
+                  Bạn có chắc chắn muốn xóa vĩnh viễn mục này không?
+                </p>
+                <div className="mt-3 p-3 bg-red-50 rounded-xl border border-red-100">
+                  <p className="text-[11px] font-bold text-red-600 leading-tight">
+                    Hành động này sẽ giải phóng dữ liệu liên quan và KHÔNG THỂ hoàn tác!
+                  </p>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-3 pt-2">
+                <button 
+                  onClick={() => { setShowDeleteModal(false); setDeletingId(null); }} 
+                  className="py-3 px-4 rounded-xl bg-gray-100 text-sm font-bold text-gray-600 hover:bg-gray-200 transition-colors"
+                >
+                  Hủy bỏ
+                </button>
+                <button 
+                  onClick={handleDelete} 
+                  className="py-3 px-4 rounded-xl bg-red-600 text-white text-sm font-bold shadow-lg shadow-red-200 hover:bg-red-700 transition-all flex items-center justify-center gap-2"
+                >
+                  <Trash2 size={16} />
+                  Xóa vĩnh viễn
+                </button>
+              </div>
             </motion.div>
           </div>
         )}

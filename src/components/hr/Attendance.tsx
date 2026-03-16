@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { CalendarCheck, Plus, X } from 'lucide-react';
+import { CalendarCheck, Plus, X, Users, Check } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { supabase } from '../../supabaseClient';
 import { Employee } from '../../types';
@@ -84,6 +84,94 @@ export const Attendance = ({ user, onBack }: { user: Employee, onBack?: () => vo
     fetchData();
   };
 
+  const [showBulkModal, setShowBulkModal] = useState(false);
+  const [selectedEmployees, setSelectedEmployees] = useState<string[]>([]);
+  const [bulkFormData, setBulkFormData] = useState({
+    status: 'present',
+    overtime: 0,
+    date: new Date().toISOString().split('T')[0]
+  });
+
+  const openBulkModal = () => {
+    setSelectedEmployees([]);
+    setBulkFormData({
+      ...bulkFormData,
+      date: new Date().toISOString().split('T')[0]
+    });
+    setShowBulkModal(true);
+  };
+
+  const saveBulk = async () => {
+    if (selectedEmployees.length === 0) {
+      alert('Vui lòng chọn ít nhất một nhân viên');
+      return;
+    }
+
+    // Convert individual settings into bulk records
+    const bulkRecords = selectedEmployees.map(empId => {
+      const setting = employeeSettings[empId] || { status: 'present', overtime: 0 };
+      const hours = setting.status === 'present' ? 8 : (setting.status === 'half-day' ? 4 : 0);
+      return {
+        employee_id: empId,
+        date: bulkFormData.date,
+        status: setting.status,
+        hours_worked: hours,
+        overtime_hours: setting.overtime
+      };
+    });
+
+    try {
+      // Delete existing records first for accuracy
+      const { error: delError } = await supabase
+        .from('attendance')
+        .delete()
+        .in('employee_id', selectedEmployees)
+        .eq('date', bulkFormData.date);
+        
+      if (delError) throw delError;
+
+      const { error: insError } = await supabase
+        .from('attendance')
+        .insert(bulkRecords);
+
+      if (insError) throw insError;
+
+      setShowBulkModal(false);
+      alert('Đã lưu chấm công hàng loạt thành công!');
+      fetchData();
+    } catch (err: any) {
+      alert('Lỗi: ' + err.message);
+    }
+  };
+
+  const [employeeSettings, setEmployeeSettings] = useState<Record<string, { status: string, overtime: number }>>({});
+
+  useEffect(() => {
+    // Sync settings when selections change
+    const newSettings = { ...employeeSettings };
+    selectedEmployees.forEach(id => {
+      if (!newSettings[id]) {
+        newSettings[id] = { status: bulkFormData.status, overtime: bulkFormData.overtime };
+      }
+    });
+    setEmployeeSettings(newSettings);
+  }, [selectedEmployees]);
+
+  const updateIndividualSetting = (empId: string, field: 'status' | 'overtime', value: any) => {
+    setEmployeeSettings(prev => ({
+      ...prev,
+      [empId]: { ...prev[empId], [field]: value }
+    }));
+  };
+
+  const applyGlobalToSelection = () => {
+    const newSettings = { ...employeeSettings };
+    selectedEmployees.forEach(id => {
+      newSettings[id] = { status: bulkFormData.status, overtime: bulkFormData.overtime };
+    });
+    setEmployeeSettings(newSettings);
+  };
+
   const [showEditModal, setShowEditModal] = useState(false);
   const [editingAtt, setEditingAtt] = useState<any>(null);
   const [editFormData, setEditFormData] = useState({ status: 'present', overtime: 0 });
@@ -118,6 +206,7 @@ export const Attendance = ({ user, onBack }: { user: Employee, onBack?: () => vo
       }]);
     }
     setShowEditModal(false);
+    alert('Đã cập nhật chấm công thành công!');
     fetchData();
   };
 
@@ -140,13 +229,23 @@ export const Attendance = ({ user, onBack }: { user: Employee, onBack?: () => vo
           </h2>
           <p className="text-xs text-gray-500 mt-1">Quản lý chuyên cần và giờ làm việc</p>
         </div>
-        <div className="flex items-center gap-2 bg-white p-1.5 rounded-2xl shadow-sm border border-gray-100">
-          <select value={selectedMonth} onChange={(e) => setSelectedMonth(Number(e.target.value))} className="px-3 py-1.5 rounded-xl border-none text-sm font-bold text-gray-700 outline-none">
-            {Array.from({ length: 12 }, (_, i) => i + 1).map(m => <option key={m} value={m}>Tháng {m}</option>)}
-          </select>
-          <select value={selectedYear} onChange={(e) => setSelectedYear(Number(e.target.value))} className="px-3 py-1.5 rounded-xl border-none text-sm font-bold text-gray-700 outline-none">
-            {[2024, 2025, 2026].map(y => <option key={y} value={y}>Năm {y}</option>)}
-          </select>
+        <div className="flex items-center gap-2">
+          {user.role !== 'User' && (
+            <button 
+              onClick={openBulkModal}
+              className="flex items-center gap-2 px-4 py-2 bg-primary/10 text-primary rounded-xl text-sm font-bold hover:bg-primary/20 transition-all border border-primary/20"
+            >
+              <Users size={18} /> Chấm công hàng loạt
+            </button>
+          )}
+          <div className="flex items-center gap-2 bg-white p-1.5 rounded-2xl shadow-sm border border-gray-100">
+            <select value={selectedMonth} onChange={(e) => setSelectedMonth(Number(e.target.value))} className="px-3 py-1.5 rounded-xl border-none text-sm font-bold text-gray-700 outline-none">
+              {Array.from({ length: 12 }, (_, i) => i + 1).map(m => <option key={m} value={m}>Tháng {m}</option>)}
+            </select>
+            <select value={selectedYear} onChange={(e) => setSelectedYear(Number(e.target.value))} className="px-3 py-1.5 rounded-xl border-none text-sm font-bold text-gray-700 outline-none">
+              {[2024, 2025, 2026].map(y => <option key={y} value={y}>Năm {y}</option>)}
+            </select>
+          </div>
         </div>
       </div>
 
@@ -201,6 +300,174 @@ export const Attendance = ({ user, onBack }: { user: Employee, onBack?: () => vo
                 <div className="flex gap-3 pt-2">
                   <button onClick={() => setShowEditModal(false)} className="flex-1 py-2 rounded-xl border border-gray-200 text-sm font-bold text-gray-500">Hủy</button>
                   <button onClick={saveEdit} className="flex-1 py-2 rounded-xl bg-primary text-white text-sm font-bold shadow-lg shadow-primary/20">Lưu</button>
+                </div>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+      {/* Bulk Attendance Modal */}
+      <AnimatePresence>
+        {showBulkModal && (
+          <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="bg-white rounded-3xl shadow-2xl w-full max-w-2xl overflow-hidden flex flex-col max-h-[90vh]"
+            >
+              <div className="bg-primary p-6 text-white flex items-center justify-between flex-shrink-0">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-white/20 rounded-xl"><Users size={20} /></div>
+                  <h3 className="font-bold text-lg">Chấm công hàng loạt</h3>
+                </div>
+                <button onClick={() => setShowBulkModal(false)} className="p-2 hover:bg-white/10 rounded-full transition-colors"><X size={20} /></button>
+              </div>
+
+              <div className="p-6 md:p-8 overflow-y-auto space-y-8 custom-scrollbar">
+                <div className="flex flex-col gap-8">
+                  {/* Top: Global Settings & Selection Toggle */}
+                  <div className="bg-primary/5 p-6 rounded-3xl border border-primary/10 grid grid-cols-1 md:grid-cols-3 gap-6 items-end">
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Ngày chấm công</label>
+                      <input 
+                        type="date" 
+                        value={bulkFormData.date} 
+                        onChange={(e) => setBulkFormData({ ...bulkFormData, date: e.target.value })} 
+                        className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20" 
+                      />
+                    </div>
+                    
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Thiết lập chung (Tùy chọn)</label>
+                      <div className="flex gap-2 bg-white p-1 rounded-xl border border-gray-200">
+                        {['present', 'half-day', 'absent'].map(s => (
+                          <button
+                            key={s}
+                            onClick={() => setBulkFormData({ ...bulkFormData, status: s })}
+                            className={`flex-1 py-1 px-2 rounded-lg text-[10px] font-bold transition-all ${bulkFormData.status === s ? 'bg-primary text-white' : 'text-gray-400 hover:bg-gray-50'}`}
+                          >
+                            {getStatusLabel(s)}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                       <NumericInput
+                        label="OT chung"
+                        value={bulkFormData.overtime}
+                        onChange={(val) => setBulkFormData({ ...bulkFormData, overtime: val })}
+                        isDecimal={true}
+                        className="flex-1"
+                      />
+                      <button 
+                        onClick={applyGlobalToSelection}
+                        className="px-4 py-2.5 bg-primary text-white rounded-xl text-[10px] font-bold hover:bg-primary-hover transition-all whitespace-nowrap"
+                        title="Áp dụng cho những người đã chọn"
+                      >
+                        Áp dụng
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-8 h-full min-h-[400px]">
+                    {/* Left: Employee List for selection */}
+                    <div className="bg-gray-50 rounded-3xl p-6 border border-gray-100 flex flex-col h-full overflow-hidden">
+                      <div className="flex items-center justify-between mb-4">
+                        <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest italic">Chọn nhân sự ({selectedEmployees.length})</label>
+                        <button 
+                          onClick={() => setSelectedEmployees(selectedEmployees.length === employees.length ? [] : employees.map(e => e.id))}
+                          className="text-[10px] font-bold text-primary hover:underline"
+                        >
+                          {selectedEmployees.length === employees.length ? 'Bỏ chọn hết' : 'Chọn tất cả'}
+                        </button>
+                      </div>
+                      <div className="space-y-2 overflow-y-auto flex-1 pr-2 custom-scrollbar">
+                        {employees.map(emp => (
+                          <div 
+                            key={emp.id} 
+                            onClick={() => {
+                              setSelectedEmployees(prev => prev.includes(emp.id) ? prev.filter(id => id !== emp.id) : [...prev, emp.id]);
+                            }}
+                            className={`flex items-center gap-3 p-3 rounded-xl cursor-pointer transition-all border ${selectedEmployees.includes(emp.id) ? 'bg-white border-primary shadow-sm' : 'bg-white/50 border-transparent opacity-60 hover:opacity-100'}`}
+                          >
+                            <div className={`w-5 h-5 rounded-md border flex items-center justify-center transition-all ${selectedEmployees.includes(emp.id) ? 'bg-primary border-primary text-white' : 'bg-white border-gray-200'}`}>
+                              {selectedEmployees.includes(emp.id) && <Check size={12} strokeWidth={4} />}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-xs font-bold text-gray-800 truncate">{emp.full_name}</p>
+                              <p className="text-[9px] text-gray-400">{emp.code || emp.id.slice(0, 8)}</p>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Right: Individual Configuration */}
+                    <div className="bg-white rounded-3xl p-6 border border-gray-100 flex flex-col h-full overflow-hidden">
+                      <div className="flex items-center justify-between mb-4">
+                        <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest italic">Cấu hình riêng biệt</label>
+                      </div>
+                      
+                      <div className="space-y-4 overflow-y-auto flex-1 pr-2 custom-scrollbar">
+                        {selectedEmployees.length === 0 ? (
+                          <div className="flex flex-col items-center justify-center h-full text-gray-300 italic py-12">
+                            <Users size={32} className="mb-2 opacity-20" />
+                            <p className="text-[10px]">Chưa chọn nhân viên nào</p>
+                          </div>
+                        ) : (
+                          selectedEmployees.map(empId => {
+                            const emp = employees.find(e => e.id === empId);
+                            const setting = employeeSettings[empId] || { status: 'present', overtime: 0 };
+                            return (
+                              <div key={empId} className="p-4 rounded-2xl bg-gray-50/50 border border-gray-100 space-y-3">
+                                <div className="flex items-center justify-between">
+                                  <span className="text-xs font-bold text-gray-800">{emp?.full_name}</span>
+                                  <span className="text-[8px] px-1.5 py-0.5 bg-gray-200 text-gray-500 rounded font-black">{emp?.code}</span>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  <div className="flex-[2] grid grid-cols-3 gap-1 bg-white p-1 rounded-xl border border-gray-100">
+                                    {['present', 'half-day', 'absent'].map(s => (
+                                      <button
+                                        key={s}
+                                        onClick={() => updateIndividualSetting(empId, 'status', s)}
+                                        className={`py-1.5 rounded-lg text-[10px] font-black transition-all ${setting.status === s ? 'bg-primary text-white' : 'text-gray-400 hover:bg-gray-50'}`}
+                                      >
+                                        {getStatusLabel(s)}
+                                      </button>
+                                    ))}
+                                  </div>
+                                  <div className="flex-1">
+                                    <input 
+                                      type="number" 
+                                      step="0.5"
+                                      placeholder="OT"
+                                      value={setting.overtime}
+                                      onChange={(e) => updateIndividualSetting(empId, 'overtime', Number(e.target.value))}
+                                      className="w-full px-2 py-2 rounded-xl border border-gray-100 text-xs font-bold text-amber-600 outline-none focus:ring-1 focus:ring-primary/20 text-center"
+                                    />
+                                  </div>
+                                </div>
+                              </div>
+                            );
+                          })
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="p-6 border-t border-gray-100 bg-gray-50/50 flex items-center justify-between flex-shrink-0">
+                <div className="text-[10px] text-gray-400 font-medium">
+                  Đang chấm cho <span className="font-bold text-primary">{selectedEmployees.length}</span> nhân sự
+                </div>
+                <div className="flex gap-3">
+                  <button onClick={() => setShowBulkModal(false)} className="px-6 py-2.5 border border-gray-200 text-sm font-bold text-gray-500 rounded-xl hover:bg-white transition-all">Hủy</button>
+                  <button onClick={saveBulk} className="px-8 py-2.5 bg-primary text-white rounded-xl font-black text-sm shadow-xl shadow-primary/20 hover:bg-primary-hover transition-all active:scale-95 disabled:opacity-50" disabled={selectedEmployees.length === 0}>
+                    Lưu dữ liệu
+                  </button>
                 </div>
               </div>
             </motion.div>

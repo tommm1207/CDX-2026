@@ -122,6 +122,7 @@ export const HRRecords = ({ user, onBack }: { user: Employee, onBack?: () => voi
       const { error } = await supabase.from('users').update({ status: 'Đã xóa' }).eq('id', itemToDelete);
       if (error) throw error;
       fetchEmployees();
+      alert('Đã chuyển nhân sự vào thùng rác');
       setShowDeleteModal(false);
       setItemToDelete(null);
     } catch (err: any) {
@@ -317,8 +318,8 @@ export const HRRecords = ({ user, onBack }: { user: Employee, onBack?: () => voi
               <div className="w-16 h-16 bg-red-50 text-red-600 rounded-full flex items-center justify-center mx-auto mb-4">
                 <Trash2 size={32} />
               </div>
-              <h3 className="text-lg font-bold text-gray-800 mb-2">Xác nhận xóa?</h3>
-              <p className="text-sm text-gray-500 mb-6">Bạn có chắc chắn muốn xóa nhân sự <strong>{employees.find(e => e.id === itemToDelete)?.code || itemToDelete.slice(0, 8)}</strong>? Dữ liệu liên quan có thể bị ảnh hưởng.</p>
+              <h3 className="text-lg font-bold text-gray-800 mb-2">Chuyển vào thùng rác?</h3>
+              <p className="text-sm text-gray-500 mb-6">Bạn có chắc chắn muốn chuyển nhân sự <strong>{employees.find(e => e.id === itemToDelete)?.code || itemToDelete.slice(0, 8)}</strong> vào thùng rác?</p>
               <div className="flex gap-3">
                 <button
                   onClick={() => setShowDeleteModal(false)}
@@ -326,12 +327,12 @@ export const HRRecords = ({ user, onBack }: { user: Employee, onBack?: () => voi
                 >
                   Hủy bỏ
                 </button>
-                <button
-                  onClick={confirmDelete}
-                  className="flex-1 px-4 py-2 rounded-xl bg-red-600 text-white text-sm font-bold hover:bg-red-700 transition-colors"
-                >
-                  Xóa ngay
-                </button>
+                  <button
+                    onClick={confirmDelete}
+                    className="flex-1 px-4 py-2 rounded-xl bg-red-600 text-white text-sm font-bold hover:bg-red-700 transition-colors"
+                  >
+                    Di chuyển
+                  </button>
               </div>
             </motion.div>
           </div>

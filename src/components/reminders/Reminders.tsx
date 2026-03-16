@@ -108,9 +108,9 @@ export const Reminders = ({ user, onBack, addToast }: { user: Employee, onBack: 
   const executeDelete = async () => {
     if (!deletingId) return;
     try {
-      const { error } = await supabase.from('reminders').delete().eq('id', deletingId);
+      const { error } = await supabase.from('reminders').update({ status: 'Đã xóa' }).eq('id', deletingId);
       if (error) throw error;
-      if (addToast) addToast('Đã xóa lịch nhắc', 'success');
+      if (addToast) addToast('Đã chuyển lịch nhắc vào thùng rác', 'success');
       setDeletingId(null);
       fetchData();
     } catch (err: any) {
@@ -362,11 +362,11 @@ export const Reminders = ({ user, onBack, addToast }: { user: Employee, onBack: 
                 <div className="w-16 h-16 bg-red-100 text-red-500 rounded-full flex items-center justify-center mx-auto mb-4">
                   <Trash2 size={32} />
                 </div>
-                <h3 className="text-xl font-bold text-gray-900">Xác nhận xóa?</h3>
-                <p className="text-gray-500 text-sm">Bạn có chắc chắn muốn xóa lịch nhắc này không? Hành động này không thể hoàn tác.</p>
+                <h3 className="text-xl font-bold text-gray-900">Chuyển vào thùng rác?</h3>
+                <p className="text-gray-500 text-sm">Bạn có chắc chắn muốn chuyển lịch nhắc này vào thùng rác?</p>
                 <div className="flex gap-3 pt-4">
                   <button onClick={() => setDeletingId(null)} className="flex-1 px-4 py-3 bg-gray-100 text-gray-700 rounded-xl font-bold hover:bg-gray-200 transition-colors">Hủy</button>
-                  <button onClick={executeDelete} className="flex-1 px-4 py-3 bg-red-500 text-white rounded-xl font-bold hover:bg-red-600 transition-colors shadow-lg shadow-red-500/30">Xóa Lịch Nhắc</button>
+                  <button onClick={executeDelete} className="flex-1 px-4 py-3 bg-red-500 text-white rounded-xl font-bold hover:bg-red-600 transition-colors shadow-lg shadow-red-500/30">Di chuyển</button>
                 </div>
               </div>
             </motion.div>

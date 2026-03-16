@@ -21,7 +21,7 @@ export const Advances = ({ user, onBack, addToast }: { user: Employee, onBack?: 
     employee_id: '',
     amount: 0,
     date: new Date().toISOString().split('T')[0],
-    reason: '',
+    notes: '',
     type: 'meal'
   };
 
@@ -57,7 +57,7 @@ export const Advances = ({ user, onBack, addToast }: { user: Employee, onBack?: 
         amount: formData.amount,
         date: formData.date,
         type: activeTab === 'advances' ? 'Tạm ứng' : formData.type,
-        reason: formData.reason // Changed from notes to reason to match initialFormState and common pattern
+        notes: formData.notes
       };
 
       if (isEditing && selectedItem) {
@@ -88,7 +88,7 @@ export const Advances = ({ user, onBack, addToast }: { user: Employee, onBack?: 
       employee_id: item.employee_id,
       amount: item.amount,
       date: item.date,
-      reason: item.reason || item.notes || '',
+      notes: item.notes || '',
       type: item.type
     });
     setIsEditing(true);
@@ -174,7 +174,7 @@ export const Advances = ({ user, onBack, addToast }: { user: Employee, onBack?: 
                   <td className="px-4 py-3 text-xs font-black text-red-600">{formatCurrency(item.amount)}</td>
                   <td className="px-4 py-3 text-xs text-gray-500 italic">
                     <div className="flex items-center justify-between">
-                      <span>{item.reason || item.notes || item.type || '-'}</span>
+                      <span>{item.notes || item.type || '-'}</span>
                       <div className="flex items-center gap-1">
                         <button 
                           type="button"
@@ -252,7 +252,7 @@ export const Advances = ({ user, onBack, addToast }: { user: Employee, onBack?: 
                 )}
                 <div className="space-y-1">
                   <label className="text-[10px] font-bold text-gray-400 uppercase">Ghi chú / Lý do</label>
-                  <textarea rows={3} value={formData.reason} onChange={(e) => setFormData({ ...formData, reason: e.target.value })} className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20 resize-none" />
+                  <textarea rows={3} value={formData.notes} onChange={(e) => setFormData({ ...formData, notes: e.target.value })} className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20 resize-none" />
                 </div>
                 <button type="submit" disabled={submitting} className="w-full py-3 bg-primary text-white rounded-xl font-bold hover:bg-primary-hover transition-colors shadow-lg shadow-primary/20 disabled:opacity-50">
                   {submitting ? 'Đang lưu...' : 'Lưu dữ liệu'}

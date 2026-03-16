@@ -5,12 +5,22 @@ import { supabase } from '../../supabaseClient';
 import { Employee } from '../../types';
 import { PageBreadcrumb } from '../shared/PageBreadcrumb';
 
-export const Reminders = ({ user, onBack }: { user: Employee, onBack: () => void }) => {
+export const Reminders = ({ user, onBack, addToast }: { user: Employee, onBack: () => void, addToast?: any }) => {
   const [reminders, setReminders] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [showSetReminder, setShowSetReminder] = useState(false);
   const [showAddNew, setShowAddNew] = useState(false);
   const [employees, setEmployees] = useState<Employee[]>([]);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+
+  const getDefaultTime = () => {
+    const d = new Date();
+    d.setHours(d.getHours() + 1);
+    d.setMinutes(0);
+    const tzOffset = d.getTimezoneOffset() * 60000;
+    return new Date(d.getTime() - tzOffset).toISOString().slice(0, 16);
+  };
 
   const [filters, setFilters] = useState({
     fromDate: '',
@@ -22,7 +32,7 @@ export const Reminders = ({ user, onBack }: { user: Employee, onBack: () => void
   const [formData, setFormData] = useState({
     title: '',
     content: '',
-    reminder_time: new Date(Date.now() + 3600000).toISOString().slice(0, 16),
+    reminder_time: getDefaultTime(),
     browser_notification: true
   });
 
@@ -45,22 +55,68 @@ export const Reminders = ({ user, onBack }: { user: Employee, onBack: () => void
   };
 
   const handleSave = async () => {
-    const { error } = await supabase.from('reminders').insert([{
-      ...formData,
-      status: 'pending'
-    }]);
-    if (!error) {
+    try {
+      const payload = {
+        ...formData,
+        reminder_time: new Date(formData.reminder_time).toISOString(),
+      };
+
+      if (editingId) {
+        const { error } = await supabase.from('reminders').update(payload).eq('id', editingId);
+        if (error) throw error;
+        if (addToast) addToast('Đã cập nhật lịch nhắc thành công', 'success');
+      } else {
+        const { error } = await supabase.from('reminders').insert([{ ...payload, status: 'pending' }]);
+        if (error) throw error;
+        if (addToast) addToast('Đã thêm mới lịch nhắc thành công', 'success');
+      }
+
       setShowSetReminder(false);
       setShowAddNew(false);
+      setEditingId(null);
       setFormData({
         title: '',
         content: '',
-        reminder_time: new Date(Date.now() + 3600000).toISOString().slice(0, 16),
+        reminder_time: getDefaultTime(),
         browser_notification: true
       });
       fetchData();
-    } else {
-      alert('Lỗi: ' + error.message);
+    } catch (err: any) {
+      if (addToast) addToast('Lỗi: ' + err.message, 'error');
+      else alert('Lỗi: ' + err.message);
+    }
+  };
+
+  const handleEdit = (rem: any) => {
+    const d = new Date(rem.reminder_time);
+    const tzOffset = d.getTimezoneOffset() * 60000;
+    const localStr = new Date(d.getTime() - tzOffset).toISOString().slice(0, 16);
+    setFormData({
+      title: rem.title || '',
+      content: rem.content || '',
+      reminder_time: localStr,
+      browser_notification: rem.browser_notification ?? true
+    });
+    setEditingId(rem.id);
+    setShowSetReminder(true);
+  };
+
+  const confirmDelete = (id: string) => {
+    setDeletingId(id);
+  };
+
+  const executeDelete = async () => {
+    if (!deletingId) return;
+    try {
+      const { error } = await supabase.from('reminders').delete().eq('id', deletingId);
+      if (error) throw error;
+      if (addToast) addToast('Đã xóa lịch nhắc', 'success');
+      setDeletingId(null);
+      fetchData();
+    } catch (err: any) {
+      if (addToast) addToast('Lỗi: ' + err.message, 'error');
+      else alert('Lỗi: ' + err.message);
+      setDeletingId(null);
     }
   };
 
@@ -77,13 +133,21 @@ export const Reminders = ({ user, onBack }: { user: Employee, onBack: () => void
         <PageBreadcrumb title="Thiết lập Lịch nhắc" onBack={onBack} />
         <div className="flex items-center gap-2">
           <button
-            onClick={() => setShowSetReminder(true)}
+            onClick={() => {
+              setEditingId(null);
+              setFormData({ title: '', content: '', reminder_time: getDefaultTime(), browser_notification: true });
+              setShowSetReminder(true);
+            }}
             className="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-xl text-sm font-bold hover:bg-primary-dark transition-all shadow-lg shadow-primary/20"
           >
             <Bell size={18} /> Đặt lịch nhắc
           </button>
           <button
-            onClick={() => setShowAddNew(true)}
+            onClick={() => {
+              setEditingId(null);
+              setFormData({ title: '', content: '', reminder_time: getDefaultTime(), browser_notification: true });
+              setShowAddNew(true);
+            }}
             className="flex items-center gap-2 px-4 py-2 bg-white text-gray-700 border border-gray-200 rounded-xl text-sm font-bold hover:bg-gray-50 transition-all shadow-sm"
           >
             <Plus size={18} /> Thêm mới
@@ -159,8 +223,8 @@ export const Reminders = ({ user, onBack }: { user: Employee, onBack: () => void
                   <td className="px-4 py-3 text-sm font-medium text-gray-700">{rem.title}</td>
                   <td className="px-4 py-3">
                     <div className="flex items-center justify-center gap-2">
-                      <button className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition-all"><Edit size={14} /></button>
-                      <button className="p-1.5 text-red-600 hover:bg-red-50 rounded-lg transition-all"><Trash2 size={14} /></button>
+                      <button onClick={() => handleEdit(rem)} className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition-all"><Edit size={14} /></button>
+                      <button onClick={() => confirmDelete(rem.id)} className="p-1.5 text-red-600 hover:bg-red-50 rounded-lg transition-all"><Trash2 size={14} /></button>
                     </div>
                   </td>
                 </tr>
@@ -177,7 +241,7 @@ export const Reminders = ({ user, onBack }: { user: Employee, onBack: () => void
             <motion.div initial={{ opacity: 0, scale: 0.95, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95, y: 20 }} className="bg-white rounded-3xl shadow-2xl w-full max-w-lg overflow-hidden relative z-10">
               <div className="p-6 border-b border-gray-50 flex items-center justify-between">
                 <h3 className="text-lg font-bold text-primary flex items-center gap-2 uppercase tracking-wide">
-                  <Bell size={20} /> Đặt lịch nhắc
+                  <Bell size={20} /> {editingId ? 'Sửa lịch nhắc' : 'Đặt lịch nhắc'}
                 </h3>
                 <button onClick={() => setShowSetReminder(false)} className="p-2 hover:bg-gray-100 rounded-full transition-colors"><X size={20} className="text-gray-400" /></button>
               </div>
@@ -226,7 +290,7 @@ export const Reminders = ({ user, onBack }: { user: Employee, onBack: () => void
                   onClick={handleSave}
                   className="flex-1 py-3 bg-primary text-white rounded-xl font-bold text-sm hover:bg-primary-dark transition-all shadow-lg shadow-primary/20 flex items-center justify-center gap-2"
                 >
-                  <Bell size={18} /> Đặt nhắc
+                  <Bell size={18} /> {editingId ? 'Cập nhật' : 'Đặt nhắc'}
                 </button>
                 <button onClick={() => setShowSetReminder(false)} className="px-6 py-3 bg-gray-400 text-white rounded-xl font-bold text-sm hover:bg-gray-500 transition-all">Hủy</button>
               </div>
@@ -283,6 +347,27 @@ export const Reminders = ({ user, onBack }: { user: Employee, onBack: () => void
               <div className="p-6 bg-gray-50 flex justify-end gap-3">
                 <button onClick={() => setShowAddNew(false)} className="px-6 py-2.5 text-gray-500 font-bold text-sm hover:bg-gray-100 rounded-xl transition-all">Hủy bỏ</button>
                 <button onClick={handleSave} className="px-8 py-2.5 bg-primary text-white rounded-xl font-bold text-sm hover:bg-primary-dark transition-all shadow-lg shadow-primary/20">Lưu dữ liệu</button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {deletingId && (
+          <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setDeletingId(null)} className="absolute inset-0 bg-black/40 backdrop-blur-sm" />
+            <motion.div initial={{ opacity: 0, scale: 0.95, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95, y: 20 }} className="bg-white rounded-3xl shadow-2xl overflow-hidden relative z-10 w-full max-w-sm">
+              <div className="p-6 text-center space-y-4">
+                <div className="w-16 h-16 bg-red-100 text-red-500 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <Trash2 size={32} />
+                </div>
+                <h3 className="text-xl font-bold text-gray-900">Xác nhận xóa?</h3>
+                <p className="text-gray-500 text-sm">Bạn có chắc chắn muốn xóa lịch nhắc này không? Hành động này không thể hoàn tác.</p>
+                <div className="flex gap-3 pt-4">
+                  <button onClick={() => setDeletingId(null)} className="flex-1 px-4 py-3 bg-gray-100 text-gray-700 rounded-xl font-bold hover:bg-gray-200 transition-colors">Hủy</button>
+                  <button onClick={executeDelete} className="flex-1 px-4 py-3 bg-red-500 text-white rounded-xl font-bold hover:bg-red-600 transition-colors shadow-lg shadow-red-500/30">Xóa Lịch Nhắc</button>
+                </div>
               </div>
             </motion.div>
           </div>

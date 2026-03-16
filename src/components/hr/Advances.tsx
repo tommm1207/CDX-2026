@@ -16,6 +16,12 @@ export const Advances = ({ user, onBack, addToast }: { user: Employee, onBack?: 
   const [showModal, setShowModal] = useState(false);
   const [activeTab, setActiveTab] = useState<'advances' | 'allowances'>('advances');
   const [submitting, setSubmitting] = useState(false);
+  const [allowanceOptions, setAllowanceOptions] = useState<{id: string, name: string}[]>([
+    { id: 'Tiền cơm', name: 'Tiền cơm' },
+    { id: 'Xăng xe', name: 'Xăng xe' },
+    { id: 'Điện thoại', name: 'Điện thoại' },
+    { id: 'Khác', name: 'Khác' }
+  ]);
 
   const initialFormState = {
     employee_id: '',
@@ -44,7 +50,37 @@ export const Advances = ({ user, onBack, addToast }: { user: Employee, onBack?: 
     if (advData) setAdvances(advData);
 
     const { data: allData } = await supabase.from('allowances').select('*, users(full_name)').order('date', { ascending: false });
-    if (allData) setAllowances(allData);
+    if (allData) {
+      setAllowances(allData);
+      
+      // Extract unique types for the dropdown
+      const dbTypes = allData
+        .map(t => t.type)
+        .filter(Boolean)
+        .map(t => {
+           if (t === 'meal') return 'Tiền cơm';
+           if (t === 'travel') return 'Xăng xe';
+           if (t === 'phone') return 'Điện thoại';
+           if (t === 'other') return 'Khác';
+           return t;
+        });
+      
+      const uniqueTypes = Array.from(new Set(dbTypes));
+      const baseOptions = [
+        { id: 'Tiền cơm', name: 'Tiền cơm' },
+        { id: 'Xăng xe', name: 'Xăng xe' },
+        { id: 'Điện thoại', name: 'Điện thoại' },
+        { id: 'Khác', name: 'Khác' }
+      ];
+      
+      const mergedOptions = [...baseOptions];
+      uniqueTypes.forEach(t => {
+        if (!mergedOptions.find(o => o.id === t)) {
+          mergedOptions.push({ id: t as string, name: t as string });
+        }
+      });
+      setAllowanceOptions(mergedOptions);
+    }
     setLoading(false);
   };
 
@@ -247,14 +283,14 @@ export const Advances = ({ user, onBack, addToast }: { user: Employee, onBack?: 
                   <CreatableSelect
                     label="Loại phụ cấp"
                     value={formData.type}
-                    options={[
-                      { id: 'Tiền cơm', name: 'Tiền cơm' },
-                      { id: 'Xăng xe', name: 'Xăng xe' },
-                      { id: 'Điện thoại', name: 'Điện thoại' },
-                      { id: 'Khác', name: 'Khác' }
-                    ]}
+                    options={allowanceOptions}
                     onChange={(val) => setFormData({ ...formData, type: val })}
-                    onCreate={(val) => setFormData({ ...formData, type: val })}
+                    onCreate={(val) => {
+                      if (!allowanceOptions.find(o => o.id === val)) {
+                        setAllowanceOptions(prev => [...prev, { id: val, name: val }]);
+                      }
+                      setFormData({ ...formData, type: val });
+                    }}
                     placeholder="Chọn hoặc nhập loại mới..."
                   />
                 )}

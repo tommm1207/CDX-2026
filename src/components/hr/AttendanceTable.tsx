@@ -1,5 +1,6 @@
 import { Plus } from 'lucide-react';
 import { Employee } from '../../types';
+import { getDayOfWeekStr, convertSolarToLunar } from '../../utils/lunar';
 
 interface AttendanceTableProps {
   employees: Employee[];
@@ -55,7 +56,20 @@ export const AttendanceTable = ({
           <thead>
             <tr className="bg-primary text-white">
               <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider sticky left-0 z-10 bg-primary border-r border-white/10 w-48">Nhân viên</th>
-              {days.map(d => <th key={d} className="px-1 py-3 text-[10px] font-bold uppercase tracking-wider text-center border-r border-white/10 w-10">{d}</th>)}
+              {days.map(d => {
+                const dow = getDayOfWeekStr(d, selectedMonth, selectedYear);
+                const lunar = convertSolarToLunar(d, selectedMonth, selectedYear);
+                const isWeekend = dow === 'Sat' || dow === 'Sun';
+                return (
+                  <th key={d} className={`px-1 py-2 text-[9px] font-bold uppercase tracking-wider text-center border-r border-white/10 w-10 ${isWeekend ? 'bg-black/10' : ''}`}>
+                    <div className="flex flex-col items-center justify-center leading-[1.1]">
+                      <span className="text-[12px] font-black">{d}</span>
+                      <span className="text-[8px] font-medium opacity-90">{dow}</span>
+                      <span className="text-[7px] font-medium italic opacity-60 mt-0.5">{lunar}</span>
+                    </div>
+                  </th>
+                );
+              })}
               <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-center w-20">Tổng</th>
             </tr>
           </thead>

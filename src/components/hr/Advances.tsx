@@ -22,7 +22,7 @@ export const Advances = ({ user, onBack, addToast }: { user: Employee, onBack?: 
     amount: 0,
     date: new Date().toISOString().split('T')[0],
     notes: '',
-    type: 'meal'
+    type: 'Tiền cơm'
   };
 
   const [formData, setFormData] = useState(initialFormState);
@@ -174,7 +174,15 @@ export const Advances = ({ user, onBack, addToast }: { user: Employee, onBack?: 
                   <td className="px-4 py-3 text-xs font-black text-red-600">{formatCurrency(item.amount)}</td>
                   <td className="px-4 py-3 text-xs text-gray-500 italic">
                     <div className="flex items-center justify-between">
-                      <span>{item.notes || item.type || '-'}</span>
+                      <span>
+                        {(item.notes || item.type) ? (
+                          (item.type === 'meal' ? 'Tiền cơm' : 
+                          item.type === 'travel' ? 'Xăng xe' : 
+                          item.type === 'phone' ? 'Điện thoại' : 
+                          item.type === 'other' ? 'Khác' : 
+                          (item.notes || item.type))
+                        ) : '-'}
+                      </span>
                       <div className="flex items-center gap-1">
                         <button 
                           type="button"
@@ -240,10 +248,10 @@ export const Advances = ({ user, onBack, addToast }: { user: Employee, onBack?: 
                     label="Loại phụ cấp"
                     value={formData.type}
                     options={[
-                      { id: 'meal', name: 'Tiền cơm' },
-                      { id: 'travel', name: 'Xăng xe' },
-                      { id: 'phone', name: 'Điện thoại' },
-                      { id: 'other', name: 'Khác' }
+                      { id: 'Tiền cơm', name: 'Tiền cơm' },
+                      { id: 'Xăng xe', name: 'Xăng xe' },
+                      { id: 'Điện thoại', name: 'Điện thoại' },
+                      { id: 'Khác', name: 'Khác' }
                     ]}
                     onChange={(val) => setFormData({ ...formData, type: val })}
                     onCreate={(val) => setFormData({ ...formData, type: val })}

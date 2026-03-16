@@ -1,6 +1,6 @@
 <div align="center">
   <img src="public/logo.png" width="150" alt="CDX Logo" />
-  <h1>Hệ thống Quản lý Thi công CDX - 2026</h1>
+  <h1>Hệ thống Quản lý Thi công CDX</h1>
   
   <p align="center">
     <img src="https://img.shields.io/badge/React-20232A?style=for-the-badge&logo=react&logoColor=61DAFB" alt="React" />

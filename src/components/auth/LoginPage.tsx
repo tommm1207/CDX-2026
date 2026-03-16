@@ -194,8 +194,8 @@ export const LoginPage = ({ onLogin }: { onLogin: (user: Employee) => void }) =>
                       <h4 className="font-bold text-gray-800 text-sm">Mở trình duyệt trên điện thoại</h4>
                       <p className="text-xs text-gray-500 leading-relaxed">Truy cập vào địa chỉ sau bằng Safari (iPhone) hoặc Chrome (Android):</p>
                       <div className="mt-2 p-3 bg-gray-50 rounded-xl border border-gray-100 flex items-center justify-between group">
-                        <span className="text-xs font-mono text-primary font-bold">https://cdx-2026.vercel.app</span>
-                        <button onClick={() => window.open('https://cdx-2026.vercel.app', '_blank')} className="p-1.5 bg-white rounded-lg shadow-sm text-gray-400 hover:text-primary transition-colors"><ArrowRight size={14} /></button>
+                        <span className="text-xs font-mono text-primary font-bold">https://cdx-team.vercel.app</span>
+                        <button onClick={() => window.open('https://cdx-team.vercel.app', '_blank')} className="p-1.5 bg-white rounded-lg shadow-sm text-gray-400 hover:text-primary transition-colors"><ArrowRight size={14} /></button>
                       </div>
                     </div>
                   </div>

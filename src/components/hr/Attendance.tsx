@@ -439,13 +439,12 @@ export const Attendance = ({ user, onBack }: { user: Employee, onBack?: () => vo
                                     ))}
                                   </div>
                                   <div className="flex-1">
-                                    <input 
-                                      type="number" 
-                                      step="0.5"
-                                      placeholder="OT"
+                                    <NumericInput
                                       value={setting.overtime}
-                                      onChange={(e) => updateIndividualSetting(empId, 'overtime', Number(e.target.value))}
-                                      className="w-full px-2 py-2 rounded-xl border border-gray-100 text-xs font-bold text-amber-600 outline-none focus:ring-1 focus:ring-primary/20 text-center"
+                                      onChange={(val) => updateIndividualSetting(empId, 'overtime', val)}
+                                      isDecimal={true}
+                                      placeholder="OT"
+                                      inputClassName="w-full px-2 py-2 rounded-xl border border-gray-100 text-xs font-bold text-amber-600 outline-none focus:ring-1 focus:ring-primary/20 text-center"
                                     />
                                   </div>
                                 </div>

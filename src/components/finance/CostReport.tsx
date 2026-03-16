@@ -293,9 +293,9 @@ export const CostReport = ({ user, onBack }: { user: Employee, onBack?: () => vo
       </div>
 
       <div className="flex flex-col lg:flex-row gap-6">
-        <div className={`flex-1 bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden ${selectedGroup ? 'hidden lg:block' : 'block'}`}>
-          <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse">
+        <div className={`flex-1 bg-white rounded-2xl shadow-sm border border-gray-100 hidden lg:block`}>
+          <div className="overflow-x-auto custom-scrollbar pb-2">
+            <table className="w-full text-left border-collapse min-w-[500px]">
               <thead>
                 <tr className="bg-gray-50 border-b border-gray-100">
                   <th className="px-4 py-3 text-[10px] font-bold text-gray-400 uppercase tracking-wider">Ngày chi</th>
@@ -306,7 +306,14 @@ export const CostReport = ({ user, onBack }: { user: Employee, onBack?: () => vo
               </thead>
               <tbody className="divide-y divide-gray-50">
                 {loading ? (
-                  <tr><td colSpan={4} className="px-4 py-8 text-center text-gray-400 italic">Đang tải dữ liệu...</td></tr>
+                  <tr>
+                    <td colSpan={4} className="px-4 py-12 text-center text-gray-400 italic">
+                      <div className="flex flex-col items-center justify-center">
+                        <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin mb-2"></div>
+                        <p className="text-sm">Đang tải báo cáo chi phí...</p>
+                      </div>
+                    </td>
+                  </tr>
                 ) : groupedData.length === 0 ? (
                   <tr><td colSpan={4} className="px-4 py-8 text-center text-gray-400 italic">Chưa có dữ liệu chi phí</td></tr>
                 ) : (
@@ -357,8 +364,8 @@ export const CostReport = ({ user, onBack }: { user: Employee, onBack?: () => vo
                 </div>
               </div>
 
-              <div className="overflow-x-auto">
-                <table className="w-full text-left border-collapse">
+              <div className="overflow-x-auto custom-scrollbar pb-2">
+                <table className="w-full text-left border-collapse min-w-[400px]">
                   <thead>
                     <tr className="bg-white border-b border-gray-100">
                       <th className="px-4 py-2 text-[10px] font-bold text-gray-400 uppercase tracking-wider">Ngày chi</th>

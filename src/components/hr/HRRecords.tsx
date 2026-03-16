@@ -1,5 +1,5 @@
 import { useState, useEffect, FormEvent } from 'react';
-import { Users, Plus, Search, Edit, Trash2, X } from 'lucide-react';
+import { Users, Plus, Search, Edit, Trash2, X, Eye } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { supabase } from '../../supabaseClient';
 import { Employee } from '../../types';
@@ -220,7 +220,7 @@ export const HRRecords = ({ user, onBack }: { user: Employee, onBack?: () => voi
           <input type="date" className="px-4 py-2 rounded-lg border border-gray-200 text-sm outline-none" />
         </div>
 
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto custom-scrollbar pb-2">
           <table className="w-full text-left border-separate border-spacing-0">
             <thead>
               <tr className="bg-primary text-white text-[11px] uppercase tracking-wider whitespace-nowrap">
@@ -239,7 +239,14 @@ export const HRRecords = ({ user, onBack }: { user: Employee, onBack?: () => voi
             </thead>
             <tbody className="text-xs text-gray-600">
               {loading ? (
-                <tr><td colSpan={user.role === 'Admin App' ? 11 : 10} className="p-8 text-center">Đang tải dữ liệu...</td></tr>
+                <tr>
+                  <td colSpan={user.role === 'Admin App' ? 11 : 10} className="p-12 text-center">
+                    <div className="flex flex-col items-center justify-center text-gray-400">
+                      <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin mb-2"></div>
+                      <p className="text-sm">Đang tải dữ liệu nhân sự...</p>
+                    </div>
+                  </td>
+                </tr>
               ) : filteredEmployees.length === 0 ? (
                 <tr><td colSpan={user.role === 'Admin App' ? 11 : 10} className="p-8 text-center">Không tìm thấy nhân sự nào</td></tr>
               ) : filteredEmployees.map((emp) => (
@@ -249,7 +256,17 @@ export const HRRecords = ({ user, onBack }: { user: Employee, onBack?: () => voi
                   <td className="p-3">{emp.email || '-'}</td>
                   <td className="p-3">{emp.phone || '-'}</td>
                   <td className="p-3">{emp.join_date || '-'}</td>
-                  {user.role === 'Admin App' && <td className="p-3 font-mono text-blue-600">{emp.app_pass}</td>}
+                  {user.role === 'Admin App' && (
+                    <td className="p-3 font-mono text-blue-600">
+                      <div className="flex items-center gap-2 group/pass">
+                        <span className="opacity-0 group-hover/pass:opacity-100 transition-opacity absolute bg-white px-2 py-1 rounded shadow-sm border border-gray-100 z-50 pointer-events-none -mt-8 ml-4">
+                          {emp.app_pass}
+                        </span>
+                        <span>••••••••</span>
+                        <Eye className="w-4 h-4 text-gray-400 group-hover/pass:text-blue-500 cursor-pointer" />
+                      </div>
+                    </td>
+                  )}
                   <td className="p-3">{emp.department || '-'}</td>
                   <td className="p-3">{emp.position || '-'}</td>
                   <td className="p-3">

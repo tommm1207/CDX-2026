@@ -61,7 +61,14 @@ export const AttendanceTable = ({
           </thead>
           <tbody className="divide-y divide-gray-100">
             {loading ? (
-              <tr><td colSpan={days.length + 2} className="px-4 py-12 text-center text-gray-400 italic">Đang tải...</td></tr>
+              <tr>
+                <td colSpan={days.length + 2} className="px-4 py-12 text-center text-gray-400 italic">
+                  <div className="flex flex-col items-center justify-center">
+                    <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin mb-2"></div>
+                    <p className="text-sm">Đang tải bảng chấm công...</p>
+                  </div>
+                </td>
+              </tr>
             ) : (
               employees.map((emp) => {
                 const empAtt = attendance.filter(a => a.employee_id === emp.id);

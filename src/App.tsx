@@ -38,6 +38,7 @@ import { PageBreadcrumb } from './components/shared/PageBreadcrumb';
 // Layout Components
 import { SidebarItem } from './components/layout/SidebarItem';
 import { BottomNav } from './components/layout/BottomNav';
+import { ToastContainer, ToastMessage, ToastType } from './components/shared/Toast';
 
 // Auth Components
 import { LoginPage } from './components/auth/LoginPage';
@@ -74,6 +75,8 @@ import { PlaceholderPage } from './components/materials/PlaceholderPage';
 import { Trash } from './components/trash/Trash';
 import { DeletedWarehouses } from './components/trash/DeletedWarehouses';
 import { DeletedSlips } from './components/trash/DeletedSlips';
+import { DeletedEmployees } from './components/trash/DeletedEmployees';
+import { DeletedCosts } from './components/trash/DeletedCosts';
 
 // Utilities & System
 import { Notes } from './components/notes/Notes';
@@ -118,6 +121,21 @@ export default function App() {
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const [pendingCount, setPendingCount] = useState(0);
   const [refreshKey, setRefreshKey] = useState(0);
+
+  // Global Toast State
+  const [toasts, setToasts] = useState<ToastMessage[]>([]);
+
+  const addToast = useCallback((message: string, type: ToastType = 'info') => {
+    const id = Math.random().toString(36).substr(2, 9);
+    setToasts(prev => [...prev, { id, message, type }]);
+    setTimeout(() => {
+      removeToast(id);
+    }, 4000);
+  }, []);
+
+  const removeToast = useCallback((id: string) => {
+    setToasts(prev => prev.filter(t => t.id !== id));
+  }, []);
 
   // Browser Notification Logic
   useEffect(() => {
@@ -279,7 +297,7 @@ export default function App() {
 
   const renderContent = () => {
     switch (currentPage) {
-      case 'dashboard': return <Dashboard user={user} onNavigate={navigateTo} />;
+      case 'dashboard': return <Dashboard user={user} onNavigate={navigateTo} addToast={addToast} />;
       case 'hr-records': return <HRRecords user={user} onBack={goBack} />;
       case 'attendance': return <Attendance user={user} onBack={goBack} />;
       case 'costs': return <Costs user={user} onBack={goBack} />;
@@ -296,7 +314,7 @@ export default function App() {
       case 'salary-settings':
         if (user.role !== 'Admin' && user.role !== 'Admin App') return <Dashboard user={user} onNavigate={navigateTo} />;
         return <SalarySettings user={user} onBack={goBack} />;
-      case 'notes': return <Notes user={user} onBack={goBack} />;
+      case 'notes': return <Notes user={user} onBack={goBack} addToast={addToast} />;
       case 'notifications': return <Notifications user={user} onBack={goBack} />;
       case 'reminders': return <Reminders user={user} onBack={goBack} />;
       case 'partners': return <PlaceholderPage title="Khách hàng & nhà cung cấp" onBack={goBack} />;
@@ -304,13 +322,15 @@ export default function App() {
       case 'trash': return <Trash onNavigate={navigateTo} onBack={goBack} />;
       case 'deleted-warehouses': return <DeletedWarehouses onBack={goBack} />;
       case 'deleted-slips': return <DeletedSlips onBack={goBack} />;
+      case 'deleted-employees': return <DeletedEmployees onBack={goBack} addToast={addToast} />;
+      case 'deleted-costs': return <DeletedCosts onBack={goBack} addToast={addToast} />;
       case 'material-groups': return <MaterialGroups user={user} onBack={goBack} />;
       case 'backup-settings':
-        if (user.role !== 'Admin' && user.role !== 'Admin App') return <Dashboard user={user} onNavigate={navigateTo} />;
-        return <Backup onBack={goBack} />;
+        if (user.role !== 'Admin' && user.role !== 'Admin App') return <Dashboard user={user} onNavigate={navigateTo} addToast={addToast} />;
+        return <Backup onBack={goBack} addToast={addToast} />;
       case 'backup-now':
-        if (user.role !== 'Admin' && user.role !== 'Admin App') return <Dashboard user={user} onNavigate={navigateTo} />;
-        return <BackupNow onBack={goBack} />;
+        if (user.role !== 'Admin' && user.role !== 'Admin App') return <Dashboard user={user} onNavigate={navigateTo} addToast={addToast} />;
+        return <BackupNow onBack={goBack} addToast={addToast} />;
       default: return (
         <div className="p-4 md:p-6 space-y-6">
           <PageBreadcrumb title={currentPage} onBack={goBack} />
@@ -490,6 +510,7 @@ export default function App() {
         </main>
       </div>
       <BottomNav currentPage={currentPage} onNavigate={navigateTo} user={user} pendingCount={pendingCount} />
+      <ToastContainer toasts={toasts} removeToast={removeToast} />
     </div>
   );
 }

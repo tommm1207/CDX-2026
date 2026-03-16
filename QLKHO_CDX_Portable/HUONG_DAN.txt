@@ -1,0 +1,36 @@
+===============================================
+  QLKHO CDX - Quan Ly Kho Con Duong Xanh
+  Huong Dan Su Dung (Portable Version)
+===============================================
+
+1. KHOI DONG APP
+   - Click dup vao file START.bat
+   - Doi vai giay, trinh duyet se tu dong mo
+   - Neu trinh duyet khong tu mo, truy cap: http://localhost:8092/
+
+2. DANG NHAP
+   - Username: CDX004
+   - Password: 132
+
+3. DUNG APP
+   - Dong cua so den (Command Prompt) hoac click dup STOP.bat
+
+4. YEU CAU HE THONG
+   - Windows 10/11 (64-bit)
+   - Can ket noi Internet (de tai CSS, Font tu CDN)
+   - Khong can cai dat them phan mem nao
+
+5. LUU Y
+   - Khong xoa hoac doi ten cac file/thu muc trong day
+   - Du lieu luu trong thu muc pb_data/
+   - Neu muon backup, copy thu muc pb_data/ ra noi khac
+   - Port 8092 can trong (khong co app nao khac dung port nay)
+
+6. QUAN TRI DATABASE (cho nguoi biet ky thuat)
+   - Truy cap: http://localhost:8092/_/
+   - Email: CDX004@cdx.local
+   - Password: 13213213
+
+===============================================
+  Con Duong Xanh - 2026
+===============================================

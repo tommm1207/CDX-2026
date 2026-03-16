@@ -115,8 +115,8 @@ export const Advances = ({ user, onBack }: { user: Employee, onBack?: () => void
         </button>
       </div>
 
-      <div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
-        <table className="w-full text-left border-collapse">
+      <div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden overflow-x-auto custom-scrollbar pb-2">
+        <table className="w-full text-left border-collapse min-w-[600px]">
           <thead>
             <tr className="bg-primary text-white">
               <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider">Ngày</th>
@@ -127,7 +127,14 @@ export const Advances = ({ user, onBack }: { user: Employee, onBack?: () => void
           </thead>
           <tbody className="divide-y divide-gray-100">
             {loading ? (
-              <tr><td colSpan={4} className="px-4 py-8 text-center text-gray-400 italic">Đang tải...</td></tr>
+              <tr>
+                <td colSpan={4} className="px-4 py-12 text-center text-gray-400 italic">
+                  <div className="flex flex-col items-center justify-center">
+                    <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin mb-2"></div>
+                    <p className="text-sm">Đang tải dữ liệu...</p>
+                  </div>
+                </td>
+              </tr>
             ) : (activeTab === 'advances' ? advances : allowances).length === 0 ? (
               <tr><td colSpan={4} className="px-4 py-8 text-center text-gray-400 italic">Chưa có dữ liệu</td></tr>
             ) : (

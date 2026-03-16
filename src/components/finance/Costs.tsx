@@ -52,11 +52,12 @@ export const Costs = ({ user, onBack }: { user: Employee, onBack?: () => void })
       const { data, error } = await supabase
         .from('costs')
         .select('*, users(full_name), warehouses(name), materials(name)')
+        .or('status.is.null,status.neq.Đã xóa')
         .order('date', { ascending: false });
 
       if (error) {
         console.error('Error fetching costs:', error);
-        const { data: fallbackData, error: fallbackError } = await supabase.from('costs').select('*').order('date', { ascending: false });
+        const { data: fallbackData, error: fallbackError } = await supabase.from('costs').select('*').or('status.is.null,status.neq.Đã xóa').order('date', { ascending: false });
         if (fallbackError) throw fallbackError;
         setCosts(fallbackData || []);
       } else {
@@ -209,7 +210,7 @@ export const Costs = ({ user, onBack }: { user: Employee, onBack?: () => void })
   const confirmDelete = async () => {
     if (!itemToDelete) return;
     try {
-      const { error } = await supabase.from('costs').delete().eq('id', itemToDelete);
+      const { error } = await supabase.from('costs').update({ status: 'Đã xóa' }).eq('id', itemToDelete);
       if (error) throw error;
       fetchCosts();
       setShowDeleteModal(false);

@@ -1,5 +1,5 @@
 import { useState, useEffect, FormEvent } from 'react';
-import { Plus, X, Navigation, ArrowDownCircle, ChevronRight, Edit } from 'lucide-react';
+import { Plus, Search, ChevronRight, X, ArrowDownCircle, Edit, Navigation, Trash2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { supabase } from '../../supabaseClient';
 import { Employee } from '../../types';
@@ -84,6 +84,21 @@ export const StockIn = ({ user, onBack, initialStatus }: { user: Employee, onBac
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
+    
+    // Explicit validation since custom components don't always trigger HTML5 forms properly
+    if (!formData.material_id) {
+      alert("Vui lòng chọn hoặc nhập Tên vật tư nhập.");
+      return;
+    }
+    if (!formData.warehouse_id) {
+      alert("Vui lòng chọn hoặc nhập Tên kho nhập.");
+      return;
+    }
+    if (!formData.quantity || formData.quantity <= 0) {
+      alert("Vui lòng nhập số lượng nhập hợp lệ (lớn hơn 0).");
+      return;
+    }
+
     setSubmitting(true);
     try {
       let finalWarehouseId = formData.warehouse_id;
@@ -220,6 +235,20 @@ export const StockIn = ({ user, onBack, initialStatus }: { user: Employee, onBac
 
       fetchSlips();
       setShowDetailModal(false);
+    } catch (err: any) {
+      alert('Lỗi: ' + err.message);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!selectedSlip || !confirm('Bạn có chắc chắn muốn đưa phiếu này vào thùng rác?')) return;
+    try {
+      const { error } = await supabase.from('stock_in').update({ status: 'Đã xóa' }).eq('id', selectedSlip.id);
+      if (error) throw error;
+      
+      alert('Đã chuyển phiếu vào thùng rác');
+      setShowDetailModal(false);
+      fetchSlips();
     } catch (err: any) {
       alert('Lỗi: ' + err.message);
     }
@@ -399,6 +428,12 @@ export const StockIn = ({ user, onBack, initialStatus }: { user: Employee, onBac
               </div>
 
               <div className="p-6 bg-gray-50 border-t border-gray-100 flex justify-end gap-3 rounded-b-3xl">
+                <button
+                  onClick={handleDelete}
+                  className="px-6 py-2 bg-red-50 text-red-600 rounded-xl text-sm font-bold hover:bg-red-100 transition-colors flex items-center gap-2"
+                >
+                  <Trash2 size={16} /> Xóa phiếu
+                </button>
                 <button
                   onClick={handleEdit}
                   className="px-6 py-2 bg-blue-100 text-blue-600 rounded-xl text-sm font-bold hover:bg-blue-200 transition-colors flex items-center gap-2"

@@ -22,7 +22,7 @@ export const BACKUP_TABLES = [
   { id: 'partners', label: 'Khách hàng & NCC' },
 ];
 
-export const Backup = ({ onBack }: { onBack: () => void }) => {
+export const Backup = ({ onBack, addToast }: { onBack: () => void, addToast: (msg: string, type?: 'success' | 'error' | 'info') => void }) => {
   const [email, setEmail] = useState(() => localStorage.getItem('backup_email') || '');
   const [frequency, setFrequency] = useState('Thủ công (không tự động)');
   const [time, setTime] = useState('06:00');
@@ -96,18 +96,18 @@ export const Backup = ({ onBack }: { onBack: () => void }) => {
       });
 
       if (response.ok) {
-        alert('Đã lưu cấu hình và đồng bộ với Server!');
+        addToast('Đã lưu cấu hình và đồng bộ với Server!', 'success');
       } else {
         throw new Error('Không thể đồng bộ với Server');
       }
     } catch (err: any) {
-      alert('Đã lưu cục bộ nhưng lỗi đồng bộ Server: ' + err.message);
+      addToast('Đã lưu cục bộ nhưng lỗi Server: ' + err.message, 'error');
     }
   };
 
   const handleBackupNow = async () => {
     if (selectedTables.length === 0) {
-      alert('Vui lòng chọn ít nhất một bảng dữ liệu!');
+      addToast('Vui lòng chọn ít nhất một bảng dữ liệu!', 'error');
       return;
     }
 
@@ -153,10 +153,10 @@ export const Backup = ({ onBack }: { onBack: () => void }) => {
       writeFile(workbook, fileName);
 
       setBackupStatus('Hoàn tất!');
-      alert('Sao lưu thành công! File đã được tải về' + (email ? ` và gửi tới email ${email}.` : '.'));
+      addToast('Sao lưu thành công! File đã được tải về' + (email ? ` và gửi tới email ${email}.` : '.'), 'success');
     } catch (err: any) {
       console.error(err);
-      alert('Đã xảy ra lỗi khi sao lưu: ' + err.message);
+      addToast('Đã xảy ra lỗi khi sao lưu: ' + err.message, 'error');
     } finally {
       setIsBackingUp(false);
       setBackupStatus('');

@@ -1,11 +1,13 @@
 import { motion } from 'motion/react';
-import { Package, Warehouse, Archive } from 'lucide-react';
+import { Package, Warehouse, Archive, UserCircle, Wallet } from 'lucide-react';
 import { PageBreadcrumb } from '../shared/PageBreadcrumb';
 
 export const Trash = ({ onNavigate, onBack }: { onNavigate: (page: string) => void, onBack: () => void }) => {
   const trashItems = [
+    { id: 'deleted-employees', label: 'Hồ sơ nhân sự đã xóa', icon: UserCircle, color: 'bg-rose-50 text-rose-600' },
     { id: 'deleted-warehouses', label: 'Danh sách kho xóa', icon: Warehouse, color: 'bg-orange-50 text-orange-600' },
     { id: 'deleted-slips', label: 'Phiếu nhập xuất đã xóa', icon: Archive, color: 'bg-blue-50 text-blue-600' },
+    { id: 'deleted-costs', label: 'Báo cáo chi phí đã xóa', icon: Wallet, color: 'bg-purple-50 text-purple-600' },
   ];
 
   return (

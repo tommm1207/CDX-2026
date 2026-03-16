@@ -6,7 +6,7 @@ import { supabase } from '../../supabaseClient';
 import { PageBreadcrumb } from '../shared/PageBreadcrumb';
 import { BACKUP_TABLES } from './Backup';
 
-export const BackupNow = ({ onBack }: { onBack: () => void }) => {
+export const BackupNow = ({ onBack, addToast }: { onBack: () => void, addToast: (msg: string, type?: 'success' | 'error' | 'info') => void }) => {
   const [loading, setLoading] = useState(false);
   const [status, setStatus] = useState('');
 
@@ -62,10 +62,10 @@ export const BackupNow = ({ onBack }: { onBack: () => void }) => {
       writeFile(workbook, fileName);
 
       setStatus('Hoàn tất!');
-      alert('Sao lưu toàn bộ dữ liệu thành công!' + (email ? ` Đã gửi tới email ${email}.` : ''));
+      addToast('Sao lưu toàn bộ dữ liệu thành công!' + (email ? ` Đã gửi tới email ${email}.` : ''), 'success');
     } catch (err: any) {
       console.error('Backup error:', err);
-      alert('Đã xảy ra lỗi khi sao lưu dữ liệu: ' + err.message);
+      addToast('Đã xảy ra lỗi khi sao lưu dữ liệu: ' + err.message, 'error');
     } finally {
       setLoading(false);
     }

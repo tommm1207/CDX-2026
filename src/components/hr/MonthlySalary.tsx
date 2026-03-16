@@ -95,7 +95,7 @@ export const MonthlySalary = ({ user, onBack }: { user: Employee, onBack?: () =>
         </div>
       </div>
 
-      <div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden overflow-x-auto">
+      <div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden overflow-x-auto custom-scrollbar pb-2">
         <table className="w-full text-left border-collapse min-w-[800px]">
           <thead>
             <tr className="bg-primary text-white">
@@ -111,7 +111,14 @@ export const MonthlySalary = ({ user, onBack }: { user: Employee, onBack?: () =>
           </thead>
           <tbody className="divide-y divide-gray-100">
             {loading ? (
-              <tr><td colSpan={8} className="px-4 py-12 text-center text-gray-400 italic">Đang tính toán...</td></tr>
+              <tr>
+                <td colSpan={8} className="px-4 py-12 text-center text-gray-400 italic">
+                  <div className="flex flex-col items-center justify-center">
+                    <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin mb-2"></div>
+                    <p className="text-sm">Đang tính toán...</p>
+                  </div>
+                </td>
+              </tr>
             ) : (
               salaries.map((s) => (
                 <tr key={s.id} className="hover:bg-gray-50 transition-colors">

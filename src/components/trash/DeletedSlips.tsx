@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Archive, RefreshCw } from 'lucide-react';
+import { Archive, RefreshCw, Trash2 } from 'lucide-react';
 import { supabase } from '../../supabaseClient';
 import { PageBreadcrumb } from '../shared/PageBreadcrumb';
 import { formatDate, formatNumber } from '../../utils/format';
@@ -41,6 +41,18 @@ export const DeletedSlips = ({ onBack }: { onBack: () => void }) => {
       const { error } = await supabase.from(table).update({ status: 'Chờ duyệt' }).eq('id', id);
       if (error) throw error;
       alert('Đã khôi phục phiếu thành công!');
+      fetchDeletedSlips();
+    } catch (err: any) {
+      alert('Lỗi: ' + err.message);
+    }
+  };
+
+  const handlePermanentDelete = async (id: string, table: string) => {
+    if (!confirm('Bạn có chắc chắn muốn xóa vĩnh viễn phiếu này? Hành động này không thể hoàn tác!')) return;
+    try {
+      const { error } = await supabase.from(table).delete().eq('id', id);
+      if (error) throw error;
+      alert('Đã xóa vĩnh viễn thành công!');
       fetchDeletedSlips();
     } catch (err: any) {
       alert('Lỗi: ' + err.message);
@@ -93,13 +105,22 @@ export const DeletedSlips = ({ onBack }: { onBack: () => void }) => {
                   <td className="px-4 py-3 text-xs text-gray-800 font-medium">{item.materials?.name}</td>
                   <td className="px-4 py-3 text-xs text-center font-bold text-gray-700">{formatNumber(item.quantity)}</td>
                   <td className="px-4 py-3 text-right">
-                    <button
-                      onClick={() => handleRestore(item.id, item.table)}
-                      className="p-2 bg-green-50 text-green-600 rounded-lg hover:bg-green-100 transition-colors"
-                      title="Khôi phục"
-                    >
-                      <RefreshCw size={16} />
-                    </button>
+                    <div className="flex justify-end gap-2">
+                      <button
+                        onClick={() => handleRestore(item.id, item.table)}
+                        className="p-2 bg-green-50 text-green-600 rounded-lg hover:bg-green-100 transition-colors"
+                        title="Khôi phục"
+                      >
+                        <RefreshCw size={16} />
+                      </button>
+                      <button
+                        onClick={() => handlePermanentDelete(item.id, item.table)}
+                        className="p-2 bg-red-50 text-red-600 rounded-lg hover:bg-red-100 transition-colors"
+                        title="Xóa vĩnh viễn"
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))

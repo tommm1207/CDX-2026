@@ -1,5 +1,5 @@
 import { useState, useEffect, FormEvent } from 'react';
-import { Plus, X, ArrowUpCircle, Edit, ChevronRight } from 'lucide-react';
+import { Plus, X, ArrowUpCircle, Edit, ChevronRight, Trash2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { supabase } from '../../supabaseClient';
 import { Employee } from '../../types';
@@ -20,6 +20,7 @@ export const StockOut = ({ user, onBack }: { user: Employee, onBack?: () => void
   const [materials, setMaterials] = useState<any[]>([]);
   const [submitting, setSubmitting] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [availableStock, setAvailableStock] = useState<number | null>(null);
 
   const initialFormState = {
@@ -32,6 +33,9 @@ export const StockOut = ({ user, onBack }: { user: Employee, onBack?: () => void
     status: 'Chờ duyệt',
     export_code: generateCode('XK')
   };
+
+  // Kiểm tra tồn kho realtime khi có đủ thông tin
+  const [stockLoading, setStockLoading] = useState(false);
 
   const [formData, setFormData] = useState(initialFormState);
 
@@ -47,7 +51,7 @@ export const StockOut = ({ user, onBack }: { user: Employee, onBack?: () => void
     } else {
       setAvailableStock(null);
     }
-  }, [formData.warehouse_id, formData.material_id, formData.date]);
+  }, [formData.warehouse_id, formData.material_id, formData.date, editingId]);
 
   const checkStock = async () => {
     const wh = warehouses.find(w => w.name === formData.warehouse_id || w.id === formData.warehouse_id);
@@ -55,11 +59,16 @@ export const StockOut = ({ user, onBack }: { user: Employee, onBack?: () => void
 
     if (!wh?.id || !mat?.id || !formData.date) return;
 
+    setStockLoading(true);
     try {
-      const stock = await getAvailableStock(mat.id, wh.id, formData.date);
+      // Lấy tồn kho tích lũy đến đúng ngày của phiếu xuất.
+      // Truyền editingId để loại trừ phiếu đang sửa khỏi tongXuat (tránh double-count).
+      const stock = await getAvailableStock(mat.id, wh.id, formData.date, editingId || undefined);
       setAvailableStock(stock);
     } catch (err) {
       console.error('Error checking stock:', err);
+    } finally {
+      setStockLoading(false);
     }
   };
 
@@ -94,6 +103,21 @@ export const StockOut = ({ user, onBack }: { user: Employee, onBack?: () => void
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
+
+    // Explicit validation since custom components don't always trigger HTML5 forms properly
+    if (!formData.warehouse_id) {
+      alert("Vui lòng chọn hoặc nhập Kho xuất.");
+      return;
+    }
+    if (!formData.material_id) {
+      alert("Vui lòng chọn hoặc nhập Vật tư xuất.");
+      return;
+    }
+    if (!formData.quantity || formData.quantity <= 0) {
+      alert("Vui lòng nhập số lượng xuất hợp lệ (lớn hơn 0).");
+      return;
+    }
+
     setSubmitting(true);
     try {
       let finalWarehouseId = formData.warehouse_id;
@@ -123,8 +147,17 @@ export const StockOut = ({ user, onBack }: { user: Employee, onBack?: () => void
         }
       }
 
-      if (availableStock !== null && Number(formData.quantity) > availableStock) {
-        throw new Error(`Số lượng xuất (${formData.quantity}) vượt quá tồn kho hiện tại (${availableStock})!`);
+      // Kiểm tra tồn kho tại ngày của phiếu xuất.
+      // Loại trừ phiếu đang sửa (editingId) để không bị trừ double.
+      const wh = warehouses.find(w => w.name === finalWarehouseId || w.id === finalWarehouseId);
+      const stockAtDate = await getAvailableStock(
+        finalMaterialId,
+        wh?.id || finalWarehouseId,
+        formData.date,
+        isEditing && selectedSlip ? selectedSlip.id : undefined
+      );
+      if (Number(formData.quantity) > stockAtDate) {
+        throw new Error(`Không đủ tồn kho tại ngày ${formData.date}! Tồn hiện có: ${stockAtDate}, cần xuất: ${formData.quantity}.`);
       }
 
       const payload = {
@@ -151,6 +184,7 @@ export const StockOut = ({ user, onBack }: { user: Employee, onBack?: () => void
       fetchSlips();
       setFormData(initialFormState);
       setIsEditing(false);
+      setEditingId(null);
       setSelectedSlip(null);
     } catch (err: any) {
       alert('Lỗi: ' + err.message);
@@ -201,6 +235,20 @@ export const StockOut = ({ user, onBack }: { user: Employee, onBack?: () => void
     }
   };
 
+  const handleDelete = async () => {
+    if (!selectedSlip || !confirm('Bạn có chắc chắn muốn đưa phiếu này vào thùng rác?')) return;
+    try {
+      const { error } = await supabase.from('stock_out').update({ status: 'Đã xóa' }).eq('id', selectedSlip.id);
+      if (error) throw error;
+      
+      alert('Đã chuyển phiếu vào thùng rác');
+      setShowDetailModal(false);
+      fetchSlips();
+    } catch (err: any) {
+      alert('Lỗi: ' + err.message);
+    }
+  };
+
   const handleRowClick = (slip: any) => {
     setSelectedSlip(slip);
     setShowDetailModal(true);
@@ -217,6 +265,7 @@ export const StockOut = ({ user, onBack }: { user: Employee, onBack?: () => void
       status: 'Chờ duyệt'
     });
     setIsEditing(true);
+    setEditingId(selectedSlip.id);  // lưu id để loại trừ khỏi tính tồn
     setShowDetailModal(false);
     setShowModal(true);
   };
@@ -238,6 +287,7 @@ export const StockOut = ({ user, onBack }: { user: Employee, onBack?: () => void
               export_code: generateCode('XK')
             });
             setIsEditing(false);
+            setEditingId(null);
             setShowModal(true);
           }}
           className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-xl text-sm font-bold hover:bg-red-700 transition-colors shadow-lg shadow-red-600/20"
@@ -347,6 +397,12 @@ export const StockOut = ({ user, onBack }: { user: Employee, onBack?: () => void
 
                 <div className="flex gap-3 pt-4 border-t border-gray-100">
                   <button
+                    onClick={handleDelete}
+                    className="flex-1 flex items-center justify-center gap-2 py-2 bg-red-50 text-red-600 rounded-xl text-sm font-bold hover:bg-red-100 transition-colors"
+                  >
+                    <Trash2 size={18} /> Xóa phiếu
+                  </button>
+                  <button
                     onClick={handleEdit}
                     className="flex-1 flex items-center justify-center gap-2 py-2 bg-blue-50 text-blue-600 rounded-xl text-sm font-bold hover:bg-blue-100 transition-colors"
                   >
@@ -400,11 +456,11 @@ export const StockOut = ({ user, onBack }: { user: Employee, onBack?: () => void
                       <input 
                         type="date" 
                         required 
-                        disabled
                         value={formData.date} 
                         onChange={(e) => setFormData({ ...formData, date: e.target.value })} 
-                        className="w-full px-4 py-2 rounded-xl border border-gray-100 text-sm outline-none bg-gray-50 text-gray-400 cursor-not-allowed" 
+                        className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-red-600/20" 
                       />
+                      <p className="text-[10px] text-gray-400">Tồn kho sẽ được kiểm tra tại ngày này</p>
                     </div>
 
                     <CreatableSelect
@@ -427,10 +483,28 @@ export const StockOut = ({ user, onBack }: { user: Employee, onBack?: () => void
                       required
                     />
 
-                    {availableStock !== null && (
-                      <div className="p-3 bg-blue-50 rounded-xl border border-blue-100">
-                        <p className="text-[10px] font-bold text-blue-400 uppercase">Tồn kho hiện tại</p>
-                        <p className="text-sm font-bold text-blue-600">{formatNumber(availableStock)} {materials.find(m => m.id === formData.material_id || m.name === formData.material_id)?.unit}</p>
+                    {stockLoading && (
+                      <div className="p-3 bg-gray-50 rounded-xl border border-gray-100">
+                        <p className="text-[10px] font-bold text-gray-400 uppercase animate-pulse">Đang kiểm tra tồn kho...</p>
+                      </div>
+                    )}
+                    {!stockLoading && availableStock !== null && (
+                      <div className={`p-3 rounded-xl border ${
+                        availableStock <= 0
+                          ? 'bg-red-50 border-red-100'
+                          : availableStock <= 5
+                          ? 'bg-amber-50 border-amber-100'
+                          : 'bg-blue-50 border-blue-100'
+                      }`}>
+                        <p className={`text-[10px] font-bold uppercase ${
+                          availableStock <= 0 ? 'text-red-400' : availableStock <= 5 ? 'text-amber-400' : 'text-blue-400'
+                        }`}>Tồn kho tại ngày {formData.date}</p>
+                        <p className={`text-sm font-bold ${
+                          availableStock <= 0 ? 'text-red-600' : availableStock <= 5 ? 'text-amber-600' : 'text-blue-600'
+                        }`}>
+                          {formatNumber(availableStock)} {materials.find(m => m.id === formData.material_id || m.name === formData.material_id)?.unit}
+                          {availableStock <= 0 && ' ⚠ Không đủ tồn kho!'}
+                        </p>
                       </div>
                     )}
                   </div>
@@ -458,7 +532,12 @@ export const StockOut = ({ user, onBack }: { user: Employee, onBack?: () => void
 
                   <div className="md:col-span-2 flex justify-end gap-3 mt-4">
                     <button type="button" onClick={() => setShowModal(false)} className="px-6 py-2 rounded-xl text-sm font-bold text-gray-500 hover:bg-gray-100 transition-colors">Hủy</button>
-                    <button type="submit" disabled={submitting} className="px-8 py-2 rounded-xl bg-red-600 text-white text-sm font-bold hover:bg-red-700 transition-colors shadow-lg shadow-red-600/20 disabled:opacity-50">
+                    <button
+                      type="submit"
+                      disabled={submitting || (availableStock !== null && Number(formData.quantity) > availableStock)}
+                      title={availableStock !== null && Number(formData.quantity) > availableStock ? `Không đủ tồn kho (tồn: ${availableStock})` : undefined}
+                      className="px-8 py-2 rounded-xl bg-red-600 text-white text-sm font-bold hover:bg-red-700 transition-colors shadow-lg shadow-red-600/20 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
                       {submitting ? 'Đang lưu...' : (isEditing ? 'Cập nhật' : 'Lưu phiếu xuất')}
                     </button>
                   </div>

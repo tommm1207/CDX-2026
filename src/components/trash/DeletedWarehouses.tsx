@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Warehouse, RefreshCw } from 'lucide-react';
+import { Warehouse, RefreshCw, Trash2 } from 'lucide-react';
 import { supabase } from '../../supabaseClient';
 import { PageBreadcrumb } from '../shared/PageBreadcrumb';
 
@@ -42,6 +42,18 @@ export const DeletedWarehouses = ({ onBack }: { onBack: () => void }) => {
     }
   };
 
+  const handlePermanentDelete = async (id: string) => {
+    if (!confirm('Bạn có chắc chắn muốn xóa vĩnh viễn kho này? Hành động này không thể hoàn tác!')) return;
+    try {
+      const { error } = await supabase.from('warehouses').delete().eq('id', id);
+      if (error) throw error;
+      alert('Đã xóa vĩnh viễn thành công!');
+      fetchDeletedWarehouses();
+    } catch (err: any) {
+      alert('Lỗi: ' + err.message);
+    }
+  };
+
   return (
     <div className="p-4 md:p-6 space-y-6 pb-44">
       <PageBreadcrumb title="Kho đã xóa" onBack={onBack} />
@@ -78,13 +90,22 @@ export const DeletedWarehouses = ({ onBack }: { onBack: () => void }) => {
                   <td className="px-4 py-3 text-xs text-gray-600">{item.address}</td>
                   <td className="px-4 py-3 text-xs text-gray-600">{item.users?.full_name}</td>
                   <td className="px-4 py-3 text-right">
-                    <button
-                      onClick={() => handleRestore(item.id)}
-                      className="p-2 bg-green-50 text-green-600 rounded-lg hover:bg-green-100 transition-colors"
-                      title="Khôi phục"
-                    >
-                      <RefreshCw size={16} />
-                    </button>
+                    <div className="flex justify-end gap-2">
+                      <button
+                        onClick={() => handleRestore(item.id)}
+                        className="p-2 bg-green-50 text-green-600 rounded-lg hover:bg-green-100 transition-colors"
+                        title="Khôi phục"
+                      >
+                        <RefreshCw size={16} />
+                      </button>
+                      <button
+                        onClick={() => handlePermanentDelete(item.id)}
+                        className="p-2 bg-red-50 text-red-600 rounded-lg hover:bg-red-100 transition-colors"
+                        title="Xóa vĩnh viễn"
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))

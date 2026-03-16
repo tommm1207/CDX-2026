@@ -18,7 +18,9 @@ export const WEATHER_OPTIONS = [
   { value: 'pleasant', label: '🌤️ Trời trong xanh, nắng dịu' },
 ];
 
-export const Notes = ({ user, onBack }: { user: Employee, onBack: () => void }) => {
+import { ToastType } from '../shared/Toast';
+
+export const Notes = ({ user, onBack, addToast }: { user: Employee, onBack: () => void, addToast?: (msg: string, type?: ToastType) => void }) => {
   const [notes, setNotes] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [showQuickNote, setShowQuickNote] = useState(false);
@@ -67,6 +69,11 @@ export const Notes = ({ user, onBack }: { user: Employee, onBack: () => void }) 
   };
 
   const handleSave = async () => {
+    if (!formData.content) {
+      if (addToast) addToast('Vui lòng nhập nội dung ghi chú', 'error');
+      return;
+    }
+
     const { error } = await supabase.from('notes').insert([{
       ...formData,
       created_by: user.id
@@ -85,6 +92,9 @@ export const Notes = ({ user, onBack }: { user: Employee, onBack: () => void }) 
         related_personnel: []
       });
       fetchData();
+      if (addToast) addToast('Lưu ghi chú thành công!', 'success');
+    } else {
+      if (addToast) addToast('Lỗi khi lưu ghi chú', 'error');
     }
   };
 

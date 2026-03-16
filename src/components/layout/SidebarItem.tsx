@@ -1,7 +1,8 @@
 import { motion } from 'motion/react';
+import React from 'react';
 import { LucideIcon } from 'lucide-react';
 
-export const SidebarItem = ({ icon: Icon, label, active, onClick, badge }: { icon: LucideIcon, label: string, active: boolean, onClick: () => void, badge?: number }) => (
+export const SidebarItem: React.FC<{ icon: any, label: string, active: boolean, onClick: () => void, badge?: number | string }> = ({ icon: Icon, label, active, onClick, badge }) => (
   <button
     onClick={onClick}
     className={`w-full flex items-center justify-between px-4 py-3 rounded-2xl transition-all group relative ${active

@@ -21,8 +21,15 @@ import { Employee } from '../../types';
 import { formatCurrency, formatNumber } from '../../utils/format';
 import { AttendanceTable } from '../hr/AttendanceTable';
 import { NumericInput } from '../shared/NumericInput';
+import { ToastType } from '../shared/Toast';
 
-export const Dashboard = ({ user, onNavigate }: { user: Employee, onNavigate: (page: string, params?: any) => void }) => {
+interface DashboardProps {
+  user: Employee;
+  onNavigate: (page: string, params?: any) => void;
+  addToast?: (message: string, type?: ToastType) => void;
+}
+
+export const Dashboard = ({ user, onNavigate, addToast }: DashboardProps) => {
   const [stats, setStats] = useState({
     totalBudget: 0,
     totalIn: 0,
@@ -130,10 +137,13 @@ export const Dashboard = ({ user, onNavigate }: { user: Employee, onNavigate: (p
           .gte('date', `${selectedYear}-${String(selectedMonth).padStart(2, '0')}-01`)
           .lte('date', new Date(selectedYear, selectedMonth, 0).toISOString().split('T')[0]);
         if (updatedAtt) setAttendance(updatedAtt);
+        
+        if (addToast) addToast(`Đã xóa chấm công ngày ${day}/${selectedMonth}`, 'info');
         return;
       }
 
       await supabase.from('attendance').update({ status: nextStatus, hours_worked: hours, overtime_hours: current.overtime_hours || 0 }).eq('id', current.id);
+      if (addToast) addToast(`Đã cập nhật chấm công thành: ${getStatusLabel(nextStatus)}`, 'success');
     } else {
       await supabase.from('attendance').insert([{
         employee_id: empId,
@@ -142,6 +152,7 @@ export const Dashboard = ({ user, onNavigate }: { user: Employee, onNavigate: (p
         hours_worked: 8,
         overtime_hours: 0
       }]);
+      if (addToast) addToast(`Đã chấm công đủ ngày ${day}/${selectedMonth}`, 'success');
     }
     
     // Refresh attendance data
@@ -183,6 +194,8 @@ export const Dashboard = ({ user, onNavigate }: { user: Employee, onNavigate: (p
       }]);
     }
     setShowEditModal(false);
+    
+    if (addToast) addToast(`Đã lưu thay đổi công ngày ${editingAtt.day}/${selectedMonth}`, 'success');
     
     // Refresh attendance data
     const { data: updatedAtt } = await supabase
@@ -296,7 +309,10 @@ export const Dashboard = ({ user, onNavigate }: { user: Employee, onNavigate: (p
           {/* Pending Approvals Widget - Now in Sidebar for Admin */}
           {(user.role === 'Admin' || user.role === 'Admin App') && (
             <div className="bg-white rounded-[2.5rem] border border-gray-100 shadow-sm overflow-hidden">
-              <div className="p-8 pb-4 flex items-center justify-between">
+              <div 
+                className="p-8 pb-4 flex items-center justify-between cursor-pointer hover:bg-gray-50 transition-colors"
+                onClick={() => onNavigate('pending-approvals')}
+              >
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 bg-amber-50 text-amber-600 rounded-xl flex items-center justify-center">
                     <Bell size={20} className="animate-bounce" />

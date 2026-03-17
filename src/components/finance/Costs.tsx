@@ -71,12 +71,12 @@ export const Costs = ({ user, onBack }: { user: Employee, onBack?: () => void })
   };
 
   const fetchMaterials = async () => {
-    const { data } = await supabase.from('materials').select('id, name');
+    const { data } = await supabase.from('materials').select('id, name').or('status.is.null,status.neq.Đã xóa');
     if (data) setMaterials(data);
   };
 
   const fetchWarehouses = async () => {
-    const { data } = await supabase.from('warehouses').select('id, name');
+    const { data } = await supabase.from('warehouses').select('id, name').or('status.is.null,status.neq.Đã xóa');
     if (data) setWarehouses(data);
   };
 
@@ -95,7 +95,7 @@ export const Costs = ({ user, onBack }: { user: Employee, onBack?: () => void })
     if (data) {
       const uniqueUnits = Array.from(new Set(data.map(item => item.unit)))
         .filter(Boolean)
-        .map((name, index) => ({ id: index, name }));
+        .map((name) => ({ id: name, name }));
       setUnits(uniqueUnits);
     }
   };
@@ -153,7 +153,8 @@ export const Costs = ({ user, onBack }: { user: Employee, onBack?: () => void })
         quantity: formData.quantity,
         unit: formData.unit,
         total_amount: formData.total_amount,
-        notes: formData.notes
+        notes: formData.notes,
+        status: 'Đã duyệt'
       };
 
       let error;
@@ -377,7 +378,7 @@ export const Costs = ({ user, onBack }: { user: Employee, onBack?: () => void })
                     </td>
                     <td className="px-4 py-3 text-xs text-gray-600 font-medium">{item.warehouses?.name || 'N/A'}</td>
                     <td className="px-4 py-3 text-xs text-gray-600">{item.cost_type}</td>
-                    <td className="px-4 py-3 text-xs text-gray-600">{item.content}</td>
+                    <td className="px-4 py-3 text-xs text-gray-600">{item.materials?.name || item.content}</td>
                     <td className="px-4 py-3 text-xs text-gray-600 text-center">{item.quantity}</td>
                     <td className="px-4 py-3 text-xs text-gray-600 text-center">{item.unit}</td>
                     <td className={`px-4 py-3 text-xs font-bold text-right ${item.transaction_type === 'Thu' ? 'text-green-600' : 'text-red-600'}`}>

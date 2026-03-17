@@ -78,7 +78,7 @@ export const StockIn = ({ user, onBack, initialStatus }: { user: Employee, onBac
   };
 
   const fetchMaterials = async () => {
-    const { data } = await supabase.from('materials').select('*').order('name');
+    const { data } = await supabase.from('materials').select('*').or('status.is.null,status.neq.Đã xóa').order('name');
     if (data) setMaterials(data);
   };
 

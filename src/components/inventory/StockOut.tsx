@@ -97,7 +97,7 @@ export const StockOut = ({ user, onBack }: { user: Employee, onBack?: () => void
   };
 
   const fetchMaterials = async () => {
-    const { data } = await supabase.from('materials').select('*').order('name');
+    const { data } = await supabase.from('materials').select('*').or('status.is.null,status.neq.Đã xóa').order('name');
     if (data) setMaterials(data);
   };
 
@@ -297,49 +297,51 @@ export const StockOut = ({ user, onBack }: { user: Employee, onBack?: () => void
       </div>
 
       <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-        <table className="w-full text-left border-collapse min-w-[600px]">
-          <thead>
-            <tr className="bg-red-600 text-white">
-              <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider">Ngày</th>
-              <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider">Kho</th>
-              <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider">Vật tư</th>
-              <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-center">SL</th>
-              <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider">Trạng thái</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-100">
-            {loading ? (
-              <tr><td colSpan={5} className="px-4 py-8 text-center text-gray-400 italic">Đang tải...</td></tr>
-            ) : slips.length === 0 ? (
-              <tr><td colSpan={5} className="px-4 py-8 text-center text-gray-400 italic">Chưa có phiếu xuất nào</td></tr>
-            ) : (
-              slips.map((item) => (
-                <tr key={item.id} onClick={() => handleRowClick(item)} className="hover:bg-gray-50 transition-colors cursor-pointer group">
-                  <td className="px-4 py-3 text-xs text-gray-600">{formatDate(item.date)}</td>
-                  <td className="px-4 py-3 text-xs text-gray-600 font-medium">
-                    <p>{item.warehouses?.name}</p>
-                    <p className="text-[10px] text-gray-400">#{item.warehouses?.code}</p>
-                  </td>
-                  <td className="px-4 py-3 text-xs text-gray-600">
-                    <p>{item.materials?.name}</p>
-                    <p className="text-[10px] text-gray-400">#{item.materials?.code}</p>
-                  </td>
-                  <td className="px-4 py-3 text-xs text-red-600 text-center font-bold">-{item.quantity}</td>
-                  <td className="px-4 py-3 text-xs">
-                    <div className="flex items-center justify-between">
-                      <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${item.status === 'Đã duyệt' ? 'bg-green-100 text-green-600' :
-                          item.status === 'Từ chối' ? 'bg-red-100 text-red-600' : 'bg-amber-100 text-amber-600'
-                        }`}>
-                        {item.status || 'Chờ duyệt'}
-                      </span>
-                      <ChevronRight size={14} className="text-gray-300 group-hover:text-primary transition-colors" />
-                    </div>
-                  </td>
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
+        <div className="overflow-x-auto">
+          <table className="w-full text-left border-collapse min-w-[700px]">
+            <thead>
+              <tr className="bg-red-600 text-white">
+                <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider">Ngày</th>
+                <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider">Kho</th>
+                <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider">Vật tư</th>
+                <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-center">SL</th>
+                <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider">Trạng thái</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-100">
+              {loading ? (
+                <tr><td colSpan={5} className="px-4 py-8 text-center text-gray-400 italic">Đang tải...</td></tr>
+              ) : slips.length === 0 ? (
+                <tr><td colSpan={5} className="px-4 py-8 text-center text-gray-400 italic">Chưa có phiếu xuất nào</td></tr>
+              ) : (
+                slips.map((item) => (
+                  <tr key={item.id} onClick={() => handleRowClick(item)} className="hover:bg-gray-50 transition-colors cursor-pointer group">
+                    <td className="px-4 py-3 text-xs text-gray-600">{formatDate(item.date)}</td>
+                    <td className="px-4 py-3 text-xs text-gray-600 font-medium">
+                      <p>{item.warehouses?.name}</p>
+                      <p className="text-[10px] text-gray-400">#{item.warehouses?.code}</p>
+                    </td>
+                    <td className="px-4 py-3 text-xs text-gray-600">
+                      <p>{item.materials?.name}</p>
+                      <p className="text-[10px] text-gray-400">#{item.materials?.code}</p>
+                    </td>
+                    <td className="px-4 py-3 text-xs text-red-600 text-center font-bold">-{item.quantity}</td>
+                    <td className="px-4 py-3 text-xs">
+                      <div className="flex items-center justify-between">
+                        <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${item.status === 'Đã duyệt' ? 'bg-green-100 text-green-600' :
+                            item.status === 'Từ chối' ? 'bg-red-100 text-red-600' : 'bg-amber-100 text-amber-600'
+                          }`}>
+                          {item.status || 'Chờ duyệt'}
+                        </span>
+                        <ChevronRight size={14} className="text-gray-300 group-hover:text-primary transition-colors" />
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
       </div>
 
       <AnimatePresence>

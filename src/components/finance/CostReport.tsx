@@ -41,7 +41,8 @@ export const CostReport = ({ user, onBack }: { user: Employee, onBack?: () => vo
     warehouse_name: '',
     notes: '',
     cost_type: 'Chi phí',
-    stock_status: 'Chưa nhập'
+    stock_status: 'Chưa nhập',
+    transaction_type: 'Chi'
   });
 
   useEffect(() => {
@@ -57,6 +58,7 @@ export const CostReport = ({ user, onBack }: { user: Employee, onBack?: () => vo
     const { data, error } = await supabase
       .from('costs')
       .select('*, users(full_name), warehouses(name), materials(name)')
+      .or('status.is.null,status.neq.Đã xóa')
       .order('date', { ascending: false });
 
     if (error) {
@@ -68,12 +70,12 @@ export const CostReport = ({ user, onBack }: { user: Employee, onBack?: () => vo
   };
 
   const fetchWarehouses = async () => {
-    const { data } = await supabase.from('warehouses').select('id, name');
+    const { data } = await supabase.from('warehouses').select('id, name').or('status.is.null,status.neq.Đã xóa');
     if (data) setWarehouses(data);
   };
 
   const fetchMaterials = async () => {
-    const { data } = await supabase.from('materials').select('id, name');
+    const { data } = await supabase.from('materials').select('id, name').or('status.is.null,status.neq.Đã xóa');
     if (data) setMaterials(data);
   };
 
@@ -82,7 +84,7 @@ export const CostReport = ({ user, onBack }: { user: Employee, onBack?: () => vo
     if (data) {
       const uniqueTypes = Array.from(new Set(data.map(item => item.cost_type)))
         .filter(Boolean)
-        .map((name, index) => ({ id: index, name }));
+        .map((name) => ({ id: name, name }));
       setCostTypes(uniqueTypes);
     }
   };
@@ -92,7 +94,7 @@ export const CostReport = ({ user, onBack }: { user: Employee, onBack?: () => vo
     if (data) {
       const uniqueUnits = Array.from(new Set(data.map(item => item.unit)))
         .filter(Boolean)
-        .map((name, index) => ({ id: index, name }));
+        .map((name) => ({ id: name, name }));
       setUnits(uniqueUnits);
     }
   };
@@ -227,7 +229,9 @@ export const CostReport = ({ user, onBack }: { user: Employee, onBack?: () => vo
           unit_price: item.unit_price,
           total_amount: item.total_amount,
           notes: item.notes,
-          stock_status: item.stock_status
+          stock_status: item.stock_status,
+          transaction_type: item.transaction_type || 'Chi',
+          status: 'Chờ duyệt'
         };
 
         return item.id ? { ...payload, id: item.id } : payload;
@@ -266,14 +270,18 @@ export const CostReport = ({ user, onBack }: { user: Employee, onBack?: () => vo
     const existingGroup = acc.find(g => g.date === date && g.employee_id === employeeId);
 
     if (existingGroup) {
-      existingGroup.total_amount += current.total_amount;
+      if (current.transaction_type === 'Thu') {
+        existingGroup.total_amount -= current.total_amount;
+      } else {
+        existingGroup.total_amount += current.total_amount;
+      }
       existingGroup.items.push(current);
     } else {
       acc.push({
         date,
         employee_id: employeeId,
         employee_name: employeeName,
-        total_amount: current.total_amount,
+        total_amount: current.transaction_type === 'Thu' ? -current.total_amount : current.total_amount,
         items: [current]
       });
     }
@@ -381,8 +389,15 @@ export const CostReport = ({ user, onBack }: { user: Employee, onBack?: () => vo
                         className={`hover:bg-gray-50 cursor-pointer transition-colors ${selectedItem?.id === item.id ? 'bg-gray-50' : ''}`}
                       >
                         <td className="px-4 py-3 text-xs text-gray-500">{formatDate(item.date)}</td>
-                        <td className="px-4 py-3 text-xs text-gray-700 font-medium">{item.cost_type}</td>
-                        <td className="px-4 py-3 text-xs font-bold text-red-600 text-right">{formatCurrency(item.total_amount)}</td>
+                        <td className="px-4 py-3 text-xs text-gray-700 font-medium">
+                          {item.cost_type}
+                          <span className={`ml-2 px-1.5 py-0.5 rounded text-[8px] font-bold ${item.transaction_type === 'Thu' ? 'bg-green-100 text-green-600' : 'bg-red-100 text-red-600'}`}>
+                            {item.transaction_type === 'Thu' ? 'Thu' : 'Chi'}
+                          </span>
+                        </td>
+                        <td className={`px-4 py-3 text-xs font-bold text-right ${item.transaction_type === 'Thu' ? 'text-green-600' : 'text-red-600'}`}>
+                          {item.transaction_type === 'Thu' ? '+' : '-'}{formatCurrency(item.total_amount)}
+                        </td>
                       </tr>
                     ))}
                   </tbody>
@@ -663,6 +678,22 @@ export const CostReport = ({ user, onBack }: { user: Employee, onBack?: () => vo
                           <option value="Chưa nhập">Chưa nhập</option>
                           <option value="Đã nhập">Đã nhập</option>
                         </select>
+                      </div>
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-bold text-gray-400 uppercase">Loại giao dịch</label>
+                      <div className="flex gap-2">
+                        {['Chi', 'Thu'].map(type => (
+                          <button
+                            key={type}
+                            type="button"
+                            onClick={() => setDetailForm({ ...detailForm, transaction_type: type })}
+                            className={`flex-1 py-1.5 rounded-lg text-[10px] font-bold transition-colors ${detailForm.transaction_type === type ? (type === 'Thu' ? 'bg-green-600 text-white' : 'bg-red-600 text-white') : 'bg-gray-100 text-gray-500 hover:bg-gray-200'}`}
+                          >
+                            {type === 'Thu' ? 'Phiếu Cộng (+)' : 'Phiếu Trừ (-)'}
+                          </button>
+                        ))}
                       </div>
                     </div>
 

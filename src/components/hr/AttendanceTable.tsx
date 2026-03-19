@@ -55,7 +55,7 @@ export const AttendanceTable = ({
         <table className="w-full text-left border-collapse min-w-[1200px]">
           <thead>
             <tr className="bg-primary text-white">
-              <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider sticky left-0 z-10 bg-primary border-r border-white/10 w-48">Nhân viên</th>
+              <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider sticky left-0 z-[50] bg-primary border-r border-white/10 w-48">Nhân viên</th>
               {days.map(d => {
                 const dow = getDayOfWeekStr(d, selectedMonth, selectedYear);
                 const lunar = convertSolarToLunar(d, selectedMonth, selectedYear);
@@ -89,7 +89,7 @@ export const AttendanceTable = ({
                 const totalDays = empAtt.reduce((sum, a) => sum + Number(a.hours_worked || 0), 0) / 8;
                 return (
                   <tr key={emp.id} className="hover:bg-gray-50 transition-colors group">
-                    <td className="px-4 py-3 sticky left-0 z-10 bg-white group-hover:bg-gray-50 border-r border-gray-100">
+                    <td className="px-4 py-3 sticky left-0 z-[50] bg-white group-hover:bg-gray-50 border-r border-gray-100">
                       <p className="text-xs font-bold text-gray-800 leading-tight">{emp.full_name}</p>
                       <p className="text-[9px] text-gray-400">{emp.code || emp.id.slice(0, 8)}</p>
                     </td>

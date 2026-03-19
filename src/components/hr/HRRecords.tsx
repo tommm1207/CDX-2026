@@ -4,8 +4,13 @@ import { motion, AnimatePresence } from 'motion/react';
 import { supabase } from '../../supabaseClient';
 import { Employee } from '../../types';
 import { PageBreadcrumb } from '../shared/PageBreadcrumb';
+import { ToastType } from '../shared/Toast';
 
-export const HRRecords = ({ user, onBack }: { user: Employee, onBack?: () => void }) => {
+export const HRRecords = ({ user, onBack, addToast }: { 
+  user: Employee, 
+  onBack?: () => void,
+  addToast?: (message: string, type?: ToastType) => void
+}) => {
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -80,7 +85,8 @@ export const HRRecords = ({ user, onBack }: { user: Employee, onBack?: () => voi
 
   const handleEdit = (emp: Employee) => {
     if (emp.role === 'Admin App' && user.role !== 'Admin App') {
-      alert('Bạn không có quyền chỉnh sửa tài khoản Admin App');
+      if (addToast) addToast('Bạn không có quyền chỉnh sửa tài khoản Admin App', 'error');
+      else alert('Bạn không có quyền chỉnh sửa tài khoản Admin App');
       return;
     }
     setFormData({
@@ -114,7 +120,8 @@ export const HRRecords = ({ user, onBack }: { user: Employee, onBack?: () => voi
 
     const target = employees.find(e => e.id === itemToDelete);
     if (target?.role === 'Admin App' && user.role !== 'Admin App') {
-      alert('Bạn không có quyền xóa tài khoản Admin App');
+      if (addToast) addToast('Bạn không có quyền xóa tài khoản Admin App', 'error');
+      else alert('Bạn không có quyền xóa tài khoản Admin App');
       return;
     }
 
@@ -122,11 +129,12 @@ export const HRRecords = ({ user, onBack }: { user: Employee, onBack?: () => voi
       const { error } = await supabase.from('users').update({ status: 'Đã xóa' }).eq('id', itemToDelete);
       if (error) throw error;
       fetchEmployees();
-      alert('Đã chuyển nhân sự vào thùng rác');
+      if (addToast) addToast('Đã chuyển nhân sự vào thùng rác', 'success');
       setShowDeleteModal(false);
       setItemToDelete(null);
     } catch (err: any) {
-      alert('Lỗi khi xóa nhân sự: ' + err.message);
+      if (addToast) addToast('Lỗi khi xóa nhân sự: ' + err.message, 'error');
+      else alert('Lỗi khi xóa nhân sự: ' + err.message);
     }
   };
 
@@ -162,8 +170,10 @@ export const HRRecords = ({ user, onBack }: { user: Employee, onBack?: () => voi
       fetchEmployees();
       setFormData(initialFormState);
       setIsEditing(false);
+      if (addToast) addToast(isEditing ? 'Cập nhật nhân sự thành công!' : 'Thêm mới nhân sự thành công!', 'success');
     } catch (err: any) {
-      alert('Lỗi khi lưu nhân sự: ' + err.message);
+      if (addToast) addToast('Lỗi khi lưu nhân sự: ' + err.message, 'error');
+      else alert('Lỗi khi lưu nhân sự: ' + err.message);
     } finally {
       setSubmitting(false);
     }

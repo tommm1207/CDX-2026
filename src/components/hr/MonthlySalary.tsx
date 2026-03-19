@@ -4,9 +4,14 @@ import { motion, AnimatePresence } from 'motion/react';
 import { supabase } from '../../supabaseClient';
 import { Employee } from '../../types';
 import { PageBreadcrumb } from '../shared/PageBreadcrumb';
+import { ToastType } from '../shared/Toast';
 import { formatCurrency, formatDate } from '../../utils/format';
 
-export const MonthlySalary = ({ user, onBack }: { user: Employee, onBack?: () => void }) => {
+export const MonthlySalary = ({ user, onBack, addToast }: { 
+  user: Employee, 
+  onBack?: () => void,
+  addToast?: (message: string, type?: ToastType) => void
+}) => {
   const [salaries, setSalaries] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1);
@@ -65,8 +70,9 @@ export const MonthlySalary = ({ user, onBack }: { user: Employee, onBack?: () =>
       });
 
       setSalaries(calculated);
-    } catch (err) {
+    } catch (err: any) {
       console.error('Error calculating salaries:', err);
+      if (addToast) addToast('Lỗi tính toán lương: ' + err.message, 'error');
     } finally {
       setLoading(false);
     }

@@ -3,6 +3,7 @@ import { BarChart3, RefreshCw, EyeOff } from 'lucide-react';
 import { supabase } from '../../supabaseClient';
 import { Employee } from '../../types';
 import { PageBreadcrumb } from '../shared/PageBreadcrumb';
+import { ToastType } from '../shared/Toast';
 import { formatNumber } from '../../utils/format';
 import { getTonKhoTable, TonKhoRow } from '../../utils/inventory';
 
@@ -13,7 +14,11 @@ interface ReportRow extends TonKhoRow {
   warehouseName: string;
 }
 
-export const InventoryReport = ({ user, onBack }: { user: Employee, onBack?: () => void }) => {
+export const InventoryReport = ({ user, onBack, addToast }: {
+  user: Employee,
+  onBack?: () => void,
+  addToast?: (message: string, type?: ToastType) => void
+}) => {
   const [report, setReport] = useState<ReportRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [warehouses, setWarehouses] = useState<any[]>([]);
@@ -68,8 +73,9 @@ export const InventoryReport = ({ user, onBack }: { user: Employee, onBack?: () 
         : enriched;
 
       setReport(finalRows);
-    } catch (err) {
+    } catch (err: any) {
       console.error('Error fetching report:', err);
+      if (addToast) addToast('Lỗi tải báo cáo: ' + err.message, 'error');
     } finally {
       setLoading(false);
     }

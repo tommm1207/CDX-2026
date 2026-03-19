@@ -4,8 +4,13 @@ import { motion, AnimatePresence } from 'motion/react';
 import { supabase } from '../../supabaseClient';
 import { Employee } from '../../types';
 import { PageBreadcrumb } from '../shared/PageBreadcrumb';
+import { ToastType } from '../shared/Toast';
 
-export const Reminders = ({ user, onBack, addToast }: { user: Employee, onBack: () => void, addToast?: any }) => {
+export const Reminders = ({ user, onBack, addToast }: { 
+  user: Employee, 
+  onBack: () => void, 
+  addToast?: (message: string, type?: ToastType) => void 
+}) => {
   const [reminders, setReminders] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [showSetReminder, setShowSetReminder] = useState(false);

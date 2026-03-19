@@ -106,7 +106,7 @@ export const CreatableSelect = ({
               initial={{ opacity: 0, y: -10 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -10 }}
-              className="absolute z-[120] left-0 right-0 mt-1 bg-white rounded-xl shadow-xl border border-gray-100 overflow-hidden"
+              className="absolute z-[9999] left-0 right-0 mt-1 bg-white rounded-xl shadow-xl border border-gray-100 overflow-hidden"
             >
               <div className="max-h-60 overflow-y-auto custom-scrollbar">
                 {filteredOptions.map((opt) => (

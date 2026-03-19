@@ -5,8 +5,14 @@ import { supabase } from '../../supabaseClient';
 import { Employee } from '../../types';
 import { PageBreadcrumb } from '../shared/PageBreadcrumb';
 import { CreatableSelect } from '../shared/CreatableSelect';
+import { ToastType } from '../shared/Toast';
 
-export const MaterialCatalog = ({ user, onBack, onNavigate }: { user: Employee, onBack?: () => void, onNavigate?: (page: string) => void }) => {
+export const MaterialCatalog = ({ user, onBack, onNavigate, addToast }: { 
+  user: Employee, 
+  onBack?: () => void, 
+  onNavigate?: (page: string) => void,
+  addToast?: (message: string, type?: ToastType) => void
+}) => {
   const [materials, setMaterials] = useState<any[]>([]);
   const [groups, setGroups] = useState<any[]>([]);
   const [warehouses, setWarehouses] = useState<any[]>([]);
@@ -56,7 +62,8 @@ export const MaterialCatalog = ({ user, onBack, onNavigate }: { user: Employee, 
       }
     } catch (err: any) {
       console.error('Error fetching materials:', err);
-      alert('Lỗi tải danh mục vật tư: ' + err.message);
+      if (addToast) addToast('Lỗi tải danh mục vật tư: ' + err.message, 'error');
+      else alert('Lỗi tải danh mục vật tư: ' + err.message);
     } finally {
       setLoading(false);
     }
@@ -153,8 +160,10 @@ export const MaterialCatalog = ({ user, onBack, onNavigate }: { user: Employee, 
       setShowModal(false);
       fetchMaterials();
       setFormData(initialFormState);
+      if (addToast) addToast(isEditing ? 'Cập nhật vật tư thành công!' : 'Thêm mới vật tư thành công!', 'success');
     } catch (err: any) {
-      alert('Lỗi: ' + err.message);
+      if (addToast) addToast('Lỗi: ' + err.message, 'error');
+      else alert('Lỗi: ' + err.message);
     } finally {
       setSubmitting(false);
     }
@@ -177,8 +186,10 @@ export const MaterialCatalog = ({ user, onBack, onNavigate }: { user: Employee, 
       const { error } = await supabase.from('materials').delete().eq('id', itemToDelete);
       if (error) throw error;
       fetchMaterials();
+      if (addToast) addToast('Xóa vật tư thành công!', 'success');
     } catch (err: any) {
-      alert('Lỗi: ' + err.message);
+      if (addToast) addToast('Lỗi: ' + err.message, 'error');
+      else alert('Lỗi: ' + err.message);
     }
     setShowDeleteModal(false);
   };

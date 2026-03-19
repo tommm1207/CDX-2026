@@ -6,9 +6,15 @@ import { Employee } from '../../types';
 import { PageBreadcrumb } from '../shared/PageBreadcrumb';
 import { CustomCombobox } from '../shared/CustomCombobox';
 import { DetailItem } from '../shared/DetailItem';
+import { ToastType } from '../shared/Toast';
 import { formatCurrency, formatDate, numberToWords } from '../../utils/format';
+import { isUUID } from '../../utils/helpers';
 
-export const CostFilter = ({ user, onBack }: { user: Employee, onBack?: () => void }) => {
+export const CostFilter = ({ user, onBack, addToast }: { 
+  user: Employee, 
+  onBack?: () => void,
+  addToast?: (message: string, type?: ToastType) => void 
+}) => {
   const [filters, setFilters] = useState({
     fromDate: new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0],
     toDate: new Date().toISOString().split('T')[0],
@@ -73,22 +79,37 @@ export const CostFilter = ({ user, onBack }: { user: Employee, onBack?: () => vo
         .gte('date', filters.fromDate)
         .lte('date', filters.toDate);
 
-      if (filters.category) query = query.ilike('cost_type', `%${filters.category}%`);
+      if (filters.category) {
+        const cat = categories.find(c => c.id === filters.category || c.name === filters.category);
+        query = query.ilike('cost_type', `%${cat?.name || filters.category}%`);
+      }
       if (filters.warehouse) {
-        const wh = warehouses.find(w => w.name === filters.warehouse);
-        if (wh) query = query.eq('warehouse_id', wh.id);
+        if (isUUID(filters.warehouse)) {
+          query = query.eq('warehouse_id', filters.warehouse);
+        } else {
+          const wh = warehouses.find(w => w.name === filters.warehouse);
+          if (wh) query = query.eq('warehouse_id', wh.id);
+        }
       }
       if (filters.employee) {
-        const emp = employees.find(e => e.name === filters.employee);
-        if (emp) query = query.eq('employee_id', emp.id);
+        if (isUUID(filters.employee)) {
+          query = query.eq('employee_id', filters.employee);
+        } else {
+          const emp = employees.find(e => e.name === filters.employee);
+          if (emp) query = query.eq('employee_id', emp.id);
+        }
       }
-      if (filters.content) query = query.ilike('content', `%${filters.content}%`);
+      if (filters.content) {
+        const cont = contents.find(c => c.id === filters.content || c.name === filters.content);
+        query = query.ilike('content', `%${cont?.name || filters.content}%`);
+      }
 
       const { data, error } = await query.order('date', { ascending: false });
       if (error) throw error;
       setCosts(data || []);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error filtering costs:', error);
+      if (addToast) addToast('Lỗi lọc dữ liệu: ' + error.message, 'error');
     } finally {
       setLoading(false);
     }

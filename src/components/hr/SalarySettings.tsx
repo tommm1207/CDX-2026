@@ -5,9 +5,14 @@ import { supabase } from '../../supabaseClient';
 import { Employee } from '../../types';
 import { PageBreadcrumb } from '../shared/PageBreadcrumb';
 import { NumericInput } from '../shared/NumericInput';
+import { ToastType } from '../shared/Toast';
 import { formatCurrency } from '../../utils/format';
 
-export const SalarySettings = ({ user, onBack }: { user: Employee, onBack?: () => void }) => {
+export const SalarySettings = ({ user, onBack, addToast }: { 
+  user: Employee, 
+  onBack?: () => void,
+  addToast?: (message: string, type?: ToastType) => void
+}) => {
   const [employees, setEmployees] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
@@ -63,8 +68,10 @@ export const SalarySettings = ({ user, onBack }: { user: Employee, onBack?: () =
       }, { onConflict: 'employee_id' });
       setShowModal(false);
       fetchData();
+      if (addToast) addToast('Cập nhật cài đặt lương thành công!', 'success');
     } catch (err: any) {
-      alert('Lỗi: ' + err.message);
+      if (addToast) addToast('Lỗi: ' + err.message, 'error');
+      else alert('Lỗi: ' + err.message);
     } finally {
       setSubmitting(false);
     }

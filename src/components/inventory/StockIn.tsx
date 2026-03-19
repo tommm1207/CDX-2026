@@ -1,27 +1,38 @@
 import { useState, useEffect, FormEvent } from 'react';
-import { Plus, Search, ChevronRight, X, ArrowDownCircle, Edit, Navigation, Trash2 } from 'lucide-react';
+import { Plus, Search, ChevronRight, X, ArrowDownCircle, Edit, Navigation, Trash2, PackagePlus } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { supabase } from '../../supabaseClient';
 import { Employee } from '../../types';
 import { PageBreadcrumb } from '../shared/PageBreadcrumb';
 import { NumericInput } from '../shared/NumericInput';
 import { CreatableSelect } from '../shared/CreatableSelect';
+import { ToastType } from '../shared/Toast';
+import { ConfirmModal } from '../shared/ConfirmModal';
+import { QuickAddMaterialModal } from '../shared/QuickAddMaterialModal';
+import { useInventoryData } from '../../hooks/useInventoryData';
 import { formatDate, formatCurrency, formatNumber, numberToWords } from '../../utils/format';
 import { isUUID } from '../../utils/helpers';
 
-export const StockIn = ({ user, onBack, initialStatus }: { user: Employee, onBack?: () => void, initialStatus?: string }) => {
+export const StockIn = ({ user, onBack, initialStatus, addToast }: { 
+  user: Employee, 
+  onBack?: () => void, 
+  initialStatus?: string,
+  addToast?: (message: string, type?: ToastType) => void 
+}) => {
   const [slips, setSlips] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [selectedSlip, setSelectedSlip] = useState<any>(null);
-  const [warehouses, setWarehouses] = useState<any[]>([]);
-  const [materials, setMaterials] = useState<any[]>([]);
   const [submitting, setSubmitting] = useState(false);
   const [statusFilter, setStatusFilter] = useState(initialStatus || 'Tất cả');
   const [materialHistory, setMaterialHistory] = useState<any[]>([]);
   const [loadingHistory, setLoadingHistory] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [showAddMaterial, setShowAddMaterial] = useState(false);
+
+  const { warehouses, materials, groups, refreshAll, fetchWarehouses } = useInventoryData();
 
   const initialFormState = {
     date: new Date().toISOString().split('T')[0],
@@ -39,8 +50,6 @@ export const StockIn = ({ user, onBack, initialStatus }: { user: Employee, onBac
 
   useEffect(() => {
     fetchSlips();
-    fetchWarehouses();
-    fetchMaterials();
   }, []);
 
   const fetchSlips = async () => {
@@ -62,7 +71,8 @@ export const StockIn = ({ user, onBack, initialStatus }: { user: Employee, onBac
         setSlips(data || []);
       }
     } catch (err: any) {
-      alert('Lỗi tải phiếu nhập kho: ' + err.message);
+      if (addToast) addToast('Lỗi tải phiếu nhập kho: ' + err.message, 'error');
+      else alert('Lỗi tải phiếu nhập kho: ' + err.message);
     } finally {
       setLoading(false);
     }
@@ -72,30 +82,23 @@ export const StockIn = ({ user, onBack, initialStatus }: { user: Employee, onBac
     fetchSlips();
   }, [statusFilter]);
 
-  const fetchWarehouses = async () => {
-    const { data } = await supabase.from('warehouses').select('*').or('status.is.null,status.neq.Đã xóa').order('name');
-    if (data) setWarehouses(data);
-  };
-
-  const fetchMaterials = async () => {
-    const { data } = await supabase.from('materials').select('*').or('status.is.null,status.neq.Đã xóa').order('name');
-    if (data) setMaterials(data);
-  };
-
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     
     // Explicit validation since custom components don't always trigger HTML5 forms properly
     if (!formData.material_id) {
-      alert("Vui lòng chọn hoặc nhập Tên vật tư nhập.");
+      if (addToast) addToast("Vui lòng chọn hoặc nhập Tên vật tư nhập.", "error");
+      else alert("Vui lòng chọn hoặc nhập Tên vật tư nhập.");
       return;
     }
     if (!formData.warehouse_id) {
-      alert("Vui lòng chọn hoặc nhập Tên kho nhập.");
+      if (addToast) addToast("Vui lòng chọn hoặc nhập Tên kho nhập.", "error");
+      else alert("Vui lòng chọn hoặc nhập Tên kho nhập.");
       return;
     }
     if (!formData.quantity || formData.quantity <= 0) {
-      alert("Vui lòng nhập số lượng nhập hợp lệ (lớn hơn 0).");
+      if (addToast) addToast("Vui lòng nhập số lượng nhập hợp lệ (lớn hơn 0).", "error");
+      else alert("Vui lòng nhập số lượng nhập hợp lệ (lớn hơn 0).");
       return;
     }
 
@@ -150,12 +153,12 @@ export const StockIn = ({ user, onBack, initialStatus }: { user: Employee, onBac
 
       setShowModal(false);
       fetchSlips();
-      setFormData(initialFormState);
       setIsEditing(false);
       setSelectedSlip(null);
-      alert(isEditing ? 'Cập nhật phiếu nhập thành công!' : 'Nhập kho thành công! Tồn kho đã được cập nhật.');
+      if (addToast) addToast(isEditing ? 'Cập nhật phiếu nhập thành công!' : 'Nhập kho thành công! Tồn kho đã được cập nhật.', 'success');
     } catch (err: any) {
-      alert('Lỗi: ' + (err as any).message);
+      if (addToast) addToast('Lỗi: ' + err.message, 'error');
+      else alert('Lỗi: ' + err.message);
     } finally {
       setSubmitting(false);
     }
@@ -207,50 +210,75 @@ export const StockIn = ({ user, onBack, initialStatus }: { user: Employee, onBac
       if (status === 'Đã duyệt') {
         const { data: slip } = await supabase.from('stock_in').select('*, users(id)').eq('id', id).maybeSingle();
         if (slip && slip.total_amount > 0) {
-          const dateObj = new Date(slip.date);
-          const d = String(dateObj.getDate()).padStart(2, '0');
-          const m = String(dateObj.getMonth() + 1).padStart(2, '0');
-          const y = String(dateObj.getFullYear()).slice(-2);
-          const random = Math.floor(1000 + Math.random() * 9000);
-          const userPrefix = (slip as any).users?.id?.slice(0, 4) || 'SYS';
-          const costCode = `CP-${userPrefix.toUpperCase()}-${d}${m}${y}-${random}`;
+          // Check if cost already exists to prevent duplicates
+          const { data: existingCost } = await supabase
+            .from('costs')
+            .select('id')
+            .ilike('content', `%${slip.import_code}%`)
+            .maybeSingle();
 
-          await supabase.from('costs').insert([{
-            transaction_type: 'Chi',
-            cost_code: costCode,
-            date: slip.date,
-            employee_id: user.id,
-            cost_type: 'Vật tư',
-            content: `Nhập kho từ phiếu ${slip.import_code}`,
-            material_id: slip.material_id,
-            warehouse_id: slip.warehouse_id,
-            quantity: slip.quantity,
-            unit: slip.unit,
-            unit_price: slip.unit_price,
-            total_amount: slip.total_amount,
-            notes: 'Tự động tạo từ hệ thống Nhập Kho'
-          }]);
+          if (!existingCost) {
+            const dateObj = new Date(slip.date);
+            const d = String(dateObj.getDate()).padStart(2, '0');
+            const m = String(dateObj.getMonth() + 1).padStart(2, '0');
+            const y = String(dateObj.getFullYear()).slice(-2);
+            const random = Math.floor(1000 + Math.random() * 9000);
+            const userPrefix = (slip as any).users?.id?.slice(0, 4) || 'SYS';
+            const costCode = `CP-${userPrefix.toUpperCase()}-${d}${m}${y}-${random}`;
+
+            await supabase.from('costs').insert([{
+              transaction_type: 'Chi',
+              cost_code: costCode,
+              date: slip.date,
+              employee_id: user.id,
+              cost_type: 'Vật tư',
+              content: `Nhập kho từ phiếu ${slip.import_code}`,
+              material_id: slip.material_id,
+              warehouse_id: slip.warehouse_id,
+              quantity: slip.quantity,
+              unit: slip.unit,
+              unit_price: slip.unit_price,
+              total_amount: slip.total_amount,
+              notes: 'Tự động tạo từ hệ thống Nhập Kho'
+            }]);
+          }
         }
       }
 
       fetchSlips();
       setShowDetailModal(false);
+      if (addToast) addToast('Cập nhật trạng thái thành công!', 'success');
     } catch (err: any) {
-      alert('Lỗi: ' + err.message);
+      if (addToast) addToast('Lỗi: ' + err.message, 'error');
+      else alert('Lỗi: ' + err.message);
     }
   };
 
-  const handleDelete = async () => {
-    if (!selectedSlip || !confirm('Bạn có chắc chắn muốn chuyển phiếu này vào thùng rác?')) return;
+  const handleDelete = () => {
+    if (!selectedSlip) return;
+    setShowDeleteConfirm(true);
+  };
+
+  const confirmDelete = async () => {
     try {
       const { error } = await supabase.from('stock_in').update({ status: 'Đã xóa' }).eq('id', selectedSlip.id);
       if (error) throw error;
+
+      // Also void associated cost
+      await supabase.from('costs')
+        .update({ status: 'Đã xóa' })
+        .ilike('content', `%${selectedSlip.import_code}%`);
       
-      alert('Đã chuyển phiếu vào thùng rác');
+      if (addToast) addToast('Đã chuyển phiếu vào thùng rác', 'success');
       setShowDetailModal(false);
+      setShowDeleteConfirm(false);
       fetchSlips();
     } catch (err: any) {
-      alert('Lỗi: ' + err.message);
+      const msg = err.message.includes('foreign key constraint') 
+        ? 'Không thể xóa phiếu này vì đang có dữ liệu liên quan khác.' 
+        : err.message;
+      if (addToast) addToast('Lỗi: ' + msg, 'error');
+      else alert('Lỗi: ' + msg);
     }
   };
 
@@ -428,32 +456,36 @@ export const StockIn = ({ user, onBack, initialStatus }: { user: Employee, onBac
               </div>
 
               <div className="p-6 bg-gray-50 border-t border-gray-100 flex justify-end gap-3 rounded-b-3xl">
-                <button
-                  onClick={handleDelete}
-                  className="px-6 py-2 bg-red-50 text-red-600 rounded-xl text-sm font-bold hover:bg-red-100 transition-colors flex items-center gap-2"
-                >
-                  <Trash2 size={16} /> Chuyển vào thùng rác
-                </button>
-                <button
-                  onClick={handleEdit}
-                  className="px-6 py-2 bg-blue-100 text-blue-600 rounded-xl text-sm font-bold hover:bg-blue-200 transition-colors flex items-center gap-2"
-                >
-                  <Edit size={16} /> Sửa phiếu
-                </button>
-                {(user.role === 'Admin' || user.role === 'Admin App') && selectedSlip.status === 'Chờ duyệt' && (
+                {selectedSlip.status !== 'Đã xóa' && (
                   <>
                     <button
-                      onClick={() => handleApprove(selectedSlip.id, 'Từ chối')}
-                      className="px-6 py-2 bg-red-100 text-red-600 rounded-xl text-sm font-bold hover:bg-red-200 transition-colors"
+                      onClick={handleDelete}
+                      className="px-6 py-2 bg-red-50 text-red-600 rounded-xl text-sm font-bold hover:bg-red-100 transition-colors flex items-center gap-2"
                     >
-                      Từ chối
+                      <Trash2 size={16} /> Chuyển vào thùng rác
                     </button>
                     <button
-                      onClick={() => handleApprove(selectedSlip.id, 'Đã duyệt')}
-                      className="px-6 py-2 bg-green-600 text-white rounded-xl text-sm font-bold hover:bg-green-700 transition-colors"
+                      onClick={handleEdit}
+                      className="px-6 py-2 bg-blue-100 text-blue-600 rounded-xl text-sm font-bold hover:bg-blue-200 transition-colors flex items-center gap-2"
                     >
-                      Duyệt phiếu
+                      <Edit size={16} /> Sửa phiếu
                     </button>
+                    {(user.role === 'Admin' || user.role === 'Admin App') && selectedSlip.status === 'Chờ duyệt' && (
+                      <>
+                        <button
+                          onClick={() => handleApprove(selectedSlip.id, 'Từ chối')}
+                          className="px-6 py-2 bg-red-100 text-red-600 rounded-xl text-sm font-bold hover:bg-red-200 transition-colors"
+                        >
+                          Từ chối
+                        </button>
+                        <button
+                          onClick={() => handleApprove(selectedSlip.id, 'Đã duyệt')}
+                          className="px-6 py-2 bg-green-600 text-white rounded-xl text-sm font-bold hover:bg-green-700 transition-colors"
+                        >
+                          Duyệt phiếu
+                        </button>
+                      </>
+                    )}
                   </>
                 )}
                 <button
@@ -486,7 +518,7 @@ export const StockIn = ({ user, onBack, initialStatus }: { user: Employee, onBac
               </div>
 
               <div className="flex-1 overflow-y-auto p-6 custom-scrollbar">
-                <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-6 pb-32">
                   <div className="space-y-4">
                     <div className="space-y-1">
                       <label className="text-[10px] font-bold text-gray-400 uppercase">Ngày nhập *</label>
@@ -500,22 +532,37 @@ export const StockIn = ({ user, onBack, initialStatus }: { user: Employee, onBac
                       />
                     </div>
 
-                    <CreatableSelect
-                      label="Tên vật tư nhập *"
-                      value={formData.material_id}
-                      options={materials}
-                      onChange={(val) => {
-                        const mat = materials.find(m => m.id === val);
-                        setFormData({
-                          ...formData,
-                          material_id: val,
-                          unit: mat?.unit || formData.unit
-                        });
-                      }}
-                      onCreate={() => alert('Vui lòng chọn vật tư có trong Danh mục. Để thêm vật tư mới, hãy vào mục Danh mục vật tư.')}
-                      placeholder="Chọn vật tư..."
-                      required
-                    />
+                    <div className="flex items-end gap-2 relative z-[120]">
+                      <div className="flex-1">
+                        <CreatableSelect
+                          label="Tên vật tư nhập *"
+                          value={formData.material_id}
+                          options={materials}
+                          onChange={(val) => {
+                            const mat = materials.find(m => m.id === val);
+                            setFormData({
+                              ...formData,
+                              material_id: val,
+                              unit: mat?.unit || formData.unit
+                            });
+                          }}
+                          onCreate={() => {
+                            if (addToast) addToast('Vui lòng chọn vật tư có trong Danh mục. Hoặc click nút + bên cạnh để tạo mới.', 'info');
+                            else alert('Vui lòng chọn vật tư có trong Danh mục. Hoặc click nút + bên cạnh để tạo mới.');
+                          }}
+                          placeholder="Chọn vật tư..."
+                          required
+                        />
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setShowAddMaterial(true)}
+                        className="h-[42px] px-3 bg-blue-50 text-blue-600 rounded-xl hover:bg-blue-100 transition-colors flex items-center justify-center shrink-0 border border-blue-100"
+                        title="Thêm vật tư nhanh"
+                      >
+                        <PackagePlus size={20} />
+                      </button>
+                    </div>
 
                     <NumericInput
                       label="Số lượng nhập *"
@@ -575,6 +622,26 @@ export const StockIn = ({ user, onBack, initialStatus }: { user: Employee, onBac
           </div>
         )}
       </AnimatePresence>
+
+      <QuickAddMaterialModal
+        show={showAddMaterial}
+        onClose={() => setShowAddMaterial(false)}
+        groups={groups}
+        addToast={addToast}
+        onSuccess={(newMat) => {
+          setFormData({ ...formData, material_id: newMat.id, unit: newMat.unit });
+          refreshAll();
+        }}
+      />
+
+      <ConfirmModal
+        show={showDeleteConfirm}
+        title="Xác nhận xóa"
+        message="Bạn có chắc chắn muốn chuyển phiếu nhập kho này vào thùng rác? Hành động này cũng sẽ vô hiệu hóa bản ghi chi phí liên quan."
+        confirmText="Chuyển vào thùng rác"
+        onConfirm={confirmDelete}
+        onCancel={() => setShowDeleteConfirm(false)}
+      />
     </div>
   );
 };

@@ -5,10 +5,15 @@ import { supabase } from '../../supabaseClient';
 import { Employee } from '../../types';
 import { PageBreadcrumb } from '../shared/PageBreadcrumb';
 import { NumericInput } from '../shared/NumericInput';
+import { ToastType } from '../shared/Toast';
 
 import { AttendanceTable } from './AttendanceTable';
 
-export const Attendance = ({ user, onBack }: { user: Employee, onBack?: () => void }) => {
+export const Attendance = ({ user, onBack, addToast }: { 
+  user: Employee, 
+  onBack?: () => void,
+  addToast?: (message: string, type?: ToastType) => void 
+}) => {
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [attendance, setAttendance] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -103,7 +108,8 @@ export const Attendance = ({ user, onBack }: { user: Employee, onBack?: () => vo
 
   const saveBulk = async () => {
     if (selectedEmployees.length === 0) {
-      alert('Vui lòng chọn ít nhất một nhân viên');
+      if (addToast) addToast('Vui lòng chọn ít nhất một nhân viên', 'error');
+      else alert('Vui lòng chọn ít nhất một nhân viên');
       return;
     }
 
@@ -137,10 +143,12 @@ export const Attendance = ({ user, onBack }: { user: Employee, onBack?: () => vo
       if (insError) throw insError;
 
       setShowBulkModal(false);
-      alert('Đã lưu chấm công hàng loạt thành công!');
+      if (addToast) addToast('Đã lưu chấm công hàng loạt thành công!', 'success');
+      else alert('Đã lưu chấm công hàng loạt thành công!');
       fetchData();
     } catch (err: any) {
-      alert('Lỗi: ' + err.message);
+      if (addToast) addToast('Lỗi: ' + err.message, 'error');
+      else alert('Lỗi: ' + err.message);
     }
   };
 
@@ -206,7 +214,8 @@ export const Attendance = ({ user, onBack }: { user: Employee, onBack?: () => vo
       }]);
     }
     setShowEditModal(false);
-    alert('Đã cập nhật chấm công thành công!');
+    if (addToast) addToast('Đã cập nhật chấm công thành công!', 'success');
+    else alert('Đã cập nhật chấm công thành công!');
     fetchData();
   };
 

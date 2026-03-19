@@ -4,8 +4,13 @@ import { motion, AnimatePresence } from 'motion/react';
 import { supabase } from '../../supabaseClient';
 import { Employee } from '../../types';
 import { PageBreadcrumb } from '../shared/PageBreadcrumb';
+import { ToastType } from '../shared/Toast';
 
-export const Warehouses = ({ user, onBack }: { user: Employee, onBack?: () => void }) => {
+export const Warehouses = ({ user, onBack, addToast }: { 
+  user: Employee, 
+  onBack?: () => void,
+  addToast?: (message: string, type?: ToastType) => void 
+}) => {
   const [showModal, setShowModal] = useState(false);
   const [warehouses, setWarehouses] = useState<any[]>([]);
   const [employees, setEmployees] = useState<Employee[]>([]);
@@ -57,7 +62,8 @@ export const Warehouses = ({ user, onBack }: { user: Employee, onBack?: () => vo
       }
     } catch (err: any) {
       console.error('Final fetch error:', err);
-      alert('Lỗi tải dữ liệu kho: ' + err.message);
+      if (addToast) addToast('Lỗi tải dữ liệu kho: ' + err.message, 'error');
+      else alert('Lỗi tải dữ liệu kho: ' + err.message);
     } finally {
       setLoading(false);
     }
@@ -113,8 +119,10 @@ export const Warehouses = ({ user, onBack }: { user: Employee, onBack?: () => vo
       setShowModal(false);
       fetchWarehouses();
       setFormData(initialFormState);
+      if (addToast) addToast(isEditing ? 'Cập nhật kho thành công!' : 'Thêm mới kho thành công!', 'success');
     } catch (err: any) {
-      alert('Lỗi: ' + err.message);
+      if (addToast) addToast('Lỗi: ' + err.message, 'error');
+      else alert('Lỗi: ' + err.message);
     } finally {
       setSubmitting(false);
     }
@@ -143,9 +151,14 @@ export const Warehouses = ({ user, onBack }: { user: Employee, onBack?: () => vo
   const confirmDelete = async () => {
     if (!itemToDelete) return;
     const { error } = await supabase.from('warehouses').update({ status: 'Đã xóa' }).eq('id', itemToDelete);
-    if (error) alert('Lỗi: ' + error.message);
-    else {
-      alert('Đã chuyển kho vào thùng rác');
+    if (error) {
+      const msg = error.message.includes('foreign key constraint') 
+        ? 'Không thể xóa kho này vì đang có dữ liệu liên quan khác.' 
+        : error.message;
+      if (addToast) addToast('Lỗi: ' + msg, 'error');
+      else alert('Lỗi: ' + msg);
+    } else {
+      if (addToast) addToast('Đã chuyển kho vào thùng rác', 'success');
       fetchWarehouses();
     }
     setShowDeleteModal(false);

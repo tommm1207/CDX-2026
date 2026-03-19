@@ -7,10 +7,15 @@ import { Employee } from '../../types';
 import { PageBreadcrumb } from '../shared/PageBreadcrumb';
 import { NumericInput } from '../shared/NumericInput';
 import { CreatableSelect } from '../shared/CreatableSelect';
+import { ToastType } from '../shared/Toast';
 import { formatCurrency, formatNumber, formatDate } from '../../utils/format';
 import { isUUID } from '../../utils/helpers';
 
-export const Costs = ({ user, onBack }: { user: Employee, onBack?: () => void }) => {
+export const Costs = ({ user, onBack, addToast }: { 
+  user: Employee, 
+  onBack?: () => void,
+  addToast?: (message: string, type?: ToastType) => void
+}) => {
   const [showModal, setShowModal] = useState(false);
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [selectedCost, setSelectedCost] = useState<any>(null);
@@ -23,6 +28,15 @@ export const Costs = ({ user, onBack }: { user: Employee, onBack?: () => void })
   const [submitting, setSubmitting] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
+
+  // Filters State
+  const [filterStartDate, setFilterStartDate] = useState('');
+  const [filterEndDate, setFilterEndDate] = useState('');
+  const [filterEmployeeId, setFilterEmployeeId] = useState('');
+  const [filterWarehouseId, setFilterWarehouseId] = useState('');
+  const [searchTerm, setSearchTerm] = useState('');
+
+  const [employees, setEmployees] = useState<any[]>([]);
 
   const initialFormState = {
     date: new Date().toISOString().split('T')[0],
@@ -44,7 +58,13 @@ export const Costs = ({ user, onBack }: { user: Employee, onBack?: () => void })
     fetchWarehouses();
     fetchCostTypes();
     fetchUnits();
+    fetchEmployees();
   }, []);
+
+  const fetchEmployees = async () => {
+    const { data } = await supabase.from('users').select('id, full_name, code').neq('status', 'Nghỉ việc');
+    if (data) setEmployees(data);
+  };
 
   const fetchCosts = async () => {
     setLoading(true);
@@ -64,7 +84,8 @@ export const Costs = ({ user, onBack }: { user: Employee, onBack?: () => void })
         setCosts(data || []);
       }
     } catch (err: any) {
-      alert('Lỗi tải danh sách chi phí: ' + err.message);
+      if (addToast) addToast('Lỗi tải danh sách chi phí: ' + err.message, 'error');
+      else alert('Lỗi tải danh sách chi phí: ' + err.message);
     } finally {
       setLoading(false);
     }
@@ -85,7 +106,7 @@ export const Costs = ({ user, onBack }: { user: Employee, onBack?: () => void })
     if (data) {
       const uniqueTypes = Array.from(new Set(data.map(item => item.cost_type)))
         .filter(Boolean)
-        .map((name, index) => ({ id: index, name }));
+        .map((name) => ({ id: name as string, name: name as string }));
       setCostTypes(uniqueTypes);
     }
   };
@@ -131,7 +152,10 @@ export const Costs = ({ user, onBack }: { user: Employee, onBack?: () => void })
 
     try {
       const warehouse_id = await ensureValueExists('warehouses', formData.warehouse_name, warehouses, fetchWarehouses);
-      const material_id = await ensureValueExists('materials', formData.content, materials, fetchMaterials);
+      
+      const isContentUuid = isUUID(formData.content);
+      const finalContent = isContentUuid ? materials.find(m => m.id === formData.content)?.name || formData.content : formData.content;
+      const material_id = await ensureValueExists('materials', finalContent, materials, fetchMaterials);
 
       const dateObj = new Date(formData.date);
       const d = String(dateObj.getDate()).padStart(2, '0');
@@ -147,7 +171,7 @@ export const Costs = ({ user, onBack }: { user: Employee, onBack?: () => void })
         cost_code: finalCode,
         employee_id: user.id,
         cost_type: formData.cost_type,
-        content: formData.content,
+        content: finalContent,
         warehouse_id: warehouse_id,
         material_id: material_id,
         quantity: formData.quantity,
@@ -175,8 +199,10 @@ export const Costs = ({ user, onBack }: { user: Employee, onBack?: () => void })
       fetchCosts();
       fetchCostTypes();
       fetchUnits();
+      if (addToast) addToast(isEditing ? 'Cập nhật thành công!' : 'Nhập chi phí thành công!', 'success');
     } catch (err: any) {
-      alert('Lỗi: ' + err.message);
+      if (addToast) addToast('Lỗi: ' + err.message, 'error');
+      else alert('Lỗi: ' + err.message);
     } finally {
       setSubmitting(false);
     }
@@ -214,11 +240,15 @@ export const Costs = ({ user, onBack }: { user: Employee, onBack?: () => void })
       const { error } = await supabase.from('costs').update({ status: 'Đã xóa' }).eq('id', itemToDelete);
       if (error) throw error;
       fetchCosts();
-      alert('Đã chuyển vào thùng rác');
+      if (addToast) addToast('Đã chuyển vào thùng rác', 'success');
       setShowDeleteModal(false);
       setItemToDelete(null);
     } catch (err: any) {
-      alert('Lỗi khi xóa chi phí: ' + err.message);
+      const msg = err.message.includes('foreign key constraint') 
+        ? 'Không thể xóa vì đang có dữ liệu liên quan khác.' 
+        : err.message;
+      if (addToast) addToast('Lỗi: ' + msg, 'error');
+      else alert('Lỗi khi xóa chi phí: ' + msg);
     }
   };
 
@@ -242,6 +272,26 @@ export const Costs = ({ user, onBack }: { user: Employee, onBack?: () => void })
     utils.book_append_sheet(wb, ws, "Chi phí");
     writeFile(wb, `QuanLyChiPhi_${new Date().toISOString().split('T')[0]}.xlsx`);
   };
+
+  const filteredCosts = costs.filter(item => {
+    let match = true;
+    if (filterStartDate && item.date < filterStartDate) match = false;
+    if (filterEndDate && item.date > filterEndDate) match = false;
+    if (filterEmployeeId && item.employee_id !== filterEmployeeId) match = false;
+    if (filterWarehouseId && item.warehouse_id !== filterWarehouseId) match = false;
+    if (searchTerm) {
+      const lowerSearch = searchTerm.toLowerCase();
+      const contentMatched = (item.content || '').toLowerCase().includes(lowerSearch);
+      const codeMatched = (item.cost_code || '').toLowerCase().includes(lowerSearch);
+      const notesMatched = (item.notes || '').toLowerCase().includes(lowerSearch);
+      const matMatched = (item.materials?.name || '').toLowerCase().includes(lowerSearch);
+      const typeMatched = (item.cost_type || '').toLowerCase().includes(lowerSearch);
+      if (!contentMatched && !codeMatched && !notesMatched && !matMatched && !typeMatched) {
+        match = false;
+      }
+    }
+    return match;
+  });
 
   return (
     <div className="p-4 md:p-6 space-y-6 pb-44">
@@ -279,7 +329,7 @@ export const Costs = ({ user, onBack }: { user: Employee, onBack?: () => void })
           <div>
             <p className="text-xs text-gray-500 font-bold uppercase">Tổng Thu</p>
             <p className="text-xl font-black text-green-600">
-              {formatCurrency(costs.filter(c => c.transaction_type === 'Thu').reduce((sum, c) => sum + Number(c.total_amount || 0), 0))}
+              {formatCurrency(filteredCosts.filter(c => c.transaction_type === 'Thu').reduce((sum, c) => sum + Number(c.total_amount || 0), 0))}
             </p>
           </div>
         </div>
@@ -290,7 +340,7 @@ export const Costs = ({ user, onBack }: { user: Employee, onBack?: () => void })
           <div>
             <p className="text-xs text-gray-500 font-bold uppercase">Tổng Chi</p>
             <p className="text-xl font-black text-red-600">
-              {formatCurrency(costs.filter(c => c.transaction_type !== 'Thu').reduce((sum, c) => sum + Number(c.total_amount || 0), 0))}
+              {formatCurrency(filteredCosts.filter(c => c.transaction_type !== 'Thu').reduce((sum, c) => sum + Number(c.total_amount || 0), 0))}
             </p>
           </div>
         </div>
@@ -302,8 +352,8 @@ export const Costs = ({ user, onBack }: { user: Employee, onBack?: () => void })
             <p className="text-xs text-gray-500 font-bold uppercase">Lợi Nhuận Gộp</p>
             <p className="text-xl font-black text-blue-600">
               {formatCurrency(
-                costs.filter(c => c.transaction_type === 'Thu').reduce((sum, c) => sum + Number(c.total_amount || 0), 0) -
-                costs.filter(c => c.transaction_type !== 'Thu').reduce((sum, c) => sum + Number(c.total_amount || 0), 0)
+                filteredCosts.filter(c => c.transaction_type === 'Thu').reduce((sum, c) => sum + Number(c.total_amount || 0), 0) -
+                filteredCosts.filter(c => c.transaction_type !== 'Thu').reduce((sum, c) => sum + Number(c.total_amount || 0), 0)
               )}
             </p>
           </div>
@@ -311,32 +361,33 @@ export const Costs = ({ user, onBack }: { user: Employee, onBack?: () => void })
       </div>
 
       <div className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-4">
-        {/* Placeholder filters as in App.tsx */}
         <div className="space-y-1">
           <label className="text-[10px] font-bold text-gray-400 uppercase">Từ ngày</label>
-          <input type="date" className="w-full px-3 py-2 rounded-lg border border-gray-200 text-xs outline-none focus:ring-2 focus:ring-primary/20" />
+          <input type="date" value={filterStartDate} onChange={(e) => setFilterStartDate(e.target.value)} className="w-full px-3 py-2 rounded-lg border border-gray-200 text-xs outline-none focus:ring-2 focus:ring-primary/20" />
         </div>
         <div className="space-y-1">
           <label className="text-[10px] font-bold text-gray-400 uppercase">Đến ngày</label>
-          <input type="date" className="w-full px-3 py-2 rounded-lg border border-gray-200 text-xs outline-none focus:ring-2 focus:ring-primary/20" />
+          <input type="date" value={filterEndDate} onChange={(e) => setFilterEndDate(e.target.value)} className="w-full px-3 py-2 rounded-lg border border-gray-200 text-xs outline-none focus:ring-2 focus:ring-primary/20" />
         </div>
         <div className="space-y-1">
           <label className="text-[10px] font-bold text-gray-400 uppercase">Nhân sự</label>
-          <select className="w-full px-3 py-2 rounded-lg border border-gray-200 text-xs outline-none focus:ring-2 focus:ring-primary/20">
-            <option>-- Tất cả --</option>
+          <select value={filterEmployeeId} onChange={(e) => setFilterEmployeeId(e.target.value)} className="w-full px-3 py-2 rounded-lg border border-gray-200 text-xs outline-none focus:ring-2 focus:ring-primary/20">
+            <option value="">-- Tất cả --</option>
+            {employees.map(emp => <option key={emp.id} value={emp.id}>{emp.full_name} ({emp.code})</option>)}
           </select>
         </div>
         <div className="space-y-1">
           <label className="text-[10px] font-bold text-gray-400 uppercase">Kho</label>
-          <select className="w-full px-3 py-2 rounded-lg border border-gray-200 text-xs outline-none focus:ring-2 focus:ring-primary/20">
-            <option>-- Tất cả kho --</option>
+          <select value={filterWarehouseId} onChange={(e) => setFilterWarehouseId(e.target.value)} className="w-full px-3 py-2 rounded-lg border border-gray-200 text-xs outline-none focus:ring-2 focus:ring-primary/20">
+            <option value="">-- Tất cả kho --</option>
+            {warehouses.map(w => <option key={w.id} value={w.id}>{w.name}</option>)}
           </select>
         </div>
         <div className="space-y-1">
           <label className="text-[10px] font-bold text-gray-400 uppercase">Tìm kiếm nhanh</label>
           <div className="relative">
             <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-            <input type="text" placeholder="Gõ để tìm..." className="w-full pl-9 pr-3 py-2 rounded-lg border border-gray-200 text-xs outline-none focus:ring-2 focus:ring-primary/20" />
+            <input type="text" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} placeholder="Gõ để tìm..." className="w-full pl-9 pr-3 py-2 rounded-lg border border-gray-200 text-xs outline-none focus:ring-2 focus:ring-primary/20" />
           </div>
         </div>
       </div>
@@ -346,7 +397,7 @@ export const Costs = ({ user, onBack }: { user: Employee, onBack?: () => void })
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="bg-primary text-white">
-                <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider border-r border-white/10">Ngày</th>
+                <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider border-r border-white/10">Mã / Ngày</th>
                 <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider border-r border-white/10">Loại GD</th>
                 <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider border-r border-white/10">Tên kho</th>
                 <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider border-r border-white/10">Hạng mục</th>
@@ -354,23 +405,26 @@ export const Costs = ({ user, onBack }: { user: Employee, onBack?: () => void })
                 <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider border-r border-white/10 text-center">SL</th>
                 <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider border-r border-white/10 text-center">ĐVT</th>
                 <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider border-r border-white/10 text-right">Số tiền</th>
-                <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider border-r border-white/10">Ghi chú</th>
+                <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider border-r border-white/10 text-center">Trạng thái</th>
                 <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider">Người lập</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
               {loading ? (
                 <tr><td colSpan={10} className="px-4 py-8 text-center text-gray-400 italic">Đang tải dữ liệu...</td></tr>
-              ) : costs.length === 0 ? (
-                <tr><td colSpan={10} className="px-4 py-8 text-center text-gray-400 italic">Chưa có dữ liệu chi phí</td></tr>
+              ) : filteredCosts.length === 0 ? (
+                <tr><td colSpan={10} className="px-4 py-8 text-center text-gray-400 italic">Không tìm thấy chi phí phù hợp với bộ lọc</td></tr>
               ) : (
-                costs.map((item) => (
+                filteredCosts.map((item) => (
                   <tr
                     key={item.id}
                     onClick={() => { setSelectedCost(item); setShowDetailModal(true); }}
                     className="hover:bg-gray-50 transition-colors cursor-pointer group"
                   >
-                    <td className="px-4 py-3 text-xs text-gray-600">{new Date(item.date).toLocaleDateString('vi-VN')}</td>
+                    <td className="px-4 py-3">
+                      <div className="text-xs font-bold text-primary">{item.cost_code}</div>
+                      <div className="text-[10px] text-gray-500">{new Date(item.date).toLocaleDateString('vi-VN')}</div>
+                    </td>
                     <td className="px-4 py-3 text-xs font-bold">
                       <span className={`px-2 py-0.5 rounded-full ${item.transaction_type === 'Thu' ? 'bg-green-100 text-green-600' : 'bg-red-100 text-red-600'}`}>
                         {item.transaction_type || 'Chi'}
@@ -384,7 +438,16 @@ export const Costs = ({ user, onBack }: { user: Employee, onBack?: () => void })
                     <td className={`px-4 py-3 text-xs font-bold text-right ${item.transaction_type === 'Thu' ? 'text-green-600' : 'text-red-600'}`}>
                       {item.transaction_type === 'Thu' ? '+' : '-'}{formatCurrency(item.total_amount)}
                     </td>
-                    <td className="px-4 py-3 text-xs text-gray-400 italic truncate max-w-[150px]">{item.notes}</td>
+                    <td className="px-4 py-3 text-center">
+                      <span className={`px-2 py-1 rounded-lg text-[10px] font-bold ${
+                        item.status === 'Đã duyệt' ? 'bg-green-100 text-green-700' :
+                        item.status === 'Từ chối' ? 'bg-red-100 text-red-700' :
+                        item.status === 'Đã hoàn thành' ? 'bg-blue-100 text-blue-700' :
+                        'bg-amber-100 text-amber-700'
+                      }`}>
+                        {item.status || 'Chờ duyệt'}
+                      </span>
+                    </td>
                     <td className="px-4 py-3 text-xs text-gray-600">{item.users?.full_name}</td>
                   </tr>
                 ))
@@ -413,6 +476,10 @@ export const Costs = ({ user, onBack }: { user: Employee, onBack?: () => void })
               <div className="p-6 space-y-4">
                 <div className="grid grid-cols-2 gap-4 text-sm">
                   <div>
+                    <p className="text-[10px] font-bold text-gray-400 uppercase">Mã chứng từ</p>
+                    <p className="font-bold text-primary">{selectedCost.cost_code}</p>
+                  </div>
+                  <div>
                     <p className="text-[10px] font-bold text-gray-400 uppercase">Ngày chi</p>
                     <p className="font-medium">{new Date(selectedCost.date).toLocaleDateString('vi-VN')}</p>
                   </div>
@@ -438,7 +505,18 @@ export const Costs = ({ user, onBack }: { user: Employee, onBack?: () => void })
                   </div>
                   <div>
                     <p className="text-[10px] font-bold text-gray-400 uppercase">Số tiền</p>
-                    <p className="font-bold text-primary text-lg">{selectedCost.total_amount.toLocaleString('vi-VN')}đ</p>
+                    <p className="font-bold text-red-600 text-lg">{selectedCost.total_amount.toLocaleString('vi-VN')}đ</p>
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-bold text-gray-400 uppercase">Trạng thái</p>
+                    <span className={`px-2 py-0.5 rounded text-[10px] font-bold inline-block mt-1 ${
+                      selectedCost.status === 'Đã duyệt' ? 'bg-green-100 text-green-700' :
+                      selectedCost.status === 'Từ chối' ? 'bg-red-100 text-red-700' :
+                      selectedCost.status === 'Đã hoàn thành' ? 'bg-blue-100 text-blue-700' :
+                      'bg-amber-100 text-amber-700'
+                    }`}>
+                      {selectedCost.status || 'Chờ duyệt'}
+                    </span>
                   </div>
                   <div className="col-span-2">
                     <p className="text-[10px] font-bold text-gray-400 uppercase">Ghi chú</p>
@@ -446,12 +524,14 @@ export const Costs = ({ user, onBack }: { user: Employee, onBack?: () => void })
                   </div>
                 </div>
                 <div className="flex gap-3 pt-4 border-t border-gray-100">
-                  <button
-                    onClick={() => handleEdit(selectedCost)}
-                    className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl bg-blue-50 text-blue-600 font-bold hover:bg-blue-100 transition-colors"
-                  >
-                    <Edit size={18} /> Sửa
-                  </button>
+                  {selectedCost.status !== 'Đã duyệt' && selectedCost.status !== 'Từ chối' && selectedCost.status !== 'Đã hoàn thành' && (
+                    <button
+                      onClick={() => handleEdit(selectedCost)}
+                      className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl bg-blue-50 text-blue-600 font-bold hover:bg-blue-100 transition-colors"
+                    >
+                      <Edit size={18} /> Sửa
+                    </button>
+                  )}
                   <button
                     onClick={() => { setShowDetailModal(false); handleDeleteClick(selectedCost.id); }}
                     className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl bg-red-50 text-red-600 font-bold hover:bg-red-100 transition-colors"
@@ -586,7 +666,7 @@ export const Costs = ({ user, onBack }: { user: Employee, onBack?: () => void })
                       />
 
                       <CreatableSelect
-                        label="Nội dung chi *"
+                        label={formData.transaction_type === 'Thu' ? "Nội dung thu *" : "Nội dung chi *"}
                         value={formData.content}
                         options={materials}
                         onChange={(val) => setFormData({ ...formData, content: val })}

@@ -3,11 +3,18 @@ import { ClipboardCheck, ArrowDownCircle, ArrowUpCircle, ArrowLeftRight, Check, 
 import { supabase } from '../../supabaseClient';
 import { Employee } from '../../types';
 import { PageBreadcrumb } from '../shared/PageBreadcrumb';
+import { ToastType } from '../shared/Toast';
 import { formatDate, formatNumber } from '../../utils/format';
 
 interface ConfirmState { slip: any; action: 'approve' | 'reject' }
 
-export const PendingApprovals = ({ user, onBack, onNavigate, onRefreshCount }: { user: Employee, onBack: () => void, onNavigate: (page: string, params?: any) => void, onRefreshCount: () => void }) => {
+export const PendingApprovals = ({ user, onBack, onNavigate, onRefreshCount, addToast }: { 
+  user: Employee, 
+  onBack: () => void, 
+  onNavigate: (page: string, params?: any) => void, 
+  onRefreshCount: () => void,
+  addToast?: (message: string, type?: ToastType) => void
+}) => {
   const [slips, setSlips] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
@@ -38,7 +45,9 @@ export const PendingApprovals = ({ user, onBack, onNavigate, onRefreshCount }: {
 
       setSlips(allPending);
     } catch (err: any) {
-      setErrorMsg('Lỗi tải danh sách: ' + err.message);
+      const msg = 'Lỗi tải danh sách: ' + err.message;
+      setErrorMsg(msg);
+      if (addToast) addToast(msg, 'error');
     } finally {
       setLoading(false);
     }
@@ -60,8 +69,11 @@ export const PendingApprovals = ({ user, onBack, onNavigate, onRefreshCount }: {
       if (error) throw error;
       await fetchPendingSlips();
       onRefreshCount();
+      if (addToast) addToast(`${action === 'approve' ? 'Duyệt' : 'Từ chối'} phiếu thành công!`, 'success');
     } catch (err: any) {
-      setErrorMsg(`Lỗi khi ${action === 'approve' ? 'duyệt' : 'từ chối'} phiếu: ${err.message}`);
+      const msg = `Lỗi khi ${action === 'approve' ? 'duyệt' : 'từ chối'} phiếu: ${err.message}`;
+      setErrorMsg(msg);
+      if (addToast) addToast(msg, 'error');
     } finally {
       setActionLoading(null);
     }

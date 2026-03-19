@@ -4,8 +4,13 @@ import { motion, AnimatePresence } from 'motion/react';
 import { supabase } from '../../supabaseClient';
 import { Employee } from '../../types';
 import { PageBreadcrumb } from '../shared/PageBreadcrumb';
+import { ToastType } from '../shared/Toast';
 
-export const MaterialGroups = ({ user, onBack }: { user: Employee, onBack?: () => void }) => {
+export const MaterialGroups = ({ user, onBack, addToast }: { 
+  user: Employee, 
+  onBack?: () => void,
+  addToast?: (message: string, type?: ToastType) => void
+}) => {
   const [showModal, setShowModal] = useState(false);
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [showMaterialModal, setShowMaterialModal] = useState(false);
@@ -125,8 +130,10 @@ export const MaterialGroups = ({ user, onBack }: { user: Employee, onBack?: () =
       setShowModal(false);
       fetchGroups();
       setFormData(initialFormState);
+      if (addToast) addToast(isEditing ? 'Cập nhật nhóm thành công!' : 'Thêm nhóm thành công!', 'success');
     } catch (err: any) {
-      alert('Lỗi: ' + err.message);
+      if (addToast) addToast('Lỗi: ' + err.message, 'error');
+      else alert('Lỗi: ' + err.message);
     } finally {
       setSubmitting(false);
     }
@@ -147,8 +154,10 @@ export const MaterialGroups = ({ user, onBack }: { user: Employee, onBack?: () =
       setShowMaterialModal(false);
       fetchMaterialsByGroup(selectedGroup.id);
       setMaterialFormData(initialMaterialFormState);
+      if (addToast) addToast(isEditingMaterial ? 'Cập nhật vật tư thành công!' : 'Thêm vật tư thành công!', 'success');
     } catch (err: any) {
-      alert('Lỗi: ' + err.message);
+      if (addToast) addToast('Lỗi: ' + err.message, 'error');
+      else alert('Lỗi: ' + err.message);
     } finally {
       setSubmitting(false);
     }
@@ -204,7 +213,8 @@ export const MaterialGroups = ({ user, onBack }: { user: Employee, onBack?: () =
         if (checkError) throw checkError;
 
         if (count && count > 0) {
-          alert(`Không thể xóa nhóm này vì đang có ${count} vật tư thuộc nhóm. Vui lòng xóa hoặc chuyển các vật tư này sang nhóm khác trước.`);
+          if (addToast) addToast(`Không thể xóa nhóm này vì đang có ${count} vật tư thuộc nhóm.`, 'error');
+          else alert(`Không thể xóa nhóm này vì đang có ${count} vật tư thuộc nhóm. Vui lòng xóa hoặc chuyển các vật tư này sang nhóm khác trước.`);
           setShowDeleteModal(false);
           return;
         }
@@ -217,8 +227,10 @@ export const MaterialGroups = ({ user, onBack }: { user: Employee, onBack?: () =
         if (error) throw error;
         fetchMaterialsByGroup(selectedGroup.id);
       }
+      if (addToast) addToast('Đã xóa dữ liệu thành công!', 'success');
     } catch (err: any) {
-      alert('Lỗi: ' + err.message);
+      if (addToast) addToast('Lỗi: ' + err.message, 'error');
+      else alert('Lỗi: ' + err.message);
     }
     setShowDeleteModal(false);
   };

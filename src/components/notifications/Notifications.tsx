@@ -4,9 +4,14 @@ import { motion, AnimatePresence } from 'motion/react';
 import { supabase } from '../../supabaseClient';
 import { Employee } from '../../types';
 import { PageBreadcrumb } from '../shared/PageBreadcrumb';
+import { ToastType } from '../shared/Toast';
 import { formatDate } from '../../utils/format';
 
-export const Notifications = ({ user, onBack }: { user: Employee, onBack: () => void }) => {
+export const Notifications = ({ user, onBack, addToast }: { 
+  user: Employee, 
+  onBack: () => void,
+  addToast?: (message: string, type?: ToastType) => void
+}) => {
   const [notifications, setNotifications] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -21,8 +26,9 @@ export const Notifications = ({ user, onBack }: { user: Employee, onBack: () => 
       
       if (error) throw error;
       setNotifications(data || []);
-    } catch (err) {
+    } catch (err: any) {
       console.error('Error fetching notifications:', err);
+      if (addToast) addToast('Lỗi tải thông báo: ' + err.message, 'error');
     } finally {
       setLoading(false);
     }
@@ -41,8 +47,10 @@ export const Notifications = ({ user, onBack }: { user: Employee, onBack: () => 
       const { error } = await supabase.from('reminders').update({ status: 'cleared' }).eq('id', id);
       if (error) throw error;
       fetchNotifications();
+      if (addToast) addToast('Đã xóa thông báo', 'success');
     } catch (err: any) {
-      alert('Lỗi: ' + err.message);
+      if (addToast) addToast('Lỗi: ' + err.message, 'error');
+      else alert('Lỗi: ' + err.message);
     }
   };
 
@@ -56,8 +64,10 @@ export const Notifications = ({ user, onBack }: { user: Employee, onBack: () => 
       
       if (error) throw error;
       fetchNotifications();
+      if (addToast) addToast('Đã xóa tất cả thông báo', 'success');
     } catch (err: any) {
-      alert('Lỗi: ' + err.message);
+      if (addToast) addToast('Lỗi: ' + err.message, 'error');
+      else alert('Lỗi: ' + err.message);
     }
   };
 

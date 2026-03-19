@@ -7,9 +7,15 @@ import { PageBreadcrumb } from '../shared/PageBreadcrumb';
 import { DetailItem } from '../shared/DetailItem';
 import { NumericInput } from '../shared/NumericInput';
 import { CreatableSelect } from '../shared/CreatableSelect';
+import { ToastType } from '../shared/Toast';
 import { formatCurrency, formatDate, numberToWords } from '../../utils/format';
+import { isUUID } from '../../utils/helpers';
 
-export const CostReport = ({ user, onBack }: { user: Employee, onBack?: () => void }) => {
+export const CostReport = ({ user, onBack, addToast }: { 
+  user: Employee, 
+  onBack?: () => void,
+  addToast?: (message: string, type?: ToastType) => void
+}) => {
   const [loading, setLoading] = useState(true);
   const [costs, setCosts] = useState<any[]>([]);
   const [selectedGroup, setSelectedGroup] = useState<any>(null);
@@ -159,7 +165,8 @@ export const CostReport = ({ user, onBack }: { user: Employee, onBack?: () => vo
 
   const handleSaveDetail = () => {
     if (!detailForm.content || !detailForm.cost_type) {
-      alert('Vui lòng điền đầy đủ thông tin bắt buộc');
+      if (addToast) addToast('Vui lòng điền đầy đủ thông tin bắt buộc', 'error');
+      else alert('Vui lòng điền đầy đủ thông tin bắt buộc');
       return;
     }
 
@@ -185,7 +192,8 @@ export const CostReport = ({ user, onBack }: { user: Employee, onBack?: () => vo
 
   const handleSaveAll = async () => {
     if (masterForm.items.length === 0) {
-      alert('Vui lòng thêm ít nhất một hạng mục chi');
+      if (addToast) addToast('Vui lòng thêm ít nhất một hạng mục chi', 'error');
+      else alert('Vui lòng thêm ít nhất một hạng mục chi');
       return;
     }
 
@@ -196,23 +204,42 @@ export const CostReport = ({ user, onBack }: { user: Employee, onBack?: () => vo
       const itemsToInsert = await Promise.all(masterForm.items.map(async (item) => {
         let warehouse_id = null;
         if (item.warehouse_name) {
-          const existingWh = warehouses.find(w => w.name.toLowerCase() === item.warehouse_name.toLowerCase());
-          if (existingWh) {
-            warehouse_id = existingWh.id;
+          if (isUUID(item.warehouse_name)) {
+            const existingWh = warehouses.find(w => w.id === item.warehouse_name);
+            if (existingWh) warehouse_id = existingWh.id;
           } else {
-            const { data: newWh } = await supabase.from('warehouses').insert([{ name: item.warehouse_name }]).select();
-            if (newWh) warehouse_id = newWh[0].id;
+            const existingWh = warehouses.find(w => w.name.toLowerCase() === item.warehouse_name.toLowerCase());
+            if (existingWh) {
+              warehouse_id = existingWh.id;
+            } else {
+              const { data: newWh } = await supabase.from('warehouses').insert([{ name: item.warehouse_name }]).select();
+              if (newWh) warehouse_id = newWh[0].id;
+            }
           }
         }
 
         let material_id = null;
+        let finalContent = item.content;
+        
         if (item.content) {
-          const existingMat = materials.find(m => m.name.toLowerCase() === item.content.toLowerCase());
-          if (existingMat) {
-            material_id = existingMat.id;
+          if (isUUID(item.content)) {
+            const existingMat = materials.find(m => m.id === item.content);
+            if (existingMat) {
+              material_id = existingMat.id;
+              finalContent = existingMat.name;
+            }
           } else {
-            const { data: newMat } = await supabase.from('materials').insert([{ name: item.content }]).select();
-            if (newMat) material_id = newMat[0].id;
+            const existingMat = materials.find(m => m.name.toLowerCase() === item.content.toLowerCase());
+            if (existingMat) {
+              material_id = existingMat.id;
+              finalContent = existingMat.name;
+            } else {
+              const { data: newMat } = await supabase.from('materials').insert([{ name: item.content }]).select();
+              if (newMat) {
+                material_id = newMat[0].id;
+                finalContent = newMat[0].name;
+              }
+            }
           }
         }
 
@@ -220,17 +247,17 @@ export const CostReport = ({ user, onBack }: { user: Employee, onBack?: () => vo
           date: masterForm.date,
           cost_code: costCode,
           employee_id: masterForm.employee_id,
+          transaction_type: item.transaction_type || 'Chi',
           cost_type: item.cost_type,
-          content: item.content,
+          content: finalContent,
           warehouse_id,
           material_id,
           quantity: item.quantity,
           unit: item.unit,
           unit_price: item.unit_price,
-          total_amount: item.total_amount,
+          total_amount: item.quantity * item.unit_price,
           notes: item.notes,
           stock_status: item.stock_status,
-          transaction_type: item.transaction_type || 'Chi',
           status: 'Chờ duyệt'
         };
 
@@ -254,39 +281,50 @@ export const CostReport = ({ user, onBack }: { user: Employee, onBack?: () => vo
 
       setShowMasterModal(false);
       fetchCosts();
-      alert('Lưu báo cáo chi phí thành công!');
+      if (addToast) addToast('Lưu báo cáo chi phí thành công!', 'success');
     } catch (err: any) {
-      alert('Lỗi khi lưu: ' + err.message);
+      if (addToast) addToast('Lỗi khi lưu: ' + err.message, 'error');
+      else alert('Lỗi khi lưu: ' + err.message);
     } finally {
       setSubmitting(false);
     }
   };
 
-  const groupedData = costs.reduce((acc: any[], current: any) => {
-    const date = current.date;
-    const employeeId = current.employee_id;
+  const groupedDataObj = costs.reduce((acc: any, current: any) => {
+    const code = current.cost_code || generateCostCode(current.date, current.employee_id);
     const employeeName = current.users?.full_name || 'N/A';
 
-    const existingGroup = acc.find(g => g.date === date && g.employee_id === employeeId);
-
-    if (existingGroup) {
+    if (acc[code]) {
       if (current.transaction_type === 'Thu') {
-        existingGroup.total_amount -= current.total_amount;
+        acc[code].total_amount -= current.total_amount;
       } else {
-        existingGroup.total_amount += current.total_amount;
+        acc[code].total_amount += current.total_amount;
       }
-      existingGroup.items.push(current);
+      acc[code].items.push(current);
+      
+      // Update overall status if any item is pending or rejected
+      if (current.status === 'Chờ duyệt') acc[code].status = 'Chờ duyệt';
+      else if (current.status === 'Từ chối' && acc[code].status !== 'Chờ duyệt') acc[code].status = 'Từ chối';
+      
+      // Update date to latest if applicable
+      if (new Date(current.date) > new Date(acc[code].date)) {
+        acc[code].date = current.date;
+      }
     } else {
-      acc.push({
-        date,
-        employee_id: employeeId,
+      acc[code] = {
+        cost_code: code,
+        date: current.date,
+        employee_id: current.employee_id,
         employee_name: employeeName,
         total_amount: current.transaction_type === 'Thu' ? -current.total_amount : current.total_amount,
+        status: current.status || 'Chờ duyệt',
         items: [current]
-      });
+      };
     }
     return acc;
-  }, []);
+  }, {});
+
+  const groupedData = Object.values(groupedDataObj).sort((a: any, b: any) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
   return (
     <div className="p-4 md:p-6 space-y-6 pb-44">
@@ -306,9 +344,10 @@ export const CostReport = ({ user, onBack }: { user: Employee, onBack?: () => vo
             <table className="w-full text-left border-collapse min-w-[500px]">
               <thead>
                 <tr className="bg-gray-50 border-b border-gray-100">
-                  <th className="px-4 py-3 text-[10px] font-bold text-gray-400 uppercase tracking-wider">Ngày chi</th>
-                  <th className="px-4 py-3 text-[10px] font-bold text-gray-400 uppercase tracking-wider">Người chi</th>
+                  <th className="px-4 py-3 text-[10px] font-bold text-gray-400 uppercase tracking-wider">Mã / Ngày</th>
+                  <th className="px-4 py-3 text-[10px] font-bold text-gray-400 uppercase tracking-wider">Người báo cáo</th>
                   <th className="px-4 py-3 text-[10px] font-bold text-gray-400 uppercase tracking-wider text-right">Tổng số tiền</th>
+                  <th className="px-4 py-3 text-[10px] font-bold text-gray-400 uppercase tracking-wider text-center">Trạng thái</th>
                   <th className="px-4 py-3 w-10"></th>
                 </tr>
               </thead>
@@ -325,22 +364,37 @@ export const CostReport = ({ user, onBack }: { user: Employee, onBack?: () => vo
                 ) : groupedData.length === 0 ? (
                   <tr><td colSpan={4} className="px-4 py-8 text-center text-gray-400 italic">Chưa có dữ liệu chi phí</td></tr>
                 ) : (
-                  groupedData.map((group, idx) => (
+                  groupedData.map((group: any, idx: number) => (
                     <tr
-                      key={`${group.date}-${group.employee_id}-${idx}`}
+                      key={`${group.cost_code}-${idx}`}
                       onClick={() => { setSelectedGroup(group); setSelectedItem(null); }}
-                      className={`hover:bg-primary/5 cursor-pointer transition-colors ${selectedGroup?.date === group.date && selectedGroup?.employee_id === group.employee_id ? 'bg-primary/5' : ''}`}
+                      className={`hover:bg-primary/5 cursor-pointer transition-colors ${selectedGroup?.cost_code === group.cost_code ? 'bg-primary/5' : ''}`}
                     >
-                      <td className="px-4 py-3 text-sm text-gray-600">{formatDate(group.date)}</td>
+                      <td className="px-4 py-3">
+                        <div className="text-xs font-bold text-primary">{group.cost_code}</div>
+                        <div className="text-[10px] text-gray-500">{formatDate(group.date)}</div>
+                      </td>
                       <td className="px-4 py-3 text-sm font-medium text-gray-800">{group.employee_name}</td>
                       <td className="px-4 py-3 text-sm font-bold text-red-600 text-right">{formatCurrency(group.total_amount)}</td>
+                      <td className="px-4 py-3 text-center">
+                        <span className={`px-2 py-1 rounded-lg text-[10px] font-bold ${
+                          group.status === 'Đã duyệt' ? 'bg-green-100 text-green-700' :
+                          group.status === 'Từ chối' ? 'bg-red-100 text-red-700' :
+                          group.status === 'Đã hoàn thành' ? 'bg-blue-100 text-blue-700' :
+                          'bg-amber-100 text-amber-700'
+                        }`}>
+                          {group.status}
+                        </span>
+                      </td>
                       <td className="px-4 py-3 text-gray-400 flex items-center gap-2">
-                        <button
-                          onClick={(e) => { e.stopPropagation(); handleEditReport(group); }}
-                          className="p-1.5 hover:bg-blue-50 text-blue-500 rounded-lg transition-colors"
-                        >
-                          <Edit size={16} />
-                        </button>
+                        {group.status !== 'Đã duyệt' && group.status !== 'Từ chối' && group.status !== 'Đã hoàn thành' && (
+                          <button
+                            onClick={(e) => { e.stopPropagation(); handleEditReport(group); }}
+                            className="p-1.5 hover:bg-blue-50 text-blue-500 rounded-lg transition-colors"
+                          >
+                            <Edit size={16} />
+                          </button>
+                        )}
                         <ChevronRight size={16} />
                       </td>
                     </tr>
@@ -378,6 +432,7 @@ export const CostReport = ({ user, onBack }: { user: Employee, onBack?: () => vo
                     <tr className="bg-white border-b border-gray-100">
                       <th className="px-4 py-2 text-[10px] font-bold text-gray-400 uppercase tracking-wider">Ngày chi</th>
                       <th className="px-4 py-2 text-[10px] font-bold text-gray-400 uppercase tracking-wider">Loại chi phí</th>
+                      <th className="px-4 py-2 text-[10px] font-bold text-gray-400 uppercase tracking-wider">Trạng thái</th>
                       <th className="px-4 py-2 text-[10px] font-bold text-gray-400 uppercase tracking-wider text-right">Số tiền</th>
                     </tr>
                   </thead>
@@ -393,6 +448,16 @@ export const CostReport = ({ user, onBack }: { user: Employee, onBack?: () => vo
                           {item.cost_type}
                           <span className={`ml-2 px-1.5 py-0.5 rounded text-[8px] font-bold ${item.transaction_type === 'Thu' ? 'bg-green-100 text-green-600' : 'bg-red-100 text-red-600'}`}>
                             {item.transaction_type === 'Thu' ? 'Thu' : 'Chi'}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 text-xs">
+                           <span className={`px-2 py-0.5 rounded text-[9px] font-bold ${
+                            item.status === 'Đã duyệt' ? 'bg-green-100 text-green-700' :
+                            item.status === 'Từ chối' ? 'bg-red-100 text-red-700' :
+                            item.status === 'Đã hoàn thành' ? 'bg-blue-100 text-blue-700' :
+                            'bg-amber-100 text-amber-700'
+                          }`}>
+                            {item.status || 'Chờ duyệt'}
                           </span>
                         </td>
                         <td className={`px-4 py-3 text-xs font-bold text-right ${item.transaction_type === 'Thu' ? 'text-green-600' : 'text-red-600'}`}>
@@ -441,6 +506,11 @@ export const CostReport = ({ user, onBack }: { user: Employee, onBack?: () => vo
                   <DetailItem label="TT" value={String(selectedGroup.items.indexOf(selectedItem) + 1).padStart(2, '0')} />
                   <DetailItem label="Loại hình chi" value={selectedItem.cost_type || 'N/A'} />
                   <DetailItem label="Tình trạng nhập kho" value={selectedItem.stock_status || 'N/A'} />
+                  <DetailItem label="Trạng thái duyệt" value={selectedItem.status || 'Chờ duyệt'} color={
+                    selectedItem.status === 'Đã duyệt' ? 'text-green-600 font-bold' :
+                    selectedItem.status === 'Từ chối' ? 'text-red-600 font-bold' :
+                    'text-amber-600 font-bold'
+                  } />
                   <DetailItem label="Ghi chú" value={selectedItem.notes || 'Không có ghi chú'} className="col-span-full" />
                   <div className="col-span-full pt-4 border-t border-gray-50">
                     <DetailItem label="Số tiền bằng chữ" value={numberToWords(selectedItem.total_amount)} color="text-primary font-medium italic" />
@@ -592,7 +662,7 @@ export const CostReport = ({ user, onBack }: { user: Employee, onBack?: () => vo
                     </div>
 
                     <CreatableSelect
-                      label="Nội dung chi *"
+                      label={detailForm.transaction_type === 'Thu' ? "Nội dung thu *" : "Nội dung chi *"}
                       value={detailForm.content}
                       options={materials}
                       onChange={(val) => setDetailForm({ ...detailForm, content: val })}

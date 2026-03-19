@@ -299,34 +299,34 @@ export default function App() {
   const renderContent = () => {
     switch (currentPage) {
       case 'dashboard': return <Dashboard user={user} onNavigate={navigateTo} addToast={addToast} />;
-      case 'hr-records': return <HRRecords user={user} onBack={goBack} />;
-      case 'attendance': return <Attendance user={user} onBack={goBack} />;
-      case 'costs': return <Costs user={user} onBack={goBack} />;
-      case 'warehouses': return <Warehouses user={user} onBack={goBack} />;
-      case 'materials': return <MaterialCatalog user={user} onBack={goBack} onNavigate={navigateTo} />;
-      case 'stock-in': return <StockIn user={user} onBack={goBack} initialStatus={pageParams?.status} />;
-      case 'pending-approvals': return <PendingApprovals user={user} onBack={goBack} onNavigate={navigateTo} onRefreshCount={fetchPendingCount} />;
-      case 'stock-out': return <StockOut user={user} onBack={goBack} />;
-      case 'transfer': return <Transfer user={user} onBack={goBack} />;
-      case 'cost-report': return <CostReport user={user} onBack={goBack} />;
-      case 'cost-filter': return <CostFilter user={user} onBack={goBack} />;
+      case 'hr-records': return <HRRecords user={user} onBack={goBack} addToast={addToast} />;
+      case 'attendance': return <Attendance user={user} onBack={goBack} addToast={addToast} />;
+      case 'costs': return <Costs user={user} onBack={goBack} addToast={addToast} />;
+      case 'warehouses': return <Warehouses user={user} onBack={goBack} addToast={addToast} />;
+      case 'materials': return <MaterialCatalog user={user} onBack={goBack} onNavigate={navigateTo} addToast={addToast} />;
+      case 'stock-in': return <StockIn user={user} onBack={goBack} addToast={addToast} initialStatus={pageParams?.status} />;
+      case 'pending-approvals': return <PendingApprovals user={user} onBack={goBack} onNavigate={navigateTo} onRefreshCount={fetchPendingCount} addToast={addToast} />;
+      case 'stock-out': return <StockOut user={user} onBack={goBack} addToast={addToast} />;
+      case 'transfer': return <Transfer user={user} onBack={goBack} addToast={addToast} />;
+      case 'cost-report': return <CostReport user={user} onBack={goBack} addToast={addToast} />;
+      case 'cost-filter': return <CostFilter user={user} onBack={goBack} addToast={addToast} />;
       case 'advances': return <Advances user={user} onBack={goBack} addToast={addToast} />;
-      case 'payroll': return <MonthlySalary user={user} onBack={goBack} />;
+      case 'payroll': return <MonthlySalary user={user} onBack={goBack} addToast={addToast} />;
       case 'salary-settings':
-        if (user.role !== 'Admin' && user.role !== 'Admin App') return <Dashboard user={user} onNavigate={navigateTo} />;
-        return <SalarySettings user={user} onBack={goBack} />;
+        if (user.role !== 'Admin' && user.role !== 'Admin App') return <Dashboard user={user} onNavigate={navigateTo} addToast={addToast} />;
+        return <SalarySettings user={user} onBack={goBack} addToast={addToast} />;
       case 'notes': return <Notes user={user} onBack={goBack} addToast={addToast} />;
-      case 'notifications': return <Notifications user={user} onBack={goBack} />;
-      case 'reminders': return <Reminders user={user} onBack={goBack} />;
+      case 'notifications': return <Notifications user={user} onBack={goBack} addToast={addToast} />;
+      case 'reminders': return <Reminders user={user} onBack={goBack} addToast={addToast} />;
       case 'partners': return <PlaceholderPage title="Khách hàng & nhà cung cấp" onBack={goBack} />;
-      case 'inventory-report': return <InventoryReport user={user} onBack={goBack} />;
+      case 'inventory-report': return <InventoryReport user={user} onBack={goBack} addToast={addToast} />;
       case 'trash': return <Trash onNavigate={navigateTo} onBack={goBack} />;
       case 'user-manual': return <UserManual user={user} onBack={goBack} />;
-      case 'deleted-warehouses': return <DeletedWarehouses onBack={goBack} />;
-      case 'deleted-slips': return <DeletedSlips onBack={goBack} />;
+      case 'deleted-warehouses': return <DeletedWarehouses onBack={goBack} addToast={addToast} />;
+      case 'deleted-slips': return <DeletedSlips onBack={goBack} addToast={addToast} />;
       case 'deleted-employees': return <DeletedEmployees onBack={goBack} addToast={addToast} />;
       case 'deleted-costs': return <DeletedCosts onBack={goBack} addToast={addToast} />;
-      case 'material-groups': return <MaterialGroups user={user} onBack={goBack} />;
+      case 'material-groups': return <MaterialGroups user={user} onBack={goBack} addToast={addToast} />;
       case 'backup-settings':
         if (user.role !== 'Admin' && user.role !== 'Admin App') return <Dashboard user={user} onNavigate={navigateTo} addToast={addToast} />;
         return <Backup onBack={goBack} addToast={addToast} />;

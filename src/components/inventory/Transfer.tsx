@@ -1,28 +1,39 @@
 import { useState, useEffect, FormEvent } from 'react';
-import { Plus, X, ArrowLeftRight, Edit, Trash2 } from 'lucide-react';
+import { Plus, X, ArrowLeftRight, Edit, Trash2, PackagePlus, Search, ChevronRight } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { supabase } from '../../supabaseClient';
 import { Employee } from '../../types';
 import { PageBreadcrumb } from '../shared/PageBreadcrumb';
 import { NumericInput } from '../shared/NumericInput';
 import { CreatableSelect } from '../shared/CreatableSelect';
+import { ToastType } from '../shared/Toast';
+import { ConfirmModal } from '../shared/ConfirmModal';
+import { QuickAddMaterialModal } from '../shared/QuickAddMaterialModal';
+import { useInventoryData } from '../../hooks/useInventoryData';
 import { formatDate, formatNumber } from '../../utils/format';
 import { isUUID, generateCode } from '../../utils/helpers';
 import { getAvailableStock } from '../../utils/inventory';
 
-export const Transfer = ({ user, onBack }: { user: Employee, onBack?: () => void }) => {
+export const Transfer = ({ user, onBack, addToast }: { 
+  user: Employee, 
+  onBack?: () => void,
+  addToast?: (message: string, type?: ToastType) => void
+}) => {
   const [slips, setSlips] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [selectedSlip, setSelectedSlip] = useState<any>(null);
-  const [warehouses, setWarehouses] = useState<any[]>([]);
-  const [materials, setMaterials] = useState<any[]>([]);
   const [submitting, setSubmitting] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [availableStock, setAvailableStock] = useState<number | null>(null);
   const [stockLoading, setStockLoading] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [showAddMaterial, setShowAddMaterial] = useState(false);
+
+  const { warehouses, materials, groups, refreshAll, fetchWarehouses } = useInventoryData();
+
 
   const initialFormState = {
     date: new Date().toISOString().split('T')[0],
@@ -39,8 +50,6 @@ export const Transfer = ({ user, onBack }: { user: Employee, onBack?: () => void
 
   useEffect(() => {
     fetchSlips();
-    fetchWarehouses();
-    fetchMaterials();
   }, []);
 
   useEffect(() => {
@@ -81,27 +90,20 @@ export const Transfer = ({ user, onBack }: { user: Employee, onBack?: () => void
         setSlips(data || []);
       }
     } catch (err: any) {
-      alert('Lỗi tải phiếu luân chuyển: ' + err.message);
+      if (addToast) addToast('Lỗi tải phiếu luân chuyển: ' + err.message, 'error');
+      else alert('Lỗi tải phiếu luân chuyển: ' + err.message);
     } finally {
       setLoading(false);
     }
   };
 
-  const fetchWarehouses = async () => {
-    const { data } = await supabase.from('warehouses').select('*').or('status.is.null,status.neq.Đã xóa').order('name');
-    if (data) setWarehouses(data);
-  };
-
-  const fetchMaterials = async () => {
-    const { data } = await supabase.from('materials').select('*').or('status.is.null,status.neq.Đã xóa').order('name');
-    if (data) setMaterials(data);
-  };
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
 
     if (formData.from_warehouse_id === formData.to_warehouse_id && formData.from_warehouse_id !== '') {
-      alert('Kho nguồn và kho đích không được trùng nhau!');
+      if (addToast) addToast('Kho nguồn và kho đích không được trùng nhau!', 'error');
+      else alert('Kho nguồn và kho đích không được trùng nhau!');
       return;
     }
 
@@ -161,7 +163,6 @@ export const Transfer = ({ user, onBack }: { user: Employee, onBack?: () => void
       } else {
         const { error } = await supabase.from('transfers').insert([payload]);
         if (error) throw error;
-
       }
 
       setShowModal(false);
@@ -171,8 +172,10 @@ export const Transfer = ({ user, onBack }: { user: Employee, onBack?: () => void
       setEditingId(null);
       setAvailableStock(null);
       setSelectedSlip(null);
+      if (addToast) addToast(isEditing ? 'Cập nhật thành công!' : 'Lập phiếu luân chuyển thành công!', 'success');
     } catch (err: any) {
-      alert('Lỗi: ' + err.message);
+      if (addToast) addToast('Lỗi: ' + err.message, 'error');
+      else alert('Lỗi: ' + err.message);
     } finally {
       setSubmitting(false);
     }
@@ -191,7 +194,8 @@ export const Transfer = ({ user, onBack }: { user: Employee, onBack?: () => void
       material_id: selectedSlip.material_id,
       quantity: selectedSlip.quantity,
       notes: selectedSlip.notes?.replace('[SỬA] ', '') || '',
-      status: 'Chờ duyệt'
+      status: 'Chờ duyệt',
+      transfer_code: selectedSlip.transfer_code
     });
     setIsEditing(true);
     setEditingId(selectedSlip.id);
@@ -199,17 +203,25 @@ export const Transfer = ({ user, onBack }: { user: Employee, onBack?: () => void
     setShowModal(true);
   };
 
-  const handleDelete = async () => {
-    if (!selectedSlip || !confirm('Bạn có chắc chắn muốn chuyển phiếu này vào thùng rác?')) return;
+  const handleDelete = () => {
+    if (!selectedSlip) return;
+    setShowDeleteConfirm(true);
+  };
+
+  const confirmDelete = async () => {
     try {
       const { error } = await supabase.from('transfers').update({ status: 'Đã xóa' }).eq('id', selectedSlip.id);
       if (error) throw error;
-      alert('Đã chuyển phiếu vào thùng rác');
-      setAvailableStock(null);
-      setShowDetailModal(false);
+      if (addToast) addToast('Đã chuyển phiếu vào thùng rác', 'success');
       fetchSlips();
+      setShowDetailModal(false);
+      setShowDeleteConfirm(false);
     } catch (err: any) {
-      alert('Lỗi: ' + err.message);
+      const msg = err.message.includes('foreign key constraint') 
+        ? 'Không thể xóa phiếu này vì đang có dữ liệu liên quan khác.' 
+        : err.message;
+      if (addToast) addToast('Lỗi: ' + msg, 'error');
+      else alert('Lỗi: ' + msg);
     }
   };
 
@@ -230,8 +242,8 @@ export const Transfer = ({ user, onBack }: { user: Employee, onBack?: () => void
               transfer_code: generateCode('LC')
             });
             setIsEditing(false);
-            setEditingId(null); // Reset editingId when creating new
-            setAvailableStock(null); // Reset available stock
+            setEditingId(null);
+            setAvailableStock(null);
             setShowModal(true);
           }}
           className="flex items-center gap-2 px-4 py-2 bg-orange-500 text-white rounded-xl text-sm font-bold hover:bg-orange-600 transition-colors shadow-lg shadow-orange-500/20"
@@ -339,13 +351,17 @@ export const Transfer = ({ user, onBack }: { user: Employee, onBack?: () => void
                   <p className="text-sm text-gray-600 italic">{selectedSlip.notes || 'Không có ghi chú'}</p>
                 </div>
 
-                <div className="flex gap-3 pt-4 border-t border-gray-100">
-                  <button onClick={handleEdit} className="flex-1 flex items-center justify-center gap-2 py-2 bg-blue-50 text-blue-600 rounded-xl text-sm font-bold hover:bg-blue-100 transition-colors">
-                    <Edit size={18} /> Chỉnh sửa
-                  </button>
-                  <button onClick={handleDelete} className="flex-1 flex items-center justify-center gap-2 py-2 bg-red-50 text-red-600 rounded-xl text-sm font-bold hover:bg-red-100 transition-colors">
-                    <Trash2 size={18} /> Chuyển vào thùng rác
-                  </button>
+                 <div className="flex gap-3 pt-4 border-t border-gray-100">
+                  {selectedSlip.status !== 'Đã xóa' && (
+                    <>
+                      <button onClick={handleEdit} className="flex-1 flex items-center justify-center gap-2 py-2 bg-blue-50 text-blue-600 rounded-xl text-sm font-bold hover:bg-blue-100 transition-colors">
+                        <Edit size={18} /> Chỉnh sửa
+                      </button>
+                      <button onClick={handleDelete} className="flex-1 flex items-center justify-center gap-2 py-2 bg-red-50 text-red-600 rounded-xl text-sm font-bold hover:bg-red-100 transition-colors">
+                        <Trash2 size={18} /> Chuyển vào thùng rác
+                      </button>
+                    </>
+                  )}
                   <button onClick={() => setShowDetailModal(false)} className="flex-1 py-2 bg-gray-100 text-gray-500 rounded-xl text-sm font-bold hover:bg-gray-200 transition-colors">
                     Đóng
                   </button>
@@ -374,7 +390,7 @@ export const Transfer = ({ user, onBack }: { user: Employee, onBack?: () => void
               </div>
 
               <div className="flex-1 overflow-y-auto p-6 custom-scrollbar">
-                <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-6 pb-12">
                   <div className="space-y-4">
                     <div className="space-y-1">
                       <label className="text-[10px] font-bold text-gray-400 uppercase">Ngày chuyển *</label>
@@ -407,15 +423,29 @@ export const Transfer = ({ user, onBack }: { user: Employee, onBack?: () => void
                     />
                   </div>
                   <div className="space-y-4">
-                    <CreatableSelect
-                      label="Vật tư luân chuyển *"
-                      value={formData.material_id}
-                      options={materials}
-                      onChange={(val) => setFormData({ ...formData, material_id: val })}
-                      onCreate={(val) => alert('Vui lòng chọn vật tư có trong Danh mục!')}
-                      placeholder="Chọn vật tư..."
-                      required
-                    />
+                    <div className="flex items-end gap-2 relative z-[120]">
+                      <div className="flex-1">
+                        <CreatableSelect
+                          label="Vật tư luân chuyển *"
+                          value={formData.material_id}
+                          options={materials}
+                          onChange={(val) => setFormData({ ...formData, material_id: val })}
+                          onCreate={() => {
+                            if (addToast) addToast('Vui lòng chọn vật tư có trong Danh mục. Hoặc click nút + bên cạnh để tạo mới.', 'info');
+                          }}
+                          placeholder="Chọn vật tư..."
+                          required
+                        />
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setShowAddMaterial(true)}
+                        className="h-[42px] px-3 bg-blue-50 text-blue-600 rounded-xl hover:bg-blue-100 transition-colors flex items-center justify-center shrink-0 border border-blue-100"
+                        title="Thêm vật tư nhanh"
+                      >
+                        <PackagePlus size={20} />
+                      </button>
+                    </div>
                     <div>
                       <NumericInput
                         label="Số lượng chuyển *"
@@ -470,6 +500,26 @@ export const Transfer = ({ user, onBack }: { user: Employee, onBack?: () => void
           </div>
         )}
       </AnimatePresence>
+
+      <QuickAddMaterialModal
+        show={showAddMaterial}
+        onClose={() => setShowAddMaterial(false)}
+        groups={groups}
+        addToast={addToast}
+        onSuccess={(newMat) => {
+          setFormData({ ...formData, material_id: newMat.id });
+          refreshAll();
+        }}
+      />
+
+      <ConfirmModal
+        show={showDeleteConfirm}
+        title="Xác nhận xóa"
+        message="Bạn có chắc chắn muốn chuyển phiếu luân chuyển này vào thùng rác không?"
+        confirmText="Chuyển vào thùng rác"
+        onConfirm={confirmDelete}
+        onCancel={() => setShowDeleteConfirm(false)}
+      />
     </div>
   );
 };

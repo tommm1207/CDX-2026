@@ -328,3 +328,27 @@ export const getTonKhoTable = async (
     return [];
   }
 };
+
+/**
+ * Tự động sinh mã vật tư tiếp theo dựa trên nhóm vật tư.
+ * Định dạng: [Mã nhóm]-[Số thứ tự 3 chữ số] (VD: VT-001)
+ */
+export const generateNextMaterialCode = async (groupId: string): Promise<string> => {
+  if (!groupId) return '';
+  try {
+    const { data: groupData } = await supabase.from('material_groups').select('code').eq('id', groupId).single();
+    if (!groupData || !groupData.code) return '';
+    const groupPrefix = groupData.code;
+    const { data } = await supabase.from('materials').select('code').eq('group_id', groupId).order('code', { ascending: false }).limit(1);
+    if (data && data.length > 0 && data[0].code) {
+      const lastCode = data[0].code;
+      const parts = lastCode.split('-');
+      const lastNum = parseInt(parts[parts.length - 1]);
+      if (!isNaN(lastNum)) return `${groupPrefix}-${(lastNum + 1).toString().padStart(3, '0')}`;
+    }
+    return `${groupPrefix}-001`;
+  } catch (err) {
+    console.error('Error generating material code:', err);
+    return '';
+  }
+};

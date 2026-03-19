@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { X, PackagePlus } from 'lucide-react';
 import { supabase } from '../../supabaseClient';
+import { generateNextMaterialCode } from '../../utils/inventory';
 
 interface QuickAddMaterialModalProps {
   show: boolean;
@@ -26,25 +27,6 @@ export const QuickAddMaterialModal = ({
   const [code, setCode] = useState('');
   const [loading, setLoading] = useState(false);
 
-  const generateNextMaterialCode = async (gid: string) => {
-    if (!gid) return '';
-    try {
-      const selectedGroup = groups.find(g => g.id === gid);
-      if (!selectedGroup || !selectedGroup.code) return '';
-      const groupPrefix = selectedGroup.code;
-      const { data } = await supabase.from('materials').select('code').eq('group_id', gid).order('code', { ascending: false }).limit(1);
-      if (data && data.length > 0 && data[0].code) {
-        const lastCode = data[0].code;
-        const parts = lastCode.split('-');
-        const lastNum = parseInt(parts[parts.length - 1]);
-        if (!isNaN(lastNum)) return `${groupPrefix}-${(lastNum + 1).toString().padStart(3, '0')}`;
-      }
-      return `${groupPrefix}-001`;
-    } catch (err) {
-      console.error('Error generating material code:', err);
-      return '';
-    }
-  };
 
   const handleGroupChange = async (val: string) => {
     setGroupId(val);

@@ -261,7 +261,7 @@ export const HRRecords = ({ user, onBack, addToast }: {
               ) : filteredEmployees.length === 0 ? (
                 <tr><td colSpan={user.role === 'Admin App' ? 11 : 10} className="p-8 text-center">Không tìm thấy nhân sự nào</td></tr>
               ) : filteredEmployees.map((emp) => (
-                <tr key={emp.id} className="border-b border-gray-50 hover:bg-gray-50 transition-colors whitespace-nowrap">
+                <tr key={emp.id} onClick={() => handleEdit(emp)} className="border-b border-gray-50 hover:bg-primary/5 transition-colors whitespace-nowrap cursor-pointer">
                   <td className="p-3 font-bold text-gray-800 sticky left-0 bg-white group-hover:bg-gray-50 z-10 border-b border-gray-50">{emp.code || emp.id.slice(0, 8)}</td>
                   <td className="p-3">{emp.full_name}</td>
                   <td className="p-3">{emp.email || '-'}</td>
@@ -293,16 +293,16 @@ export const HRRecords = ({ user, onBack, addToast }: {
                       {emp.status}
                     </span>
                   </td>
-                  <td className="p-3">
+                  <td className="p-3" onClick={(e) => e.stopPropagation()}>
                     <div className="flex gap-2">
                       <button
-                        onClick={() => handleEdit(emp)}
+                        onClick={(e) => { e.stopPropagation(); handleEdit(emp); }}
                         className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
                       >
                         <Edit size={14} />
                       </button>
                       <button
-                        onClick={() => handleDeleteClick(emp.id)}
+                        onClick={(e) => { e.stopPropagation(); handleDeleteClick(emp.id); }}
                         className="p-1.5 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
                       >
                         <Trash2 size={14} />

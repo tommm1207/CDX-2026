@@ -169,7 +169,17 @@ export const PendingApprovals = ({ user, onBack, onNavigate, onRefreshCount, add
                 <tr><td colSpan={5} className="px-4 py-12 text-center text-gray-400 italic">✅ Không có phiếu nào cần duyệt</td></tr>
               ) : (
                 slips.map((item) => (
-                  <tr key={`${item.table}-${item.id}`} className={`hover:bg-gray-50/50 transition-colors ${actionLoading === item.id ? 'opacity-50 pointer-events-none' : ''}`}>
+                  <tr
+                    key={`${item.table}-${item.id}`}
+                    onClick={() => {
+                      const pageMap: Record<string, string> = {
+                        'stock_in': 'stock-in', 'stock_out': 'stock-out',
+                        'transfers': 'transfer', 'costs': 'cost-report'
+                      };
+                      onNavigate(pageMap[item.table] || 'dashboard');
+                    }}
+                    className={`hover:bg-primary/5 cursor-pointer transition-colors ${actionLoading === item.id ? 'opacity-50 pointer-events-none' : ''}`}
+                  >
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-2">
                         {item.type === 'Nhập kho' ? <ArrowDownCircle className="text-blue-500" size={16} /> :
@@ -203,7 +213,7 @@ export const PendingApprovals = ({ user, onBack, onNavigate, onRefreshCount, add
                     <td className="px-4 py-3">
                       <div className="flex items-center justify-center gap-2">
                         <button
-                          onClick={() => setConfirm({ slip: item, action: 'approve' })}
+                          onClick={(e) => { e.stopPropagation(); setConfirm({ slip: item, action: 'approve' }); }}
                           disabled={actionLoading === item.id}
                           className="p-2 bg-green-50 text-green-600 rounded-xl hover:bg-green-600 hover:text-white transition-all shadow-sm disabled:opacity-50"
                           title="Duyệt phiếu"
@@ -211,18 +221,12 @@ export const PendingApprovals = ({ user, onBack, onNavigate, onRefreshCount, add
                           {actionLoading === item.id ? <RefreshCw size={16} className="animate-spin" /> : <Check size={16} />}
                         </button>
                         <button
-                          onClick={() => setConfirm({ slip: item, action: 'reject' })}
+                          onClick={(e) => { e.stopPropagation(); setConfirm({ slip: item, action: 'reject' }); }}
                           disabled={actionLoading === item.id}
                           className="p-2 bg-red-50 text-red-600 rounded-xl hover:bg-red-600 hover:text-white transition-all shadow-sm disabled:opacity-50"
                           title="Từ chối"
                         >
                           <X size={16} />
-                        </button>
-                        <button
-                          className="p-2 bg-gray-50 text-gray-400 rounded-xl hover:bg-gray-100 transition-all"
-                          title="Xem chi tiết"
-                        >
-                          <Eye size={16} />
                         </button>
                       </div>
                     </td>

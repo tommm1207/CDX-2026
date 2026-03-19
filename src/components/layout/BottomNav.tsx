@@ -18,7 +18,7 @@ export const BottomNav = ({ currentPage, onNavigate, user, pendingCount }: { cur
     ];
 
   return (
-    <div className="lg:hidden fixed bottom-5 left-1/2 -translate-x-1/2 w-[92%] max-w-md bg-white/90 backdrop-blur-md border border-gray-100 flex items-center justify-around py-2 px-2 z-40 shadow-[0_8px_25px_rgba(0,0,0,0.1)] rounded-full">
+    <div className="lg:hidden fixed bottom-5 left-1/2 -translate-x-1/2 w-[92%] max-w-md bg-white/90 backdrop-blur-md border border-gray-100 flex items-center justify-around py-2 px-2 z-[60] shadow-[0_8px_25px_rgba(0,0,0,0.1)] rounded-full">
       {navItems.map((item) => (
         <button
           key={item.id}

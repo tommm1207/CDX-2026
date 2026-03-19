@@ -112,7 +112,6 @@ export const MonthlySalary = ({ user, onBack, addToast }: {
               <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-right">Phụ cấp</th>
               <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-right">Tạm ứng</th>
               <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-right">Thực lĩnh</th>
-              <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-center">Thao tác</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-100">
@@ -127,7 +126,7 @@ export const MonthlySalary = ({ user, onBack, addToast }: {
               </tr>
             ) : (
               salaries.map((s) => (
-                <tr key={s.id} className="hover:bg-gray-50 transition-colors">
+                <tr key={s.id} onClick={() => { setSelectedSalary(s); setShowDetailModal(true); }} className="hover:bg-gray-50 transition-colors cursor-pointer">
                   <td className="px-4 py-3">
                     <p className="text-xs font-bold text-gray-800">{s.full_name}</p>
                     <p className="text-[9px] text-gray-400">{s.code || s.id.slice(0, 8)}</p>
@@ -138,15 +137,6 @@ export const MonthlySalary = ({ user, onBack, addToast }: {
                   <td className="px-4 py-3 text-right text-xs font-medium text-green-600">+{formatCurrency(s.totalAll)}</td>
                   <td className="px-4 py-3 text-right text-xs font-medium text-red-600">-{formatCurrency(s.totalAdv)}</td>
                   <td className="px-4 py-3 text-right text-xs font-black text-primary">{formatCurrency(s.netSalary)}</td>
-                  <td className="px-4 py-3 text-center">
-                    <button
-                      onClick={() => { setSelectedSalary(s); setShowDetailModal(true); }}
-                      className="p-1.5 text-primary hover:bg-primary/10 rounded-lg transition-colors"
-                      title="Xem chi tiết"
-                    >
-                      <Eye size={14} />
-                    </button>
-                  </td>
                 </tr>
               ))
             )}

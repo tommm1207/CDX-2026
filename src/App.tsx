@@ -347,7 +347,7 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-[#F8F9FA] flex flex-col font-sans">
-      <header className="bg-primary text-white h-14 flex items-center justify-between px-4 sticky top-0 z-50 shadow-md">
+      <header className="bg-primary text-white h-14 flex items-center justify-between px-4 sticky top-0 z-[40] shadow-md">
         <div className="flex items-center gap-2">
           <button
             onClick={() => setIsSidebarOpen(!isSidebarOpen)}
@@ -404,7 +404,7 @@ export default function App() {
                   initial={{ opacity: 0, y: 10, scale: 0.95 }}
                   animate={{ opacity: 1, y: 0, scale: 1 }}
                   exit={{ opacity: 0, y: 10, scale: 0.95 }}
-                  className="absolute right-0 top-full mt-2 w-56 bg-white rounded-2xl shadow-2xl border border-gray-100 overflow-hidden z-20 text-gray-800"
+                  className="absolute right-0 top-full mt-2 w-56 bg-white rounded-2xl shadow-2xl border border-gray-100 overflow-hidden z-[70] text-gray-800"
                 >
                   <div className="p-4 border-b border-gray-50 bg-gray-50/50">
                     <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">Tài khoản</p>
@@ -449,7 +449,7 @@ export default function App() {
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               onClick={() => setIsSidebarOpen(false)}
-              className="fixed top-14 inset-x-0 bottom-0 bg-black/20 backdrop-blur-sm z-40 lg:hidden"
+              className="fixed top-14 inset-x-0 bottom-0 bg-black/20 backdrop-blur-sm z-[60] lg:hidden"
             />
           )}
         </AnimatePresence>
@@ -461,7 +461,7 @@ export default function App() {
               animate={{ x: 0, opacity: 1 }}
               exit={{ x: -280, opacity: 0 }}
               transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-              className="bg-white border-r border-gray-200 overflow-y-auto flex-shrink-0 z-40 fixed lg:relative top-14 lg:top-0 h-[calc(100vh-3.5rem)] w-[280px] shadow-2xl lg:shadow-none custom-scrollbar"
+               className="bg-white border-r border-gray-200 overflow-y-auto flex-shrink-0 z-[60] fixed lg:relative top-14 lg:top-0 h-[calc(100vh-3.5rem)] w-[280px] shadow-2xl lg:shadow-none custom-scrollbar"
             >
               <div className="p-4 space-y-6 pb-44 lg:pb-4">
                 <div className="flex items-center justify-between px-2">

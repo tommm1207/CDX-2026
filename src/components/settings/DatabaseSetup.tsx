@@ -231,6 +231,41 @@ CREATE TABLE IF NOT EXISTS allowances (
   created_at TIMESTAMPTZ DEFAULT now()
 );
 
+-- 17. BOM Configs (Định mức sản xuất)
+CREATE TABLE IF NOT EXISTS bom_configs (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  product_item_id UUID REFERENCES materials(id), -- Thành phẩm (Cọc)
+  name TEXT NOT NULL,
+  is_two_stage BOOLEAN DEFAULT false, -- Quy trình 2 bước (Lồng thép -> Cọc)
+  notes TEXT,
+  created_at TIMESTAMPTZ DEFAULT now()
+);
+
+-- 18. Chi tiết định mức (BOM Items)
+CREATE TABLE IF NOT EXISTS bom_items (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  bom_id UUID REFERENCES bom_configs(id) ON DELETE CASCADE,
+  material_item_id UUID REFERENCES materials(id), -- Nguyên liệu (Xi măng, Cát, Thép...)
+  quantity_per_unit NUMERIC NOT NULL, -- Lượng cần cho 1 đơn vị thành phẩm
+  unit TEXT
+);
+
+-- 19. Lệnh sản xuất (Production Orders)
+CREATE TABLE IF NOT EXISTS production_orders (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  order_code TEXT UNIQUE NOT NULL, -- LSX-2024-001
+  bom_id UUID REFERENCES bom_configs(id),
+  warehouse_id UUID REFERENCES warehouses(id), -- Kho xuất nguyên liệu
+  output_warehouse_id UUID REFERENCES warehouses(id), -- Kho nhập thành phẩm
+  quantity NUMERIC NOT NULL, -- Số lượng thành phẩm cần đúc
+  status TEXT DEFAULT 'Mới', -- 'Mới' | 'Đã duyệt' | 'Hoàn thành' | 'Hủy'
+  planned_date DATE,
+  created_by UUID REFERENCES users(id),
+  approved_by UUID REFERENCES users(id),
+  notes TEXT,
+  created_at TIMESTAMPTZ DEFAULT now()
+);
+
 -- ==========================================
 -- ROW LEVEL SECURITY (RLS) CONFIGURATION
 -- ==========================================
@@ -325,6 +360,18 @@ CREATE POLICY "Admins can manage partners" ON partners FOR ALL USING (get_user_r
 -- 16. Allowances Policies
 CREATE POLICY "Users can view their own allowances" ON allowances FOR SELECT USING (auth.uid() = employee_id OR get_user_role() IN ('Admin', 'Admin App'));
 CREATE POLICY "Admins can manage allowances" ON allowances FOR ALL USING (get_user_role() IN ('Admin', 'Admin App'));
+
+-- 17. BOM Configs Policies
+CREATE POLICY "Everyone can view bom configs" ON bom_configs FOR SELECT USING (true);
+CREATE POLICY "Admins can manage bom configs" ON bom_configs FOR ALL USING (get_user_role() IN ('Admin', 'Admin App'));
+
+-- 18. BOM Items Policies
+CREATE POLICY "Everyone can view bom items" ON bom_items FOR SELECT USING (true);
+CREATE POLICY "Admins can manage bom items" ON bom_items FOR ALL USING (get_user_role() IN ('Admin', 'Admin App'));
+
+-- 19. Production Orders Policies
+CREATE POLICY "Everyone can view production orders" ON production_orders FOR SELECT USING (true);
+CREATE POLICY "Admins can manage production orders" ON production_orders FOR ALL USING (get_user_role() IN ('Admin', 'Admin App'));
 `;
 
   const copyToClipboard = () => {

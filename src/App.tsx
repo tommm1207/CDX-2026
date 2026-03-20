@@ -27,6 +27,7 @@ import {
   ClipboardCheck,
   Bell,
   BellRing,
+  ClipboardList,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { supabase } from './supabaseClient';
@@ -71,6 +72,11 @@ import { MaterialGroups } from './components/materials/MaterialGroups';
 import { MaterialCatalog } from './components/materials/MaterialCatalog';
 import { PlaceholderPage } from './components/materials/PlaceholderPage';
 
+// Production Components
+import { BOMConfig } from './components/production/BOMConfig';
+import { ProductionOrders } from './components/production/ProductionOrders';
+import { ProductionOrderDetail } from './components/production/ProductionOrderDetail';
+
 // Trash Components
 import { Trash } from './components/trash/Trash';
 import { DeletedWarehouses } from './components/trash/DeletedWarehouses';
@@ -86,6 +92,7 @@ import { BackupNow } from './components/settings/BackupNow';
 
 import { Notifications } from './components/notifications/Notifications';
 import { UserManual } from './components/shared/UserManual';
+import { DatabaseSetup } from './components/settings/DatabaseSetup';
 
 const LOGO_URL = "/logo.png";
 
@@ -248,6 +255,13 @@ export default function App() {
       ]
     },
     {
+      title: 'SẢN XUẤT',
+      items: [
+        { id: 'production-list', label: 'Lệnh sản xuất', icon: ClipboardList },
+        { id: 'production-bom', label: 'Định mức sản xuất', icon: Settings },
+      ]
+    },
+    {
       title: 'TIỀN LƯƠNG',
       items: [
         { id: 'attendance', label: 'Chấm công', icon: CalendarCheck },
@@ -269,6 +283,7 @@ export default function App() {
         { id: 'notes', label: 'Nhật ký / Ghi chú', icon: FileText },
         { id: 'notifications', label: 'Thông báo', icon: BellRing },
         { id: 'reminders', label: 'Thiết lập Lịch nhắc', icon: Bell },
+        { id: 'database-setup', label: 'Cấu hình Database', icon: Settings2 },
         { id: 'trash', label: 'Thùng rác', icon: Trash2 },
       ]
     },
@@ -285,7 +300,7 @@ export default function App() {
     ...group,
       items: group.items.filter(item => {
         if (user.role === 'User') {
-          const allowed = ['stock-in', 'stock-out', 'transfer', 'attendance', 'cost-report'];
+          const allowed = ['stock-in', 'stock-out', 'transfer', 'attendance', 'cost-report', 'production-list', 'production-detail'];
           return allowed.includes(item.id);
         }
         // Allow Admin role to see all tools
@@ -320,6 +335,12 @@ export default function App() {
       case 'reminders': return <Reminders user={user} onBack={goBack} addToast={addToast} />;
       case 'partners': return <PlaceholderPage title="Khách hàng & nhà cung cấp" onBack={goBack} />;
       case 'inventory-report': return <InventoryReport user={user} onBack={goBack} addToast={addToast} />;
+      
+      // Production
+      case 'production-list': return <ProductionOrders user={user} onBack={goBack} addToast={addToast} onOpenDetail={(id) => navigateTo('production-detail', { id })} />;
+      case 'production-detail': return <ProductionOrderDetail user={user} orderId={pageParams?.id} onBack={goBack} addToast={addToast} />;
+      case 'production-bom': return <BOMConfig user={user} onBack={goBack} addToast={addToast} />;
+
       case 'trash': return <Trash onNavigate={navigateTo} onBack={goBack} />;
       case 'user-manual': return <UserManual user={user} onBack={goBack} />;
       case 'deleted-warehouses': return <DeletedWarehouses onBack={goBack} addToast={addToast} />;
@@ -333,6 +354,9 @@ export default function App() {
       case 'backup-now':
         if (user.role !== 'Admin' && user.role !== 'Admin App') return <Dashboard user={user} onNavigate={navigateTo} addToast={addToast} />;
         return <BackupNow onBack={goBack} addToast={addToast} />;
+      case 'database-setup':
+        if (user.role !== 'Admin' && user.role !== 'Admin App') return <Dashboard user={user} onNavigate={navigateTo} addToast={addToast} />;
+        return <DatabaseSetup onBack={goBack} />;
       default: return (
         <div className="p-4 md:p-6 space-y-6">
           <PageBreadcrumb title={currentPage} onBack={goBack} />
@@ -347,7 +371,7 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-[#F8F9FA] flex flex-col font-sans">
-      <header className="bg-primary text-white h-14 flex items-center justify-between px-4 sticky top-0 z-[40] shadow-md">
+      <header className="bg-primary text-white h-14 flex items-center justify-between px-4 sticky top-0 z-[100] shadow-md">
         <div className="flex items-center gap-2">
           <button
             onClick={() => setIsSidebarOpen(!isSidebarOpen)}
@@ -461,7 +485,7 @@ export default function App() {
               animate={{ x: 0, opacity: 1 }}
               exit={{ x: -280, opacity: 0 }}
               transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-               className="bg-white border-r border-gray-200 overflow-y-auto flex-shrink-0 z-[60] fixed lg:relative top-14 lg:top-0 h-[calc(100vh-3.5rem)] w-[280px] shadow-2xl lg:shadow-none custom-scrollbar"
+               className="bg-white border-r border-gray-200 overflow-y-auto flex-shrink-0 z-[60] lg:z-30 fixed lg:relative top-14 lg:top-0 h-[calc(100vh-3.5rem)] w-[280px] shadow-2xl lg:shadow-none custom-scrollbar"
             >
               <div className="p-4 space-y-6 pb-44 lg:pb-4">
                 <div className="flex items-center justify-between px-2">

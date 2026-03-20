@@ -5,11 +5,11 @@ import {
   LayoutDashboard, Package, Wallet, UserCircle, Settings, Shield, 
   ArrowLeftRight, ArrowDownCircle, ArrowUpCircle, ClipboardCheck, 
   FileText, Banknote, History, Bell, Trash2, Database, ChevronRight,
-  Info, CheckCircle2, BookOpen, Printer
+  Info, CheckCircle2, BookOpen, Printer, Factory, Cpu, Cog
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
-type Category = 'overview' | 'inventory' | 'finance' | 'hr' | 'system';
+type Category = 'overview' | 'inventory' | 'production' | 'finance' | 'hr' | 'system';
 
 export const UserManual = ({ user, onBack }: { user: Employee; onBack?: () => void }) => {
   const [activeCategory, setActiveCategory] = useState<Category>('overview');
@@ -18,11 +18,11 @@ export const UserManual = ({ user, onBack }: { user: Employee; onBack?: () => vo
   const categories: { id: Category; label: string; icon: any; adminOnly?: boolean }[] = [
     { id: 'overview', label: 'Tổng quan', icon: LayoutDashboard },
     { id: 'inventory', label: 'Kho vật tư', icon: Package },
+    { id: 'production', label: 'Sản xuất', icon: Factory },
     { id: 'finance', label: 'Tài chính', icon: Wallet },
     { id: 'hr', label: 'Nhân sự & Lương', icon: UserCircle },
     { id: 'system', label: 'Hệ thống', icon: Settings, adminOnly: true },
   ];
-
   const filteredCategories = categories.filter(c => !c.adminOnly || isAdmin);
 
   const FeatureSection = ({ title, icon, children }: { title: string; icon: any; children: React.ReactNode }) => (
@@ -157,6 +157,37 @@ export const UserManual = ({ user, onBack }: { user: Employee; onBack?: () => vo
                       />
                     </>
                   )}
+                </FeatureSection>
+              </div>
+            )}
+
+            {activeCategory === 'production' && (
+              <div className="space-y-12">
+                <FeatureSection title="Quản lý Sản xuất Cọc" icon={<Factory />}>
+                  <Step 
+                    number={1} 
+                    title="Cấu hình Định mức (BOM)" 
+                    text="Tại menu 'Định mức sản xuất', bạn cần khai báo các loại nguyên liệu tiêu hao (Cát, Đá, Xi măng...) cần thiết để tạo ra 1 đơn vị thành phẩm (1 mét cọc). Đây là cơ sở để hệ thống tự động tính toán vật tư." 
+                    image="/manual/bom_config_guide.png"
+                  />
+                  <div className="h-px bg-gray-100" />
+                  <Step 
+                    number={2} 
+                    title="Lập Lệnh sản xuất" 
+                    text="Sử dụng menu 'Lệnh sản xuất' để tạo lệnh mới. Tại đây bạn chỉ cần chọn Định mức đã tạo và nhập Số lượng cần đúc, hệ thống sẽ tự động hiển thị bảng vật tư tiêu hao tương ứng và kiểm tra tồn kho." 
+                    image="/manual/production_order_guide.png"
+                    subSteps={[
+                      "Sử dụng ô tìm kiếm (Search) trong dropdown để chọn nhanh Định mức và Kho.",
+                      "Hệ thống sẽ báo đỏ nếu tồn kho nguyên liệu không đủ."
+                    ]}
+                  />
+                  <div className="h-px bg-gray-100" />
+                  <Step 
+                    number={3} 
+                    title="Phê duyệt & Tự động trừ kho" 
+                    text="Khi Admin bấm 'Duyệt', hệ thống sẽ tự động thực hiện 2 thao tác cùng lúc: Tạo phiếu Xuất kho nguyên liệu và Tạo phiếu Nhập kho thành phẩm. Bạn không cần làm các phiếu kho này thủ công." 
+                    image="/manual/approve_production_guide.png"
+                  />
                 </FeatureSection>
               </div>
             )}

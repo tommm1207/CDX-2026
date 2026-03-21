@@ -303,8 +303,12 @@ export default function App() {
           const allowed = ['stock-in', 'stock-out', 'transfer', 'attendance', 'cost-report', 'production-list', 'production-detail'];
           return allowed.includes(item.id);
         }
-        // Allow Admin role to see all tools
-        if (user.role === 'Admin' || user.role === 'Admin App') {
+        // Allow Admin role to see all tools except database-setup
+        if (user.role === 'Admin') {
+          return item.id !== 'database-setup';
+        }
+        // Allow Admin App to see everything
+        if (user.role === 'Admin App') {
           return true;
         }
         return false;
@@ -355,7 +359,7 @@ export default function App() {
         if (user.role !== 'Admin' && user.role !== 'Admin App') return <Dashboard user={user} onNavigate={navigateTo} addToast={addToast} />;
         return <BackupNow onBack={goBack} addToast={addToast} />;
       case 'database-setup':
-        if (user.role !== 'Admin' && user.role !== 'Admin App') return <Dashboard user={user} onNavigate={navigateTo} addToast={addToast} />;
+        if (user.role !== 'Admin App') return <Dashboard user={user} onNavigate={navigateTo} addToast={addToast} />;
         return <DatabaseSetup onBack={goBack} />;
       default: return (
         <div className="p-4 md:p-6 space-y-6">

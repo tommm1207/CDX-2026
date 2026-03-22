@@ -1,11 +1,15 @@
 import { useState, useEffect } from 'react';
-import { Wallet, X, Eye, Printer } from 'lucide-react';
+import * as XLSX from 'xlsx';
+import { Wallet, X, Eye, Printer, Download } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { supabase } from '../../supabaseClient';
 import { Employee } from '../../types';
 import { PageBreadcrumb } from '../shared/PageBreadcrumb';
 import { ToastType } from '../shared/Toast';
 import { formatCurrency, formatDate } from '../../utils/format';
+
+const currentYear = new Date().getFullYear();
+const years = Array.from({ length: 4 }, (_, i) => currentYear - 1 + i);
 
 export const MonthlySalary = ({ user, onBack, addToast }: { 
   user: Employee, 
@@ -47,10 +51,12 @@ export const MonthlySalary = ({ user, onBack, addToast }: {
         const totalAdv = empAdv.reduce((sum, a) => sum + Number(a.amount || 0), 0);
         const totalAll = empAll.reduce((sum, a) => sum + Number(a.amount || 0), 0);
 
+        const insuranceDeduction = Number(set.insurance_deduction || 0);
+
         const hourlyRate = Number(set.daily_rate || 0) / 8;
         const earnedSalary = totalDays * Number(set.daily_rate || 0);
         const otSalary = totalOT * hourlyRate;
-        const netSalary = earnedSalary + otSalary + totalAll - totalAdv;
+        const netSalary = earnedSalary + otSalary + totalAll - totalAdv - insuranceDeduction;
 
         return {
           ...emp,
@@ -60,6 +66,7 @@ export const MonthlySalary = ({ user, onBack, addToast }: {
           otSalary,
           totalAdv,
           totalAll,
+          insuranceDeduction,
           netSalary,
           dailyRate: Number(set.daily_rate || 0),
           hourlyRate,
@@ -81,6 +88,51 @@ export const MonthlySalary = ({ user, onBack, addToast }: {
   const [selectedSalary, setSelectedSalary] = useState<any>(null);
   const [showDetailModal, setShowDetailModal] = useState(false);
 
+  const totalDaysAll = salaries.reduce((sum, s) => sum + s.totalDays, 0);
+  const totalOTAll = salaries.reduce((sum, s) => sum + s.totalOT, 0);
+  const earnedSalaryAll = salaries.reduce((sum, s) => sum + s.earnedSalary + s.otSalary, 0);
+  const totalAllAll = salaries.reduce((sum, s) => sum + s.totalAll, 0);
+  const totalAdvAll = salaries.reduce((sum, s) => sum + s.totalAdv, 0);
+  const insuranceDeductionAll = salaries.reduce((sum, s) => sum + s.insuranceDeduction, 0);
+  const netSalaryAll = salaries.reduce((sum, s) => sum + s.netSalary, 0);
+
+  const handleExportExcel = () => {
+    const data = [
+      ['Mã NV', 'Họ tên', 'Công', 'Tăng ca', 'Lương công', 'Phụ cấp', 'Tạm ứng', 'Bảo hiểm', 'Thực lĩnh']
+    ];
+
+    salaries.forEach(s => {
+      data.push([
+        s.code || s.id.slice(0, 8),
+        s.full_name,
+        Number(s.totalDays.toFixed(1)),
+        `${s.totalOT.toFixed(1)}h`,
+        s.earnedSalary + s.otSalary,
+        s.totalAll,
+        s.totalAdv,
+        s.insuranceDeduction,
+        s.netSalary
+      ]);
+    });
+
+    data.push([
+      '',
+      'TỔNG CỘNG',
+      Number(totalDaysAll.toFixed(1)),
+      `${totalOTAll.toFixed(1)}h`,
+      earnedSalaryAll,
+      totalAllAll,
+      totalAdvAll,
+      insuranceDeductionAll,
+      netSalaryAll
+    ]);
+
+    const ws = XLSX.utils.aoa_to_sheet(data);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, `Luong T${selectedMonth}-${selectedYear}`);
+    XLSX.writeFile(wb, `Bang_Luong_Thang_${selectedMonth}_${selectedYear}.xlsx`);
+  };
+
   return (
     <div className="p-4 md:p-6 space-y-6 pb-44">
       <PageBreadcrumb title="Tổng hợp lương" onBack={onBack} />
@@ -91,13 +143,22 @@ export const MonthlySalary = ({ user, onBack, addToast }: {
           </h2>
           <p className="text-xs text-gray-500 mt-1">Bảng lương chi tiết dựa trên công và các khoản phụ phí</p>
         </div>
-        <div className="flex items-center gap-2 bg-white p-1.5 rounded-2xl shadow-sm border border-gray-100">
-          <select value={selectedMonth} onChange={(e) => setSelectedMonth(Number(e.target.value))} className="px-3 py-1.5 rounded-xl border-none text-sm font-bold text-gray-700 outline-none">
-            {Array.from({ length: 12 }, (_, i) => i + 1).map(m => <option key={m} value={m}>Tháng {m}</option>)}
-          </select>
-          <select value={selectedYear} onChange={(e) => setSelectedYear(Number(e.target.value))} className="px-3 py-1.5 rounded-xl border-none text-sm font-bold text-gray-700 outline-none">
-            {[2024, 2025, 2026].map(y => <option key={y} value={y}>Năm {y}</option>)}
-          </select>
+        <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 bg-white p-1.5 rounded-2xl shadow-sm border border-gray-100">
+            <select value={selectedMonth} onChange={(e) => setSelectedMonth(Number(e.target.value))} className="px-3 py-1.5 rounded-xl border-none text-sm font-bold text-gray-700 outline-none">
+              {Array.from({ length: 12 }, (_, i) => i + 1).map(m => <option key={m} value={m}>Tháng {m}</option>)}
+            </select>
+            <select value={selectedYear} onChange={(e) => setSelectedYear(Number(e.target.value))} className="px-3 py-1.5 rounded-xl border-none text-sm font-bold text-gray-700 outline-none">
+              {years.map(y => <option key={y} value={y}>Năm {y}</option>)}
+            </select>
+          </div>
+          <button
+            onClick={handleExportExcel}
+            disabled={salaries.length === 0}
+            className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-xl text-sm font-bold hover:bg-green-700 transition-colors shadow-lg shadow-green-600/20 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <Download size={18} /> <span className="hidden md:inline">Xuất Excel</span>
+          </button>
         </div>
       </div>
 
@@ -111,6 +172,7 @@ export const MonthlySalary = ({ user, onBack, addToast }: {
               <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-right">Lương công</th>
               <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-right">Phụ cấp</th>
               <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-right">Tạm ứng</th>
+              <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-right">Bảo hiểm</th>
               <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-right">Thực lĩnh</th>
             </tr>
           </thead>
@@ -122,6 +184,12 @@ export const MonthlySalary = ({ user, onBack, addToast }: {
                     <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin mb-2"></div>
                     <p className="text-sm">Đang tính toán...</p>
                   </div>
+                </td>
+              </tr>
+            ) : salaries.length === 0 ? (
+              <tr>
+                <td colSpan={8} className="px-4 py-12 text-center text-gray-400 italic">
+                  Không có dữ liệu bảng lương
                 </td>
               </tr>
             ) : (
@@ -136,11 +204,26 @@ export const MonthlySalary = ({ user, onBack, addToast }: {
                   <td className="px-4 py-3 text-right text-xs font-medium text-gray-600">{formatCurrency(s.earnedSalary + s.otSalary)}</td>
                   <td className="px-4 py-3 text-right text-xs font-medium text-green-600">+{formatCurrency(s.totalAll)}</td>
                   <td className="px-4 py-3 text-right text-xs font-medium text-red-600">-{formatCurrency(s.totalAdv)}</td>
+                  <td className="px-4 py-3 text-right text-xs font-medium text-red-600">-{formatCurrency(s.insuranceDeduction)}</td>
                   <td className="px-4 py-3 text-right text-xs font-black text-primary">{formatCurrency(s.netSalary)}</td>
                 </tr>
               ))
             )}
           </tbody>
+          {!loading && salaries.length > 0 && (
+            <tfoot className="bg-gray-50/80 border-t-2 border-primary/20">
+              <tr>
+                <td className="px-4 py-4 text-xs font-black text-gray-800 uppercase">Tổng cộng</td>
+                <td className="px-4 py-4 text-center text-xs font-black text-gray-800">{totalDaysAll.toFixed(1)}</td>
+                <td className="px-4 py-4 text-center text-xs font-black text-amber-600">{totalOTAll.toFixed(1)}h</td>
+                <td className="px-4 py-4 text-right text-xs font-black text-gray-800">{formatCurrency(earnedSalaryAll)}</td>
+                <td className="px-4 py-4 text-right text-xs font-black text-green-600">+{formatCurrency(totalAllAll)}</td>
+                <td className="px-4 py-4 text-right text-xs font-black text-red-600">-{formatCurrency(totalAdvAll)}</td>
+                <td className="px-4 py-4 text-right text-xs font-black text-red-600">-{formatCurrency(insuranceDeductionAll)}</td>
+                <td className="px-4 py-4 text-right text-base font-black text-primary">{formatCurrency(netSalaryAll)}</td>
+              </tr>
+            </tfoot>
+          )}
         </table>
       </div>
 
@@ -201,6 +284,10 @@ export const MonthlySalary = ({ user, onBack, addToast }: {
                     <div className="flex justify-between items-center text-sm">
                       <span className="text-gray-500">Tổng tạm ứng</span>
                       <span className="font-bold text-red-600">-{formatCurrency(selectedSalary.totalAdv)}</span>
+                    </div>
+                    <div className="flex justify-between items-center text-sm">
+                      <span className="text-gray-500">Khấu trừ bảo hiểm</span>
+                      <span className="font-bold text-red-600">-{formatCurrency(selectedSalary.insuranceDeduction)}</span>
                     </div>
                     <div className="pt-4 border-t-2 border-dashed border-gray-100 flex justify-between items-center">
                       <span className="text-lg font-black text-gray-800 uppercase">Thực lĩnh</span>

@@ -154,7 +154,9 @@ export const Transfer = ({ user, onBack, addToast }: {
         employee_id: user.id,
         status: 'Chờ duyệt',
         transfer_code: formData.transfer_code || generateCode('LC'),
-        notes: isEditing ? `[SỬA] ${formData.notes}` : formData.notes
+        notes: isEditing 
+          ? `[SỬA lúc ${new Date().toLocaleString('vi-VN')}] ${formData.notes.replace(/^\[SỬA lúc .*?\]\s*/, '')}` 
+          : formData.notes
       };
 
       if (isEditing && selectedSlip) {
@@ -193,9 +195,9 @@ export const Transfer = ({ user, onBack, addToast }: {
       to_warehouse_id: selectedSlip.to_warehouse_id,
       material_id: selectedSlip.material_id,
       quantity: selectedSlip.quantity,
-      notes: selectedSlip.notes?.replace('[SỬA] ', '') || '',
+      notes: selectedSlip.notes?.replace(/^\[SỬA lúc .*?\]\s*/, '') || '',
       status: 'Chờ duyệt',
-      transfer_code: selectedSlip.transfer_code
+      transfer_code: selectedSlip.transfer_code || formData.transfer_code
     });
     setIsEditing(true);
     setEditingId(selectedSlip.id);
@@ -312,7 +314,10 @@ export const Transfer = ({ user, onBack, addToast }: {
               className="bg-white rounded-3xl shadow-2xl w-full max-w-lg overflow-hidden"
             >
               <div className="bg-orange-500 p-6 text-white flex items-center justify-between">
-                <h3 className="font-bold text-lg">Chi tiết phiếu luân chuyển</h3>
+                <div>
+                  <h3 className="font-bold text-lg">Chi tiết phiếu luân chuyển</h3>
+                  <p className="text-xs opacity-80 font-medium">{selectedSlip.transfer_code}</p>
+                </div>
                 <button onClick={() => setShowDetailModal(false)} className="p-2 hover:bg-white/10 rounded-full transition-colors"><X size={20} /></button>
               </div>
               <div className="p-6 space-y-4">

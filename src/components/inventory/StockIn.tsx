@@ -139,7 +139,9 @@ export const StockIn = ({ user, onBack, initialStatus, addToast }: {
         total_amount: formData.quantity * formData.unit_price,
         unit: formData.unit || materials.find(m => m.id === finalMaterialId)?.unit || '',
         status: 'Chờ duyệt',
-        notes: isEditing ? `[SỬA] ${formData.notes}` : formData.notes
+        notes: isEditing 
+          ? `[SỬA lúc ${new Date().toLocaleString('vi-VN')}] ${formData.notes.replace(/^\[SỬA lúc .*?\]\s*/, '')}` 
+          : formData.notes
       };
 
       if (isEditing && selectedSlip) {
@@ -193,8 +195,8 @@ export const StockIn = ({ user, onBack, initialStatus, addToast }: {
       quantity: selectedSlip.quantity,
       unit_price: selectedSlip.unit_price,
       unit: selectedSlip.unit,
-      notes: selectedSlip.notes,
-      import_code: selectedSlip.import_code,
+      notes: selectedSlip.notes?.replace(/^\[SỬA lúc .*?\]\s*/, '') || '',
+      import_code: selectedSlip.import_code || formData.import_code,
       status: 'Chờ duyệt'
     });
     setIsEditing(true);
@@ -388,7 +390,10 @@ export const StockIn = ({ user, onBack, initialStatus, addToast }: {
                   <div className="w-16 h-16 bg-primary/10 text-primary rounded-full flex items-center justify-center">
                     <Navigation size={32} />
                   </div>
-                  <p className="text-xs text-gray-400 uppercase font-bold tracking-widest">Xem lịch sử vật tư</p>
+                  <div className="text-center">
+                    <p className="text-sm font-black text-primary">{selectedSlip.import_code}</p>
+                    <p className="text-[10px] text-gray-400 uppercase font-bold tracking-widest mt-1">Mã phiếu nhập kho</p>
+                  </div>
                 </div>
 
                 <div className="grid grid-cols-1 gap-6">

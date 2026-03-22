@@ -23,11 +23,13 @@ export const BOMConfig = ({ user, onBack, addToast }: {
     id?: string;
     product_item_id: string;
     name: string;
+    is_two_stage?: boolean;
     notes: string;
     items: { material_item_id: string; quantity_per_unit: number; unit: string }[];
   }>({
     product_item_id: '',
     name: '',
+    is_two_stage: false,
     notes: '',
     items: []
   });
@@ -64,6 +66,7 @@ export const BOMConfig = ({ user, onBack, addToast }: {
       id: bom.id,
       product_item_id: bom.product_item_id,
       name: bom.name,
+      is_two_stage: bom.is_two_stage,
       notes: bom.notes || '',
       items: (items || []).map(it => ({
         material_item_id: it.material_item_id,
@@ -118,6 +121,7 @@ export const BOMConfig = ({ user, onBack, addToast }: {
         await supabase.from('bom_configs').update({
           product_item_id: formData.product_item_id,
           name: formData.name,
+          is_two_stage: formData.is_two_stage,
           notes: formData.notes
         }).eq('id', bomId);
         
@@ -128,6 +132,7 @@ export const BOMConfig = ({ user, onBack, addToast }: {
         const { data: newBom, error: headError } = await supabase.from('bom_configs').insert([{
           product_item_id: formData.product_item_id,
           name: formData.name,
+          is_two_stage: formData.is_two_stage,
           notes: formData.notes
         }]).select();
         
@@ -276,15 +281,27 @@ export const BOMConfig = ({ user, onBack, addToast }: {
                   </div>
                 </div>
 
-                <div className="space-y-1">
-                  <label className="text-[10px] font-bold text-gray-400 uppercase">Ghi chú</label>
-                  <textarea
-                    rows={2}
-                    placeholder="Mô tả thêm về định mức này..."
-                    value={formData.notes}
-                    onChange={e => setFormData({ ...formData, notes: e.target.value })}
-                    className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20 resize-none"
-                  />
+                <div className="flex items-center gap-6">
+                  <div className="flex-1 space-y-1">
+                    <label className="text-[10px] font-bold text-gray-400 uppercase">Ghi chú</label>
+                    <textarea
+                      rows={2}
+                      placeholder="Mô tả thêm về định mức này..."
+                      value={formData.notes}
+                      onChange={e => setFormData({ ...formData, notes: e.target.value })}
+                      className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20 resize-none"
+                    />
+                  </div>
+                  <div className="flex items-center gap-2 pt-4">
+                    <input
+                      type="checkbox"
+                      id="is_two_stage"
+                      checked={formData.is_two_stage}
+                      onChange={e => setFormData({ ...formData, is_two_stage: e.target.checked })}
+                      className="w-4 h-4 text-primary border-gray-300 rounded focus:ring-primary"
+                    />
+                    <label htmlFor="is_two_stage" className="text-xs font-bold text-gray-700 select-none cursor-pointer">Quy trình 2 giai đoạn</label>
+                  </div>
                 </div>
 
                 <div className="space-y-4">

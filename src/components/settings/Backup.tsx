@@ -45,7 +45,9 @@ export const Backup = ({ onBack, addToast }: { onBack: () => void, addToast: (ms
   useEffect(() => {
     const fetchConfig = async () => {
       try {
-        const response = await fetch('/api/get-backup-config');
+        const response = await fetch('/api/get-backup-config', {
+          headers: { 'x-api-key': import.meta.env.VITE_API_SECRET_KEY }
+        });
         if (response.ok) {
           const config = await response.json();
           if (config.email) setEmail(config.email);
@@ -86,7 +88,10 @@ export const Backup = ({ onBack, addToast }: { onBack: () => void, addToast: (ms
     try {
       const response = await fetch('/api/save-backup-config', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'x-api-key': import.meta.env.VITE_API_SECRET_KEY
+        },
         body: JSON.stringify({
           email,
           smtpConfig,
@@ -134,7 +139,10 @@ export const Backup = ({ onBack, addToast }: { onBack: () => void, addToast: (ms
 
         const response = await fetch('/api/send-backup', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 
+            'Content-Type': 'application/json',
+            'x-api-key': import.meta.env.VITE_API_SECRET_KEY
+          },
           body: JSON.stringify({
             email,
             fileName,

@@ -27,18 +27,10 @@ interface DashboardProps {
   user: Employee;
   onNavigate: (page: string, params?: any) => void;
   addToast?: (message: string, type?: ToastType) => void;
+  pendingApprovals?: number;
 }
 
-export const Dashboard = ({ user, onNavigate, addToast }: DashboardProps) => {
-  const [stats, setStats] = useState({
-    totalBudget: 0,
-    totalIn: 0,
-    totalOut: 0,
-    pendingApprovals: 0
-  });
-  const [recentActivities, setRecentActivities] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
-
+export const Dashboard = ({ user, onNavigate, addToast, pendingApprovals = 0 }: DashboardProps) => {
   // Attendance data for Users
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [attendance, setAttendance] = useState<any[]>([]);
@@ -51,41 +43,6 @@ export const Dashboard = ({ user, onNavigate, addToast }: DashboardProps) => {
   const selectedYear = new Date().getFullYear();
 
   useEffect(() => {
-    const fetchDashboardData = async () => {
-      setLoading(true);
-      try {
-        // Fetch Stats
-        const [expenses, siCount, soCount, trCount] = await Promise.all([
-          supabase.from('costs').select('total_amount').eq('status', 'Đã duyệt'),
-          supabase.from('stock_in').select('*', { count: 'exact', head: true }).eq('status', 'Chờ duyệt'),
-          supabase.from('stock_out').select('*', { count: 'exact', head: true }).eq('status', 'Chờ duyệt'),
-          supabase.from('transfers').select('*', { count: 'exact', head: true }).eq('status', 'Chờ duyệt')
-        ]);
-
-        const totalSpent = (expenses.data || []).reduce((sum, item) => sum + (item.total_amount || 0), 0);
-
-        setStats({
-          totalBudget: totalSpent,
-          totalIn: 125, // Mock data or fetch real
-          totalOut: 48,
-          pendingApprovals: (siCount.count || 0) + (soCount.count || 0) + (trCount.count || 0)
-        });
-
-        // Fetch Recent Activities
-        const { data: recent } = await supabase
-          .from('costs')
-          .select('*, users(full_name)')
-          .order('created_at', { ascending: false })
-          .limit(5);
-
-        setRecentActivities(recent || []);
-      } catch (err) {
-        console.error('Error fetching dashboard data:', err);
-      } finally {
-        setLoading(false);
-      }
-    };
-
     const fetchAttendanceData = async () => {
       // Fetch for everyone now since Admin also sees the table
       setLoadingAttendance(true);
@@ -110,7 +67,6 @@ export const Dashboard = ({ user, onNavigate, addToast }: DashboardProps) => {
       }
     };
 
-    fetchDashboardData();
     fetchAttendanceData();
   }, [user.role, selectedMonth, selectedYear]);
 
@@ -323,11 +279,11 @@ export const Dashboard = ({ user, onNavigate, addToast }: DashboardProps) => {
                   <h2 className="text-lg font-black text-gray-800 uppercase tracking-tight">Phiếu đang chờ duyệt</h2>
                 </div>
                 <span className="px-4 py-1.5 bg-red-100 text-red-600 text-[10px] font-black rounded-full border-2 border-red-50">
-                  {stats.pendingApprovals} PHIẾU
+                  {pendingApprovals} PHIẾU
                 </span>
               </div>
               <div className="px-8 pb-8 pt-4">
-                {stats.pendingApprovals > 0 ? (
+                {pendingApprovals > 0 ? (
                   <div className="bg-amber-50/50 border border-amber-100 rounded-2xl p-6 flex items-center justify-between group cursor-pointer" onClick={() => onNavigate('pending-approvals')}>
                     <div className="flex gap-4 items-center">
                       <div className="p-3 bg-amber-100 rounded-xl text-amber-600">
@@ -335,7 +291,7 @@ export const Dashboard = ({ user, onNavigate, addToast }: DashboardProps) => {
                       </div>
                       <div>
                         <p className="text-sm font-bold text-amber-900">Yêu cầu mới</p>
-                        <p className="text-[10px] text-amber-700 font-medium">Bạn có {stats.pendingApprovals} phiếu đang chờ.</p>
+                        <p className="text-[10px] text-amber-700 font-medium">Bạn có {pendingApprovals} phiếu đang chờ.</p>
                       </div>
                     </div>
                     <button className="p-2 bg-amber-500 text-white rounded-lg shadow-lg shadow-amber-500/20 group-hover:translate-x-1 transition-transform">

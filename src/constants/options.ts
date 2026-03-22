@@ -12,3 +12,12 @@ export const WEATHER_OPTIONS = [
   { value: 'smog', label: '🌫️ Sương mù quang hóa' },
   { value: 'pleasant', label: '🌤️ Trời trong xanh, nắng dịu' },
 ];
+
+export const ATTENDANCE_STATUSES = ['present', 'half-day', 'absent'] as const;
+export const SLIP_STATUSES = ['Chờ duyệt', 'Đã duyệt', 'Từ chối', 'Đã xóa'] as const;
+export const USER_ROLES = ['Admin App', 'Admin', 'User'] as const;
+export const PARTNER_TYPES = ['Khách hàng', 'Nhà cung cấp', 'Cả hai'] as const;
+
+export const LOW_STOCK_THRESHOLD = 10;
+export const REMINDER_CHECK_INTERVAL = 30000; // 30 giây
+export const PENDING_COUNT_INTERVAL = 30000; // 30 giây

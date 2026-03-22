@@ -2,7 +2,7 @@ import express from "express";
 import { createServer as createViteServer } from "vite";
 import nodemailer from "nodemailer";
 import bodyParser from "body-parser";
-import cron from "node-cron";
+import cron, { ScheduledTask } from "node-cron";
 import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
@@ -15,6 +15,7 @@ dotenv.config();
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const CONFIG_PATH = path.join(__dirname, "backup-config.json");
+let currentCronJob: ScheduledTask | null = null;
 
 const supabaseUrl = process.env.VITE_SUPABASE_URL || "";
 const supabaseKey = process.env.VITE_SUPABASE_ANON_KEY || "";
@@ -104,6 +105,17 @@ async function runAutoBackup() {
   }
 }
 
+const checkApiKey = (req: express.Request, res: express.Response, next: express.NextFunction) => {
+  const apiKey = req.headers['x-api-key'];
+  const secretKey = process.env.API_SECRET_KEY;
+
+  if (!secretKey || apiKey !== secretKey) {
+    console.warn(`[AUTH] Unauthorized API access attempt from ${req.ip}`);
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+  next();
+};
+
 async function startServer() {
   const app = express();
   const PORT = process.env.PORT || 3000;
@@ -111,16 +123,17 @@ async function startServer() {
   app.use(bodyParser.json({ limit: '50mb' }));
   app.use(bodyParser.urlencoded({ limit: '50mb', extended: true }));
 
+
   // LOAD SCHEDULE ON START
   if (fs.existsSync(CONFIG_PATH)) {
     const config = JSON.parse(fs.readFileSync(CONFIG_PATH, "utf-8"));
     if (config.enabled && config.schedule) {
       console.log(`[BACKUP] Scheduling backup with cron: ${config.schedule}`);
-      cron.schedule(config.schedule, runAutoBackup);
+      currentCronJob = cron.schedule(config.schedule, runAutoBackup);
     }
   }
 
-  app.get("/api/get-backup-config", (req, res) => {
+  app.get("/api/get-backup-config", checkApiKey, (req, res) => {
     if (fs.existsSync(CONFIG_PATH)) {
       const config = JSON.parse(fs.readFileSync(CONFIG_PATH, "utf-8"));
       res.json(config);
@@ -129,28 +142,44 @@ async function startServer() {
     }
   });
 
-  app.post("/api/save-backup-config", (req, res) => {
+  app.get("/api/cron-status", checkApiKey, (req, res) => {
+    console.log("[DEBUG] /api/cron-status called");
+    if (fs.existsSync(CONFIG_PATH)) {
+      const config = JSON.parse(fs.readFileSync(CONFIG_PATH, "utf-8"));
+      res.json({
+        hasJob: !!currentCronJob,
+        schedule: config.schedule,
+        enabled: config.enabled,
+        nextRun: config.enabled && config.schedule ? "Scheduled" : "Disabled"
+      });
+    } else {
+      res.json({ hasJob: !!currentCronJob, status: "No config file" });
+    }
+  });
+
+  app.post("/api/save-backup-config", checkApiKey, (req, res) => {
     const { email, smtpConfig, schedule, enabled } = req.body;
     const config = { email, smtpConfig, schedule, enabled };
     fs.writeFileSync(CONFIG_PATH, JSON.stringify(config, null, 2));
     
-    // Restart scheduler by reloading (simpler way: just schedule if enabled)
-    // Note: in a real production app we'd need to clear old jobs. 
-    // Here we just restart the server or wait for next start for simplicity, 
-    // or we can just run it immediately for testing.
-    console.log(`[BACKUP] Configuration saved. New schedule: ${schedule}`);
+    // Stop old job if exists
+    if (currentCronJob) {
+      currentCronJob.stop();
+      console.log("[BACKUP] Old job stopped.");
+    }
     
-    // Attempt to clear all and re-schedule (basic version)
-    // Actually node-cron doesn't have an easy "clear all" without references.
-    // For this prototype, we'll suggest a server restart if schedule changes, or just add new.
     if (enabled && schedule) {
-      cron.schedule(schedule, runAutoBackup);
+      console.log(`[BACKUP] New job scheduled: ${schedule}`);
+      currentCronJob = cron.schedule(schedule, runAutoBackup);
+    } else {
+      currentCronJob = null;
     }
 
     res.json({ success: true });
   });
 
-  app.post("/api/send-backup", async (req, res) => {
+
+  app.post("/api/send-backup", checkApiKey, async (req, res) => {
     const { email, fileName, fileData, smtpConfig } = req.body;
     if (!email || !fileData || !smtpConfig) return res.status(400).json({ error: "Missing required fields" });
 

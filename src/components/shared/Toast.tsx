@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { CheckCircle2, AlertCircle, X, Info } from 'lucide-react';
 
-export type ToastType = 'success' | 'error' | 'info';
+export type ToastType = 'success' | 'error' | 'info' | 'warning';
 
 export interface ToastMessage {
   id: string;
@@ -28,11 +28,13 @@ export const ToastContainer = ({ toasts, removeToast }: ToastContainerProps) => 
             className={`pointer-events-auto flex items-center gap-3 px-4 py-3 rounded-2xl shadow-xl border w-[300px] ${
               toast.type === 'success' ? 'bg-green-50 border-green-100 text-green-800' :
               toast.type === 'error' ? 'bg-red-50 border-red-100 text-red-800' :
+              toast.type === 'warning' ? 'bg-amber-50 border-amber-100 text-amber-800' :
               'bg-blue-50 border-blue-100 text-blue-800'
             }`}
           >
             {toast.type === 'success' && <CheckCircle2 className="text-green-500 flex-shrink-0" size={20} />}
             {toast.type === 'error' && <AlertCircle className="text-red-500 flex-shrink-0" size={20} />}
+            {toast.type === 'warning' && <AlertCircle className="text-amber-500 flex-shrink-0" size={20} />}
             {toast.type === 'info' && <Info className="text-blue-500 flex-shrink-0" size={20} />}
             
             <p className="text-sm font-medium flex-1 leading-tight">{toast.message}</p>
@@ -42,6 +44,7 @@ export const ToastContainer = ({ toasts, removeToast }: ToastContainerProps) => 
               className={`p-1 rounded-full transition-colors flex-shrink-0 ${
                 toast.type === 'success' ? 'hover:bg-green-100 text-green-600' :
                 toast.type === 'error' ? 'hover:bg-red-100 text-red-600' :
+                toast.type === 'warning' ? 'hover:bg-amber-100 text-amber-600' :
                 'hover:bg-blue-100 text-blue-600'
               }`}
             >

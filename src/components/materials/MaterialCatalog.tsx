@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { supabase } from '../../supabaseClient';
 import { Employee } from '../../types';
 import { PageBreadcrumb } from '../shared/PageBreadcrumb';
+import { isActiveWarehouse } from '../../utils/inventory';
 import { CreatableSelect } from '../shared/CreatableSelect';
 import { ToastType } from '../shared/Toast';
 
@@ -76,7 +77,9 @@ export const MaterialCatalog = ({ user, onBack, onNavigate, addToast }: {
 
   const fetchWarehouses = async () => {
     const { data } = await supabase.from('warehouses').select('*').or('status.is.null,status.neq.Đã xóa').order('name');
-    if (data) setWarehouses(data);
+    if (data) {
+      setWarehouses(data.filter(isActiveWarehouse));
+    }
   };
 
   const generateNextMaterialCode = async (groupId: string) => {

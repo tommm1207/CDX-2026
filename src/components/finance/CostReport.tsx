@@ -1,9 +1,11 @@
 import { useState, useEffect } from 'react';
-import { Plus, Edit, Trash2, X, ChevronRight, ArrowLeft, PlusCircle, FileText } from 'lucide-react';
+import { Plus, Edit, Trash2, X, ChevronRight, ArrowLeft, PlusCircle, FileText, Download } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { supabase } from '../../supabaseClient';
+import * as xlsx from 'xlsx';
 import { Employee } from '../../types';
 import { PageBreadcrumb } from '../shared/PageBreadcrumb';
+import { isActiveWarehouse } from '../../utils/inventory';
 import { DetailItem } from '../shared/DetailItem';
 import { NumericInput } from '../shared/NumericInput';
 import { CreatableSelect } from '../shared/CreatableSelect';
@@ -76,8 +78,10 @@ export const CostReport = ({ user, onBack, addToast }: {
   };
 
   const fetchWarehouses = async () => {
-    const { data } = await supabase.from('warehouses').select('id, name').or('status.is.null,status.neq.Đã xóa');
-    if (data) setWarehouses(data);
+    const { data } = await supabase.from('warehouses').select('id, name, status').or('status.is.null,status.neq.Đã xóa');
+    if (data) {
+      setWarehouses(data.filter(isActiveWarehouse));
+    }
   };
 
   const fetchMaterials = async () => {
@@ -326,16 +330,63 @@ export const CostReport = ({ user, onBack, addToast }: {
 
   const groupedData = Object.values(groupedDataObj).sort((a: any, b: any) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
+  const handleExportExcel = () => {
+    if (costs.length === 0) {
+      if (addToast) addToast('Không có dữ liệu để xuất', 'warning');
+      return;
+    }
+
+    try {
+      const exportData = costs.map(item => ({
+        'Mã': item.cost_code || '',
+        'Ngày': formatDate(item.date),
+        'Nhân viên': item.users?.full_name || '',
+        'Loại chi phí': item.cost_type || '',
+        'Nội dung': item.content || item.materials?.name || '',
+        'Kho': item.warehouses?.name || '',
+        'Vật tư': item.materials?.name || '',
+        'SL': item.quantity || 1,
+        'Đơn giá': item.unit_price || 0,
+        'Thành tiền': item.transaction_type === 'Thu' ? item.total_amount : -item.total_amount,
+        'Ghi chú': item.notes || ''
+      }));
+
+      const ws = xlsx.utils.json_to_sheet(exportData);
+      
+      const now = new Date();
+      const month = String(now.getMonth() + 1).padStart(2, '0');
+      const year = now.getFullYear();
+      const fileName = `ChiPhi_${month}_${year}.xlsx`;
+
+      const wb = xlsx.utils.book_new();
+      xlsx.utils.book_append_sheet(wb, ws, 'ChiPhi');
+      xlsx.writeFile(wb, fileName);
+
+      if (addToast) addToast('Xuất Excel thành công!', 'success');
+    } catch (err: any) {
+      console.error('Export Excel error:', err);
+      if (addToast) addToast('Lỗi xuất Excel: ' + err.message, 'error');
+    }
+  };
+
   return (
     <div className="p-4 md:p-6 space-y-6 pb-44">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <PageBreadcrumb title="Báo cáo chi phí" onBack={onBack} />
-        <button
-          onClick={handleAddReport}
-          className="flex items-center justify-center gap-2 px-6 py-2.5 bg-primary text-white rounded-xl text-sm font-bold hover:bg-primary-hover transition-all shadow-lg shadow-primary/20"
-        >
-          <Plus size={18} /> Thêm báo cáo
-        </button>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={handleAddReport}
+            className="flex items-center justify-center gap-2 px-6 py-2.5 bg-primary text-white rounded-xl text-sm font-bold hover:bg-primary-hover transition-all shadow-lg shadow-primary/20"
+          >
+            <Plus size={18} /> Thêm báo cáo
+          </button>
+          <button
+            onClick={handleExportExcel}
+            className="flex items-center justify-center gap-2 px-6 py-2.5 border-2 border-primary text-primary bg-white rounded-xl text-sm font-bold hover:bg-primary/5 transition-all shadow-sm"
+          >
+            <Download size={18} /> Xuất Excel
+          </button>
+        </div>
       </div>
 
       <div className="flex flex-col lg:flex-row gap-6">

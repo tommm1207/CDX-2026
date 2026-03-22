@@ -15,10 +15,10 @@ export interface Employee {
   position?: string;
   has_salary?: boolean;
   role: UserRole; // Phân quyền
-  data_view_permission?: string;
+  data_view_permission?: string; // TODO: Chưa implement — dự định dùng để giới hạn nhân viên chỉ xem dữ liệu của kho/bộ phận cụ thể
   avatar_url?: string;
   resign_date?: string;
-  initial_budget?: number;
+  initial_budget?: number; // TODO: Chưa implement — dự định dùng làm ngân sách ban đầu cho từng nhân viên/dự án
   status: 'Đang làm việc' | 'Hoạt động' | 'Nghỉ việc';
   created_at?: string;
 }
@@ -71,6 +71,7 @@ export interface Cost {
   total_amount?: number;
   notes?: string;
   created_at?: string;
+  updated_at?: string;
 }
 
 export interface StockIn {
@@ -87,6 +88,7 @@ export interface StockIn {
   status?: string;
   notes?: string;
   created_at?: string;
+  updated_at?: string;
 }
 
 export interface StockOut {
@@ -103,6 +105,7 @@ export interface StockOut {
   status?: string;
   notes?: string;
   created_at?: string;
+  updated_at?: string;
 }
 
 export interface Transfer {
@@ -118,6 +121,7 @@ export interface Transfer {
   status?: string;
   notes?: string;
   created_at?: string;
+  updated_at?: string;
 }
 
 export interface AttendanceRecord {

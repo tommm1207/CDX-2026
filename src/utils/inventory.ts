@@ -40,6 +40,8 @@ export const tongXuat = async (
     .select('id, quantity')
     .eq('material_id', materialId)
     .eq('warehouse_id', warehouseId)
+    // Lock tồn kho ngay khi phiếu được tạo để tránh 2 phiếu xuất song song vượt tồn.
+    // Khi phiếu bị 'Từ chối', status thay đổi và tự động không còn được tính nữa.
     .in('status', ['Đã duyệt', 'Chờ duyệt'])
     .gte('date', startDate)
     .lte('date', endDate);
@@ -351,4 +353,27 @@ export const generateNextMaterialCode = async (groupId: string): Promise<string>
     console.error('Error generating material code:', err);
     return '';
   }
+};
+
+/**
+ * Kiểm tra xem một kho có đang hoạt động hay không.
+ * Loại bỏ các kho có trạng thái liên quan đến "đã xóa" hoặc "thùng rác".
+ */
+export const isActiveWarehouse = (warehouse: any): boolean => {
+  if (!warehouse) return false;
+  if (!warehouse.status) return true;
+  
+  // Normalize string to NFC to avoid differences in Vietnamese character representation
+  const s = warehouse.status.toString().trim().toLowerCase().normalize('NFC');
+  
+  // More aggressive check for any variant of "deleted" or "trash"
+  const isDeleted = s === 'đã xóa'.normalize('NFC') || 
+                    s === 'da xoa' || 
+                    s === 'deleted' || 
+                    s.includes('xóa'.normalize('NFC')) || 
+                    s.includes('thùng rác'.normalize('NFC')) ||
+                    s.includes('thung rac') ||
+                    s.includes('trash');
+                    
+  return !isDeleted;
 };

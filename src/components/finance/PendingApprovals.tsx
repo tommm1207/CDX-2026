@@ -4,7 +4,7 @@ import { supabase } from '../../supabaseClient';
 import { Employee } from '../../types';
 import { PageBreadcrumb } from '../shared/PageBreadcrumb';
 import { ToastType } from '../shared/Toast';
-import { formatDate, formatNumber } from '../../utils/format';
+import { formatDate, formatNumber, formatCurrency } from '../../utils/format';
 
 interface ConfirmState { slip: any; action: 'approve' | 'reject' }
 
@@ -187,6 +187,9 @@ export const PendingApprovals = ({ user, onBack, onNavigate, onRefreshCount, add
                             item.type === 'Luân chuyển' ? <ArrowLeftRight className="text-orange-500" size={16} /> :
                               <ClipboardCheck className="text-primary" size={16} />}
                         <span className="text-xs font-bold text-gray-800">{item.type}</span>
+                        {item.notes?.includes('[SỬA') && (
+                          <span className="px-1.5 py-0.5 bg-yellow-100 text-yellow-700 text-[10px] font-bold rounded">Đã sửa</span>
+                        )}
                       </div>
                       <span className="text-[10px] font-mono text-gray-400 uppercase mt-0.5 block">
                         #{item.import_code || item.export_code || item.transfer_code || item.cost_code || item.id.slice(0, 8)}
@@ -197,17 +200,32 @@ export const PendingApprovals = ({ user, onBack, onNavigate, onRefreshCount, add
                       <div className="text-[10px] text-gray-400">{formatDate(item.date)}</div>
                     </td>
                     <td className="px-4 py-3">
-                      <div className="text-xs font-bold text-gray-800">{item.materials?.name || item.content || '—'}</div>
-                      <div className="text-[10px] text-gray-500 italic mt-0.5">
-                        {item.type === 'Luân chuyển' ? `${item.from_wh?.name} → ${item.to_wh?.name}` : item.warehouses?.name || ''}
+                      <div className="text-xs font-bold text-gray-800">
+                        {item.type === 'Chi phí' ? item.content : (item.materials?.name || item.content || '—')}
+                      </div>
+                      <div className="flex flex-col items-start gap-1 mt-0.5">
+                        {item.type === 'Chi phí' && item.cost_type && (
+                          <span className="px-1.5 py-0.5 bg-gray-100 text-gray-600 rounded text-[10px] font-bold">
+                            {item.cost_type}
+                          </span>
+                        )}
+                        {item.type !== 'Chi phí' && (
+                          <span className="text-[10px] text-gray-500 italic">
+                            {item.type === 'Luân chuyển' ? `${item.from_wh?.name} → ${item.to_wh?.name}` : item.warehouses?.name || ''}
+                          </span>
+                        )}
                       </div>
                     </td>
                     <td className="px-4 py-3 text-right">
-                      <div className="text-xs font-bold text-gray-900">
-                        {item.quantity ? `${formatNumber(item.quantity)} ${item.materials?.unit || item.unit || ''}` : ''}
-                      </div>
+                      {item.type !== 'Chi phí' && item.quantity ? (
+                        <div className="text-xs font-bold text-gray-900">
+                          {formatNumber(item.quantity)} {item.materials?.unit || item.unit || ''}
+                        </div>
+                      ) : null}
                       {item.total_amount > 0 && (
-                        <div className="text-[10px] text-gray-400 font-medium">{formatNumber(item.total_amount)} ₫</div>
+                        <div className={`mt-0.5 font-medium ${item.type === 'Chi phí' ? 'text-xs font-bold text-red-600' : 'text-[10px] text-gray-400'}`}>
+                          {item.type === 'Chi phí' ? formatCurrency(item.total_amount) : `${formatNumber(item.total_amount)} ₫`}
+                        </div>
                       )}
                     </td>
                     <td className="px-4 py-3">

@@ -28,10 +28,12 @@ import {
   Bell,
   BellRing,
   ClipboardList,
+  Search,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { supabase } from './supabaseClient';
 import { Employee } from './types';
+import { REMINDER_CHECK_INTERVAL, PENDING_COUNT_INTERVAL } from './constants/options';
 
 // Shared Components
 import { PageBreadcrumb } from './components/shared/PageBreadcrumb';
@@ -93,6 +95,7 @@ import { BackupNow } from './components/settings/BackupNow';
 import { Notifications } from './components/notifications/Notifications';
 import { UserManual } from './components/shared/UserManual';
 import { DatabaseSetup } from './components/settings/DatabaseSetup';
+import { GlobalSearch } from './components/shared/GlobalSearch';
 
 const LOGO_URL = "/logo.png";
 
@@ -127,6 +130,7 @@ export default function App() {
   const [navigationHistory, setNavigationHistory] = useState<string[]>([]);
   const [isSidebarOpen, setIsSidebarOpen] = useState(window.innerWidth >= 1024);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [pendingCount, setPendingCount] = useState(0);
   const [refreshKey, setRefreshKey] = useState(0);
 
@@ -151,8 +155,9 @@ export default function App() {
       Notification.requestPermission();
     }
 
+    if (!user) return;
+
     const checkReminders = setInterval(async () => {
-      if (!user) return;
       const now = new Date().toISOString();
       const { data } = await supabase
         .from('reminders')
@@ -171,30 +176,32 @@ export default function App() {
           setRefreshKey(prev => prev + 1);
         }
       }
-    }, 30000);
+    }, REMINDER_CHECK_INTERVAL);
 
     return () => clearInterval(checkReminders);
   }, [user, currentPage]);
 
   const fetchPendingCount = useCallback(async () => {
     try {
-      const [si, so, tr] = await Promise.all([
+      const [si, so, tr, co] = await Promise.all([
         supabase.from('stock_in').select('*', { count: 'exact', head: true }).eq('status', 'Chờ duyệt'),
         supabase.from('stock_out').select('*', { count: 'exact', head: true }).eq('status', 'Chờ duyệt'),
-        supabase.from('transfers').select('*', { count: 'exact', head: true }).eq('status', 'Chờ duyệt')
+        supabase.from('transfers').select('*', { count: 'exact', head: true }).eq('status', 'Chờ duyệt'),
+        supabase.from('costs').select('*', { count: 'exact', head: true }).eq('status', 'Chờ duyệt')
       ]);
-      setPendingCount((si.count || 0) + (so.count || 0) + (tr.count || 0));
+      setPendingCount((si.count || 0) + (so.count || 0) + (tr.count || 0) + (co.count || 0));
     } catch (err) {
       console.error('Error fetching pending count:', err);
     }
   }, []);
 
   useEffect(() => {
-    if (user) {
-      fetchPendingCount();
-      const interval = setInterval(fetchPendingCount, 30000);
-      return () => clearInterval(interval);
-    }
+    if (!user) return;
+    
+    fetchPendingCount();
+    const interval = setInterval(fetchPendingCount, PENDING_COUNT_INTERVAL);
+    
+    return () => clearInterval(interval);
   }, [user, fetchPendingCount]);
 
   const navigateTo = (page: string, params: any = null) => {
@@ -317,7 +324,7 @@ export default function App() {
 
   const renderContent = () => {
     switch (currentPage) {
-      case 'dashboard': return <Dashboard user={user} onNavigate={navigateTo} addToast={addToast} />;
+      case 'dashboard': return <Dashboard user={user} onNavigate={navigateTo} addToast={addToast} pendingApprovals={pendingCount} />;
       case 'hr-records': return <HRRecords user={user} onBack={goBack} addToast={addToast} />;
       case 'attendance': return <Attendance user={user} onBack={goBack} addToast={addToast} />;
       case 'costs': return <Costs user={user} onBack={goBack} addToast={addToast} />;
@@ -332,10 +339,10 @@ export default function App() {
       case 'advances': return <Advances user={user} onBack={goBack} addToast={addToast} />;
       case 'payroll': return <MonthlySalary user={user} onBack={goBack} addToast={addToast} />;
       case 'salary-settings':
-        if (user.role !== 'Admin' && user.role !== 'Admin App') return <Dashboard user={user} onNavigate={navigateTo} addToast={addToast} />;
+        if (user.role !== 'Admin' && user.role !== 'Admin App') return <Dashboard user={user} onNavigate={navigateTo} addToast={addToast} pendingApprovals={pendingCount} />;
         return <SalarySettings user={user} onBack={goBack} addToast={addToast} />;
       case 'notes': return <Notes user={user} onBack={goBack} addToast={addToast} />;
-      case 'notifications': return <Notifications user={user} onBack={goBack} addToast={addToast} />;
+      case 'notifications': return <Notifications user={user} onBack={goBack} onNavigate={navigateTo} addToast={addToast} />;
       case 'reminders': return <Reminders user={user} onBack={goBack} addToast={addToast} />;
       case 'partners': return <PlaceholderPage title="Khách hàng & nhà cung cấp" onBack={goBack} />;
       case 'inventory-report': return <InventoryReport user={user} onBack={goBack} addToast={addToast} />;
@@ -353,13 +360,13 @@ export default function App() {
       case 'deleted-costs': return <DeletedCosts onBack={goBack} addToast={addToast} />;
       case 'material-groups': return <MaterialGroups user={user} onBack={goBack} addToast={addToast} />;
       case 'backup-settings':
-        if (user.role !== 'Admin' && user.role !== 'Admin App') return <Dashboard user={user} onNavigate={navigateTo} addToast={addToast} />;
+        if (user.role !== 'Admin' && user.role !== 'Admin App') return <Dashboard user={user} onNavigate={navigateTo} addToast={addToast} pendingApprovals={pendingCount} />;
         return <Backup onBack={goBack} addToast={addToast} />;
       case 'backup-now':
-        if (user.role !== 'Admin' && user.role !== 'Admin App') return <Dashboard user={user} onNavigate={navigateTo} addToast={addToast} />;
+        if (user.role !== 'Admin' && user.role !== 'Admin App') return <Dashboard user={user} onNavigate={navigateTo} addToast={addToast} pendingApprovals={pendingCount} />;
         return <BackupNow onBack={goBack} addToast={addToast} />;
       case 'database-setup':
-        if (user.role !== 'Admin App') return <Dashboard user={user} onNavigate={navigateTo} addToast={addToast} />;
+        if (user.role !== 'Admin App') return <Dashboard user={user} onNavigate={navigateTo} addToast={addToast} pendingApprovals={pendingCount} />;
         return <DatabaseSetup onBack={goBack} />;
       default: return (
         <div className="p-4 md:p-6 space-y-6">
@@ -406,6 +413,14 @@ export default function App() {
             title="Tải lại dữ liệu"
           >
             <RefreshCw size={20} className="group-hover:rotate-180 transition-transform duration-500" />
+          </button>
+          
+          <button
+            onClick={() => setIsSearchOpen(true)}
+            className="hover:bg-white/10 p-2 rounded-xl transition-colors flex items-center gap-2 group"
+            title="Tìm kiếm toàn cục"
+          >
+            <Search size={20} className="group-hover:scale-110 transition-transform" />
           </button>
         </div>
 
@@ -540,6 +555,7 @@ export default function App() {
         </main>
       </div>
       <BottomNav currentPage={currentPage} onNavigate={navigateTo} user={user} pendingCount={pendingCount} />
+      <GlobalSearch isOpen={isSearchOpen} onClose={() => setIsSearchOpen(false)} onNavigate={navigateTo} />
       <ToastContainer toasts={toasts} removeToast={removeToast} />
     </div>
   );

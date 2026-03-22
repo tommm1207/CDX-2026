@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { supabase } from '../../supabaseClient';
 import { Employee } from '../../types';
 import { PageBreadcrumb } from '../shared/PageBreadcrumb';
+import { isActiveWarehouse } from '../../utils/inventory';
 import { CustomCombobox } from '../shared/CustomCombobox';
 import { DetailItem } from '../shared/DetailItem';
 import { ToastType } from '../shared/Toast';
@@ -49,9 +50,10 @@ export const CostFilter = ({ user, onBack, addToast }: {
       setCategories(unique);
     }
 
-    // Fetch warehouses
-    const { data: whData } = await supabase.from('warehouses').select('id, name');
-    if (whData) setWarehouses(whData);
+    const { data: whData } = await supabase.from('warehouses').select('id, name, status').or('status.is.null,status.neq.Đã xóa');
+    if (whData) {
+      setWarehouses(whData.filter(isActiveWarehouse));
+    }
 
     // Fetch employees
     let empQuery = supabase.from('users').select('id, full_name');

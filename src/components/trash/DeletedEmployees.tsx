@@ -3,6 +3,7 @@ import { UserCircle, RefreshCw, Trash2, AlertTriangle, X, Check } from 'lucide-r
 import { motion, AnimatePresence } from 'motion/react';
 import { supabase } from '../../supabaseClient';
 import { PageBreadcrumb } from '../shared/PageBreadcrumb';
+import { ConfirmModal } from '../shared/ConfirmModal';
 
 export const DeletedEmployees = ({ onBack, addToast }: { onBack: () => void, addToast: (msg: string, type?: 'success' | 'error' | 'info') => void }) => {
   const [employees, setEmployees] = useState<any[]>([]);
@@ -176,40 +177,17 @@ export const DeletedEmployees = ({ onBack, addToast }: { onBack: () => void, add
           </div>
         )}
 
-        {showDeleteModal && selectedItem && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center px-4 bg-gray-900/50 backdrop-blur-sm">
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.95 }}
-              className="bg-white rounded-3xl shadow-xl w-full max-w-md overflow-hidden"
-            >
-              <div className="p-6">
-                <div className="w-16 h-16 rounded-2xl bg-rose-100 text-rose-600 flex items-center justify-center mb-6 mx-auto">
-                  <AlertTriangle size={32} />
-                </div>
-                <h3 className="text-xl font-black text-gray-800 text-center mb-2">Xóa vĩnh viễn</h3>
-                <p className="text-sm text-gray-500 text-center mb-8 leading-relaxed">
-                  Bạn có chắc chắn muốn xóa vĩnh viễn dữ liệu của <span className="font-bold text-gray-800">{selectedItem.name}</span> không?<br />
-                  <span className="text-rose-500 font-medium">Hành động này sẽ giải phóng Mã nhân sự (ID) và không thể hoàn tác!</span>
-                </p>
-                <div className="flex gap-4">
-                  <button
-                    onClick={() => setShowDeleteModal(false)}
-                    className="flex-1 py-3.5 px-6 rounded-xl font-bold text-gray-600 bg-gray-100 hover:bg-gray-200 transition-colors"
-                  >
-                    Hủy bỏ
-                  </button>
-                  <button
-                    onClick={confirmDelete}
-                    className="flex-1 py-3.5 px-6 rounded-xl font-bold text-white bg-rose-600 hover:bg-rose-700 transition-colors flex items-center justify-center gap-2"
-                  >
-                    <Trash2 size={18} /> Xóa vĩnh viễn
-                  </button>
-                </div>
-              </div>
-            </motion.div>
-          </div>
+        {selectedItem && (
+          <ConfirmModal
+            show={showDeleteModal}
+            title="Xóa vĩnh viễn?"
+            message={`Hành động này KHÔNG thể hoàn tác. ${selectedItem.name} sẽ bị xóa vĩnh viễn khỏi hệ thống.`}
+            confirmText="Xóa vĩnh viễn"
+            cancelText="Hủy bỏ"
+            onConfirm={confirmDelete}
+            onCancel={() => setShowDeleteModal(false)}
+            type="danger"
+          />
         )}
       </AnimatePresence>
     </div>

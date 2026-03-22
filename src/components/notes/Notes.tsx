@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { supabase } from '../../supabaseClient';
 import { Employee } from '../../types';
 import { PageBreadcrumb } from '../shared/PageBreadcrumb';
+import { isActiveWarehouse } from '../../utils/inventory';
 import { ToastType } from '../shared/Toast';
 
 export const WEATHER_OPTIONS = [
@@ -64,8 +65,10 @@ export const Notes = ({ user, onBack, addToast }: { user: Employee, onBack: () =
     const { data: empData } = await empQuery.order('full_name');
     if (empData) setEmployees(empData);
 
-    const { data: whData } = await supabase.from('warehouses').select('*').order('name');
-    if (whData) setWarehouses(whData);
+    const { data: whData } = await supabase.from('warehouses').select('*').or('status.is.null,status.neq.Đã xóa').order('name');
+    if (whData) {
+      setWarehouses(whData.filter(isActiveWarehouse));
+    }
     setLoading(false);
   };
 

@@ -169,7 +169,9 @@ export const StockOut = ({ user, onBack, addToast }: {
         status: 'Chờ duyệt',
         total_amount: formData.quantity * formData.unit_price,
         export_code: formData.export_code || generateCode('XK'),
-        notes: isEditing ? `[SỬA] ${formData.notes}` : formData.notes
+        notes: isEditing 
+          ? `[SỬA lúc ${new Date().toLocaleString('vi-VN')}] ${formData.notes.replace(/^\[SỬA lúc .*?\]\s*/, '')}` 
+          : formData.notes
       };
 
       if (isEditing && selectedSlip) {
@@ -288,7 +290,8 @@ export const StockOut = ({ user, onBack, addToast }: {
       material_id: selectedSlip.material_id,
       quantity: selectedSlip.quantity,
       unit_price: selectedSlip.unit_price || 0,
-      notes: selectedSlip.notes?.replace('[SỬA] ', '') || '',
+      notes: selectedSlip.notes?.replace(/^\[SỬA lúc .*?\]\s*/, '') || '',
+      export_code: selectedSlip.export_code || formData.export_code,
       status: 'Chờ duyệt'
     });
     setIsEditing(true);
@@ -381,7 +384,10 @@ export const StockOut = ({ user, onBack, addToast }: {
               className="bg-white rounded-3xl shadow-2xl w-full max-w-lg overflow-hidden"
             >
               <div className="bg-red-600 p-6 text-white flex items-center justify-between">
-                <h3 className="font-bold text-lg">Chi tiết phiếu xuất</h3>
+                <div>
+                  <h3 className="font-bold text-lg">Chi tiết phiếu xuất</h3>
+                  <p className="text-xs opacity-80 font-medium">{selectedSlip.export_code}</p>
+                </div>
                 <button onClick={() => setShowDetailModal(false)} className="p-2 hover:bg-white/10 rounded-full transition-colors"><X size={20} /></button>
               </div>
               <div className="p-6 space-y-4 max-h-[70vh] overflow-y-auto">

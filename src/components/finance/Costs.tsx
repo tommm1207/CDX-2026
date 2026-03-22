@@ -10,6 +10,7 @@ import { CreatableSelect } from '../shared/CreatableSelect';
 import { ToastType } from '../shared/Toast';
 import { formatCurrency, formatNumber, formatDate } from '../../utils/format';
 import { isUUID } from '../../utils/helpers';
+import { isActiveWarehouse } from '../../utils/inventory';
 
 export const Costs = ({ user, onBack, addToast }: { 
   user: Employee, 
@@ -97,8 +98,10 @@ export const Costs = ({ user, onBack, addToast }: {
   };
 
   const fetchWarehouses = async () => {
-    const { data } = await supabase.from('warehouses').select('id, name').or('status.is.null,status.neq.Đã xóa');
-    if (data) setWarehouses(data);
+    const { data } = await supabase.from('warehouses').select('id, name, status').or('status.is.null,status.neq.Đã xóa');
+    if (data) {
+      setWarehouses(data.filter(isActiveWarehouse));
+    }
   };
 
   const fetchCostTypes = async () => {

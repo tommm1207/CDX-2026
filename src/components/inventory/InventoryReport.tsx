@@ -1,8 +1,10 @@
 import { useState, useEffect } from 'react';
-import { BarChart3, RefreshCw, EyeOff } from 'lucide-react';
+import { BarChart3, RefreshCw, EyeOff, Download } from 'lucide-react';
 import { supabase } from '../../supabaseClient';
+import * as xlsx from 'xlsx';
 import { Employee } from '../../types';
 import { PageBreadcrumb } from '../shared/PageBreadcrumb';
+import { isActiveWarehouse } from '../../utils/inventory';
 import { ToastType } from '../shared/Toast';
 import { formatNumber } from '../../utils/format';
 import { getTonKhoTable, TonKhoRow } from '../../utils/inventory';
@@ -10,6 +12,7 @@ import { getTonKhoTable, TonKhoRow } from '../../utils/inventory';
 interface ReportRow extends TonKhoRow {
   materialName: string;
   materialCode: string;
+  materialGroup: string;
   unit: string;
   warehouseName: string;
 }
@@ -35,9 +38,11 @@ export const InventoryReport = ({ user, onBack, addToast }: {
   useEffect(() => {
     Promise.all([
       supabase.from('warehouses').select('*').or('status.is.null,status.neq.Đã xóa').order('name'),
-      supabase.from('materials').select('*').order('name'),
+      supabase.from('materials').select('*, material_groups(name)').order('name'),
     ]).then(([whRes, matRes]) => {
-      if (whRes.data) setWarehouses(whRes.data);
+      if (whRes.data) {
+        setWarehouses(whRes.data.filter(isActiveWarehouse));
+      }
       if (matRes.data) setMaterials(matRes.data);
     });
   }, []);
@@ -61,6 +66,7 @@ export const InventoryReport = ({ user, onBack, addToast }: {
             ...row,
             materialName: mat?.name || 'N/A',
             materialCode: mat?.code || '',
+            materialGroup: mat?.material_groups?.name || '',
             unit: mat?.unit || '',
             warehouseName: wh?.name || 'N/A',
           };
@@ -94,6 +100,57 @@ export const InventoryReport = ({ user, onBack, addToast }: {
     { tonDau: 0, tongNhap: 0, tongXuat: 0, chuyenDen: 0, chuyenDi: 0, tonCuoi: 0 }
   );
 
+  const handleExportExcel = () => {
+    if (report.length === 0) {
+      if (addToast) addToast('Không có dữ liệu để xuất Excel', 'warning');
+      return;
+    }
+
+    try {
+      const exportData = report.map((row) => ({
+        'Mã vật tư': row.materialCode || '',
+        'Tên vật tư': row.materialName || '',
+        'Nhóm': row.materialGroup || '',
+        'Kho': row.warehouseName || '',
+        'Tồn đầu kỳ': row.tonDau,
+        'Nhập': row.tongNhap,
+        'Xuất': row.tongXuat,
+        'Chuyển đến': row.chuyenDen,
+        'Chuyển đi': row.chuyenDi,
+        'Tồn cuối kỳ': row.tonCuoi
+      }));
+
+      exportData.push({
+        'Mã vật tư': 'TỔNG CỘNG',
+        'Tên vật tư': '',
+        'Nhóm': '',
+        'Kho': '',
+        'Tồn đầu kỳ': totals.tonDau,
+        'Nhập': totals.tongNhap,
+        'Xuất': totals.tongXuat,
+        'Chuyển đến': totals.chuyenDen,
+        'Chuyển đi': totals.chuyenDi,
+        'Tồn cuối kỳ': totals.tonCuoi
+      });
+
+      const ws = xlsx.utils.json_to_sheet(exportData);
+      
+      const whName = selectedWarehouse ? warehouses.find(w => w.id === selectedWarehouse)?.name : 'TatCaKho';
+      const cleanWhName = whName?.replace(/[^a-zA-Z0-9_\u0080-\uFFFF]/g, '') || 'TatCaKho';
+      const dateStr = new Date().toISOString().split('T')[0].replace(/-/g, '');
+      const fileName = `TonKho_${cleanWhName}_${dateStr}.xlsx`;
+
+      const wb = xlsx.utils.book_new();
+      xlsx.utils.book_append_sheet(wb, ws, 'Tồn Kho');
+      xlsx.writeFile(wb, fileName);
+      
+      if (addToast) addToast('Xuất Excel thành công!', 'success');
+    } catch (err: any) {
+      console.error('Export Excel error:', err);
+      if (addToast) addToast('Lỗi xuất Excel: ' + err.message, 'error');
+    }
+  };
+
   return (
     <div className="p-4 md:p-6 space-y-6 pb-44">
       <PageBreadcrumb title="Kiểm tra tồn kho" onBack={onBack} />
@@ -107,12 +164,20 @@ export const InventoryReport = ({ user, onBack, addToast }: {
             Tồn đầu kỳ + Nhập - Xuất + Chuyển đến - Chuyển đi = Tồn cuối kỳ
           </p>
         </div>
-        <button
-          onClick={fetchReport}
-          className="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-xl text-sm font-bold hover:bg-primary/90 transition-colors"
-        >
-          <RefreshCw size={16} /> Làm mới
-        </button>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={fetchReport}
+            className="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-xl text-sm font-bold hover:bg-primary-hover transition-all shadow-lg shadow-primary/20"
+          >
+            <RefreshCw size={16} /> Làm mới
+          </button>
+          <button
+            onClick={handleExportExcel}
+            className="flex items-center gap-2 px-4 py-2 border-2 border-primary text-primary bg-white rounded-xl text-sm font-bold hover:bg-primary/5 transition-all shadow-sm"
+          >
+            <Download size={16} /> Xuất Excel
+          </button>
+        </div>
       </div>
 
       {/* Bộ lọc */}

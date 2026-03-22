@@ -44,7 +44,10 @@ export const BackupNow = ({ onBack, addToast }: { onBack: () => void, addToast: 
 
         const response = await fetch('/api/send-backup', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 
+            'Content-Type': 'application/json',
+            'x-api-key': import.meta.env.VITE_API_SECRET_KEY
+          },
           body: JSON.stringify({
             email,
             fileName,

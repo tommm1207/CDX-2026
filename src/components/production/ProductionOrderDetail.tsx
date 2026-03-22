@@ -7,7 +7,7 @@ import { PageBreadcrumb } from '../shared/PageBreadcrumb';
 import { ToastType } from '../shared/Toast';
 import { CustomCombobox } from '../shared/CustomCombobox';
 import { formatNumber } from '../../utils/format';
-import { getAvailableStock } from '../../utils/inventory';
+import { getAvailableStock, isActiveWarehouse } from '../../utils/inventory';
 
 export const ProductionOrderDetail = ({ user, orderId, onBack, addToast }: {
   user: Employee,
@@ -40,12 +40,14 @@ export const ProductionOrderDetail = ({ user, orderId, onBack, addToast }: {
       const [matRes, bomRes, whRes] = await Promise.all([
         supabase.from('materials').select('*').order('name'),
         supabase.from('bom_configs').select('*').order('name'),
-        supabase.from('warehouses').select('*').order('name')
+        supabase.from('warehouses').select('*').or('status.is.null,status.neq.Đã xóa').order('name')
       ]);
 
       if (matRes.data) setMaterials(matRes.data);
       if (bomRes.data) setBoms(bomRes.data);
-      if (whRes.data) setWarehouses(whRes.data);
+      if (whRes.data) {
+        setWarehouses(whRes.data.filter(isActiveWarehouse));
+      }
 
       if (orderId) {
         const { data: orderData } = await supabase
@@ -164,28 +166,41 @@ export const ProductionOrderDetail = ({ user, orderId, onBack, addToast }: {
     }
 
     setSubmitting(true);
+    const createdStockOutIds: string[] = [];
     try {
       const today = new Date().toISOString().split('T')[0];
+      const bom = boms.find(b => b.id === order.bom_id);
       
-      // 1. Create Stock Out for each material
-      const stockOutPromises = bomItems.map(it => {
-        return supabase.from('stock_out').insert([{
+      // 1. Create Stock Out for each material sequentially
+      for (const it of bomItems) {
+        const qty = calculateTotal(it.quantity_per_unit);
+        if (addToast) addToast(`Đang xuất vật tư: ${it.material?.name} (${formatNumber(qty)} ${it.unit})...`, 'info');
+        
+        const { data, error } = await supabase.from('stock_out').insert([{
           export_code: `X-LSX-${order.order_code}`,
           date: today,
           warehouse_id: order.warehouse_id,
           material_id: it.material_item_id,
-          quantity: calculateTotal(it.quantity_per_unit),
+          quantity: qty,
           unit: it.unit,
           employee_id: user.id,
           status: 'Đã duyệt',
-          notes: `Xuất vật tư theo lệnh sản xuất ${order.order_code}`
-        }]);
-      });
+          notes: `Xuất vật tư theo lệnh sản xuất ${order.order_code}${bom?.is_two_stage ? ' [2 giai đoạn]' : ''}`
+        }]).select('id').single();
+
+        if (error) throw new Error(`Lỗi xuất vật tư ${it.material?.name}: ${error.message}`);
+        if (data) createdStockOutIds.push(data.id);
+      }
 
       // 2. Create Stock In for finished product
-      const bom = boms.find(b => b.id === order.bom_id);
+      if (addToast) addToast('Đang nhập kho thành phẩm...', 'info');
+      // TODO: Nếu bom?.is_two_stage là true, cần tách làm 2 bước:
+      // Bước 1: Nhập Bán thành phẩm vào kho nguyên liệu (order.warehouse_id)
+      // Bước 2: Xuất Bán thành phẩm từ kho nguyên liệu và Nhập Thành phẩm vào kho đích (order.output_warehouse_id)
+      // Hiện tại vẫn làm 1 bước nhưng thêm note nhận diện.
+      
       const product = materials.find(m => m.id === bom?.product_item_id);
-      const stockInPromise = supabase.from('stock_in').insert([{
+      const { error: siError } = await supabase.from('stock_in').insert([{
         import_code: `N-LSX-${order.order_code}`,
         date: today,
         warehouse_id: order.output_warehouse_id,
@@ -194,20 +209,29 @@ export const ProductionOrderDetail = ({ user, orderId, onBack, addToast }: {
         unit: product?.unit,
         employee_id: user.id,
         status: 'Đã duyệt',
-        notes: `Nhập thành phẩm từ lệnh sản xuất ${order.order_code}`
+        notes: `Nhập thành phẩm từ lệnh sản xuất ${order.order_code}${bom?.is_two_stage ? ' [2 giai đoạn]' : ''}`
       }]);
 
+      if (siError) throw new Error(`Lỗi nhập thành phẩm: ${siError.message}`);
+
       // 3. Update order status
-      const updatePromise = supabase.from('production_orders').update({
+      if (addToast) addToast('Đang hoàn thành lệnh sản xuất...', 'info');
+      const { error: upError } = await supabase.from('production_orders').update({
         status: 'Hoàn thành',
         approved_by: user.id
       }).eq('id', order.id);
 
-      await Promise.all([...stockOutPromises, stockInPromise, updatePromise]);
+      if (upError) throw new Error(`Lỗi cập nhật lệnh: ${upError.message}`);
 
       if (addToast) addToast('Đã duyệt và thực hiện xuất/nhập kho thành công!', 'success');
       onBack();
     } catch (err: any) {
+      console.error('Approval error:', err);
+      // Rollback stock_out items if any were created
+      if (createdStockOutIds.length > 0) {
+        if (addToast) addToast('Có lỗi xảy ra. Đang hoàn tác các phiếu xuất đã tạo...', 'warning');
+        await supabase.from('stock_out').update({ status: 'Đã xóa' }).in('id', createdStockOutIds);
+      }
       if (addToast) addToast('Lỗi phê duyệt: ' + err.message, 'error');
     } finally {
       setSubmitting(false);
@@ -228,7 +252,7 @@ export const ProductionOrderDetail = ({ user, orderId, onBack, addToast }: {
             <ClipboardList size={24} />
           </div>
           <div>
-            <h2 className="text-xl font-bold text-gray-800">Lệnh sản xuất: {order.order_code}</h2>
+            <h2 className="text-xl font-bold text-gray-800">Lệnh sản xuất: {order.order_code} <span className="text-[10px] text-primary/50 font-normal">(Đã lọc kho)</span></h2>
             <div className="flex items-center gap-2 mt-1">
               {isViewOnly ? (
                 <span className="px-2 py-0.5 bg-green-50 text-green-600 rounded-md text-[10px] font-bold border border-green-100 uppercase tracking-wider">
@@ -275,14 +299,21 @@ export const ProductionOrderDetail = ({ user, orderId, onBack, addToast }: {
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-1.5">
-                <CustomCombobox
-                  label="Định mức sản xuất *"
-                  placeholder="-- Chọn định mức --"
-                  value={order.bom_id || ''}
-                  options={boms}
-                  onChange={handleBomChange}
-                  required
-                />
+                <div className="flex items-center justify-between">
+                  <CustomCombobox
+                    label="Định mức sản xuất *"
+                    placeholder="-- Chọn định mức --"
+                    value={order.bom_id || ''}
+                    options={boms}
+                    onChange={handleBomChange}
+                    required
+                  />
+                  {boms.find(b => b.id === order.bom_id)?.is_two_stage && (
+                    <span className="mt-6 px-2 py-0.5 bg-green-100 text-green-700 rounded text-[10px] font-bold border border-green-200 uppercase">
+                      2 giai đoạn
+                    </span>
+                  )}
+                </div>
               </div>
 
               <div className="space-y-1.5">

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { CalendarCheck, Plus, X, Users, Check } from 'lucide-react';
+import { CalendarCheck, Plus, X, Users, Check, RefreshCw } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { supabase } from '../../supabaseClient';
 import { Employee } from '../../types';
@@ -8,6 +8,9 @@ import { NumericInput } from '../shared/NumericInput';
 import { ToastType } from '../shared/Toast';
 
 import { AttendanceTable } from './AttendanceTable';
+
+const currentYear = new Date().getFullYear();
+const years = Array.from({ length: 4 }, (_, i) => currentYear - 1 + i);
 
 export const Attendance = ({ user, onBack, addToast }: { 
   user: Employee, 
@@ -106,49 +109,83 @@ export const Attendance = ({ user, onBack, addToast }: {
     setShowBulkModal(true);
   };
 
-  const saveBulk = async () => {
+  const [bulkLoading, setBulkLoading] = useState(false);
+  const [bulkProgress, setBulkProgress] = useState({ current: 0, total: 0, employeeName: '' });
+  const [showConfirmBulk, setShowConfirmBulk] = useState(false);
+
+  const handleStartSaveBulk = () => {
     if (selectedEmployees.length === 0) {
       if (addToast) addToast('Vui lòng chọn ít nhất một nhân viên', 'error');
-      else alert('Vui lòng chọn ít nhất một nhân viên');
       return;
     }
+    setShowConfirmBulk(true);
+  };
 
-    // Convert individual settings into bulk records
-    const bulkRecords = selectedEmployees.map(empId => {
-      const setting = employeeSettings[empId] || { status: 'present', overtime: 0 };
-      const hours = setting.status === 'present' ? 8 : (setting.status === 'half-day' ? 4 : 0);
-      return {
-        employee_id: empId,
-        date: bulkFormData.date,
-        status: setting.status,
-        hours_worked: hours,
-        overtime_hours: setting.overtime
-      };
-    });
+  const confirmAndSaveBulk = async () => {
+    setShowConfirmBulk(false);
+    setBulkLoading(true);
+    const successfullySaved: string[] = [];
+    let isError = false;
 
     try {
-      // Delete existing records first for accuracy
-      const { error: delError } = await supabase
-        .from('attendance')
-        .delete()
-        .in('employee_id', selectedEmployees)
-        .eq('date', bulkFormData.date);
+      for (let i = 0; i < selectedEmployees.length; i++) {
+        const empId = selectedEmployees[i];
+        const emp = employees.find(e => e.id === empId);
+        setBulkProgress({ 
+          current: i + 1, 
+          total: selectedEmployees.length, 
+          employeeName: emp?.full_name || 'Nhân viên' 
+        });
+
+        const setting = employeeSettings[empId] || { status: 'present', overtime: 0 };
+        const hours = setting.status === 'present' ? 8 : (setting.status === 'half-day' ? 4 : 0);
+
+        // Delete then insert
+        const { error: delError } = await supabase
+          .from('attendance')
+          .delete()
+          .eq('employee_id', empId)
+          .eq('date', bulkFormData.date);
         
-      if (delError) throw delError;
+        if (delError) {
+          isError = true;
+          if (addToast) addToast(`Lỗi khi lưu ${emp?.full_name}: ${delError.message}`, 'error');
+          break;
+        }
 
-      const { error: insError } = await supabase
-        .from('attendance')
-        .insert(bulkRecords);
+        const { error: insError } = await supabase
+          .from('attendance')
+          .insert([{
+            employee_id: empId,
+            date: bulkFormData.date,
+            status: setting.status,
+            hours_worked: hours,
+            overtime_hours: setting.overtime
+          }]);
 
-      if (insError) throw insError;
+        if (insError) {
+          isError = true;
+          if (addToast) addToast(`Lỗi khi lưu ${emp?.full_name}: ${insError.message}`, 'error');
+          break;
+        }
 
-      setShowBulkModal(false);
-      if (addToast) addToast('Đã lưu chấm công hàng loạt thành công!', 'success');
-      else alert('Đã lưu chấm công hàng loạt thành công!');
-      fetchData();
+        successfullySaved.push(emp?.full_name || empId);
+      }
+
+      if (!isError) {
+        if (addToast) addToast('Đã lưu chấm công hàng loạt thành công!', 'success');
+        setShowBulkModal(false);
+      } else {
+        const remainingCount = selectedEmployees.length - successfullySaved.length;
+        alert(`QUÁ TRÌNH BỊ DỪNG LẠI!\n\n- Đã lưu thành công: ${successfullySaved.length} người\n- Nhân viên lỗi: ${bulkProgress.employeeName}\n- Chưa lưu được: ${remainingCount} người còn lại.`);
+      }
     } catch (err: any) {
-      if (addToast) addToast('Lỗi: ' + err.message, 'error');
-      else alert('Lỗi: ' + err.message);
+      console.error(err);
+      if (addToast) addToast('Lỗi không xác định: ' + err.message, 'error');
+    } finally {
+      setBulkLoading(false);
+      setBulkProgress({ current: 0, total: 0, employeeName: '' });
+      fetchData();
     }
   };
 
@@ -157,12 +194,14 @@ export const Attendance = ({ user, onBack, addToast }: {
   useEffect(() => {
     // Sync settings when selections change
     const newSettings = { ...employeeSettings };
+    let changed = false;
     selectedEmployees.forEach(id => {
       if (!newSettings[id]) {
         newSettings[id] = { status: bulkFormData.status, overtime: bulkFormData.overtime };
+        changed = true;
       }
     });
-    setEmployeeSettings(newSettings);
+    if (changed) setEmployeeSettings(newSettings);
   }, [selectedEmployees]);
 
   const updateIndividualSetting = (empId: string, field: 'status' | 'overtime', value: any) => {
@@ -252,7 +291,7 @@ export const Attendance = ({ user, onBack, addToast }: {
               {Array.from({ length: 12 }, (_, i) => i + 1).map(m => <option key={m} value={m}>Tháng {m}</option>)}
             </select>
             <select value={selectedYear} onChange={(e) => setSelectedYear(Number(e.target.value))} className="px-3 py-1.5 rounded-xl border-none text-sm font-bold text-gray-700 outline-none">
-              {[2024, 2025, 2026].map(y => <option key={y} value={y}>Năm {y}</option>)}
+              {years.map(y => <option key={y} value={y}>Năm {y}</option>)}
             </select>
           </div>
         </div>
@@ -469,12 +508,68 @@ export const Attendance = ({ user, onBack, addToast }: {
 
               <div className="p-6 border-t border-gray-100 bg-gray-50/50 flex items-center justify-between flex-shrink-0">
                 <div className="text-[10px] text-gray-400 font-medium">
-                  Đang chấm cho <span className="font-bold text-primary">{selectedEmployees.length}</span> nhân sự
+                  {bulkLoading ? (
+                    <span className="flex items-center gap-2 text-amber-600 font-bold">
+                      <RefreshCw size={12} className="animate-spin" />
+                      Đang lưu... ({bulkProgress.current}/{bulkProgress.total}) - {bulkProgress.employeeName}
+                    </span>
+                  ) : (
+                    <>Đang chấm cho <span className="font-bold text-primary">{selectedEmployees.length}</span> nhân sự</>
+                  )}
                 </div>
                 <div className="flex gap-3">
-                  <button onClick={() => setShowBulkModal(false)} className="px-6 py-2.5 border border-gray-200 text-sm font-bold text-gray-500 rounded-xl hover:bg-white transition-all">Hủy</button>
-                  <button onClick={saveBulk} className="px-8 py-2.5 bg-primary text-white rounded-xl font-black text-sm shadow-xl shadow-primary/20 hover:bg-primary-hover transition-all active:scale-95 disabled:opacity-50" disabled={selectedEmployees.length === 0}>
-                    Lưu dữ liệu
+                  <button 
+                    onClick={() => setShowBulkModal(false)} 
+                    disabled={bulkLoading}
+                    className="px-6 py-2.5 border border-gray-200 text-sm font-bold text-gray-500 rounded-xl hover:bg-white transition-all disabled:opacity-50"
+                  >
+                    Hủy
+                  </button>
+                  <button 
+                    onClick={handleStartSaveBulk} 
+                    className="px-8 py-2.5 bg-primary text-white rounded-xl font-black text-sm shadow-xl shadow-primary/20 hover:bg-primary-hover transition-all active:scale-95 disabled:opacity-50 min-w-[140px]" 
+                    disabled={selectedEmployees.length === 0 || bulkLoading}
+                  >
+                    {bulkLoading ? 'Đang xử lý...' : 'Lưu dữ liệu'}
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Confirmation Modal for Bulk Attendance */}
+      <AnimatePresence>
+        {showConfirmBulk && (
+          <div className="fixed inset-0 z-[120] flex items-center justify-center p-4 bg-black/60 backdrop-blur-md">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.9, y: 20 }}
+              className="bg-white rounded-3xl shadow-2xl p-8 max-w-md w-full border border-gray-100"
+            >
+              <div className="flex flex-col items-center text-center gap-4">
+                <div className="w-16 h-16 bg-amber-100 text-amber-600 rounded-full flex items-center justify-center">
+                  <CalendarCheck size={32} />
+                </div>
+                <h3 className="text-xl font-bold text-gray-800">Xác nhận chấm công</h3>
+                <p className="text-sm text-gray-500 leading-relaxed">
+                  Xác nhận chấm công cho <span className="font-bold text-primary">{selectedEmployees.length}</span> nhân viên <br /> 
+                  ngày <span className="font-bold text-gray-700">{new Date(bulkFormData.date).toLocaleDateString('vi-VN')}</span>?
+                </p>
+                <div className="flex gap-3 w-full pt-4">
+                  <button 
+                    onClick={() => setShowConfirmBulk(false)} 
+                    className="flex-1 py-3 rounded-2xl border border-gray-100 text-sm font-bold text-gray-400 hover:bg-gray-50 transition-colors"
+                  >
+                    Hủy
+                  </button>
+                  <button 
+                    onClick={confirmAndSaveBulk} 
+                    className="flex-1 py-3 rounded-2xl bg-primary text-white text-sm font-bold shadow-xl shadow-primary/20 hover:bg-primary-hover transition-all active:scale-95"
+                  >
+                    Xác nhận
                   </button>
                 </div>
               </div>

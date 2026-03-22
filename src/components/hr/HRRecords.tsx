@@ -499,10 +499,12 @@ export const HRRecords = ({ user, onBack, addToast }: {
                         <label className="text-[10px] font-bold text-gray-400 uppercase">Quyền xem dữ liệu</label>
                         <input
                           type="text"
+                          placeholder="VD: kho-a,kho-b (chức năng đang phát triển)"
                           value={formData.data_view_permission}
                           onChange={(e) => setFormData({ ...formData, data_view_permission: e.target.value })}
                           className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20"
                         />
+                        <p className="text-[10px] text-gray-400 italic mt-1">* Tính năng phân quyền theo kho đang được phát triển</p>
                       </div>
                       <div className="space-y-1">
                         <label className="text-[10px] font-bold text-gray-400 uppercase">Ảnh cá nhân (URL)</label>

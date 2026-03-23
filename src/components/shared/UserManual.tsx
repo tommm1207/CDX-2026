@@ -238,6 +238,18 @@ export const UserManual = ({ user, onBack }: { user: Employee; onBack?: () => vo
                     text="Cài đặt lịch nhắc, cấu hình sao lưu dữ liệu tự động và xem nhật ký hoạt động hệ thống." 
                     image="/manual/backup_settings_admin.png" 
                   />
+                  <div className="h-px bg-gray-100" />
+                  <Step 
+                    number={2} 
+                    title="Phân quyền Xem Dữ liệu" 
+                    text="Admin có thể giới hạn từng nhân viên chỉ xem được dữ liệu của một số kho cụ thể. Cài đặt trong hồ sơ nhân viên, trường 'Quyền xem dữ liệu'."
+                    subSteps={[
+                      "Để trống hoặc nhập 'ALL' → Xem tất cả kho (không giới hạn).",
+                      "Nhập WH:uuid1,uuid2 → Chỉ xem phiếu kho & tồn kho của các kho đó.",
+                      "Áp dụng cho tất cả module: Nhập kho, Xuất kho, Luân chuyển, Chi phí, Báo cáo tồn kho và Lệnh sản xuất.",
+                      "UUID của kho lấy trong bảng warehouses trên Supabase Dashboard."
+                    ]}
+                  />
                 </FeatureSection>
               </div>
             )}

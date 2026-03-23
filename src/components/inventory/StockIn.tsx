@@ -12,6 +12,7 @@ import { QuickAddMaterialModal } from '../shared/QuickAddMaterialModal';
 import { useInventoryData } from '../../hooks/useInventoryData';
 import { formatDate, formatCurrency, formatNumber, numberToWords } from '../../utils/format';
 import { isUUID, getAllowedWarehouses } from '../../utils/helpers';
+import { Button } from '../shared/Button';
 
 export const StockIn = ({ user, onBack, initialStatus, addToast }: { 
   user: Employee, 
@@ -308,7 +309,9 @@ export const StockIn = ({ user, onBack, initialStatus, addToast }: {
             </button>
           ))}
         </div>
-        <button
+        <Button
+          variant="primary"
+          icon={Plus}
           onClick={() => {
             setFormData({
               ...initialFormState,
@@ -317,10 +320,9 @@ export const StockIn = ({ user, onBack, initialStatus, addToast }: {
             setIsEditing(false);
             setShowModal(true);
           }}
-          className="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-xl text-sm font-bold hover:bg-primary-hover transition-colors shadow-lg shadow-primary/20"
         >
-          <Plus size={18} /> Lập phiếu nhập
-        </button>
+          Lập phiếu nhập
+        </Button>
       </div>
 
       <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
@@ -387,7 +389,7 @@ export const StockIn = ({ user, onBack, initialStatus, addToast }: {
             >
               <div className="p-6 border-b border-gray-100 flex items-center justify-between">
                 <h3 className="text-lg font-bold text-gray-800">Chi tiết vật tư nhập</h3>
-                <button onClick={() => setShowDetailModal(false)} className="p-2 hover:bg-gray-100 rounded-full transition-colors"><X size={20} /></button>
+                <Button variant="ghost" size="icon" icon={X} onClick={() => setShowDetailModal(false)} />
               </div>
 
               <div className="flex-1 overflow-y-auto p-8 space-y-6">
@@ -468,42 +470,46 @@ export const StockIn = ({ user, onBack, initialStatus, addToast }: {
               <div className="p-6 bg-gray-50 border-t border-gray-100 flex justify-end gap-3 rounded-b-3xl">
                 {selectedSlip.status !== 'Đã xóa' && (
                   <>
-                    <button
+                    <Button
+                      variant="outline"
+                      icon={Trash2}
                       onClick={handleDelete}
-                      className="px-6 py-2 bg-red-50 text-red-600 rounded-xl text-sm font-bold hover:bg-red-100 transition-colors flex items-center gap-2"
+                      className="text-red-600 bg-red-50 border-red-100"
                     >
-                      <Trash2 size={16} /> Chuyển vào thùng rác
-                    </button>
-                    <button
+                      Chuyển vào thùng rác
+                    </Button>
+                    <Button
+                      variant="outline"
+                      icon={Edit}
                       onClick={handleEdit}
-                      className="px-6 py-2 bg-blue-100 text-blue-600 rounded-xl text-sm font-bold hover:bg-blue-200 transition-colors flex items-center gap-2"
+                      className="text-blue-600 bg-blue-50 border-blue-100"
                     >
-                      <Edit size={16} /> Sửa phiếu
-                    </button>
+                      Sửa phiếu
+                    </Button>
                     {(user.role === 'Admin' || user.role === 'Admin App') && selectedSlip.status === 'Chờ duyệt' && (
                       <>
-                        <button
+                        <Button
+                          variant="danger"
                           onClick={() => handleApprove(selectedSlip.id, 'Từ chối')}
-                          className="px-6 py-2 bg-red-100 text-red-600 rounded-xl text-sm font-bold hover:bg-red-200 transition-colors"
                         >
                           Từ chối
-                        </button>
-                        <button
+                        </Button>
+                        <Button
+                          variant="success"
                           onClick={() => handleApprove(selectedSlip.id, 'Đã duyệt')}
-                          className="px-6 py-2 bg-green-600 text-white rounded-xl text-sm font-bold hover:bg-green-700 transition-colors"
                         >
                           Duyệt phiếu
-                        </button>
+                        </Button>
                       </>
                     )}
                   </>
                 )}
-                <button
+                <Button
+                  variant="outline"
                   onClick={() => setShowDetailModal(false)}
-                  className="px-6 py-2 bg-gray-500 text-white rounded-xl text-sm font-bold hover:bg-gray-600 transition-colors"
                 >
                   Đóng
-                </button>
+                </Button>
               </div>
             </motion.div>
           </div>
@@ -524,7 +530,7 @@ export const StockIn = ({ user, onBack, initialStatus, addToast }: {
                   <div className="p-2 bg-white/20 rounded-xl"><ArrowDownCircle size={24} /></div>
                   <h3 className="font-bold text-lg">{isEditing ? 'Sửa phiếu nhập kho' : 'Lập phiếu nhập kho'}</h3>
                 </div>
-                <button onClick={() => setShowModal(false)} className="p-2 hover:bg-white/10 rounded-full transition-colors"><X size={20} /></button>
+                <Button variant="ghost" icon={X} className="text-white hover:bg-white/10" onClick={() => setShowModal(false)} />
               </div>
 
               <div className="flex-1 overflow-y-auto p-6 custom-scrollbar">
@@ -621,10 +627,15 @@ export const StockIn = ({ user, onBack, initialStatus, addToast }: {
                   </div>
 
                   <div className="md:col-span-2 flex justify-end gap-3 mt-4">
-                    <button type="button" onClick={() => setShowModal(false)} className="px-6 py-2 rounded-xl text-sm font-bold text-gray-500 hover:bg-gray-100 transition-colors">Hủy lệnh</button>
-                    <button type="submit" disabled={submitting} className="px-8 py-2 rounded-xl bg-primary text-white text-sm font-bold hover:bg-primary-hover transition-colors shadow-lg shadow-primary/20 disabled:opacity-50">
-                      {submitting ? 'Đang lưu...' : 'Lưu'}
-                    </button>
+                    <Button variant="outline" onClick={() => setShowModal(false)}>Hủy lệnh</Button>
+                    <Button 
+                      type="submit" 
+                      variant="primary" 
+                      isLoading={submitting}
+                      className="min-w-[100px]"
+                    >
+                      Lưu
+                    </Button>
                   </div>
                 </form>
               </div>

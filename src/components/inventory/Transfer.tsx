@@ -13,6 +13,7 @@ import { useInventoryData } from '../../hooks/useInventoryData';
 import { formatDate, formatNumber } from '../../utils/format';
 import { isUUID, generateCode, getAllowedWarehouses } from '../../utils/helpers';
 import { getAvailableStock } from '../../utils/inventory';
+import { Button } from '../shared/Button';
 
 export const Transfer = ({ user, onBack, addToast }: { 
   user: Employee, 
@@ -245,7 +246,9 @@ export const Transfer = ({ user, onBack, addToast }: {
           </h2>
           <p className="text-xs text-gray-500 mt-1">Luân chuyển vật tư giữa các kho</p>
         </div>
-        <button
+        <Button
+          variant="warning"
+          icon={Plus}
           onClick={() => {
             setFormData({
               ...initialFormState,
@@ -256,10 +259,10 @@ export const Transfer = ({ user, onBack, addToast }: {
             setAvailableStock(null);
             setShowModal(true);
           }}
-          className="flex items-center gap-2 px-4 py-2 bg-orange-500 text-white rounded-xl text-sm font-bold hover:bg-orange-600 transition-colors shadow-lg shadow-orange-500/20"
+          className="bg-orange-500 hover:bg-orange-600 shadow-orange-500/20"
         >
-          <Plus size={18} /> Lập phiếu chuyển
-        </button>
+          Lập phiếu chuyển
+        </Button>
       </div>
 
       <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
@@ -326,7 +329,7 @@ export const Transfer = ({ user, onBack, addToast }: {
                   <h3 className="font-bold text-lg">Chi tiết phiếu luân chuyển</h3>
                   <p className="text-xs opacity-80 font-medium">{selectedSlip.transfer_code}</p>
                 </div>
-                <button onClick={() => setShowDetailModal(false)} className="p-2 hover:bg-white/10 rounded-full transition-colors"><X size={20} /></button>
+                <Button variant="ghost" icon={X} className="text-white hover:bg-white/10" onClick={() => setShowDetailModal(false)} />
               </div>
               <div className="p-6 space-y-4">
                 <div className="grid grid-cols-2 gap-4">
@@ -367,17 +370,32 @@ export const Transfer = ({ user, onBack, addToast }: {
                  <div className="flex gap-3 pt-4 border-t border-gray-100">
                   {selectedSlip.status !== 'Đã xóa' && (
                     <>
-                      <button onClick={handleEdit} className="flex-1 flex items-center justify-center gap-2 py-2 bg-blue-50 text-blue-600 rounded-xl text-sm font-bold hover:bg-blue-100 transition-colors">
-                        <Edit size={18} /> Chỉnh sửa
-                      </button>
-                      <button onClick={handleDelete} className="flex-1 flex items-center justify-center gap-2 py-2 bg-red-50 text-red-600 rounded-xl text-sm font-bold hover:bg-red-100 transition-colors">
-                        <Trash2 size={18} /> Chuyển vào thùng rác
-                      </button>
+                      <Button
+                        variant="outline"
+                        fullWidth
+                        icon={Edit}
+                        onClick={handleEdit}
+                        className="text-blue-600 bg-blue-50 border-blue-100"
+                      >
+                        Sửa
+                      </Button>
+                      <Button
+                        variant="outline"
+                        fullWidth
+                        icon={Trash2}
+                        onClick={handleDelete}
+                        className="text-red-600 bg-red-50 border-red-100"
+                      >
+                        Chuyển vào thùng rác
+                      </Button>
                     </>
                   )}
-                  <button onClick={() => setShowDetailModal(false)} className="flex-1 py-2 bg-gray-100 text-gray-500 rounded-xl text-sm font-bold hover:bg-gray-200 transition-colors">
+                  <Button
+                    variant="outline"
+                    onClick={() => setShowDetailModal(false)}
+                  >
                     Đóng
-                  </button>
+                  </Button>
                 </div>
               </div>
             </motion.div>
@@ -399,7 +417,7 @@ export const Transfer = ({ user, onBack, addToast }: {
                   <div className="p-2 bg-white/20 rounded-xl"><ArrowLeftRight size={24} /></div>
                   <h3 className="font-bold text-lg">Luân chuyển kho</h3>
                 </div>
-                <button onClick={() => setShowModal(false)} className="p-2 hover:bg-white/10 rounded-full transition-colors"><X size={20} /></button>
+                <Button variant="ghost" icon={X} className="text-white hover:bg-white/10" onClick={() => setShowModal(false)} />
               </div>
 
               <div className="flex-1 overflow-y-auto p-6 custom-scrollbar">

@@ -5,6 +5,7 @@ import { Employee } from '../../types';
 import { PageBreadcrumb } from '../shared/PageBreadcrumb';
 import { ToastType } from '../shared/Toast';
 import { formatDate, formatNumber, formatCurrency } from '../../utils/format';
+import { Button } from '../shared/Button';
 
 interface ConfirmState { slip: any; action: 'approve' | 'reject' }
 
@@ -90,12 +91,14 @@ export const PendingApprovals = ({ user, onBack, onNavigate, onRefreshCount, add
           </h2>
           <p className="text-xs text-gray-500 mt-1">Vui lòng kiểm tra kỹ thông tin trước khi duyệt</p>
         </div>
-        <button
+        <Button
+          variant="ghost"
+          icon={RefreshCw}
           onClick={fetchPendingSlips}
-          className="flex items-center gap-2 px-3 py-2 bg-gray-100 text-gray-600 rounded-xl text-sm font-medium hover:bg-gray-200 transition-colors"
+          className="bg-gray-100 text-gray-600 hover:bg-gray-200"
         >
-          <RefreshCw size={14} /> Làm mới
-        </button>
+          Làm mới
+        </Button>
       </div>
 
       {/* Error display */}
@@ -133,18 +136,21 @@ export const PendingApprovals = ({ user, onBack, onNavigate, onRefreshCount, add
               )}
             </div>
             <div className="flex gap-3">
-              <button
+              <Button
+                variant="outline"
+                fullWidth
                 onClick={() => setConfirm(null)}
-                className="flex-1 py-2.5 rounded-xl border border-gray-200 text-sm font-medium text-gray-600 hover:bg-gray-50"
               >
                 Hủy
-              </button>
-              <button
+              </Button>
+              <Button
+                fullWidth
                 onClick={executeAction}
-                className={`flex-1 py-2.5 rounded-xl text-sm font-bold text-white ${confirm.action === 'approve' ? 'bg-green-600 hover:bg-green-700' : 'bg-red-600 hover:bg-red-700'}`}
+                variant={confirm.action === 'approve' ? 'success' : 'danger'}
+                className={confirm.action === 'approve' ? 'bg-green-600 hover:bg-green-700 shadow-green-500/20' : 'bg-red-600 hover:bg-red-700 shadow-red-500/20'}
               >
                 {confirm.action === 'approve' ? '✓ Duyệt ngay' : '✕ Từ chối'}
-              </button>
+              </Button>
             </div>
           </div>
         </div>

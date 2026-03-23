@@ -12,6 +12,7 @@ import { CreatableSelect } from '../shared/CreatableSelect';
 import { ToastType } from '../shared/Toast';
 import { formatCurrency, formatDate, numberToWords } from '../../utils/format';
 import { isUUID } from '../../utils/helpers';
+import { Button } from '../shared/Button';
 
 export const CostReport = ({ user, onBack, addToast }: { 
   user: Employee, 
@@ -374,18 +375,22 @@ export const CostReport = ({ user, onBack, addToast }: {
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <PageBreadcrumb title="Báo cáo chi phí" onBack={onBack} />
         <div className="flex items-center gap-3">
-          <button
+          <Button
+            variant="primary"
+            icon={Plus}
             onClick={handleAddReport}
-            className="flex items-center justify-center gap-2 px-6 py-2.5 bg-primary text-white rounded-xl text-sm font-bold hover:bg-primary-hover transition-all shadow-lg shadow-primary/20"
+            className="min-w-[140px]"
           >
-            <Plus size={18} /> Thêm báo cáo
-          </button>
-          <button
+            Thêm báo cáo
+          </Button>
+          <Button
+            variant="outline"
+            icon={Download}
             onClick={handleExportExcel}
-            className="flex items-center justify-center gap-2 px-6 py-2.5 border-2 border-primary text-primary bg-white rounded-xl text-sm font-bold hover:bg-primary/5 transition-all shadow-sm"
+            className="text-primary border-primary hover:bg-primary/5 min-w-[140px]"
           >
-            <Download size={18} /> Xuất Excel
-          </button>
+            Xuất Excel
+          </Button>
         </div>
       </div>
 
@@ -590,7 +595,7 @@ export const CostReport = ({ user, onBack, addToast }: {
                     <p className="text-xs text-white/70">Mã: {generateCostCode(masterForm.date, masterForm.employee_id)}</p>
                   </div>
                 </div>
-                <button onClick={() => setShowMasterModal(false)} className="p-2 hover:bg-white/10 rounded-full transition-colors"><X size={20} /></button>
+                <Button variant="ghost" icon={X} className="text-white hover:bg-white/10" onClick={() => setShowMasterModal(false)} />
               </div>
 
               <div className="flex-1 overflow-y-auto p-6 custom-scrollbar space-y-6">
@@ -673,14 +678,14 @@ export const CostReport = ({ user, onBack, addToast }: {
               </div>
 
               <div className="p-6 border-t border-gray-100 flex justify-end gap-3">
-                <button onClick={() => setShowMasterModal(false)} className="px-6 py-2 rounded-xl text-sm font-bold text-gray-500 hover:bg-gray-100 transition-colors">Hủy</button>
-                <button
+                <Button variant="outline" onClick={() => setShowMasterModal(false)}>Hủy</Button>
+                <Button
                   onClick={handleSaveAll}
-                  disabled={submitting}
-                  className="px-8 py-2 rounded-xl bg-primary text-white text-sm font-bold hover:bg-primary-hover transition-colors shadow-lg shadow-primary/20 disabled:opacity-50"
+                  isLoading={submitting}
+                  className="min-w-[140px]"
                 >
-                  {submitting ? 'Đang lưu...' : 'Lưu báo cáo'}
-                </button>
+                  Lưu báo cáo
+                </Button>
               </div>
             </motion.div>
           </div>
@@ -701,7 +706,7 @@ export const CostReport = ({ user, onBack, addToast }: {
                   <div className="p-2 bg-white/20 rounded-xl"><PlusCircle size={24} /></div>
                   <h3 className="font-bold text-lg">Chi phí chi tiết</h3>
                 </div>
-                <button onClick={() => setShowDetailModal(false)} className="p-2 hover:bg-white/10 rounded-full transition-colors"><X size={20} /></button>
+                <Button variant="ghost" icon={X} className="text-white hover:bg-white/10" onClick={() => setShowDetailModal(false)} />
               </div>
 
               <div className="flex-1 overflow-y-auto p-6 custom-scrollbar">

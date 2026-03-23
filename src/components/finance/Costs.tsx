@@ -11,6 +11,7 @@ import { ToastType } from '../shared/Toast';
 import { formatCurrency, formatNumber, formatDate } from '../../utils/format';
 import { isUUID, getAllowedWarehouses } from '../../utils/helpers';
 import { isActiveWarehouse } from '../../utils/inventory';
+import { Button } from '../shared/Button';
 
 export const Costs = ({ user, onBack, addToast }: { 
   user: Employee, 
@@ -320,20 +321,20 @@ export const Costs = ({ user, onBack, addToast }: {
           <p className="text-xs text-gray-500 mt-1">Theo dõi các khoản thu chi và lợi nhuận</p>
         </div>
         <div className="flex gap-2">
-          <motion.button
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
+          <Button
+            variant="outline"
+            icon={FileSpreadsheet}
             onClick={exportToExcel}
-            className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 rounded-xl text-sm font-bold text-gray-600 hover:bg-gray-50 transition-colors shadow-sm"
           >
-            <FileSpreadsheet size={18} className="text-green-600" /> Xuất Excel
-          </motion.button>
-          <button
+            Xuất Excel
+          </Button>
+          <Button
+            variant="primary"
+            icon={Plus}
             onClick={() => { setIsEditing(false); setFormData(initialFormState); setShowModal(true); }}
-            className="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-xl text-sm font-bold hover:bg-primary-hover transition-colors shadow-lg shadow-primary/20"
           >
-            <Plus size={18} /> Nhập giao dịch
-          </button>
+            Nhập giao dịch
+          </Button>
         </div>
       </div>
 
@@ -487,7 +488,7 @@ export const Costs = ({ user, onBack, addToast }: {
                   <div className="p-2 bg-white/20 rounded-xl"><Wallet size={24} /></div>
                   <h3 className="font-bold text-lg">Chi tiết chi phí</h3>
                 </div>
-                <button onClick={() => setShowDetailModal(false)} className="p-2 hover:bg-white/10 rounded-full transition-colors"><X size={20} /></button>
+                <Button variant="ghost" icon={X} className="text-white hover:bg-white/10" onClick={() => setShowDetailModal(false)} />
               </div>
               <div className="p-6 space-y-4">
                 <div className="grid grid-cols-2 gap-4 text-sm">
@@ -541,19 +542,25 @@ export const Costs = ({ user, onBack, addToast }: {
                 </div>
                 <div className="flex gap-3 pt-4 border-t border-gray-100">
                   {selectedCost.status !== 'Đã duyệt' && selectedCost.status !== 'Từ chối' && selectedCost.status !== 'Đã hoàn thành' && (
-                    <button
+                    <Button
+                      variant="outline"
+                      fullWidth
+                      icon={Edit}
                       onClick={() => handleEdit(selectedCost)}
-                      className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl bg-blue-50 text-blue-600 font-bold hover:bg-blue-100 transition-colors"
+                      className="text-blue-600 border-blue-100 bg-blue-50 hover:bg-blue-100"
                     >
-                      <Edit size={18} /> Sửa
-                    </button>
+                      Sửa
+                    </Button>
                   )}
-                  <button
+                  <Button
+                    variant="outline"
+                    fullWidth
+                    icon={Trash2}
                     onClick={() => { setShowDetailModal(false); handleDeleteClick(selectedCost.id); }}
-                    className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl bg-red-50 text-red-600 font-bold hover:bg-red-100 transition-colors"
+                    className="text-red-600 border-red-100 bg-red-50 hover:bg-red-100"
                   >
-                    <Trash2 size={18} /> Chuyển vào thùng rác
-                  </button>
+                    Chuyển vào thùng rác
+                  </Button>
                 </div>
               </div>
             </motion.div>
@@ -576,18 +583,8 @@ export const Costs = ({ user, onBack, addToast }: {
               <h3 className="text-lg font-bold text-gray-800 mb-2">Chuyển vào thùng rác?</h3>
               <p className="text-sm text-gray-500 mb-6">Bạn có chắc chắn muốn chuyển bản ghi này vào thùng rác?</p>
               <div className="flex gap-3">
-                <button
-                  onClick={() => setShowDeleteModal(false)}
-                  className="flex-1 px-4 py-2 rounded-xl border border-gray-200 text-sm font-bold text-gray-500 hover:bg-gray-50 transition-colors"
-                >
-                  Hủy bỏ
-                </button>
-                  <button
-                    onClick={confirmDelete}
-                    className="flex-1 px-4 py-2 rounded-xl bg-red-600 text-white text-sm font-bold hover:bg-red-700 transition-colors"
-                  >
-                    Di chuyển
-                  </button>
+                <Button variant="outline" fullWidth onClick={() => setShowDeleteModal(false)}>Hủy bỏ</Button>
+                <Button variant="danger" fullWidth onClick={confirmDelete}>Di chuyển</Button>
               </div>
             </motion.div>
           </div>
@@ -611,7 +608,7 @@ export const Costs = ({ user, onBack, addToast }: {
                     <p className="text-xs text-white/70">Vui lòng điền đầy đủ thông tin chi phí</p>
                   </div>
                 </div>
-                <button onClick={() => setShowModal(false)} className="p-2 hover:bg-white/10 rounded-full transition-colors"><X size={20} /></button>
+                <Button variant="ghost" icon={X} className="text-white hover:bg-white/10" onClick={() => setShowModal(false)} />
               </div>
 
               <div className="flex-1 overflow-y-auto p-6 custom-scrollbar">
@@ -731,14 +728,15 @@ export const Costs = ({ user, onBack, addToast }: {
                   </div>
 
                   <div className="mt-8 flex justify-end gap-3">
-                    <button type="button" onClick={() => setShowModal(false)} className="px-8 py-2.5 rounded-xl text-sm font-bold text-gray-500 hover:bg-gray-100 transition-colors">Hủy</button>
-                    <button
-                      type="submit"
-                      disabled={submitting}
-                      className="px-8 py-2.5 rounded-xl text-sm font-bold bg-primary text-white hover:bg-primary-hover transition-colors shadow-lg shadow-primary/20 disabled:opacity-50"
+                    <Button variant="outline" onClick={() => setShowModal(false)} disabled={submitting}>Hủy</Button>
+                    <Button 
+                      type="submit" 
+                      variant="primary" 
+                      isLoading={submitting}
+                      className="min-w-[120px]"
                     >
-                      {submitting ? 'Đang lưu...' : 'Lưu chi phí'}
-                    </button>
+                      Lưu chi phí
+                    </Button>
                   </div>
                 </form>
               </div>

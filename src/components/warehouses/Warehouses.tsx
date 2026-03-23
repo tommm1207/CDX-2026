@@ -5,6 +5,7 @@ import { supabase } from '../../supabaseClient';
 import { Employee } from '../../types';
 import { PageBreadcrumb } from '../shared/PageBreadcrumb';
 import { ToastType } from '../shared/Toast';
+import { Button } from '../shared/Button';
 
 export const Warehouses = ({ user, onBack, addToast }: { 
   user: Employee, 
@@ -183,17 +184,18 @@ export const Warehouses = ({ user, onBack, addToast }: {
           </h2>
           <p className="text-xs text-gray-500 mt-1">Quản lý hệ thống bãi đúc và kho bãi công trình</p>
         </div>
-        <button
+        <Button
+          variant="primary"
+          icon={Plus}
           onClick={async () => {
             const nextCode = await generateNextWarehouseCode();
             setFormData({ ...initialFormState, code: nextCode });
             setIsEditing(false);
             setShowModal(true);
           }}
-          className="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-xl text-sm font-bold hover:bg-primary-hover transition-colors shadow-lg shadow-primary/20"
         >
-          <Plus size={18} /> Thêm mới
-        </button>
+          Thêm mới
+        </Button>
       </div>
 
       <div className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-4">
@@ -307,8 +309,8 @@ export const Warehouses = ({ user, onBack, addToast }: {
               <h3 className="text-lg font-bold text-gray-800 mb-2">Chuyển vào thùng rác?</h3>
               <p className="text-sm text-gray-500 mb-6">Bạn có chắc chắn muốn chuyển kho <strong>{warehouses.find(w => w.id === itemToDelete)?.code || itemToDelete?.slice(0, 8)}</strong> vào thùng rác?</p>
               <div className="flex gap-3">
-                <button onClick={() => setShowDeleteModal(false)} className="flex-1 px-4 py-2 rounded-xl border border-gray-200 text-sm font-bold text-gray-500 hover:bg-gray-50 transition-colors">Hủy bỏ</button>
-                <button onClick={confirmDelete} className="flex-1 px-4 py-2 rounded-xl bg-red-600 text-white text-sm font-bold hover:bg-red-700 transition-colors">Di chuyển</button>
+                <Button variant="outline" fullWidth onClick={() => setShowDeleteModal(false)}>Hủy bỏ</Button>
+                <Button variant="danger" fullWidth onClick={confirmDelete}>Di chuyển</Button>
               </div>
             </motion.div>
           </div>
@@ -332,7 +334,7 @@ export const Warehouses = ({ user, onBack, addToast }: {
                     <p className="text-xs text-white/70">Vui lòng điền đầy đủ thông tin chi tiết</p>
                   </div>
                 </div>
-                <button onClick={() => setShowModal(false)} className="p-2 hover:bg-white/10 rounded-full transition-colors"><X size={20} /></button>
+                <Button variant="ghost" icon={X} className="text-white hover:bg-white/10" onClick={() => setShowModal(false)} />
               </div>
 
               <div className="flex-1 overflow-y-auto custom-scrollbar">
@@ -423,14 +425,14 @@ export const Warehouses = ({ user, onBack, addToast }: {
                   </div>
 
                   <div className="mt-8 flex justify-end gap-3 flex-shrink-0">
-                    <button type="button" onClick={() => setShowModal(false)} className="px-8 py-2.5 rounded-xl text-sm font-bold text-gray-500 hover:bg-gray-100 transition-colors">Hủy</button>
-                    <button
+                    <Button variant="outline" onClick={() => setShowModal(false)}>Hủy</Button>
+                    <Button
                       type="submit"
-                      disabled={submitting}
-                      className="px-8 py-2.5 rounded-xl text-sm font-bold bg-primary text-white hover:bg-primary-hover transition-colors shadow-lg shadow-primary/20 disabled:opacity-50"
+                      isLoading={submitting}
+                      className="min-w-[140px]"
                     >
-                      {submitting ? 'Đang lưu...' : 'Lưu dữ liệu'}
-                    </button>
+                      Lưu dữ liệu
+                    </Button>
                   </div>
                 </form>
               </div>

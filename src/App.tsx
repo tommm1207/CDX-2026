@@ -258,7 +258,6 @@ export default function App() {
         { id: 'warehouses', label: 'Danh sách kho', icon: Warehouse },
         { id: 'material-groups', label: 'Nhóm vật tư', icon: Layers },
         { id: 'materials', label: 'Danh mục vật tư', icon: Package },
-        { id: 'trash', label: 'Thùng rác', icon: Trash2 },
       ]
     },
     {

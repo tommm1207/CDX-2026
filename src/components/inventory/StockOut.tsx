@@ -12,6 +12,7 @@ import { QuickAddMaterialModal } from '../shared/QuickAddMaterialModal';
 import { useInventoryData } from '../../hooks/useInventoryData';
 import { formatDate, formatCurrency, formatNumber } from '../../utils/format';
 import { isUUID, generateCode, getAllowedWarehouses } from '../../utils/helpers';
+import { Button } from '../shared/Button';
 import { getAvailableStock } from '../../utils/inventory';
 
 export const StockOut = ({ user, onBack, addToast }: { 
@@ -317,7 +318,9 @@ export const StockOut = ({ user, onBack, addToast }: {
           </h2>
           <p className="text-xs text-gray-500 mt-1">Quản lý phiếu xuất vật tư khỏi kho</p>
         </div>
-        <button
+        <Button
+          variant="danger"
+          icon={Plus}
           onClick={() => {
             setFormData({
               ...initialFormState,
@@ -327,10 +330,9 @@ export const StockOut = ({ user, onBack, addToast }: {
             setEditingId(null);
             setShowModal(true);
           }}
-          className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-xl text-sm font-bold hover:bg-red-700 transition-colors shadow-lg shadow-red-600/20"
         >
-          <Plus size={18} /> Lập phiếu xuất
-        </button>
+          Lập phiếu xuất
+        </Button>
       </div>
 
       <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
@@ -395,7 +397,7 @@ export const StockOut = ({ user, onBack, addToast }: {
                   <h3 className="font-bold text-lg">Chi tiết phiếu xuất</h3>
                   <p className="text-xs opacity-80 font-medium">{selectedSlip.export_code}</p>
                 </div>
-                <button onClick={() => setShowDetailModal(false)} className="p-2 hover:bg-white/10 rounded-full transition-colors"><X size={20} /></button>
+                <Button variant="ghost" icon={X} className="text-white hover:bg-white/10" onClick={() => setShowDetailModal(false)} />
               </div>
               <div className="p-6 space-y-4 max-h-[70vh] overflow-y-auto">
                   <div>
@@ -440,42 +442,48 @@ export const StockOut = ({ user, onBack, addToast }: {
                 <div className="flex gap-3 pt-4 border-t border-gray-100">
                   {selectedSlip.status !== 'Đã xóa' && (
                     <>
-                      <button
+                      <Button
+                        variant="outline"
+                        fullWidth
+                        icon={Trash2}
                         onClick={handleDelete}
-                        className="flex-1 flex items-center justify-center gap-2 py-2 bg-red-50 text-red-600 rounded-xl text-sm font-bold hover:bg-red-100 transition-colors"
+                        className="text-red-600 bg-red-50 border-red-100"
                       >
-                        <Trash2 size={18} /> Chuyển vào thùng rác
-                      </button>
-                      <button
+                        Chuyển vào thùng rác
+                      </Button>
+                      <Button
+                        variant="outline"
+                        fullWidth
+                        icon={Edit}
                         onClick={handleEdit}
-                        className="flex-1 flex items-center justify-center gap-2 py-2 bg-blue-50 text-blue-600 rounded-xl text-sm font-bold hover:bg-blue-100 transition-colors"
+                        className="text-blue-600 bg-blue-50 border-blue-100"
                       >
-                        <Edit size={18} /> Chỉnh sửa
-                      </button>
+                        Sửa
+                      </Button>
                       {((user.role === 'Admin' || user.role === 'Admin App') && selectedSlip.status === 'Chờ duyệt') && (
                         <>
-                          <button
+                          <Button
+                            variant="danger"
                             onClick={() => handleApprove(selectedSlip.id, 'Từ chối')}
-                            className="flex-1 py-2 bg-red-100 text-red-600 rounded-xl text-sm font-bold hover:bg-red-200 transition-colors"
                           >
                             Từ chối
-                          </button>
-                          <button
+                          </Button>
+                          <Button
+                            variant="success"
                             onClick={() => handleApprove(selectedSlip.id, 'Đã duyệt')}
-                            className="flex-1 py-2 bg-green-600 text-white rounded-xl text-sm font-bold hover:bg-green-700 transition-colors"
                           >
-                            Duyệt phiếu
-                          </button>
+                            Duyệt
+                          </Button>
                         </>
                       )}
                     </>
                   )}
-                  <button
+                  <Button
+                    variant="outline"
                     onClick={() => setShowDetailModal(false)}
-                    className="flex-1 py-2 bg-gray-100 text-gray-500 rounded-xl text-sm font-bold hover:bg-gray-200 transition-colors"
                   >
                     Đóng
-                  </button>
+                  </Button>
                 </div>
               </div>
             </motion.div>
@@ -497,7 +505,7 @@ export const StockOut = ({ user, onBack, addToast }: {
                   <div className="p-2 bg-white/20 rounded-xl"><ArrowUpCircle size={24} /></div>
                   <h3 className="font-bold text-lg">{isEditing ? 'Sửa phiếu xuất kho' : 'Lập phiếu xuất kho'}</h3>
                 </div>
-                <button onClick={() => setShowModal(false)} className="p-2 hover:bg-white/10 rounded-full transition-colors"><X size={20} /></button>
+                <Button variant="ghost" icon={X} className="text-white hover:bg-white/10" onClick={() => setShowModal(false)} />
               </div>
 
               <div className="flex-1 overflow-y-auto p-6 custom-scrollbar">
@@ -595,15 +603,17 @@ export const StockOut = ({ user, onBack, addToast }: {
                   </div>
 
                   <div className="md:col-span-2 flex justify-end gap-3 mt-4">
-                    <button type="button" onClick={() => setShowModal(false)} className="px-6 py-2 rounded-xl text-sm font-bold text-gray-500 hover:bg-gray-100 transition-colors">Hủy</button>
-                    <button
+                    <Button variant="outline" onClick={() => setShowModal(false)}>Hủy</Button>
+                    <Button
                       type="submit"
-                      disabled={submitting || (availableStock !== null && Number(formData.quantity) > availableStock)}
+                      variant="danger"
+                      isLoading={submitting}
+                      disabled={availableStock !== null && Number(formData.quantity) > availableStock}
                       title={availableStock !== null && Number(formData.quantity) > availableStock ? `Không đủ tồn kho (tồn: ${availableStock})` : undefined}
-                      className="px-8 py-2 rounded-xl bg-red-600 text-white text-sm font-bold hover:bg-red-700 transition-colors shadow-lg shadow-red-600/20 disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="min-w-[120px]"
                     >
-                      {submitting ? 'Đang lưu...' : (isEditing ? 'Cập nhật' : 'Lưu phiếu xuất')}
-                    </button>
+                      {isEditing ? 'Cập nhật' : 'Lưu phiếu xuất'}
+                    </Button>
                   </div>
                 </form>
               </div>

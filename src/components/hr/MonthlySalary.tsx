@@ -8,6 +8,7 @@ import { PageBreadcrumb } from '../shared/PageBreadcrumb';
 import { ToastType } from '../shared/Toast';
 import { formatCurrency, formatDate } from '../../utils/format';
 import { MonthYearPicker } from '../shared/MonthYearPicker';
+import { Button } from '../shared/Button';
 
 export const MonthlySalary = ({ user, onBack, addToast }: { 
   user: Employee, 
@@ -148,13 +149,14 @@ export const MonthlySalary = ({ user, onBack, addToast }: {
             onMonthChange={setSelectedMonth}
             onYearChange={setSelectedYear}
           />
-          <button
+          <Button
             onClick={handleExportExcel}
             disabled={salaries.length === 0}
-            className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-xl text-sm font-bold hover:bg-green-700 transition-colors shadow-lg shadow-green-600/20 disabled:opacity-50 disabled:cursor-not-allowed"
+            variant="success"
+            icon={Download}
           >
-            <Download size={18} /> <span className="hidden md:inline">Xuất Excel</span>
-          </button>
+            <span className="hidden md:inline">Xuất Excel</span>
+          </Button>
         </div>
       </div>
 
@@ -237,7 +239,12 @@ export const MonthlySalary = ({ user, onBack, addToast }: {
                   <h3 className="text-lg font-bold text-gray-800">Chi tiết lương cá nhân</h3>
                   <p className="text-xs text-gray-500">Tháng {selectedMonth} năm {selectedYear}</p>
                 </div>
-                <button onClick={() => setShowDetailModal(false)} className="p-2 hover:bg-gray-100 rounded-full transition-colors"><X size={20} /></button>
+                <Button 
+                  variant="ghost" 
+                  size="icon" 
+                  onClick={() => setShowDetailModal(false)}
+                  icon={X} 
+                />
               </div>
 
               <div className="p-8 space-y-8">
@@ -301,12 +308,21 @@ export const MonthlySalary = ({ user, onBack, addToast }: {
                 </div>
 
                 <div className="flex gap-3">
-                  <button onClick={() => window.print()} className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl bg-gray-100 text-gray-600 font-bold hover:bg-gray-200 transition-colors">
-                    <Printer size={18} /> In bảng lương
-                  </button>
-                  <button onClick={() => setShowDetailModal(false)} className="flex-1 py-3 rounded-xl bg-primary text-white font-bold shadow-lg shadow-primary/20">
+                  <Button 
+                    variant="outline" 
+                    fullWidth 
+                    icon={Printer} 
+                    onClick={() => window.print()}
+                  >
+                    In bảng lương
+                  </Button>
+                  <Button 
+                    variant="primary" 
+                    fullWidth 
+                    onClick={() => setShowDetailModal(false)}
+                  >
                     Đóng
-                  </button>
+                  </Button>
                 </div>
               </div>
             </motion.div>

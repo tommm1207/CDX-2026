@@ -1,5 +1,5 @@
 import { useState, useEffect, FormEvent, ChangeEvent } from 'react';
-import { Package, Plus, Search, Edit, Trash2, X, Image as ImageIcon } from 'lucide-react';
+import { Package, Plus, Search, Edit, Trash2, X, Image as ImageIcon, RefreshCw } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { supabase } from '../../supabaseClient';
 import { Employee } from '../../types';
@@ -7,6 +7,7 @@ import { PageBreadcrumb } from '../shared/PageBreadcrumb';
 import { isActiveWarehouse } from '../../utils/inventory';
 import { CreatableSelect } from '../shared/CreatableSelect';
 import { ToastType } from '../shared/Toast';
+import { Button } from '../shared/Button';
 
 export const MaterialCatalog = ({ user, onBack, onNavigate, addToast }: { 
   user: Employee, 
@@ -227,16 +228,17 @@ export const MaterialCatalog = ({ user, onBack, onNavigate, addToast }: {
           </h2>
           <p className="text-xs text-gray-500 mt-1">Quản lý toàn bộ danh sách vật tư, thiết bị trong hệ thống</p>
         </div>
-        <button
+        <Button
+          variant="primary"
+          icon={Plus}
           onClick={async () => {
             setFormData({ ...initialFormState });
             setIsEditing(false);
             setShowModal(true);
           }}
-          className="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-xl text-sm font-bold hover:bg-primary-hover transition-colors shadow-lg shadow-primary/20"
         >
-          <Plus size={18} /> Thêm mới
-        </button>
+          Thêm mới
+        </Button>
       </div>
 
       <div className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
@@ -265,12 +267,15 @@ export const MaterialCatalog = ({ user, onBack, onNavigate, addToast }: {
           </div>
         </div>
         <div className="flex items-end">
-          <button
+          <Button
+            variant="ghost"
+            icon={RefreshCw}
             onClick={fetchMaterials}
-            className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-gray-100 text-gray-600 rounded-lg text-xs font-bold hover:bg-gray-200 transition-colors"
+            fullWidth
+            className="bg-gray-100 text-gray-600 hover:bg-gray-200"
           >
             Làm mới dữ liệu
-          </button>
+          </Button>
         </div>
       </div>
 
@@ -342,8 +347,8 @@ export const MaterialCatalog = ({ user, onBack, onNavigate, addToast }: {
               <h3 className="text-lg font-bold text-gray-800 mb-2">Xác nhận xóa?</h3>
               <p className="text-sm text-gray-500 mb-6">Bạn có chắc chắn muốn xóa vật tư <strong>{materials.find(m => m.id === itemToDelete)?.code || itemToDelete?.slice(0, 8)}</strong>? Hành động này không thể hoàn tác.</p>
               <div className="flex gap-3">
-                <button onClick={() => setShowDeleteModal(false)} className="flex-1 px-4 py-2 rounded-xl border border-gray-200 text-sm font-bold text-gray-500 hover:bg-gray-50 transition-colors">Hủy bỏ</button>
-                <button onClick={confirmDelete} className="flex-1 px-4 py-2 rounded-xl bg-red-600 text-white text-sm font-bold hover:bg-red-700 transition-colors">Xóa ngay</button>
+                <Button variant="outline" fullWidth onClick={() => setShowDeleteModal(false)}>Hủy bỏ</Button>
+                <Button variant="danger" fullWidth onClick={confirmDelete}>Xóa ngay</Button>
               </div>
             </motion.div>
           </div>
@@ -367,7 +372,7 @@ export const MaterialCatalog = ({ user, onBack, onNavigate, addToast }: {
                     <p className="text-xs text-white/70">Nhập thông tin chi tiết vật tư vào hệ thống</p>
                   </div>
                 </div>
-                <button onClick={() => setShowModal(false)} className="p-2 hover:bg-white/10 rounded-full transition-colors"><X size={20} /></button>
+                <Button variant="ghost" icon={X} className="text-white hover:bg-white/10" onClick={() => setShowModal(false)} />
               </div>
 
               <div className="flex-1 overflow-y-auto custom-scrollbar">
@@ -487,14 +492,14 @@ export const MaterialCatalog = ({ user, onBack, onNavigate, addToast }: {
                   </div>
 
                   <div className="mt-8 flex justify-end gap-3 flex-shrink-0">
-                    <button type="button" onClick={() => setShowModal(false)} className="px-6 py-2 rounded-xl text-sm font-bold text-gray-500 hover:bg-gray-100 transition-colors">Hủy</button>
-                    <button
+                    <Button variant="outline" onClick={() => setShowModal(false)}>Hủy</Button>
+                    <Button
                       type="submit"
-                      disabled={submitting}
-                      className="px-6 py-2 rounded-xl text-sm font-bold bg-primary text-white hover:bg-primary-hover transition-colors shadow-lg shadow-primary/20 disabled:opacity-50"
+                      isLoading={submitting}
+                      className="min-w-[140px]"
                     >
-                      {submitting ? 'Đang lưu...' : 'Lưu dữ liệu'}
-                    </button>
+                      Lưu dữ liệu
+                    </Button>
                   </div>
                 </form>
               </div>
@@ -568,25 +573,28 @@ export const MaterialCatalog = ({ user, onBack, onNavigate, addToast }: {
               </div>
 
               <div className="p-6 bg-gray-50 border-t border-gray-100 flex items-center justify-between">
-                <button
+                <Button
+                  variant="danger"
+                  icon={Trash2}
                   onClick={() => { setShowDetailModal(false); handleDeleteClick(selectedMaterial.id); }}
-                  className="flex items-center gap-2 px-6 py-2 bg-red-500 text-white rounded-xl text-sm font-bold hover:bg-red-600 transition-colors shadow-lg shadow-red-500/20"
                 >
-                  <Trash2 size={16} /> Xóa
-                </button>
+                  Xóa
+                </Button>
                 <div className="flex gap-3">
-                  <button
+                  <Button
+                    variant="warning"
+                    icon={Edit}
                     onClick={() => { setShowDetailModal(false); handleEdit(selectedMaterial); }}
-                    className="flex items-center gap-2 px-6 py-2 bg-yellow-500 text-white rounded-xl text-sm font-bold hover:bg-yellow-600 transition-colors shadow-lg shadow-yellow-500/20"
                   >
-                    <Edit size={16} /> Sửa
-                  </button>
-                  <button
+                    Sửa
+                  </Button>
+                  <Button
+                    variant="outline"
+                    icon={X}
                     onClick={() => setShowDetailModal(false)}
-                    className="flex items-center gap-2 px-6 py-2 bg-gray-500 text-white rounded-xl text-sm font-bold hover:bg-gray-600 transition-colors shadow-lg shadow-gray-500/20"
                   >
-                    <X size={16} /> Đóng
-                  </button>
+                    Đóng
+                  </Button>
                 </div>
               </div>
             </motion.div>

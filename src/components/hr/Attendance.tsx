@@ -7,6 +7,7 @@ import { PageBreadcrumb } from '../shared/PageBreadcrumb';
 import { NumericInput } from '../shared/NumericInput';
 import { ToastType } from '../shared/Toast';
 import { MonthYearPicker } from '../shared/MonthYearPicker';
+import { Button } from '../shared/Button';
 
 import { AttendanceTable } from './AttendanceTable';
 
@@ -277,12 +278,13 @@ export const Attendance = ({ user, onBack, addToast }: {
         </div>
         <div className="flex items-center gap-2">
           {user.role !== 'User' && (
-            <button 
+            <Button
+              variant="secondary"
+              icon={Users}
               onClick={openBulkModal}
-              className="flex items-center gap-2 px-4 py-2 bg-primary/10 text-primary rounded-xl text-sm font-bold hover:bg-primary/20 transition-all border border-primary/20"
             >
-              <Users size={18} /> Chấm công hàng loạt
-            </button>
+              Chấm công hàng loạt
+            </Button>
           )}
           <MonthYearPicker
             selectedMonth={selectedMonth}
@@ -317,7 +319,7 @@ export const Attendance = ({ user, onBack, addToast }: {
             >
               <div className="flex items-center justify-between mb-4">
                 <h3 className="font-bold text-gray-800">Chi tiết ngày {editingAtt.day}</h3>
-                <button onClick={() => setShowEditModal(false)} className="p-1 hover:bg-gray-100 rounded-full"><X size={18} /></button>
+                <Button variant="ghost" size="icon" icon={X} onClick={() => setShowEditModal(false)} />
               </div>
               <div className="space-y-4">
                 <div>
@@ -342,8 +344,8 @@ export const Attendance = ({ user, onBack, addToast }: {
                   isDecimal={true}
                 />
                 <div className="flex gap-3 pt-2">
-                  <button onClick={() => setShowEditModal(false)} className="flex-1 py-2 rounded-xl border border-gray-200 text-sm font-bold text-gray-500">Hủy</button>
-                  <button onClick={saveEdit} className="flex-1 py-2 rounded-xl bg-primary text-white text-sm font-bold shadow-lg shadow-primary/20">Lưu</button>
+                  <Button variant="outline" fullWidth onClick={() => setShowEditModal(false)}>Hủy</Button>
+                  <Button variant="primary" fullWidth onClick={saveEdit}>Lưu</Button>
                 </div>
               </div>
             </motion.div>
@@ -365,7 +367,7 @@ export const Attendance = ({ user, onBack, addToast }: {
                   <div className="p-2 bg-white/20 rounded-xl"><Users size={20} /></div>
                   <h3 className="font-bold text-lg">Chấm công hàng loạt</h3>
                 </div>
-                <button onClick={() => setShowBulkModal(false)} className="p-2 hover:bg-white/10 rounded-full transition-colors"><X size={20} /></button>
+                <Button variant="ghost" icon={X} className="text-white hover:bg-white/10" onClick={() => setShowBulkModal(false)} />
               </div>
 
               <div className="p-6 md:p-8 overflow-y-auto space-y-8 custom-scrollbar">
@@ -405,13 +407,14 @@ export const Attendance = ({ user, onBack, addToast }: {
                         isDecimal={true}
                         className="flex-1"
                       />
-                      <button 
+                      <Button 
                         onClick={applyGlobalToSelection}
-                        className="px-4 py-2.5 bg-primary text-white rounded-xl text-[10px] font-bold hover:bg-primary-hover transition-all whitespace-nowrap"
+                        variant="primary"
+                        size="sm"
                         title="Áp dụng cho những người đã chọn"
                       >
                         Áp dụng
-                      </button>
+                      </Button>
                     </div>
                   </div>
 
@@ -514,20 +517,22 @@ export const Attendance = ({ user, onBack, addToast }: {
                   )}
                 </div>
                 <div className="flex gap-3">
-                  <button 
+                  <Button 
+                    variant="outline" 
                     onClick={() => setShowBulkModal(false)} 
                     disabled={bulkLoading}
-                    className="px-6 py-2.5 border border-gray-200 text-sm font-bold text-gray-500 rounded-xl hover:bg-white transition-all disabled:opacity-50"
                   >
                     Hủy
-                  </button>
-                  <button 
+                  </Button>
+                  <Button 
+                    variant="primary" 
                     onClick={handleStartSaveBulk} 
-                    className="px-8 py-2.5 bg-primary text-white rounded-xl font-black text-sm shadow-xl shadow-primary/20 hover:bg-primary-hover transition-all active:scale-95 disabled:opacity-50 min-w-[140px]" 
-                    disabled={selectedEmployees.length === 0 || bulkLoading}
+                    isLoading={bulkLoading}
+                    disabled={selectedEmployees.length === 0}
+                    className="min-w-[140px]"
                   >
-                    {bulkLoading ? 'Đang xử lý...' : 'Lưu dữ liệu'}
-                  </button>
+                    Lưu dữ liệu
+                  </Button>
                 </div>
               </div>
             </motion.div>
@@ -555,18 +560,20 @@ export const Attendance = ({ user, onBack, addToast }: {
                   ngày <span className="font-bold text-gray-700">{new Date(bulkFormData.date).toLocaleDateString('vi-VN')}</span>?
                 </p>
                 <div className="flex gap-3 w-full pt-4">
-                  <button 
-                    onClick={() => setShowConfirmBulk(false)} 
-                    className="flex-1 py-3 rounded-2xl border border-gray-100 text-sm font-bold text-gray-400 hover:bg-gray-50 transition-colors"
+                  <Button 
+                    variant="outline" 
+                    fullWidth 
+                    onClick={() => setShowConfirmBulk(false)}
                   >
                     Hủy
-                  </button>
-                  <button 
-                    onClick={confirmAndSaveBulk} 
-                    className="flex-1 py-3 rounded-2xl bg-primary text-white text-sm font-bold shadow-xl shadow-primary/20 hover:bg-primary-hover transition-all active:scale-95"
+                  </Button>
+                  <Button 
+                    variant="primary" 
+                    fullWidth 
+                    onClick={confirmAndSaveBulk}
                   >
                     Xác nhận
-                  </button>
+                  </Button>
                 </div>
               </div>
             </motion.div>

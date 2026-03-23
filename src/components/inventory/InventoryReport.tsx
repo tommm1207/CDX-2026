@@ -9,6 +9,7 @@ import { ToastType } from '../shared/Toast';
 import { formatNumber } from '../../utils/format';
 import { getTonKhoTable, TonKhoRow } from '../../utils/inventory';
 import { getAllowedWarehouses } from '../../utils/helpers';
+import { Button } from '../shared/Button';
 
 interface ReportRow extends TonKhoRow {
   materialName: string;
@@ -173,18 +174,21 @@ export const InventoryReport = ({ user, onBack, addToast }: {
           </p>
         </div>
         <div className="flex items-center gap-3">
-          <button
+          <Button
+            variant="primary"
+            icon={RefreshCw}
             onClick={fetchReport}
-            className="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-xl text-sm font-bold hover:bg-primary-hover transition-all shadow-lg shadow-primary/20"
           >
-            <RefreshCw size={16} /> Làm mới
-          </button>
-          <button
+            Làm mới
+          </Button>
+          <Button
+            variant="outline"
+            icon={Download}
             onClick={handleExportExcel}
-            className="flex items-center gap-2 px-4 py-2 border-2 border-primary text-primary bg-white rounded-xl text-sm font-bold hover:bg-primary/5 transition-all shadow-sm"
+            className="text-primary border-primary hover:bg-primary/5"
           >
-            <Download size={16} /> Xuất Excel
-          </button>
+            Xuất Excel
+          </Button>
         </div>
       </div>
 

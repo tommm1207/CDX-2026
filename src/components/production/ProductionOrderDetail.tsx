@@ -8,6 +8,7 @@ import { ToastType } from '../shared/Toast';
 import { CustomCombobox } from '../shared/CustomCombobox';
 import { formatNumber } from '../../utils/format';
 import { getAvailableStock, isActiveWarehouse } from '../../utils/inventory';
+import { getAllowedWarehouses } from '../../utils/helpers';
 
 export const ProductionOrderDetail = ({ user, orderId, onBack, addToast }: {
   user: Employee,
@@ -46,7 +47,12 @@ export const ProductionOrderDetail = ({ user, orderId, onBack, addToast }: {
       if (matRes.data) setMaterials(matRes.data);
       if (bomRes.data) setBoms(bomRes.data);
       if (whRes.data) {
-        setWarehouses(whRes.data.filter(isActiveWarehouse));
+        let whs = whRes.data.filter(isActiveWarehouse);
+        const allowedWhIds = getAllowedWarehouses(user.data_view_permission);
+        if (allowedWhIds) {
+          whs = whs.filter(w => allowedWhIds.includes(w.id));
+        }
+        setWarehouses(whs);
       }
 
       if (orderId) {
@@ -57,6 +63,13 @@ export const ProductionOrderDetail = ({ user, orderId, onBack, addToast }: {
           .single();
         
         if (orderData) {
+          // Check permission for existing order
+          const allowedWhIds = getAllowedWarehouses(user.data_view_permission);
+          if (allowedWhIds && !allowedWhIds.includes(orderData.warehouse_id)) {
+            if (addToast) addToast('Bạn không có quyền xem lệnh sản xuất của kho này.', 'error');
+            onBack();
+            return;
+          }
           setOrder(orderData);
           if (orderData.bom_id) {
             await fetchBomItems(orderData.bom_id, orderData.quantity, orderData.warehouse_id);

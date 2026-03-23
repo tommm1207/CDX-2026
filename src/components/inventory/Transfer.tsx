@@ -11,7 +11,7 @@ import { ConfirmModal } from '../shared/ConfirmModal';
 import { QuickAddMaterialModal } from '../shared/QuickAddMaterialModal';
 import { useInventoryData } from '../../hooks/useInventoryData';
 import { formatDate, formatNumber } from '../../utils/format';
-import { isUUID, generateCode } from '../../utils/helpers';
+import { isUUID, generateCode, getAllowedWarehouses } from '../../utils/helpers';
 import { getAvailableStock } from '../../utils/inventory';
 
 export const Transfer = ({ user, onBack, addToast }: { 
@@ -32,7 +32,7 @@ export const Transfer = ({ user, onBack, addToast }: {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showAddMaterial, setShowAddMaterial] = useState(false);
 
-  const { warehouses, materials, groups, refreshAll, fetchWarehouses } = useInventoryData();
+  const { warehouses, materials, groups, refreshAll, fetchWarehouses } = useInventoryData(user.data_view_permission);
 
 
   const initialFormState = {
@@ -80,7 +80,15 @@ export const Transfer = ({ user, onBack, addToast }: {
   const fetchSlips = async () => {
     setLoading(true);
     try {
-      const { data, error } = await supabase.from('transfers').select('*, from_wh:warehouses!from_warehouse_id(name, code), to_wh:warehouses!to_warehouse_id(name, code), materials(name, code, unit)').order('created_at', { ascending: false });
+      let query = supabase.from('transfers').select('*, from_wh:warehouses!from_warehouse_id(name, code), to_wh:warehouses!to_warehouse_id(name, code), materials(name, code, unit)');
+      
+      const allowedWhIds = getAllowedWarehouses(user.data_view_permission);
+      if (allowedWhIds) {
+        // Nếu giới hạn kho, hiển thị các phiếu mà kho nguồn HOẶC kho đích nằm trong danh sách cho phép
+        query = query.or(`from_warehouse_id.in.(${allowedWhIds.join(',')}),to_warehouse_id.in.(${allowedWhIds.join(',')})`);
+      }
+
+      const { data, error } = await query.order('created_at', { ascending: false });
       if (error) {
         console.error('Error fetching transfers:', error);
         const { data: fallbackData, error: fallbackError } = await supabase.from('transfers').select('*').order('created_at', { ascending: false });

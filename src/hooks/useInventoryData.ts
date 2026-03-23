@@ -1,8 +1,9 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../supabaseClient';
 import { isActiveWarehouse } from '../utils/inventory';
+import { getAllowedWarehouses } from '../utils/helpers';
 
-export const useInventoryData = () => {
+export const useInventoryData = (dataViewPermission?: string) => {
   const [warehouses, setWarehouses] = useState<any[]>([]);
   const [materials, setMaterials] = useState<any[]>([]);
   const [groups, setGroups] = useState<any[]>([]);
@@ -10,7 +11,14 @@ export const useInventoryData = () => {
 
   const fetchWarehouses = useCallback(async () => {
     try {
-      const { data, error } = await supabase.from('warehouses').select('*').or('status.is.null,status.neq.Đã xóa').order('name');
+      let query = supabase.from('warehouses').select('*').or('status.is.null,status.neq.Đã xóa');
+      
+      const allowedWhIds = getAllowedWarehouses(dataViewPermission);
+      if (allowedWhIds) {
+        query = query.in('id', allowedWhIds);
+      }
+      
+      const { data, error } = await query.order('name');
       if (error) throw error;
       if (data) {
         setWarehouses(data.filter(isActiveWarehouse));
@@ -18,7 +26,7 @@ export const useInventoryData = () => {
     } catch (err) {
       console.error('Error fetching warehouses:', err);
     }
-  }, []);
+  }, [dataViewPermission]);
 
   const fetchMaterials = useCallback(async () => {
     try {

@@ -11,7 +11,7 @@ import { ConfirmModal } from '../shared/ConfirmModal';
 import { QuickAddMaterialModal } from '../shared/QuickAddMaterialModal';
 import { useInventoryData } from '../../hooks/useInventoryData';
 import { formatDate, formatCurrency, formatNumber, numberToWords } from '../../utils/format';
-import { isUUID } from '../../utils/helpers';
+import { isUUID, getAllowedWarehouses } from '../../utils/helpers';
 
 export const StockIn = ({ user, onBack, initialStatus, addToast }: { 
   user: Employee, 
@@ -32,7 +32,7 @@ export const StockIn = ({ user, onBack, initialStatus, addToast }: {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showAddMaterial, setShowAddMaterial] = useState(false);
 
-  const { warehouses, materials, groups, refreshAll, fetchWarehouses } = useInventoryData();
+  const { warehouses, materials, groups, refreshAll, fetchWarehouses } = useInventoryData(user.data_view_permission);
 
   const initialFormState = {
     date: new Date().toISOString().split('T')[0],
@@ -59,6 +59,11 @@ export const StockIn = ({ user, onBack, initialStatus, addToast }: {
 
       if (statusFilter !== 'Tất cả') {
         query = query.eq('status', statusFilter);
+      }
+
+      const allowedWhIds = getAllowedWarehouses(user.data_view_permission);
+      if (allowedWhIds) {
+        query = query.in('warehouse_id', allowedWhIds);
       }
 
       const { data, error } = await query;

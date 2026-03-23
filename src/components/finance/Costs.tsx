@@ -9,7 +9,7 @@ import { NumericInput } from '../shared/NumericInput';
 import { CreatableSelect } from '../shared/CreatableSelect';
 import { ToastType } from '../shared/Toast';
 import { formatCurrency, formatNumber, formatDate } from '../../utils/format';
-import { isUUID } from '../../utils/helpers';
+import { isUUID, getAllowedWarehouses } from '../../utils/helpers';
 import { isActiveWarehouse } from '../../utils/inventory';
 
 export const Costs = ({ user, onBack, addToast }: { 
@@ -70,11 +70,17 @@ export const Costs = ({ user, onBack, addToast }: {
   const fetchCosts = async () => {
     setLoading(true);
     try {
-      const { data, error } = await supabase
+      let query = supabase
         .from('costs')
         .select('*, users(full_name), warehouses(name), materials(name)')
-        .or('status.is.null,status.neq.Đã xóa')
-        .order('date', { ascending: false });
+        .or('status.is.null,status.neq.Đã xóa');
+
+      const allowedWhIds = getAllowedWarehouses(user.data_view_permission);
+      if (allowedWhIds) {
+        query = query.in('warehouse_id', allowedWhIds);
+      }
+
+      const { data, error } = await query.order('date', { ascending: false });
 
       if (error) {
         console.error('Error fetching costs:', error);
@@ -98,7 +104,14 @@ export const Costs = ({ user, onBack, addToast }: {
   };
 
   const fetchWarehouses = async () => {
-    const { data } = await supabase.from('warehouses').select('id, name, status').or('status.is.null,status.neq.Đã xóa');
+    let query = supabase.from('warehouses').select('id, name, status').or('status.is.null,status.neq.Đã xóa');
+    
+    const allowedWhIds = getAllowedWarehouses(user.data_view_permission);
+    if (allowedWhIds) {
+      query = query.in('id', allowedWhIds);
+    }
+
+    const { data } = await query;
     if (data) {
       setWarehouses(data.filter(isActiveWarehouse));
     }

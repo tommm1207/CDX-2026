@@ -8,6 +8,7 @@ import { isActiveWarehouse } from '../../utils/inventory';
 import { ToastType } from '../shared/Toast';
 import { formatNumber } from '../../utils/format';
 import { getTonKhoTable, TonKhoRow } from '../../utils/inventory';
+import { getAllowedWarehouses } from '../../utils/helpers';
 
 interface ReportRow extends TonKhoRow {
   materialName: string;
@@ -41,11 +42,16 @@ export const InventoryReport = ({ user, onBack, addToast }: {
       supabase.from('materials').select('*, material_groups(name)').order('name'),
     ]).then(([whRes, matRes]) => {
       if (whRes.data) {
-        setWarehouses(whRes.data.filter(isActiveWarehouse));
+        let whs = whRes.data.filter(isActiveWarehouse);
+        const allowedWhIds = getAllowedWarehouses(user.data_view_permission);
+        if (allowedWhIds) {
+          whs = whs.filter(w => allowedWhIds.includes(w.id));
+        }
+        setWarehouses(whs);
       }
       if (matRes.data) setMaterials(matRes.data);
     });
-  }, []);
+  }, [user.data_view_permission]);
 
   useEffect(() => {
     if (materials.length > 0 && warehouses.length > 0) {
@@ -56,7 +62,9 @@ export const InventoryReport = ({ user, onBack, addToast }: {
   const fetchReport = async () => {
     setLoading(true);
     try {
-      const rows = await getTonKhoTable(startDate, endDate, selectedWarehouse || undefined);
+      const allowedWhIds = getAllowedWarehouses(user.data_view_permission);
+      const whParam = selectedWarehouse || (allowedWhIds || undefined);
+      const rows = await getTonKhoTable(startDate, endDate, whParam);
 
       const enriched: ReportRow[] = rows
         .map(row => {

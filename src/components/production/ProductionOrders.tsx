@@ -5,6 +5,7 @@ import { Employee, ProductionOrder, BOMConfig } from '../../types';
 import { PageBreadcrumb } from '../shared/PageBreadcrumb';
 import { ToastType } from '../shared/Toast';
 import { formatNumber } from '../../utils/format';
+import { getAllowedWarehouses } from '../../utils/helpers';
 
 export const ProductionOrders = ({ user, onBack, addToast, onOpenDetail }: {
   user: Employee,
@@ -23,14 +24,20 @@ export const ProductionOrders = ({ user, onBack, addToast, onOpenDetail }: {
   const fetchOrders = async () => {
     setLoading(true);
     try {
-      const { data, error } = await supabase
+      let query = supabase
         .from('production_orders')
         .select(`
           *,
           bom_configs(name, product_item_id, materials(name, unit)),
           warehouses!warehouse_id(name)
-        `)
-        .order('created_at', { ascending: false });
+        `);
+
+      const allowedWhIds = getAllowedWarehouses(user.data_view_permission);
+      if (allowedWhIds) {
+        query = query.in('warehouse_id', allowedWhIds);
+      }
+
+      const { data, error } = await query.order('created_at', { ascending: false });
 
       if (error) throw error;
       setOrders(data || []);

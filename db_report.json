@@ -1,0 +1,6 @@
+{
+  "negativeInventory": "PASS",
+  "missingData": "PASS",
+  "duplicateAttendance": "PASS",
+  "missingSalarySettings": "PASS"
+}

@@ -19,3 +19,12 @@ export const generateCode = (prefix) => {
   const random = Math.floor(1000 + Math.random() * 9000);
   return `${prefix}-${year}${month}${date}-${random}`;
 };
+
+export const getAllowedWarehouses = (permissionStr) => {
+  if (!permissionStr || permissionStr.trim().toUpperCase() === 'ALL' || permissionStr.trim() === '') return null;
+  if (permissionStr.startsWith('WH:')) {
+    return permissionStr.replace('WH:', '').split(',').map(id => id.trim()).filter(id => id !== '');
+  }
+  // Default for non-admin/non-ALL with invalid format: return empty (no access)
+  return [];
+};

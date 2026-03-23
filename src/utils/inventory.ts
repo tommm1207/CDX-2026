@@ -258,7 +258,7 @@ export interface TonKhoRow {
 export const getTonKhoTable = async (
   startDate: string,
   endDate: string,
-  warehouseId?: string
+  warehouseId?: string | string[]
 ): Promise<TonKhoRow[]> => {
   try {
     const priorEnd = (() => {
@@ -267,20 +267,34 @@ export const getTonKhoTable = async (
       return d.toISOString().split('T')[0];
     })();
 
-    // Fetch song song 5 queries
+    const whIds = warehouseId ? (Array.isArray(warehouseId) ? warehouseId : [warehouseId]) : null;
+
+    const buildQuery = (table: string, dateCol: string, dateOp: 'lte' | 'gte_lte', start?: string, end?: string) => {
+      let q = supabase.from(table).select(table === 'transfers' ? 'material_id, from_warehouse_id, to_warehouse_id, quantity' : 'material_id, warehouse_id, quantity').eq('status', 'Đã duyệt');
+      if (dateOp === 'lte') {
+        q = q.lte(dateCol, end!);
+      } else {
+        q = q.gte(dateCol, start!).lte(dateCol, end!);
+      }
+      
+      if (whIds) {
+        if (table === 'transfers') {
+          q = q.or(`from_warehouse_id.in.(${whIds.join(',')}),to_warehouse_id.in.(${whIds.join(',')})`);
+        } else {
+          q = q.in('warehouse_id', whIds);
+        }
+      }
+      return q;
+    };
+
+    // Fetch song song 6 queries
     const [siPrior, siCurr, soPrior, soCurr, trPrior, trCurr] = await Promise.all([
-      supabase.from('stock_in').select('material_id, warehouse_id, quantity')
-        .eq('status', 'Đã duyệt').lte('date', priorEnd),
-      supabase.from('stock_in').select('material_id, warehouse_id, quantity')
-        .eq('status', 'Đã duyệt').gte('date', startDate).lte('date', endDate),
-      supabase.from('stock_out').select('material_id, warehouse_id, quantity')
-        .eq('status', 'Đã duyệt').lte('date', priorEnd),
-      supabase.from('stock_out').select('material_id, warehouse_id, quantity')
-        .eq('status', 'Đã duyệt').gte('date', startDate).lte('date', endDate),
-      supabase.from('transfers').select('material_id, from_warehouse_id, to_warehouse_id, quantity')
-        .eq('status', 'Đã duyệt').lte('date', priorEnd),
-      supabase.from('transfers').select('material_id, from_warehouse_id, to_warehouse_id, quantity')
-        .eq('status', 'Đã duyệt').gte('date', startDate).lte('date', endDate),
+      buildQuery('stock_in', 'date', 'lte', undefined, priorEnd),
+      buildQuery('stock_in', 'date', 'gte_lte', startDate, endDate),
+      buildQuery('stock_out', 'date', 'lte', undefined, priorEnd),
+      buildQuery('stock_out', 'date', 'gte_lte', startDate, endDate),
+      buildQuery('transfers', 'date', 'lte', undefined, priorEnd),
+      buildQuery('transfers', 'date', 'gte_lte', startDate, endDate),
     ]);
 
     const rows: Record<string, TonKhoRow> = {};
@@ -295,19 +309,19 @@ export const getTonKhoTable = async (
     };
 
     // Tồn đầu kỳ = Nhập trước kỳ - Xuất trước kỳ + ChuyểnĐến trước - ChuyểnĐi trước
-    (siPrior.data || []).forEach(r => { ensure(r.material_id, r.warehouse_id).tonDau += Number(r.quantity); });
-    (soPrior.data || []).forEach(r => { ensure(r.material_id, r.warehouse_id).tonDau -= Number(r.quantity); });
-    (trPrior.data || []).forEach(r => {
+    (siPrior.data as any[] || []).forEach(r => { ensure(r.material_id, r.warehouse_id).tonDau += Number(r.quantity); });
+    (soPrior.data as any[] || []).forEach(r => { ensure(r.material_id, r.warehouse_id).tonDau -= Number(r.quantity); });
+    (trPrior.data as any[] || []).forEach(r => {
       ensure(r.material_id, r.from_warehouse_id).tonDau -= Number(r.quantity);
       ensure(r.material_id, r.to_warehouse_id).tonDau += Number(r.quantity);
     });
 
     // Nhập/xuất trong kỳ
-    (siCurr.data || []).forEach(r => { ensure(r.material_id, r.warehouse_id).tongNhap += Number(r.quantity); });
-    (soCurr.data || []).forEach(r => { ensure(r.material_id, r.warehouse_id).tongXuat += Number(r.quantity); });
+    (siCurr.data as any[] || []).forEach(r => { ensure(r.material_id, r.warehouse_id).tongNhap += Number(r.quantity); });
+    (soCurr.data as any[] || []).forEach(r => { ensure(r.material_id, r.warehouse_id).tongXuat += Number(r.quantity); });
 
     // Chuyển kho trong kỳ
-    (trCurr.data || []).forEach(r => {
+    (trCurr.data as any[] || []).forEach(r => {
       ensure(r.material_id, r.from_warehouse_id).chuyenDi += Number(r.quantity);
       ensure(r.material_id, r.to_warehouse_id).chuyenDen += Number(r.quantity);
     });

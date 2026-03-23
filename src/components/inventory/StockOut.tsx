@@ -11,7 +11,7 @@ import { ConfirmModal } from '../shared/ConfirmModal';
 import { QuickAddMaterialModal } from '../shared/QuickAddMaterialModal';
 import { useInventoryData } from '../../hooks/useInventoryData';
 import { formatDate, formatCurrency, formatNumber } from '../../utils/format';
-import { isUUID, generateCode } from '../../utils/helpers';
+import { isUUID, generateCode, getAllowedWarehouses } from '../../utils/helpers';
 import { getAvailableStock } from '../../utils/inventory';
 
 export const StockOut = ({ user, onBack, addToast }: { 
@@ -31,7 +31,7 @@ export const StockOut = ({ user, onBack, addToast }: {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showAddMaterial, setShowAddMaterial] = useState(false);
 
-  const { warehouses, materials, groups, refreshAll, fetchWarehouses } = useInventoryData();
+  const { warehouses, materials, groups, refreshAll, fetchWarehouses } = useInventoryData(user.data_view_permission);
 
   const initialFormState = {
     date: new Date().toISOString().split('T')[0],
@@ -81,7 +81,14 @@ export const StockOut = ({ user, onBack, addToast }: {
   const fetchSlips = async () => {
     setLoading(true);
     try {
-      const { data, error } = await supabase.from('stock_out').select('*, warehouses(name, code), materials(name, code, unit)').order('created_at', { ascending: false });
+      let query = supabase.from('stock_out').select('*, warehouses(name, code), materials(name, code, unit)');
+      
+      const allowedWhIds = getAllowedWarehouses(user.data_view_permission);
+      if (allowedWhIds) {
+        query = query.in('warehouse_id', allowedWhIds);
+      }
+
+      const { data, error } = await query.order('created_at', { ascending: false });
       if (error) {
         console.error('Error fetching stock_out:', error);
         const { data: fallbackData, error: fallbackError } = await supabase.from('stock_out').select('*').order('created_at', { ascending: false });

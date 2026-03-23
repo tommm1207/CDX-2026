@@ -7,9 +7,7 @@ import { Employee } from '../../types';
 import { PageBreadcrumb } from '../shared/PageBreadcrumb';
 import { ToastType } from '../shared/Toast';
 import { formatCurrency, formatDate } from '../../utils/format';
-
-const currentYear = new Date().getFullYear();
-const years = Array.from({ length: 4 }, (_, i) => currentYear - 1 + i);
+import { MonthYearPicker } from '../shared/MonthYearPicker';
 
 export const MonthlySalary = ({ user, onBack, addToast }: { 
   user: Employee, 
@@ -144,14 +142,12 @@ export const MonthlySalary = ({ user, onBack, addToast }: {
           <p className="text-xs text-gray-500 mt-1">Bảng lương chi tiết dựa trên công và các khoản phụ phí</p>
         </div>
         <div className="flex items-center gap-2">
-          <div className="flex items-center gap-2 bg-white p-1.5 rounded-2xl shadow-sm border border-gray-100">
-            <select value={selectedMonth} onChange={(e) => setSelectedMonth(Number(e.target.value))} className="px-3 py-1.5 rounded-xl border-none text-sm font-bold text-gray-700 outline-none">
-              {Array.from({ length: 12 }, (_, i) => i + 1).map(m => <option key={m} value={m}>Tháng {m}</option>)}
-            </select>
-            <select value={selectedYear} onChange={(e) => setSelectedYear(Number(e.target.value))} className="px-3 py-1.5 rounded-xl border-none text-sm font-bold text-gray-700 outline-none">
-              {years.map(y => <option key={y} value={y}>Năm {y}</option>)}
-            </select>
-          </div>
+          <MonthYearPicker
+            selectedMonth={selectedMonth}
+            selectedYear={selectedYear}
+            onMonthChange={setSelectedMonth}
+            onYearChange={setSelectedYear}
+          />
           <button
             onClick={handleExportExcel}
             disabled={salaries.length === 0}

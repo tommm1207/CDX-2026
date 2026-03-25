@@ -541,10 +541,9 @@ export const StockIn = ({ user, onBack, initialStatus, addToast }: {
                       <input 
                         type="date" 
                         required 
-                        disabled
                         value={formData.date} 
                         onChange={(e) => setFormData({ ...formData, date: e.target.value })} 
-                        className="w-full px-4 py-2 rounded-xl border border-gray-100 text-sm outline-none bg-gray-50 text-gray-400 cursor-not-allowed" 
+                        className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20" 
                       />
                     </div>
 

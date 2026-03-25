@@ -439,21 +439,21 @@ export const StockOut = ({ user, onBack, addToast }: {
                     <p className="text-sm text-gray-600 italic">{selectedSlip.notes || 'Không có ghi chú'}</p>
                   </div>
 
-                <div className="flex gap-3 pt-4 border-t border-gray-100">
+                <div className="flex flex-wrap gap-2 pt-4 border-t border-gray-100">
                   {selectedSlip.status !== 'Đã xóa' && (
                     <>
                       <Button
                         variant="outline"
-                        fullWidth
+                        size="sm"
                         icon={Trash2}
                         onClick={handleDelete}
                         className="text-red-600 bg-red-50 border-red-100"
                       >
-                        Chuyển vào thùng rác
+                        Thùng rác
                       </Button>
                       <Button
                         variant="outline"
-                        fullWidth
+                        size="sm"
                         icon={Edit}
                         onClick={handleEdit}
                         className="text-blue-600 bg-blue-50 border-blue-100"
@@ -464,12 +464,14 @@ export const StockOut = ({ user, onBack, addToast }: {
                         <>
                           <Button
                             variant="danger"
+                            size="sm"
                             onClick={() => handleApprove(selectedSlip.id, 'Từ chối')}
                           >
                             Từ chối
                           </Button>
                           <Button
                             variant="success"
+                            size="sm"
                             onClick={() => handleApprove(selectedSlip.id, 'Đã duyệt')}
                           >
                             Duyệt
@@ -480,6 +482,7 @@ export const StockOut = ({ user, onBack, addToast }: {
                   )}
                   <Button
                     variant="outline"
+                    size="sm"
                     onClick={() => setShowDetailModal(false)}
                   >
                     Đóng

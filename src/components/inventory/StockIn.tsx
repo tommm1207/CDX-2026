@@ -467,19 +467,21 @@ export const StockIn = ({ user, onBack, initialStatus, addToast }: {
                 </div>
               </div>
 
-              <div className="p-6 bg-gray-50 border-t border-gray-100 flex justify-end gap-3 rounded-b-3xl">
+              <div className="p-4 bg-gray-50 border-t border-gray-100 flex flex-wrap justify-end gap-2 rounded-b-3xl">
                 {selectedSlip.status !== 'Đã xóa' && (
                   <>
                     <Button
                       variant="outline"
+                      size="sm"
                       icon={Trash2}
                       onClick={handleDelete}
                       className="text-red-600 bg-red-50 border-red-100"
                     >
-                      Chuyển vào thùng rác
+                      Thùng rác
                     </Button>
                     <Button
                       variant="outline"
+                      size="sm"
                       icon={Edit}
                       onClick={handleEdit}
                       className="text-blue-600 bg-blue-50 border-blue-100"
@@ -490,12 +492,14 @@ export const StockIn = ({ user, onBack, initialStatus, addToast }: {
                       <>
                         <Button
                           variant="danger"
+                          size="sm"
                           onClick={() => handleApprove(selectedSlip.id, 'Từ chối')}
                         >
                           Từ chối
                         </Button>
                         <Button
                           variant="success"
+                          size="sm"
                           onClick={() => handleApprove(selectedSlip.id, 'Đã duyệt')}
                         >
                           Duyệt phiếu
@@ -506,6 +510,7 @@ export const StockIn = ({ user, onBack, initialStatus, addToast }: {
                 )}
                 <Button
                   variant="outline"
+                  size="sm"
                   onClick={() => setShowDetailModal(false)}
                 >
                   Đóng

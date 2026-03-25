@@ -540,11 +540,11 @@ export const Costs = ({ user, onBack, addToast }: {
                     <p className="text-gray-600 italic">{selectedCost.notes || 'Không có ghi chú'}</p>
                   </div>
                 </div>
-                <div className="flex gap-3 pt-4 border-t border-gray-100">
+                <div className="flex flex-wrap gap-2 pt-4 border-t border-gray-100">
                   {selectedCost.status !== 'Đã duyệt' && selectedCost.status !== 'Từ chối' && selectedCost.status !== 'Đã hoàn thành' && (
                     <Button
                       variant="outline"
-                      fullWidth
+                      size="sm"
                       icon={Edit}
                       onClick={() => handleEdit(selectedCost)}
                       className="text-blue-600 border-blue-100 bg-blue-50 hover:bg-blue-100"
@@ -554,12 +554,12 @@ export const Costs = ({ user, onBack, addToast }: {
                   )}
                   <Button
                     variant="outline"
-                    fullWidth
+                    size="sm"
                     icon={Trash2}
                     onClick={() => { setShowDetailModal(false); handleDeleteClick(selectedCost.id); }}
                     className="text-red-600 border-red-100 bg-red-50 hover:bg-red-100"
                   >
-                    Chuyển vào thùng rác
+                    Thùng rác
                   </Button>
                 </div>
               </div>

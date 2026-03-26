@@ -102,7 +102,7 @@ VITE_DATABASE_ANON_KEY=your-anon-key-here
 ```
 
 ### 4. Development & Production
-- **Start Dev Server**: Launch the app with hot-reloading at `http://localhost:5173`.
+- **Start Dev Server**: Launch the app with hot-reloading at `http://localhost:3000`.
   ```bash
   npm run dev
   ```

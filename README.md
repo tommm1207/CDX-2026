@@ -97,7 +97,7 @@ cp .env.example .env
 ```
 3. **Configure Keys**: Open `.env` and fill in your Database credentials:
 ```env
-VITE_DATAABASE_URL=https://your-project.database.co
+VITE_DATABASE_URL=https://your-project.database.co
 VITE_DATABASE_ANON_KEY=your-anon-key-here
 ```
 

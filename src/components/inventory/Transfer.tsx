@@ -1,5 +1,5 @@
 import { useState, useEffect, FormEvent } from 'react';
-import { Plus, X, ArrowLeftRight, Edit, Trash2, PackagePlus, Search, ChevronRight } from 'lucide-react';
+import { Search, Plus, Filter, PackageOpen, Download, Upload, AlertCircle, Edit, Trash2, Settings, ArrowRight, ArrowLeft, ArrowRightLeft, ArrowLeftRight, Building2, MapPin, MoreVertical, Smartphone, PenTool, Calculator, Receipt, ChevronDown, X, PackagePlus } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { supabase } from '../../supabaseClient';
 import { Employee } from '../../types';
@@ -317,12 +317,16 @@ export const Transfer = ({ user, onBack, addToast }: {
 
       <AnimatePresence>
         {showDetailModal && selectedSlip && (
-          <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
+          <div 
+            className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm h-[100dvh] w-full"
+            onClick={() => setShowDetailModal(false)}
+          >
             <motion.div
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
-              className="bg-white rounded-3xl shadow-2xl w-full max-w-lg overflow-hidden"
+              className="bg-white rounded-3xl shadow-2xl w-full max-w-lg max-h-[90dvh] flex flex-col"
+              onClick={(e) => e.stopPropagation()}
             >
               <div className="bg-orange-500 p-6 text-white flex items-center justify-between">
                 <div>
@@ -367,33 +371,32 @@ export const Transfer = ({ user, onBack, addToast }: {
                   <p className="text-sm text-gray-600 italic">{selectedSlip.notes || 'Không có ghi chú'}</p>
                 </div>
 
-                 <div className="flex flex-wrap gap-2 pt-4 border-t border-gray-100">
+                <div className="p-3 sm:p-4 border-t border-gray-100 rounded-b-3xl bg-gray-50 flex flex-wrap items-center justify-center gap-2 w-full mt-auto">
                   {selectedSlip.status !== 'Đã xóa' && (
-                    <>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        icon={Edit}
-                        onClick={handleEdit}
-                        className="text-blue-600 bg-blue-50 border-blue-100"
-                      >
-                        Sửa
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        icon={Trash2}
-                        onClick={handleDelete}
-                        className="text-red-600 bg-red-50 border-red-100"
-                      >
-                        Thùng rác
-                      </Button>
-                    </>
+                    <Button
+                      variant="outline"
+                      icon={Trash2}
+                      onClick={handleDelete}
+                      className="flex-1 min-w-[100px] text-red-500 border-red-200 hover:bg-red-50 sm:mr-auto"
+                    >
+                      Thùng rác
+                    </Button>
+                  )}
+                  {selectedSlip.status !== 'Đã xóa' && (
+                    <Button
+                      variant="outline"
+                      icon={Edit}
+                      onClick={handleEdit}
+                      className="flex-1 min-w-[100px] text-gray-700 border-gray-200 hover:bg-gray-50"
+                    >
+                      Sửa
+                    </Button>
                   )}
                   <Button
                     variant="outline"
-                    size="sm"
+                    icon={ChevronDown}
                     onClick={() => setShowDetailModal(false)}
+                    className="flex-1 min-w-[100px] text-gray-600 border-gray-200 hover:bg-gray-50"
                   >
                     Đóng
                   </Button>
@@ -406,12 +409,16 @@ export const Transfer = ({ user, onBack, addToast }: {
 
       <AnimatePresence>
         {showModal && (
-          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm overflow-y-auto">
+          <div 
+            className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm h-[100dvh] w-full"
+            onClick={() => setShowModal(false)}
+          >
             <motion.div
               initial={{ opacity: 0, scale: 0.95, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 20 }}
-              className="bg-white rounded-3xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col"
+              className="bg-white rounded-3xl shadow-2xl w-full max-w-2xl max-h-[90dvh] flex flex-col"
+              onClick={(e) => e.stopPropagation()}
             >
               <div className="bg-orange-500 p-6 text-white flex items-center justify-between rounded-t-3xl flex-shrink-0">
                 <div className="flex items-center gap-3">

@@ -33,7 +33,7 @@ import {
 import { motion, AnimatePresence } from 'motion/react';
 import { supabase } from './supabaseClient';
 import { Employee } from './types';
-import { REMINDER_CHECK_INTERVAL, PENDING_COUNT_INTERVAL } from './constants/options';
+import { REMINDER_CHECK_INTERVAL } from './constants/options';
 
 // Shared Components
 import { PageBreadcrumb } from './components/shared/PageBreadcrumb';
@@ -197,11 +197,22 @@ export default function App() {
 
   useEffect(() => {
     if (!user) return;
-    
+
+    // Initial fetch
     fetchPendingCount();
-    const interval = setInterval(fetchPendingCount, PENDING_COUNT_INTERVAL);
-    
-    return () => clearInterval(interval);
+
+    // Realtime subscriptions: update badge instantly on any slip change
+    const channel = supabase
+      .channel('pending-count-realtime')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'stock_in' }, fetchPendingCount)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'stock_out' }, fetchPendingCount)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'transfers' }, fetchPendingCount)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'costs' }, fetchPendingCount)
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [user, fetchPendingCount]);
 
   const navigateTo = (page: string, params: any = null) => {
@@ -330,7 +341,7 @@ export default function App() {
       case 'warehouses': return <Warehouses user={user} onBack={goBack} addToast={addToast} />;
       case 'materials': return <MaterialCatalog user={user} onBack={goBack} onNavigate={navigateTo} addToast={addToast} />;
       case 'stock-in': return <StockIn user={user} onBack={goBack} addToast={addToast} initialStatus={pageParams?.status} />;
-      case 'pending-approvals': return <PendingApprovals user={user} onBack={goBack} onNavigate={navigateTo} onRefreshCount={fetchPendingCount} addToast={addToast} />;
+      case 'pending-approvals': return <PendingApprovals user={user} onBack={goBack} onNavigate={navigateTo} onRefreshCount={fetchPendingCount} addToast={addToast} initialCount={pendingCount} />;
       case 'stock-out': return <StockOut user={user} onBack={goBack} addToast={addToast} />;
       case 'transfer': return <Transfer user={user} onBack={goBack} addToast={addToast} />;
       case 'cost-report': return <CostReport user={user} onBack={goBack} addToast={addToast} />;

@@ -1,5 +1,5 @@
 import { useState, useEffect, FormEvent, useRef, useMemo } from 'react';
-import { Wallet, Plus, Search, Edit, Trash2, X, FileSpreadsheet, Info, ChevronDown, ArrowDownCircle, ArrowUpCircle } from 'lucide-react';
+import { Search, Plus, Filter, PackageOpen, Download, Upload, AlertCircle, Edit, Trash2, Settings, ArrowRight, ArrowLeft, MoreVertical, Wallet, XCircle, CheckCircle, Calculator, CreditCard, RefreshCw, X, Check, ChevronDown, FileSpreadsheet, ArrowDownCircle, ArrowUpCircle, Info } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { utils, writeFile } from 'xlsx';
 import { supabase } from '../../supabaseClient';
@@ -476,12 +476,16 @@ export const Costs = ({ user, onBack, addToast }: {
 
       <AnimatePresence>
         {showDetailModal && selectedCost && (
-          <div className="fixed inset-0 z-[120] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
+          <div 
+            className="fixed inset-0 z-[120] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm"
+            onClick={() => setShowDetailModal(false)}
+          >
             <motion.div
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
               className="bg-white rounded-3xl shadow-2xl w-full max-w-lg"
+              onClick={(e) => e.stopPropagation()}
             >
               <div className="bg-primary p-6 text-white flex items-center justify-between rounded-t-3xl">
                 <div className="flex items-center gap-3">
@@ -540,26 +544,35 @@ export const Costs = ({ user, onBack, addToast }: {
                     <p className="text-gray-600 italic">{selectedCost.notes || 'Không có ghi chú'}</p>
                   </div>
                 </div>
-                <div className="flex flex-wrap gap-2 pt-4 border-t border-gray-100">
+                <div className="p-3 sm:p-4 border-t border-gray-100 rounded-b-3xl bg-gray-50 flex items-center justify-center sm:justify-end gap-3 sm:gap-2 w-full">
+                  <Button
+                    variant="outline"
+                    icon={Trash2}
+                    iconSize={16}
+                    onClick={() => { setShowDetailModal(false); handleDeleteClick(selectedCost.id); }}
+                    className="w-10 h-10 sm:w-auto sm:h-auto p-0 sm:px-4 sm:py-2 rounded-xl text-red-500 bg-white border-red-200 hover:bg-red-50 flex-shrink-0 flex items-center justify-center sm:mr-auto"
+                  >
+                    <span className="hidden sm:inline">Thùng rác</span>
+                  </Button>
                   {selectedCost.status !== 'Đã duyệt' && selectedCost.status !== 'Từ chối' && selectedCost.status !== 'Đã hoàn thành' && (
                     <Button
                       variant="outline"
-                      size="sm"
                       icon={Edit}
+                      iconSize={16}
                       onClick={() => handleEdit(selectedCost)}
-                      className="text-blue-600 border-blue-100 bg-blue-50 hover:bg-blue-100"
+                      className="w-10 h-10 sm:w-auto sm:h-auto p-0 sm:px-4 sm:py-2 rounded-xl text-gray-700 bg-white border-gray-200 hover:bg-gray-50 flex-shrink-0 flex items-center justify-center"
                     >
-                      Sửa
+                      <span className="hidden sm:inline">Sửa phiếu</span>
                     </Button>
                   )}
                   <Button
                     variant="outline"
-                    size="sm"
-                    icon={Trash2}
-                    onClick={() => { setShowDetailModal(false); handleDeleteClick(selectedCost.id); }}
-                    className="text-red-600 border-red-100 bg-red-50 hover:bg-red-100"
+                    icon={ChevronDown}
+                    iconSize={18}
+                    onClick={() => setShowDetailModal(false)}
+                    className="w-10 h-10 sm:w-auto sm:h-auto p-0 sm:px-4 sm:py-2 rounded-xl text-gray-600 bg-white border-gray-200 hover:bg-gray-50 flex-shrink-0 flex items-center justify-center"
                   >
-                    Thùng rác
+                    <span className="hidden sm:inline">Đóng</span>
                   </Button>
                 </div>
               </div>
@@ -570,12 +583,16 @@ export const Costs = ({ user, onBack, addToast }: {
 
       <AnimatePresence>
         {showDeleteModal && (
-          <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
+          <div 
+            className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm"
+            onClick={() => setShowDeleteModal(false)}
+          >
             <motion.div
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
               className="bg-white rounded-2xl shadow-xl p-6 max-w-sm w-full text-center"
+              onClick={(e) => e.stopPropagation()}
             >
               <div className="w-16 h-16 bg-red-50 text-red-600 rounded-full flex items-center justify-center mx-auto mb-4">
                 <Trash2 size={32} />
@@ -593,12 +610,16 @@ export const Costs = ({ user, onBack, addToast }: {
 
       <AnimatePresence>
         {showModal && (
-          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm overflow-y-auto">
+          <div 
+            className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm overflow-y-auto"
+            onClick={() => setShowModal(false)}
+          >
             <motion.div
               initial={{ opacity: 0, scale: 0.95, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 20 }}
               className="bg-white rounded-3xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col"
+              onClick={(e) => e.stopPropagation()}
             >
               <div className="bg-primary p-6 text-white flex items-center justify-between rounded-t-3xl flex-shrink-0">
                 <div className="flex items-center gap-3">

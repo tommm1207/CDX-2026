@@ -1,5 +1,5 @@
 import { useState, useEffect, FormEvent } from 'react';
-import { Plus, Search, ChevronRight, X, ArrowDownCircle, Edit, Navigation, Trash2, PackagePlus } from 'lucide-react';
+import { Plus, Search, ChevronRight, X, ArrowDownCircle, Edit, Navigation, Trash2, PackagePlus, ChevronDown, Check } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { supabase } from '../../supabaseClient';
 import { Employee } from '../../types';
@@ -378,14 +378,19 @@ export const StockIn = ({ user, onBack, initialStatus, addToast }: {
         </div>
       </div>
 
+      {/* Detail Modal */}
       <AnimatePresence>
         {showDetailModal && selectedSlip && (
-          <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
+          <div 
+            className="fixed inset-0 z-[70] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm h-[100dvh] w-full"
+            onClick={() => setShowDetailModal(false)}
+          >
             <motion.div
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.95 }}
-              className="bg-white rounded-3xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col"
+              initial={{ opacity: 0, scale: 0.95, y: 16 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 16 }}
+              className="bg-white rounded-3xl shadow-2xl w-full max-w-lg max-h-[90dvh] flex flex-col"
+              onClick={(e) => e.stopPropagation()}
             >
               <div className="p-6 border-b border-gray-100 flex items-center justify-between">
                 <h3 className="text-lg font-bold text-gray-800">Chi tiết vật tư nhập</h3>
@@ -467,51 +472,52 @@ export const StockIn = ({ user, onBack, initialStatus, addToast }: {
                 </div>
               </div>
 
-              <div className="p-4 bg-gray-50 border-t border-gray-100 flex flex-wrap justify-end gap-2 rounded-b-3xl">
+              <div className="p-3 sm:p-4 border-t border-gray-100 rounded-b-3xl bg-gray-50 flex flex-wrap items-center justify-center gap-2 w-full">
                 {selectedSlip.status !== 'Đã xóa' && (
+                  <Button
+                    variant="outline"
+                    icon={Trash2}
+                    onClick={handleDelete}
+                    className="flex-1 min-w-[100px] text-red-500 border-red-200 hover:bg-red-50 sm:mr-auto"
+                  >
+                    Thùng rác
+                  </Button>
+                )}
+                {selectedSlip.status !== 'Đã xóa' && (
+                  <Button
+                    variant="outline"
+                    icon={Edit}
+                    onClick={handleEdit}
+                    className="flex-1 min-w-[100px] text-gray-700 border-gray-200 hover:bg-gray-50"
+                  >
+                    Sửa
+                  </Button>
+                )}
+                {selectedSlip.status !== 'Đã xóa' && (user.role === 'Admin' || user.role === 'Admin App') && selectedSlip.status === 'Chờ duyệt' && (
                   <>
                     <Button
-                      variant="outline"
-                      size="sm"
-                      icon={Trash2}
-                      onClick={handleDelete}
-                      className="text-red-600 bg-red-50 border-red-100"
+                      variant="danger"
+                      icon={X}
+                      onClick={() => handleApprove(selectedSlip.id, 'Từ chối')}
+                      className="flex-1 min-w-[100px]"
                     >
-                      Thùng rác
+                      Từ chối
                     </Button>
                     <Button
-                      variant="outline"
-                      size="sm"
-                      icon={Edit}
-                      onClick={handleEdit}
-                      className="text-blue-600 bg-blue-50 border-blue-100"
+                      variant="success"
+                      icon={Check}
+                      onClick={() => handleApprove(selectedSlip.id, 'Đã duyệt')}
+                      className="flex-1 min-w-[100px]"
                     >
-                      Sửa phiếu
+                      Duyệt
                     </Button>
-                    {(user.role === 'Admin' || user.role === 'Admin App') && selectedSlip.status === 'Chờ duyệt' && (
-                      <>
-                        <Button
-                          variant="danger"
-                          size="sm"
-                          onClick={() => handleApprove(selectedSlip.id, 'Từ chối')}
-                        >
-                          Từ chối
-                        </Button>
-                        <Button
-                          variant="success"
-                          size="sm"
-                          onClick={() => handleApprove(selectedSlip.id, 'Đã duyệt')}
-                        >
-                          Duyệt phiếu
-                        </Button>
-                      </>
-                    )}
                   </>
                 )}
                 <Button
                   variant="outline"
-                  size="sm"
+                  icon={ChevronDown}
                   onClick={() => setShowDetailModal(false)}
+                  className="flex-1 min-w-[100px] text-gray-600 border-gray-200 hover:bg-gray-50"
                 >
                   Đóng
                 </Button>
@@ -521,14 +527,19 @@ export const StockIn = ({ user, onBack, initialStatus, addToast }: {
         )}
       </AnimatePresence>
 
+      {/* Add Item Modal */}
       <AnimatePresence>
         {showModal && (
-          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm overflow-y-auto">
+          <div 
+            className="fixed inset-0 z-[70] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm h-[100dvh] w-full"
+            onClick={() => setShowModal(false)}
+          >
             <motion.div
-              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              initial={{ opacity: 0, scale: 0.95, y: 16 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.95, y: 20 }}
-              className="bg-white rounded-3xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col"
+              exit={{ opacity: 0, scale: 0.95, y: 16 }}
+              className="bg-white rounded-3xl shadow-2xl w-full max-w-2xl max-h-[90dvh] flex flex-col"
+              onClick={(e) => e.stopPropagation()}
             >
               <div className="bg-primary p-6 text-white flex items-center justify-between rounded-t-3xl flex-shrink-0">
                 <div className="flex items-center gap-3">

@@ -9,7 +9,7 @@
   <p align="center">
     <a href="https://react.dev/"><img src="https://img.shields.io/badge/React-20232A?style=for-the-badge&logo=react&logoColor=61DAFB" alt="React" /></a>
     <a href="https://www.typescriptlang.org/"><img src="https://img.shields.io/badge/TypeScript-007ACC?style=for-the-badge&logo=typescript&logoColor=white" alt="TypeScript" /></a>
-    <a href="https://supabase.com/"><img src="https://img.shields.io/badge/Supabase-3ECF8E?style=for-the-badge&logo=supabase&logoColor=white" alt="Supabase" /></a>
+    <a href="https://Database.com/"><img src="https://img.shields.io/badge/Database-3ECF8E?style=for-the-badge&logo=Database&logoColor=white" alt="Database" /></a>
     <a href="https://vitejs.dev/"><img src="https://img.shields.io/badge/Vite-646CFF?style=for-the-badge&logo=vite&logoColor=white" alt="Vite" /></a>
     <a href="https://tailwindcss.com/"><img src="https://img.shields.io/badge/Tailwind_CSS-38B2AC?style=for-the-badge&logo=tailwind-css&logoColor=white" alt="Tailwind" /></a>
     <a href="https://web.dev/progressive-web-apps/"><img src="https://img.shields.io/badge/PWA-5A0FC8?style=for-the-badge&logo=pwa&logoColor=white" alt="PWA" /></a>
@@ -25,19 +25,19 @@
 ### 🛡️ Privacy & Security
 - **No Data Leakage**: Our public documentation is strictly technical. We do not expose internal UI layouts or sensitive employee data.
 - **Robust Permissions**: Granular data access control based on user roles and specific warehouse assignments.
-- **Real-time Integrity**: Every transaction is auditable and synchronized via Supabase's secure real-time engine.
+- **Real-time Integrity**: Every transaction is auditable and synchronized via Database's secure real-time engine.
 
 ---
 
 ## 🛠️ Architecture Overview
 
-The system follows a modern decoupled architecture, combining the speed of Vite with the power of Supabase.
+The system follows a modern decoupled architecture, combining the speed of Vite with the power of Database.
 
 ```mermaid
 graph TD
     A[Mobile/Web Client] -->|React + Vite| B(UI Components)
     B -->|PWA Layers| C{Sync Engine}
-    C -->|Real-time| D[Supabase Backend]
+    C -->|Real-time| D[Database Backend]
     D -->|PostgreSQL| E[(Relational Data)]
     D -->|Auth/Storage| F[Cloud Assets]
 ```
@@ -67,7 +67,7 @@ graph TD
 ## 🛠️ Technology Stack
 
 - **Core**: [React 18](https://reactjs.org/) + [TypeScript](https://www.typescriptlang.org/)
-- **State Management**: React Hooks & [Supabase Realtime](https://supabase.com/)
+- **State Management**: React Hooks & [Database Realtime](https://Database.com/)
 - **UI/UX**: [Tailwind CSS](https://tailwindcss.com/) & [Lucide Icons](https://lucide.dev/)
 - **Build Infrastructure**: [Vite](https://vitejs.dev/)
 
@@ -90,15 +90,15 @@ npm install
 ```
 
 ### 3. Database & Environment Configuration
-1. **Supabase Setup**: Ensure your Supabase project is active and follows the required schema (Tables: `inventory`, `costs`, `employees`, `attendance`, etc.).
+1. **Database Setup**: Ensure your Database project is active and follows the required schema (Tables: `inventory`, `costs`, `employees`, `attendance`, etc.).
 2. **Environment Variables**: Create a `.env` file in the root directory by copying the example:
 ```bash
 cp .env.example .env
 ```
-3. **Configure Keys**: Open `.env` and fill in your Supabase credentials:
+3. **Configure Keys**: Open `.env` and fill in your Database credentials:
 ```env
-VITE_SUPABASE_URL=https://your-project.supabase.co
-VITE_SUPABASE_ANON_KEY=your-anon-key-here
+VITE_DATAABASE_URL=https://your-project.database.co
+VITE_DATABASE_ANON_KEY=your-anon-key-here
 ```
 
 ### 4. Development & Production

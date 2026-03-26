@@ -544,35 +544,19 @@ export const Costs = ({ user, onBack, addToast }: {
                     <p className="text-gray-600 italic">{selectedCost.notes || 'Không có ghi chú'}</p>
                   </div>
                 </div>
-                <div className="p-3 sm:p-4 border-t border-gray-100 rounded-b-3xl bg-gray-50 flex items-center justify-center sm:justify-end gap-3 sm:gap-2 w-full">
-                  <Button
-                    variant="outline"
-                    icon={Trash2}
-                    iconSize={16}
-                    onClick={() => { setShowDetailModal(false); handleDeleteClick(selectedCost.id); }}
-                    className="w-10 h-10 sm:w-auto sm:h-auto p-0 sm:px-4 sm:py-2 rounded-xl text-red-500 bg-white border-red-200 hover:bg-red-50 flex-shrink-0 flex items-center justify-center sm:mr-auto"
-                  >
-                    <span className="hidden sm:inline">Thùng rác</span>
-                  </Button>
-                  {selectedCost.status !== 'Đã duyệt' && selectedCost.status !== 'Từ chối' && selectedCost.status !== 'Đã hoàn thành' && (
-                    <Button
-                      variant="outline"
-                      icon={Edit}
-                      iconSize={16}
-                      onClick={() => handleEdit(selectedCost)}
-                      className="w-10 h-10 sm:w-auto sm:h-auto p-0 sm:px-4 sm:py-2 rounded-xl text-gray-700 bg-white border-gray-200 hover:bg-gray-50 flex-shrink-0 flex items-center justify-center"
-                    >
-                      <span className="hidden sm:inline">Sửa phiếu</span>
+                <div className="p-4 border-t border-gray-100 rounded-b-3xl bg-gray-50 flex flex-col gap-3 w-full mt-auto">
+                  <div className={`grid gap-3 w-full ${selectedCost.status !== 'Đã duyệt' && selectedCost.status !== 'Từ chối' && selectedCost.status !== 'Đã hoàn thành' ? 'grid-cols-2' : 'grid-cols-1'}`}>
+                    <Button fullWidth variant="outline" icon={Trash2} onClick={() => { setShowDetailModal(false); handleDeleteClick(selectedCost.id); }} className="h-full text-red-600 border-red-200 bg-white hover:bg-red-50">
+                      Thùng rác
                     </Button>
-                  )}
-                  <Button
-                    variant="outline"
-                    icon={ChevronDown}
-                    iconSize={18}
-                    onClick={() => setShowDetailModal(false)}
-                    className="w-10 h-10 sm:w-auto sm:h-auto p-0 sm:px-4 sm:py-2 rounded-xl text-gray-600 bg-white border-gray-200 hover:bg-gray-50 flex-shrink-0 flex items-center justify-center"
-                  >
-                    <span className="hidden sm:inline">Đóng</span>
+                    {selectedCost.status !== 'Đã duyệt' && selectedCost.status !== 'Từ chối' && selectedCost.status !== 'Đã hoàn thành' && (
+                      <Button fullWidth variant="outline" icon={Edit} onClick={() => handleEdit(selectedCost)} className="h-full text-gray-700 border-gray-200 bg-white hover:bg-gray-50">
+                        Sửa
+                      </Button>
+                    )}
+                  </div>
+                  <Button fullWidth variant="outline" icon={ChevronDown} onClick={() => setShowDetailModal(false)} className="text-gray-600 border-gray-200 bg-white hover:bg-gray-50">
+                    Đóng
                   </Button>
                 </div>
               </div>

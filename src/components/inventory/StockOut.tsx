@@ -1,5 +1,5 @@
 import { useState, useEffect, FormEvent } from 'react';
-import { Plus, Search, ChevronRight, X, ArrowUpCircle, Edit, Navigation, Trash2, PackagePlus } from 'lucide-react';
+import { Plus, Search, ChevronRight, X, ArrowUpCircle, Edit, Navigation, Trash2, PackagePlus, ChevronDown, Check } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { supabase } from '../../supabaseClient';
 import { Employee } from '../../types';
@@ -443,52 +443,30 @@ export const StockOut = ({ user, onBack, addToast }: {
                     <p className="text-sm text-gray-600 italic">{selectedSlip.notes || 'Không có ghi chú'}</p>
                   </div>
 
-                <div className="flex flex-wrap gap-2 pt-4 border-t border-gray-100">
+                <div className="p-4 border-t border-gray-100 rounded-b-3xl bg-gray-50 flex flex-col gap-3 w-full mt-auto">
+                  {selectedSlip.status !== 'Đã xóa' && (user.role === 'Admin' || user.role === 'Admin App') && selectedSlip.status === 'Chờ duyệt' && (
+                    <div className="grid grid-cols-2 gap-3 w-full">
+                      <Button fullWidth variant="danger" icon={X} onClick={() => handleApprove(selectedSlip.id, 'Từ chối')} className="h-full">
+                        Từ chối
+                      </Button>
+                      <Button fullWidth variant="success" icon={Check} onClick={() => handleApprove(selectedSlip.id, 'Đã duyệt')} className="h-full">
+                        Duyệt
+                      </Button>
+                    </div>
+                  )}
+
                   {selectedSlip.status !== 'Đã xóa' && (
-                    <>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        icon={Trash2}
-                        onClick={handleDelete}
-                        className="text-red-600 bg-red-50 border-red-100"
-                      >
+                    <div className="grid grid-cols-2 gap-3 w-full">
+                      <Button fullWidth variant="outline" icon={Trash2} onClick={handleDelete} className="h-full text-red-600 border-red-200 bg-white hover:bg-red-50">
                         Thùng rác
                       </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        icon={Edit}
-                        onClick={handleEdit}
-                        className="text-blue-600 bg-blue-50 border-blue-100"
-                      >
+                      <Button fullWidth variant="outline" icon={Edit} onClick={handleEdit} className="h-full text-gray-700 border-gray-200 bg-white hover:bg-gray-50">
                         Sửa
                       </Button>
-                      {((user.role === 'Admin' || user.role === 'Admin App') && selectedSlip.status === 'Chờ duyệt') && (
-                        <>
-                          <Button
-                            variant="danger"
-                            size="sm"
-                            onClick={() => handleApprove(selectedSlip.id, 'Từ chối')}
-                          >
-                            Từ chối
-                          </Button>
-                          <Button
-                            variant="success"
-                            size="sm"
-                            onClick={() => handleApprove(selectedSlip.id, 'Đã duyệt')}
-                          >
-                            Duyệt
-                          </Button>
-                        </>
-                      )}
-                    </>
+                    </div>
                   )}
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setShowDetailModal(false)}
-                  >
+
+                  <Button fullWidth variant="outline" icon={ChevronDown} onClick={() => setShowDetailModal(false)} className="text-gray-600 border-gray-200 bg-white hover:bg-gray-50">
                     Đóng
                   </Button>
                 </div>

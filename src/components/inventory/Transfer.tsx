@@ -371,33 +371,19 @@ export const Transfer = ({ user, onBack, addToast }: {
                   <p className="text-sm text-gray-600 italic">{selectedSlip.notes || 'Không có ghi chú'}</p>
                 </div>
 
-                <div className="p-3 sm:p-4 border-t border-gray-100 rounded-b-3xl bg-gray-50 flex flex-wrap items-center justify-center gap-2 w-full mt-auto">
+                <div className="p-4 border-t border-gray-100 rounded-b-3xl bg-gray-50 flex flex-col gap-3 w-full mt-auto">
                   {selectedSlip.status !== 'Đã xóa' && (
-                    <Button
-                      variant="outline"
-                      icon={Trash2}
-                      onClick={handleDelete}
-                      className="flex-1 min-w-[100px] text-red-500 border-red-200 hover:bg-red-50 sm:mr-auto"
-                    >
-                      Thùng rác
-                    </Button>
+                    <div className="grid grid-cols-2 gap-3 w-full">
+                      <Button fullWidth variant="outline" icon={Trash2} onClick={handleDelete} className="h-full text-red-600 border-red-200 bg-white hover:bg-red-50">
+                        Thùng rác
+                      </Button>
+                      <Button fullWidth variant="outline" icon={Edit} onClick={handleEdit} className="h-full text-gray-700 border-gray-200 bg-white hover:bg-gray-50">
+                        Sửa
+                      </Button>
+                    </div>
                   )}
-                  {selectedSlip.status !== 'Đã xóa' && (
-                    <Button
-                      variant="outline"
-                      icon={Edit}
-                      onClick={handleEdit}
-                      className="flex-1 min-w-[100px] text-gray-700 border-gray-200 hover:bg-gray-50"
-                    >
-                      Sửa
-                    </Button>
-                  )}
-                  <Button
-                    variant="outline"
-                    icon={ChevronDown}
-                    onClick={() => setShowDetailModal(false)}
-                    className="flex-1 min-w-[100px] text-gray-600 border-gray-200 hover:bg-gray-50"
-                  >
+
+                  <Button fullWidth variant="outline" icon={ChevronDown} onClick={() => setShowDetailModal(false)} className="text-gray-600 border-gray-200 bg-white hover:bg-gray-50">
                     Đóng
                   </Button>
                 </div>

@@ -3,6 +3,7 @@
 <div align="center">
   <img src="public/logo.png" width="180" alt="CDX Logo" />
   <p align="center">
+  <strong>A modern, professional, and mobile-optimized PWA for managing construction logistics, finance, and human resources.</strong>
   </p>
 
   <p align="center">

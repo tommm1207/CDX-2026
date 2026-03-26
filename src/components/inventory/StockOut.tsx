@@ -1,5 +1,5 @@
 import { useState, useEffect, FormEvent } from 'react';
-import { Plus, Search, ChevronRight, X, ArrowUpCircle, Edit, Navigation, Trash2, PackagePlus, ChevronDown, Check } from 'lucide-react';
+import { Plus, Search, ChevronRight, X, ArrowUpCircle, Edit, Navigation, Trash2, PackagePlus } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { supabase } from '../../supabaseClient';
 import { Employee } from '../../types';
@@ -383,7 +383,6 @@ export const StockOut = ({ user, onBack, addToast }: {
         </div>
       </div>
 
-      {/* Detail Modal */}
       <AnimatePresence>
         {showDetailModal && selectedSlip && (
           <div 
@@ -394,7 +393,7 @@ export const StockOut = ({ user, onBack, addToast }: {
               initial={{ opacity: 0, scale: 0.95, y: 16 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 16 }}
-              className="bg-white rounded-3xl shadow-2xl w-full max-w-lg max-h-[90dvh] flex flex-col"
+              className="bg-white rounded-3xl shadow-2xl w-full max-w-lg max-h-[90dvh] flex flex-col overflow-hidden"
               onClick={(e) => e.stopPropagation()}
             >
               <div className="bg-red-600 p-6 text-white flex items-center justify-between">
@@ -437,68 +436,85 @@ export const StockOut = ({ user, onBack, addToast }: {
                   </div>
                   <div>
                     <p className="text-[10px] font-bold text-gray-400 uppercase">Thành tiền (Doanh thu)</p>
-                        <div className="p-3 sm:p-4 border-t border-gray-100 rounded-b-3xl bg-gray-50 flex flex-wrap items-center justify-center gap-2 w-full">
-                {selectedSlip.status !== 'Đã xóa' && (
+                    <p className="text-sm font-bold text-green-600">{formatCurrency(selectedSlip.total_amount || 0)}</p>
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-bold text-gray-400 uppercase">Ghi chú</p>
+                    <p className="text-sm text-gray-600 italic">{selectedSlip.notes || 'Không có ghi chú'}</p>
+                  </div>
+
+                <div className="flex flex-wrap gap-2 pt-4 border-t border-gray-100">
+                  {selectedSlip.status !== 'Đã xóa' && (
+                    <>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        icon={Trash2}
+                        onClick={handleDelete}
+                        className="text-red-600 bg-red-50 border-red-100"
+                      >
+                        Thùng rác
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        icon={Edit}
+                        onClick={handleEdit}
+                        className="text-blue-600 bg-blue-50 border-blue-100"
+                      >
+                        Sửa
+                      </Button>
+                      {((user.role === 'Admin' || user.role === 'Admin App') && selectedSlip.status === 'Chờ duyệt') && (
+                        <>
+                          <Button
+                            variant="danger"
+                            size="sm"
+                            onClick={() => handleApprove(selectedSlip.id, 'Từ chối')}
+                          >
+                            Từ chối
+                          </Button>
+                          <Button
+                            variant="success"
+                            size="sm"
+                            onClick={() => handleApprove(selectedSlip.id, 'Đã duyệt')}
+                          >
+                            Duyệt
+                          </Button>
+                        </>
+                      )}
+                    </>
+                  )}
                   <Button
                     variant="outline"
-                    icon={Trash2}
-                    onClick={handleDelete}
-                    className="flex-1 min-w-[100px] text-red-500 border-red-200 hover:bg-red-50 sm:mr-auto"
+                    size="sm"
+                    onClick={() => setShowDetailModal(false)}
                   >
-                    Thùng rác
+                    Đóng
                   </Button>
-                )}
-                {selectedSlip.status !== 'Đã xóa' && (
-                  <Button
-                    variant="outline"
-                    icon={Edit}
-                    onClick={handleEdit}
-                    className="flex-1 min-w-[100px] text-gray-700 border-gray-200 hover:bg-gray-50"
-                  >
-                    Sửa
-                  </Button>
-                )}
-                {selectedSlip.status !== 'Đã xóa' && (user.role === 'Admin' || user.role === 'Admin App') && selectedSlip.status === 'Chờ duyệt' && (
-                  <>
-                    <Button
-                      variant="danger"
-                      icon={X}
-                      onClick={() => handleApprove(selectedSlip.id, 'Từ chối')}
-                      className="flex-1 min-w-[100px]"
-                    >
-                      Từ chối
-                    </Button>
-                    <Button
-                      variant="success"
-                      icon={Check}
-                      onClick={() => handleApprove(selectedSlip.id, 'Đã duyệt')}
-                      className="flex-1 min-w-[100px]"
-                    >
-                      Duyệt
-                    </Button>
-                  </>
-                )}
-                <Button
-                  variant="outline"
-                  icon={ChevronDown}
-                  onClick={() => setShowDetailModal(false)}
-                  className="flex-1 min-w-[100px] text-gray-600 border-gray-200 hover:bg-gray-50"
-                >
-                  Đóng
-                </Button>
-              </div>
-                  icon={ChevronDown}
-                  iconSize={18}
-                  onClick={() => setShowDetailModal(false)}
-                  className="w-10 h-10 sm:w-auto sm:h-auto p-0 sm:px-4 sm:py-2 rounded-xl text-gray-600 bg-white border-gray-200 hover:bg-gray-50 flex-shrink-0 flex items-center justify-center"
-                >
-                  <span className="hidden sm:inline">Đóng</span>
-                </Button>
+                </div>
               </div>
             </motion.div>
           </div>
         )}
       </AnimatePresence>
+
+      <AnimatePresence>
+        {showModal && (
+          <div 
+            className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm h-[100dvh] w-full"
+            onClick={() => setShowModal(false)}
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 16 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 16 }}
+              className="bg-white rounded-3xl shadow-2xl w-full max-w-4xl max-h-[90dvh] flex flex-col overflow-hidden"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="bg-red-600 p-6 text-white flex items-center justify-between rounded-t-3xl flex-shrink-0">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-white/20 rounded-xl"><ArrowUpCircle size={24} /></div>
+                  <h3 className="font-bold text-lg">{isEditing ? 'Sửa phiếu xuất kho' : 'Lập phiếu xuất kho'}</h3>
                 </div>
                 <Button variant="ghost" icon={X} className="text-white hover:bg-white/10" onClick={() => setShowModal(false)} />
               </div>

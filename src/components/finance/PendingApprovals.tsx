@@ -295,59 +295,35 @@ export const PendingApprovals = ({ user, onBack, onNavigate, onRefreshCount, add
               </div>
 
               {/* Footer actions */}
-              <div className="p-3 sm:p-4 border-t border-gray-100 rounded-b-3xl bg-gray-50 flex flex-wrap items-center justify-center gap-2 w-full">
-                <Button
-                  variant="outline"
-                  icon={Trash2}
-                  onClick={deleteSlip}
-                  isLoading={deleteLoading}
-                  className="flex-1 min-w-[100px] text-red-500 border-red-200 hover:bg-red-50 sm:mr-auto"
-                >
-                  Thùng rác
-                </Button>
-                <Button
-                  variant="outline"
-                  icon={Edit}
-                  onClick={() => {
+              <div className="p-4 border-t border-gray-100 rounded-b-3xl bg-gray-50 flex flex-col gap-3 w-full mt-auto">
+                {isAdmin && (
+                  <div className="grid grid-cols-2 gap-3 w-full">
+                    <Button fullWidth variant="danger" icon={X} onClick={() => setConfirm({ slip: selectedSlip, action: 'reject' })} isLoading={actionLoading === selectedSlip.id} className="h-full">
+                      Từ chối
+                    </Button>
+                    <Button fullWidth variant="success" icon={Check} onClick={() => setConfirm({ slip: selectedSlip, action: 'approve' })} isLoading={actionLoading === selectedSlip.id} className="h-full">
+                      Duyệt
+                    </Button>
+                  </div>
+                )}
+                
+                <div className="grid grid-cols-2 gap-3 w-full">
+                  <Button fullWidth variant="outline" icon={Trash2} onClick={deleteSlip} isLoading={deleteLoading} className="h-full text-red-600 border-red-200 bg-white hover:bg-red-50">
+                    Thùng rác
+                  </Button>
+                  <Button fullWidth variant="outline" icon={Edit} onClick={() => {
                     if (addToast) addToast(`Chuyển đến trang ${selectedSlip.type} để sửa phiếu.`, 'info');
                     setSelectedSlip(null);
                     if (selectedSlip.table === 'stock_in') onNavigate?.('stock-in');
                     else if (selectedSlip.table === 'stock_out') onNavigate?.('stock-out');
                     else if (selectedSlip.table === 'transfers') onNavigate?.('transfer');
                     else if (selectedSlip.table === 'costs') onNavigate?.('costs');
-                  }}
-                  className="flex-1 min-w-[100px] text-gray-700 border-gray-200 hover:bg-gray-50"
-                >
-                  Sửa
-                </Button>
-                {isAdmin && (
-                  <>
-                    <Button
-                      variant="danger"
-                      icon={X}
-                      onClick={() => setConfirm({ slip: selectedSlip, action: 'reject' })}
-                      isLoading={actionLoading === selectedSlip.id}
-                      className="flex-1 min-w-[100px]"
-                    >
-                      Từ chối
-                    </Button>
-                    <Button
-                      variant="success"
-                      icon={Check}
-                      onClick={() => setConfirm({ slip: selectedSlip, action: 'approve' })}
-                      isLoading={actionLoading === selectedSlip.id}
-                      className="flex-1 min-w-[100px]"
-                    >
-                      Duyệt
-                    </Button>
-                  </>
-                )}
-                <Button 
-                  variant="outline" 
-                  icon={ChevronDown}
-                  onClick={() => setSelectedSlip(null)}
-                  className="flex-1 min-w-[100px] text-gray-600 border-gray-200 hover:bg-gray-50"
-                >
+                  }} className="h-full text-gray-700 border-gray-200 bg-white hover:bg-gray-50">
+                    Sửa
+                  </Button>
+                </div>
+
+                <Button fullWidth variant="outline" icon={ChevronDown} onClick={() => setSelectedSlip(null)} className="text-gray-600 border-gray-200 bg-white hover:bg-gray-50">
                   Đóng
                 </Button>
               </div>

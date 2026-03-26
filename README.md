@@ -75,23 +75,45 @@ graph TD
 
 ## 🔧 Installation & Setup
 
+Follow these steps to get your local development environment up and running.
+
+### 1. Clone & Enter Project
 ```bash
-# Clone and enter the project
-git clone https://github.com/tommm1207/CDX-Team.git && cd CDX-Team
-
-# Install dependencies (recommended: npm or pnpm)
-npm install
-
-# Setup local environment
-cp .env.example .env
-
-# Launch development environment
-npm run dev
+git clone https://github.com/tommm1207/CDX-Team.git
+cd CDX-Team
 ```
+
+### 2. Dependency Management
+Recommended to use **npm** for consistency with the project's `package-lock.json`.
+```bash
+npm install
+```
+
+### 3. Database & Environment Configuration
+1. **Supabase Setup**: Ensure your Supabase project is active and follows the required schema (Tables: `inventory`, `costs`, `employees`, `attendance`, etc.).
+2. **Environment Variables**: Create a `.env` file in the root directory by copying the example:
+```bash
+cp .env.example .env
+```
+3. **Configure Keys**: Open `.env` and fill in your Supabase credentials:
+```env
+VITE_SUPABASE_URL=https://your-project.supabase.co
+VITE_SUPABASE_ANON_KEY=your-anon-key-here
+```
+
+### 4. Development & Production
+- **Start Dev Server**: Launch the app with hot-reloading at `http://localhost:5173`.
+  ```bash
+  npm run dev
+  ```
+- **Build for Production**: Generate an optimized build in the `dist/` folder.
+  ```bash
+  npm run build
+  ```
 
 ---
 
 <div align="center">
-  <p>Crafted for Excellence by <b>CDX TEAM - NGUYỄN KHÔI NGUYÊN (TOM)</b></p>
+  <p>Crafted with ❤️ by <b>CDX TEAM - NGUYỄN KHÔI NGUYÊN (TOM)</b></p>
   <p><i>"Cộng tác để vươn xa" - Innovating Construction Management.</i></p>
 </div>

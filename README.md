@@ -3,7 +3,6 @@
 <div align="center">
   <img src="public/logo.png" width="180" alt="CDX Logo" />
   <p align="center">
-    <strong>A modern, professional, and mobile-optimized PWA for managing construction logistics, finance, and human resources.</strong>
   </p>
 
   <p align="center">
@@ -18,85 +17,80 @@
 
 ---
 
-## ✨ Overview
+## ✨ System Philosophy
 
-**CDX Warehouse** is an all-in-one management platform designed specifically for the construction industry. It streamlines the complex workflows of material tracking, financial reporting, and payroll management into a single, cohesive experience. 
+**CDX Warehouse** is engineered to bring digital transformation to the construction frontlines. By abstracting complex logistics into an intuitive interface, we enable teams to focus on building while our system handles the data integrity.
 
-Built with **Vite + React + Tailwind CSS** and powered by **Supabase**, it offers real-time data synchronization and a seamless mobile experience through its Progressive Web App (PWA) capabilities.
-
----
-
-## 🚀 Key Modules
-
-### 📦 Smart Inventory Control
-- **Dynamic Stock Management**: Real-time tracking of imports, exports, and internal transfers between warehouses.
-- **Approval Workflow**: A rigorous 2-step verification process ensuring data integrity and accountability.
-- **Interactive Reports**: Visual inventory checks with instant balance updates.
-
-### 💰 Financial Transparency
-- **Expense Tracking**: Granular categorization of project costs by group, location, and personnel.
-- **Real-time Analytics**: Automated cost reports and budget filtering for precise financial oversight.
-
-### 🏭 Production Efficiency
-- **BOM (Bill of Materials)**: Define consumption logic for manufacturing finished goods (e.g., concrete piles).
-- **Automated Transactions**: Streamlined production orders that automatically trigger raw material deductions and finished product stock-ins.
-
-### 👥 HR & Intelligent Payroll
-- **Smart Attendance**: One-tap daily check-ins with Lunar calendar integration.
-- **Dynamic Payroll**: Automated monthly salary calculations considering advances, allowances, and overtime.
+### 🛡️ Privacy & Security
+- **No Data Leakage**: Our public documentation is strictly technical. We do not expose internal UI layouts or sensitive employee data.
+- **Robust Permissions**: Granular data access control based on user roles and specific warehouse assignments.
+- **Real-time Integrity**: Every transaction is auditable and synchronized via Supabase's secure real-time engine.
 
 ---
 
-## 🛠️ Technical Stack
+## 🛠️ Architecture Overview
 
-- **Frontend**: [React 18](https://reactjs.org/) with [TypeScript](https://www.typescriptlang.org/) for robust, type-safe development.
-- **Styling**: [Tailwind CSS](https://tailwindcss.com/) with a custom design system for a premium look and feel.
-- **Icons**: [Lucide React](https://lucide.dev/) for a consistent and professional iconography.
-- **State & Backend**: [Supabase](https://supabase.com/) for real-time PostgreSQL database and simplified authentication.
-- **Build Tool**: [Vite](https://vitejs.dev/) for ultra-fast development and optimized production builds.
+The system follows a modern decoupled architecture, combining the speed of Vite with the power of Supabase.
 
----
-
-## 🔧 Getting Started
-
-### Prerequisites
-- Node.js (v18+)
-- npm or pnpm
-- A Supabase project
-
-### Installation
-
-1. **Clone the repository:**
-   ```bash
-   git clone https://github.com/tommm1207/CDX-Team.git
-   cd CDX-Team
-   ```
-
-2. **Install dependencies:**
-   ```bash
-   npm install
-   ```
-
-3. **Environment Setup:**
-   Create a `.env` file in the root directory:
-   ```env
-   VITE_SUPABASE_URL=your_supabase_url
-   VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
-   ```
-
-4. **Run development server:**
-   ```bash
-   npm run dev
-   ```
+```mermaid
+graph TD
+    A[Mobile/Web Client] -->|React + Vite| B(UI Components)
+    B -->|PWA Layers| C{Sync Engine}
+    C -->|Real-time| D[Supabase Backend]
+    D -->|PostgreSQL| E[(Relational Data)]
+    D -->|Auth/Storage| F[Cloud Assets]
+```
 
 ---
 
-## 📱 Mobile Experience (PWA)
-The app is fully responsive and can be installed on iOS and Android devices as a standalone app, providing a native-like experience with offline capabilities and push-like notifications.
+## 🚀 Core Modules
+
+### 📦 Logic-Driven Inventory
+- **Smart Stocking**: Automated tracking of multi-warehouse movements.
+- **Verification Flow**: Multi-stage approval guards to prevent inventory discrepancies.
+
+### 💰 Financial Intelligence
+- **Deep Analytics**: Dynamic cost filtering and categorization.
+- **Auditable Records**: Full history of project expenditures with role-based visibility.
+
+### 🏭 Industrial Production
+- **BOM Logic**: Complex material consumption modeling for manufacturing.
+- **Flow Automation**: Coupled transactions that link raw material export to finished product import.
+
+### 👥 HR & Intelligent Workforce
+- **Time-Tracking**: Integrated Lunar-calendar attendance tracking.
+- **Payroll Automation**: Dynamic engine for salary, advances, and allowances.
+
+---
+
+## 🛠️ Technology Stack
+
+- **Core**: [React 18](https://reactjs.org/) + [TypeScript](https://www.typescriptlang.org/)
+- **State Management**: React Hooks & [Supabase Realtime](https://supabase.com/)
+- **UI/UX**: [Tailwind CSS](https://tailwindcss.com/) & [Lucide Icons](https://lucide.dev/)
+- **Build Infrastructure**: [Vite](https://vitejs.dev/)
+
+---
+
+## 🔧 Installation & Setup
+
+```bash
+# Clone and enter the project
+git clone https://github.com/tommm1207/CDX-Team.git && cd CDX-Team
+
+# Install dependencies (recommended: npm or pnpm)
+npm install
+
+# Setup local environment
+cp .env.example .env
+
+# Launch development environment
+npm run dev
+```
 
 ---
 
 <div align="center">
-  <p>Crafted with ❤️ by <b>CDX TEAM - NGUYỄN KHÔI NGUYÊN (TOM)</b></p>
-  <p><i>Building the future of construction management.</i></p>
+  <p>Crafted for Excellence by <b>CDX TEAM - NGUYỄN KHÔI NGUYÊN (TOM)</b></p>
+  <p><i>"Cộng tác để vươn xa" - Innovating Construction Management.</i></p>
 </div>

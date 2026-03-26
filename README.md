@@ -32,22 +32,18 @@ Built with **Vite + React + Tailwind CSS** and powered by **Supabase**, it offer
 - **Dynamic Stock Management**: Real-time tracking of imports, exports, and internal transfers between warehouses.
 - **Approval Workflow**: A rigorous 2-step verification process ensuring data integrity and accountability.
 - **Interactive Reports**: Visual inventory checks with instant balance updates.
-- ![Inventory Screenshot](public/manual/stock_in_admin.png)
 
 ### 💰 Financial Transparency
 - **Expense Tracking**: Granular categorization of project costs by group, location, and personnel.
 - **Real-time Analytics**: Automated cost reports and budget filtering for precise financial oversight.
-- ![Finance Screenshot](public/manual/costs_admin.png)
 
 ### 🏭 Production Efficiency
 - **BOM (Bill of Materials)**: Define consumption logic for manufacturing finished goods (e.g., concrete piles).
 - **Automated Transactions**: Streamlined production orders that automatically trigger raw material deductions and finished product stock-ins.
-- ![Production Screenshot](public/manual/production_order_guide.png)
 
 ### 👥 HR & Intelligent Payroll
 - **Smart Attendance**: One-tap daily check-ins with Lunar calendar integration.
 - **Dynamic Payroll**: Automated monthly salary calculations considering advances, allowances, and overtime.
-- ![HR Screenshot](public/manual/attendance_admin.png)
 
 ---
 

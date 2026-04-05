@@ -1,8 +1,9 @@
 import { useState } from 'react';
 import { Download } from 'lucide-react';
 import { motion } from 'motion/react';
-import { utils, write, writeFile } from 'xlsx';
+import ExcelJS from 'exceljs';
 import { supabase } from '../../supabaseClient';
+import { formatDataForExcel } from '../../utils/excelHelper';
 import { PageBreadcrumb } from '../shared/PageBreadcrumb';
 import { BACKUP_TABLES } from './Backup';
 
@@ -15,48 +16,100 @@ export const BackupNow = ({ onBack, addToast }: { onBack: () => void, addToast: 
     setStatus('Đang chuẩn bị dữ liệu...');
 
     try {
-      const workbook = utils.book_new();
+      const workbook = new ExcelJS.Workbook();
+      workbook.creator = 'CDX Manager';
+      workbook.lastModifiedBy = 'CDX System';
+      workbook.created = new Date();
 
       // 1. Tạo trang bìa TỔNG QUAN
-      const summaryData = [
-        ['HỆ THỐNG QUẢN LÝ KHO & NHÂN SỰ CDX 2026'],
-        [''],
-        ['BÁO CÁO SAO LƯU DỮ LIỆU TOÀN BỘ'],
-        ['Ngày thực hiện:', new Date().toLocaleString('vi-VN')],
-        ['Số lượng bảng:', BACKUP_TABLES.length],
-        ['Danh sách bảng:', BACKUP_TABLES.map(t => t.label).join(', ')],
-        [''],
-        ['Chi tiết các bảng dữ liệu được liệt kê ở các Tab bên dưới.'],
-      ];
-      const summarySheet = utils.aoa_to_sheet(summaryData);
-      summarySheet['!cols'] = [{ wch: 25 }, { wch: 60 }];
-      utils.book_append_sheet(workbook, summarySheet, 'TỔNG QUAN');
+      const summarySheet = workbook.addWorksheet('TỔNG QUAN', { views: [{ showGridLines: false }] });
+      
+      summarySheet.getCell('A1').value = 'HỆ THỐNG QUẢN LÝ KHO & NHÂN SỰ CDX 2026';
+      summarySheet.getCell('A1').font = { size: 18, bold: true, color: { argb: 'FF008060' } };
+      
+      summarySheet.getCell('A3').value = 'BÁO CÁO SAO LƯU DỮ LIỆU TOÀN BỘ';
+      summarySheet.getCell('A3').font = { size: 14, bold: true };
+
+      summarySheet.getCell('A5').value = 'Ngày thực hiện:';
+      summarySheet.getCell('B5').value = new Date().toLocaleString('vi-VN');
+      
+      summarySheet.getCell('A6').value = 'Số lượng bảng:';
+      summarySheet.getCell('B6').value = BACKUP_TABLES.length;
+
+      summarySheet.getCell('A8').value = 'Dữ liệu chi tiết được trình bày trong các Tab tương ứng bên dưới.';
+      summarySheet.getCell('A8').font = { italic: true };
+
+      summarySheet.getColumn(1).width = 25;
+      summarySheet.getColumn(2).width = 50;
 
       // 2. Thêm dữ liệu các bảng
       const labels: string[] = [];
+      const stats: Record<string, number> = {};
+
       for (const table of BACKUP_TABLES) {
         labels.push(table.label);
-        setStatus(`Đang tải bảng: ${table.label}...`);
+        setStatus(`Đang trích xuất: ${table.label}...`);
+        
         const { data, error } = await supabase.from(table.id).select('*');
         if (error) {
           console.error(`Error fetching ${table.id}:`, error);
           continue;
         }
 
-        if (data && data.length > 0) {
-          const worksheet = utils.json_to_sheet(data);
-          
-          // Tự động giãn cột
-          const keys = Object.keys(data[0]);
-          worksheet['!cols'] = keys.map(key => {
-            const maxLen = Math.max(
-              key.toString().length,
-              ...data.map(row => (row[key] ? row[key].toString().length : 0))
-            );
-            return { wch: Math.min(maxLen + 2, 50) };
+        const rowCount = data?.length || 0;
+        stats[table.label] = rowCount;
+
+        if (data && rowCount > 0) {
+          const sheet = workbook.addWorksheet(table.label.substring(0, 31).replace(/\//g, '-'));
+          const formattedData = formatDataForExcel(data);
+          const columns = Object.keys(formattedData[0]);
+
+          // Thiết lập tiêu đề (Header)
+          const headerRow = sheet.addRow(columns);
+          headerRow.height = 25;
+          headerRow.eachCell((cell) => {
+            cell.fill = {
+              type: 'pattern',
+              pattern: 'solid',
+              fgColor: { argb: 'FF008060' }
+            };
+            cell.font = { bold: true, color: { argb: 'FFFFFFFF' }, size: 11 };
+            cell.alignment = { vertical: 'middle', horizontal: 'center' };
+            cell.border = {
+              top: { style: 'thin' },
+              left: { style: 'thin' },
+              bottom: { style: 'thin' },
+              right: { style: 'thin' }
+            };
           });
 
-          utils.book_append_sheet(workbook, worksheet, table.label.substring(0, 31).replace(/\//g, '-'));
+          // Thêm dữ liệu
+          formattedData.forEach((item) => {
+            const row = sheet.addRow(Object.values(item));
+            row.eachCell((cell) => {
+              cell.border = {
+                top: { style: 'thin' },
+                left: { style: 'thin' },
+                bottom: { style: 'thin' },
+                right: { style: 'thin' }
+              };
+              if (typeof cell.value === 'number') {
+                cell.alignment = { horizontal: 'right' };
+              }
+            });
+          });
+
+          // Tự động giãn cột và format
+          sheet.columns.forEach((column) => {
+            let maxColumnLength = 0;
+            column.eachCell!({ includeEmpty: true }, (cell) => {
+              const columnLength = cell.value ? cell.value.toString().length : 10;
+              if (columnLength > maxColumnLength) {
+                maxColumnLength = columnLength;
+              }
+            });
+            column.width = Math.min(maxColumnLength + 4, 50);
+          });
         }
       }
 
@@ -67,7 +120,15 @@ export const BackupNow = ({ onBack, addToast }: { onBack: () => void, addToast: 
 
       if (email) {
         setStatus(`Đang gửi email tới ${email}...`);
-        const fileData = write(workbook, { type: 'base64', bookType: 'xlsx' });
+        const buffer = await workbook.xlsx.writeBuffer();
+        
+        // Chuyển Buffer sang Base64
+        const uint8Array = new Uint8Array(buffer);
+        let binary = '';
+        for (let i = 0; i < uint8Array.byteLength; i++) {
+          binary += String.fromCharCode(uint8Array[i]);
+        }
+        const fileData = btoa(binary);
 
         const response = await fetch('/api/send-backup', {
           method: 'POST',
@@ -79,7 +140,8 @@ export const BackupNow = ({ onBack, addToast }: { onBack: () => void, addToast: 
             email,
             fileName,
             fileData,
-            tableList: labels
+            tableList: labels,
+            tableStats: stats
           })
         });
 

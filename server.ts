@@ -8,16 +8,41 @@ import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
 import * as xlsx from "xlsx";
+import ExcelJS from "exceljs";
 import { createClient } from "@supabase/supabase-js";
 import dotenv from "dotenv";
 
 dotenv.config();
 
-console.log("[SMTP_DEBUG] SMTP_HOST:", process.env.SMTP_HOST);
-console.log("[SMTP_DEBUG] SMTP_PORT:", process.env.SMTP_PORT);
-console.log("[SMTP_DEBUG] SMTP_USER:", process.env.SMTP_USER);
-console.log("[SMTP_DEBUG] SMTP_PASS length:", process.env.SMTP_PASS?.length || 0);
-console.log("[SMTP_DEBUG] SMTP_SECURE:", process.env.SMTP_SECURE);
+/**
+ * Ánh xạ tên cột Anh-Việt cho Excel (Đồng bộ với Frontend)
+ */
+const COLUMN_MAP: Record<string, string> = {
+  id: 'ID', code: 'Mã hiệu', name: 'Tên / Nội dung', created_at: 'Ngày tạo', updated_at: 'Ngày cập nhật',
+  notes: 'Ghi chú', status: 'Trạng thái', date: 'Ngày', quantity: 'Số lượng', unit: 'Đơn vị tính',
+  unit_price: 'Đơn giá', total_amount: 'Thành tiền', employee_id: 'Mã Nhân viên',
+  warehouse_id: 'Mã Kho', material_id: 'Mã Vật tư', description: 'Mô tả chi tiết', type: 'Phân loại',
+  full_name: 'Họ và tên', email: 'Email liên hệ', phone: 'Số điện thoại', id_card: 'Số CMND/CCCD',
+  dob: 'Ngày sinh', join_date: 'Ngày nhận việc', tax_id: 'Mã số thuế', department: 'Phòng ban / Bộ phận',
+  position: 'Chức vụ', resign_date: 'Ngày nghỉ việc', role: 'Quyền hạn (Vai trò)',
+  import_code: 'Mã Nhập kho', export_code: 'Mã Xuất kho', transfer_code: 'Mã Chuyển kho',
+  specification: 'Quy cách hồ sơ / Kỹ thuật', group_id: 'Nhóm vật tư', order_code: 'Mã Lệnh sản xuất',
+  bom_id: 'Mã Định mức (BOM)', output_warehouse_id: 'Kho thành phẩm', planned_date: 'Ngày dự kiến hoàn thành',
+  amount: 'Số tiền (VNĐ)', cost_code: 'Mã chi phí', cost_type: 'Loại chi phí', category: 'Danh mục',
+  hours_worked: 'Số giờ làm việc', overtime_hours: 'Số giờ tăng ca', content: 'Nội dung chi tiết'
+};
+
+const formatDataForExcel = (data: any[]) => {
+  if (!data || data.length === 0) return [];
+  return data.map(item => {
+    const newItem: any = {};
+    Object.keys(item).forEach(key => {
+      const label = COLUMN_MAP[key] || key;
+      newItem[label] = item[key];
+    });
+    return newItem;
+  });
+};
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -73,25 +98,24 @@ async function runAutoBackup() {
   }
 
   try {
-    const workbook = xlsx.utils.book_new();
-
+    const workbook = new ExcelJS.Workbook();
+    workbook.creator = 'CDX Auto System';
+    
     // 1. Tạo trang bìa TỔNG QUAN
-    const summaryData = [
-      ['HỆ THỐNG QUẢN LÝ KHO & NHÂN SỰ CDX 2026'],
-      [''],
-      ['BÁO CÁO SAO LƯU DỰ LIỆU TỰ ĐỘNG'],
-      ['Ngày thực hiện:', new Date().toLocaleString('vi-VN')],
-      ['Số lượng bảng:', BACKUP_TABLES.length],
-      ['Danh sách bảng:', BACKUP_TABLES.map(t => t.label).join(', ')],
-      [''],
-      ['Chi tiết các bảng dữ liệu được liệt kê ở các Tab bên dưới.'],
-    ];
-    const summarySheet = xlsx.utils.aoa_to_sheet(summaryData);
-    summarySheet['!cols'] = [{ wch: 25 }, { wch: 60 }];
-    xlsx.utils.book_append_sheet(workbook, summarySheet, 'TỔNG QUAN');
+    const summarySheet = workbook.addWorksheet('TỔNG QUAN', { views: [{ showGridLines: false }] });
+    summarySheet.getCell('A1').value = 'HỆ THỐNG QUẢN LÝ KHO & NHÂN SỰ CDX 2026';
+    summarySheet.getCell('A1').font = { size: 18, bold: true, color: { argb: 'FF008060' } };
+    summarySheet.getCell('A3').value = 'BÁO CÁO SAO LƯU DỰ LIỆU TỰ ĐỘNG (HÀNG NGÀY)';
+    summarySheet.getCell('A3').font = { size: 14, bold: true };
+    summarySheet.getCell('A5').value = 'Ngày thực hiện:';
+    summarySheet.getCell('B5').value = new Date().toLocaleString('vi-VN');
+    summarySheet.getColumn(1).width = 25;
+    summarySheet.getColumn(2).width = 50;
 
     // 2. Thêm dữ liệu các bảng
     const labels: string[] = [];
+    const stats: Record<string, number> = {};
+
     for (const table of BACKUP_TABLES) {
       labels.push(table.label);
       console.log(`[BACKUP] Fetching ${table.label}...`);
@@ -100,25 +124,49 @@ async function runAutoBackup() {
         console.error(`[BACKUP] Error fetching ${table.id}:`, error);
         continue;
       }
-      if (data && data.length > 0) {
-        const worksheet = xlsx.utils.json_to_sheet(data);
-        
-        // Tự động giãn cột
-        const keys = Object.keys(data[0]);
-        worksheet['!cols'] = keys.map(key => {
-          const maxLen = Math.max(
-            key.toString().length,
-            ...data.map(row => (row[key] ? row[key].toString().length : 0))
-          );
-          return { wch: Math.min(maxLen + 2, 50) };
+
+      const rowCount = data?.length || 0;
+      stats[table.label] = rowCount;
+
+      if (data && rowCount > 0) {
+        const sheet = workbook.addWorksheet(table.label.substring(0, 31).replace(/\//g, '-'));
+        const formattedData = formatDataForExcel(data);
+        const columns = Object.keys(formattedData[0]);
+
+        // Header
+        const headerRow = sheet.addRow(columns);
+        headerRow.height = 25;
+        headerRow.eachCell((cell) => {
+          cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF008060' } };
+          cell.font = { bold: true, color: { argb: 'FFFFFFFF' } };
+          cell.alignment = { vertical: 'middle', horizontal: 'center' };
+          cell.border = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } };
         });
 
-        xlsx.utils.book_append_sheet(workbook, worksheet, table.label.substring(0, 31).replace(/\//g, '-'));
+        // Data
+        formattedData.forEach((item) => {
+          const row = sheet.addRow(Object.values(item));
+          row.eachCell((cell) => {
+            cell.border = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } };
+            if (typeof cell.value === 'number') cell.alignment = { horizontal: 'right' };
+          });
+        });
+
+        // Auto-width
+        sheet.columns.forEach(column => {
+          let maxLen = 0;
+          column.eachCell!({ includeEmpty: true }, (cell) => {
+            const len = cell.value ? cell.value.toString().length : 10;
+            if (len > maxLen) maxLen = len;
+          });
+          column.width = Math.min(maxLen + 4, 50);
+        });
       }
     }
 
-    const fileName = `CDX_Auto_Backup_${new Date().toISOString().split('T')[0]}.xlsx`;
-    const fileData = xlsx.write(workbook, { type: 'base64', bookType: 'xlsx' });
+    const fileName = `CDX_Auto_Professional_Backup_${new Date().toISOString().split('T')[0]}.xlsx`;
+    const buffer = await workbook.xlsx.writeBuffer();
+    const fileData = Buffer.from(buffer).toString('base64');
 
     await sendEmail({
       smtpConfig,
@@ -127,6 +175,7 @@ async function runAutoBackup() {
       fileName,
       fileData,
       tableList: labels,
+      tableStats: stats,
       isAuto: true
     });
 
@@ -139,7 +188,7 @@ async function runAutoBackup() {
 /**
  * Hàm hỗ trợ gửi Email dùng chung cho cả Auto và Manual Backup
  */
-async function sendEmail({ smtpConfig, to, subject, fileName, fileData, tableList, isAuto = false }: any) {
+async function sendEmail({ smtpConfig, to, subject, fileName, fileData, tableList, tableStats, isAuto = false }: any) {
   const transporter = nodemailer.createTransport({
     host: smtpConfig.host,
     port: parseInt(smtpConfig.port.toString()),
@@ -169,13 +218,28 @@ async function sendEmail({ smtpConfig, to, subject, fileName, fileData, tableLis
           </div>
 
           <div style="margin-top: 25px;">
-            <p style="font-weight: bold; color: ${isAuto ? '#2c3e50' : '#008060'}; margin-bottom: 10px; border-bottom: 2px solid ${isAuto ? '#2c3e50' : '#008060'}; display: inline-block;">Hạng mục dữ liệu đã sao lưu:</p>
-            <ul style="padding-left: 20px; color: #444;">
-              ${tableList && tableList.length > 0 
-                ? tableList.map((item: string) => `<li style="margin-bottom: 5px;">${item}</li>`).join('')
-                : '<li style="margin-bottom: 5px;">Toàn bộ cơ sở dữ liệu</li>'
-              }
-            </ul>
+            <p style="font-weight: bold; color: ${isAuto ? '#2c3e50' : '#008060'}; margin-bottom: 10px; border-bottom: 2px solid ${isAuto ? '#2c3e50' : '#008060'}; display: inline-block;">Thống kê chi tiết dữ liệu:</p>
+            <table style="width: 100%; border-collapse: collapse; border: 1px solid #eee; margin-top: 10px;">
+              <thead>
+                <tr style="background-color: #f9f9f9; text-align: left;">
+                  <th style="padding: 10px; border: 1px solid #eee;">Hạng mục dữ liệu</th>
+                  <th style="padding: 10px; border: 1px solid #eee; text-align: center;">Số lượng bản ghi</th>
+                  <th style="padding: 10px; border: 1px solid #eee; text-align: center;">Trạng thái</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${tableList && tableList.length > 0 
+                  ? tableList.map((item: string) => `
+                    <tr>
+                      <td style="padding: 10px; border: 1px solid #eee;">${item}</td>
+                      <td style="padding: 10px; border: 1px solid #eee; text-align: center;">${tableStats && tableStats[item] !== undefined ? tableStats[item] : 'N/A'}</td>
+                      <td style="padding: 10px; border: 1px solid #eee; text-align: center; color: green;">✔ Sẵn sàng</td>
+                    </tr>
+                  `).join('')
+                  : '<tr><td colspan="3" style="padding: 10px; text-align: center;">Dữ liệu tổng hợp</td></tr>'
+                }
+              </tbody>
+            </table>
           </div>
 
           <p style="margin-top: 25px;">File đính kèm dưới đây chứa dữ liệu ở định dạng Excel (.xlsx).</p>
@@ -284,7 +348,7 @@ async function startServer() {
 
 
   app.post("/api/send-backup", backupLimiter, checkApiKey, async (req, res) => {
-    const { email, fileName, fileData, tableList } = req.body;
+    const { email, fileName, fileData, tableList, tableStats } = req.body;
     
     const smtpConfig = {
       host: process.env.SMTP_HOST || req.body.smtpConfig?.host,
@@ -305,7 +369,8 @@ async function startServer() {
         subject: `[HỆ THỐNG] Sao lưu dữ liệu CDX - ${new Date().toLocaleDateString('vi-VN')}`,
         fileName,
         fileData,
-        tableList
+        tableList,
+        tableStats
       });
       res.json({ success: true, message: "Email sent successfully" });
     } catch (error: any) {

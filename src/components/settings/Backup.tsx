@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Settings, Mail, Info, RefreshCw, Layers, Save, Play, Clock, Check } from 'lucide-react';
+import ExcelJS from 'exceljs';
+import { formatDataForExcel } from '../../utils/excelHelper';
 import { supabase } from '../../supabaseClient';
 import { PageBreadcrumb } from '../shared/PageBreadcrumb';
 
@@ -91,65 +93,126 @@ export const Backup = ({ onBack, addToast }: { onBack: () => void, addToast: (ms
     }
 
     setIsBackingUp(true);
-    setBackupStatus('Đang truy xuất dữ liệu...');
+    setBackupStatus('Đang khởi tạo báo cáo EXCEL...');
 
     try {
-      const { utils, write } = await import('xlsx');
-      const workbook = utils.book_new();
+      const workbook = new ExcelJS.Workbook();
+      workbook.creator = 'CDX Manager';
+      workbook.lastModifiedBy = 'CDX System';
+      workbook.created = new Date();
 
       // 1. Tạo trang bìa TỔNG QUAN
-      const summaryData = [
-        ['HỆ THỐNG QUẢN LÝ KHO & NHÂN SỰ CDX 2026'],
-        [''],
-        ['BÁO CÁO SAO LƯU DỮ LIỆU'],
-        ['Ngày thực hiện:', new Date().toLocaleString('vi-VN')],
-        ['Số lượng bảng:', selectedTables.length],
-        ['Danh sách bảng:', selectedTables.map(id => BACKUP_TABLES.find(t => t.id === id)?.label).join(', ')],
-        [''],
-        ['Chi tiết các bảng dữ liệu được liệt kê ở các Tab bên dưới.'],
-      ];
-      const summarySheet = utils.aoa_to_sheet(summaryData);
-      summarySheet['!cols'] = [{ wch: 25 }, { wch: 60 }];
-      utils.book_append_sheet(workbook, summarySheet, 'TỔNG QUAN');
+      const summarySheet = workbook.addWorksheet('TỔNG QUAN', { views: [{ showGridLines: false }] });
+      
+      summarySheet.getCell('A1').value = 'HỆ THỐNG QUẢN LÝ KHO & NHÂN SỰ CDX 2026';
+      summarySheet.getCell('A1').font = { size: 18, bold: true, color: { argb: 'FF008060' } };
+      
+      summarySheet.getCell('A3').value = 'BÁO CÁO SAO LƯU DỮ LIỆU ĐỊNH KỲ';
+      summarySheet.getCell('A3').font = { size: 14, bold: true };
+
+      summarySheet.getCell('A5').value = 'Ngày thực hiện:';
+      summarySheet.getCell('B5').value = new Date().toLocaleString('vi-VN');
+      
+      summarySheet.getCell('A6').value = 'Email nhận:';
+      summarySheet.getCell('B6').value = email;
+
+      summarySheet.getCell('A7').value = 'Số lượng bảng:';
+      summarySheet.getCell('B7').value = selectedTables.length;
+
+      summarySheet.getCell('A9').value = 'Dữ liệu chi tiết được trình bày trong các Tab tương ứng bên dưới.';
+      summarySheet.getCell('A9').font = { italic: true };
+
+      summarySheet.getColumn(1).width = 25;
+      summarySheet.getColumn(2).width = 50;
 
       // 2. Thêm dữ liệu các bảng
       const labels: string[] = [];
+      const stats: Record<string, number> = {};
+
       for (const tableId of selectedTables) {
-        const table = BACKUP_TABLES.find(t => t.id === tableId);
-        if (!table) continue;
-        labels.push(table.label);
+        const tableDef = BACKUP_TABLES.find(t => t.id === tableId);
+        if (!tableDef) continue;
         
-        setBackupStatus(`Đang xử lý: ${table.label}...`);
+        labels.push(tableDef.label);
+        setBackupStatus(`Đang trích xuất: ${tableDef.label}...`);
+        
         const { data } = await supabase.from(tableId).select('*');
-        
-        if (data && data.length > 0) {
-          const worksheet = utils.json_to_sheet(data);
-          
-          // Tự động giãn cột
-          const keys = Object.keys(data[0]);
-          worksheet['!cols'] = keys.map(key => {
-            const maxLen = Math.max(
-              key.toString().length,
-              ...data.map(row => (row[key] ? row[key].toString().length : 0))
-            );
-            return { wch: Math.min(maxLen + 2, 50) };
+        const rowCount = data?.length || 0;
+        stats[tableDef.label] = rowCount;
+
+        if (data && rowCount > 0) {
+          const sheet = workbook.addWorksheet(tableDef.label.substring(0, 31).replace(/\//g, '-'));
+          const formattedData = formatDataForExcel(data);
+          const columns = Object.keys(formattedData[0]);
+
+          // Thiết lập tiêu đề (Header)
+          const headerRow = sheet.addRow(columns);
+          headerRow.height = 25;
+          headerRow.eachCell((cell) => {
+            cell.fill = {
+              type: 'pattern',
+              pattern: 'solid',
+              fgColor: { argb: 'FF008060' }
+            };
+            cell.font = { bold: true, color: { argb: 'FFFFFFFF' }, size: 11 };
+            cell.alignment = { vertical: 'middle', horizontal: 'center' };
+            cell.border = {
+              top: { style: 'thin' },
+              left: { style: 'thin' },
+              bottom: { style: 'thin' },
+              right: { style: 'thin' }
+            };
           });
 
-          utils.book_append_sheet(workbook, worksheet, table.label.substring(0, 31).replace(/\//g, '-'));
+          // Thêm dữ liệu
+          formattedData.forEach((item) => {
+            const row = sheet.addRow(Object.values(item));
+            row.eachCell((cell) => {
+              cell.border = {
+                top: { style: 'thin' },
+                left: { style: 'thin' },
+                bottom: { style: 'thin' },
+                right: { style: 'thin' }
+              };
+              if (typeof cell.value === 'number') {
+                cell.alignment = { horizontal: 'right' };
+              }
+            });
+          });
+
+          // Tự động giãn cột và format
+          sheet.columns.forEach((column, i) => {
+            let maxColumnLength = 0;
+            column.eachCell!({ includeEmpty: true }, (cell) => {
+              const columnLength = cell.value ? cell.value.toString().length : 10;
+              if (columnLength > maxColumnLength) {
+                maxColumnLength = columnLength;
+              }
+            });
+            column.width = Math.min(maxColumnLength + 4, 50);
+          });
         }
       }
 
-      const fileName = `CDX_Backup_${new Date().toISOString().split('T')[0]}.xlsx`;
-      const fileData = write(workbook, { type: 'base64', bookType: 'xlsx' });
+      const fileName = `CDX_Professional_Backup_${new Date().toISOString().split('T')[0]}.xlsx`;
+      const buffer = await workbook.xlsx.writeBuffer();
+      
+      // Chuyển Buffer sang Base64 cho API
+      const uint8Array = new Uint8Array(buffer);
+      let binary = '';
+      for (let i = 0; i < uint8Array.byteLength; i++) {
+        binary += String.fromCharCode(uint8Array[i]);
+      }
+      const fileData = btoa(binary);
 
-      setBackupStatus('Đang gửi email qua hệ thống...');
+      setBackupStatus('Đang gửi báo cáo qua Email...');
       const response = await fetch('/api/send-backup', {
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json',
           'x-api-key': 'cdx-secret-2026'
         },
-        body: JSON.stringify({ email, fileName, fileData, tableList: labels })
+        body: JSON.stringify({ email, fileName, fileData, tableList: labels, tableStats: stats })
       });
 
       if (!response.ok) {

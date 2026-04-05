@@ -46,7 +46,8 @@ export const NumericInput = ({
     const rawValue = e.target.value;
 
     if (isDecimal) {
-      const cleanValue = rawValue.replace(/[^0-9.]/g, '');
+      // Chuyển đổi dấu phẩy thành dấu chấm để hỗ trợ bàn phím iPhone/Mobile
+      const cleanValue = rawValue.replace(/,/g, '.').replace(/[^0-9.]/g, '');
       const parts = cleanValue.split('.');
       const finalValue = parts[0] + (parts.length > 1 ? '.' + parts.slice(1).join('') : '');
 

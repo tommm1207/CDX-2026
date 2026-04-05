@@ -59,7 +59,6 @@ const formatDataForExcel = (data: any[], lookupData: any = {}) => {
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-const CONFIG_PATH = path.join(__dirname, "backup-config.json");
 let currentCronJob: ScheduledTask | null = null;
 
 const supabaseUrl = process.env.VITE_SUPABASE_URL || "";
@@ -83,19 +82,53 @@ const BACKUP_TABLES = [
   { id: 'partners', label: 'Khách hàng & NCC' },
 ];
 
+/**
+ * Lấy cấu hình backup từ Supabase (thay thế tệp JSON)
+ */
+async function getBackupConfig() {
+  try {
+    const { data, error } = await supabase
+      .from('system_configs')
+      .select('value')
+      .eq('key', 'backup_settings')
+      .single();
+
+    if (error || !data) return null;
+    return data.value;
+  } catch (err) {
+    console.error("[CONFIG] Error fetching config from Supabase:", err);
+    return null;
+  }
+}
+
+/**
+ * Lưu cấu hình backup vào Supabase
+ */
+async function saveBackupConfig(config: any) {
+  try {
+    const { error } = await supabase
+      .from('system_configs')
+      .upsert({ key: 'backup_settings', value: config }, { onConflict: 'key' });
+
+    if (error) throw error;
+    return true;
+  } catch (err) {
+    console.error("[CONFIG] Error saving config to Supabase:", err);
+    return false;
+  }
+}
+
 async function runAutoBackup() {
   console.log("----------------------------------------------------------------");
-  console.log(`[DEMO] >>> AUTOMATIC BACKUP TRIGGERED AT: ${new Date().toLocaleString('vi-VN')}`);
+  console.log(`[BACKUP] >>> AUTOMATIC BACKUP TRIGGERED AT: ${new Date().toLocaleString('vi-VN')}`);
   console.log("----------------------------------------------------------------");
-  console.log(`[BACKUP] Starting scheduled backup...`);
   
-  if (!fs.existsSync(CONFIG_PATH)) {
-    console.log("[BACKUP] No configuration found. Skipping.");
+  const config = await getBackupConfig();
+  if (!config) {
+    console.log("[BACKUP] No configuration found in Supabase. Skipping.");
     return;
   }
 
-  const config = JSON.parse(fs.readFileSync(CONFIG_PATH, "utf-8"));
-  
   const smtpConfig = {
     host: process.env.SMTP_HOST || config.smtpConfig?.host || '',
     port: process.env.SMTP_PORT || config.smtpConfig?.port || '',
@@ -306,112 +339,116 @@ const backupLimiter = rateLimit({
   legacyHeaders: false,
 });
 
-async function startServer() {
-  const app = express();
-  const PORT = process.env.PORT || 3000;
+const app = express();
+app.use(bodyParser.json({ limit: '50mb' }));
+app.use(bodyParser.urlencoded({ limit: '50mb', extended: true }));
 
-  app.use(bodyParser.json({ limit: '50mb' }));
-  app.use(bodyParser.urlencoded({ limit: '50mb', extended: true }));
-
-
-  // LOAD SCHEDULE ON START
-  if (fs.existsSync(CONFIG_PATH)) {
-    const config = JSON.parse(fs.readFileSync(CONFIG_PATH, "utf-8"));
-    if (config.enabled && config.schedule) {
-      console.log(`[BACKUP] Scheduling backup with cron: ${config.schedule}`);
-      currentCronJob = cron.schedule(config.schedule, runAutoBackup);
-    }
+/**
+ * Khởi tạo lịch trình Backup
+ */
+async function initBackupScheduler() {
+  const config = await getBackupConfig();
+  if (config && config.enabled && config.schedule) {
+    console.log(`[BACKUP] Scheduling backup with cron: ${config.schedule}`);
+    currentCronJob = cron.schedule(config.schedule, runAutoBackup);
   }
+}
 
-  app.get("/api/get-backup-config", checkApiKey, (req, res) => {
-    if (fs.existsSync(CONFIG_PATH)) {
-      const config = JSON.parse(fs.readFileSync(CONFIG_PATH, "utf-8"));
-      res.json(config);
-    } else {
-      res.json({});
-    }
+// Gọi khởi tạo lần đầu (Khi server start)
+initBackupScheduler();
+
+app.get("/api/get-backup-config", checkApiKey, async (req, res) => {
+  const config = await getBackupConfig();
+  res.json(config || {});
+});
+
+app.get("/api/cron-status", checkApiKey, async (req, res) => {
+  const config = await getBackupConfig();
+  res.json({
+    hasJob: !!currentCronJob,
+    schedule: config?.schedule,
+    enabled: config?.enabled,
+    nextRun: config?.enabled && config?.schedule ? "Scheduled" : "Disabled"
   });
+});
 
-  app.get("/api/cron-status", checkApiKey, (req, res) => {
-    console.log("[DEBUG] /api/cron-status called");
-    if (fs.existsSync(CONFIG_PATH)) {
-      const config = JSON.parse(fs.readFileSync(CONFIG_PATH, "utf-8"));
-      res.json({
-        hasJob: !!currentCronJob,
-        schedule: config.schedule,
-        enabled: config.enabled,
-        nextRun: config.enabled && config.schedule ? "Scheduled" : "Disabled"
-      });
-    } else {
-      res.json({ hasJob: !!currentCronJob, status: "No config file" });
-    }
-  });
+app.post("/api/save-backup-config", checkApiKey, async (req, res) => {
+  const { email, smtpConfig, schedule, enabled } = req.body;
+  const config = { email, smtpConfig, schedule, enabled };
+  
+  const saved = await saveBackupConfig(config);
+  if (!saved) return res.status(500).json({ error: "Failed to save config to database" });
 
-  app.post("/api/save-backup-config", checkApiKey, (req, res) => {
-    const { email, smtpConfig, schedule, enabled } = req.body;
-    const config = { email, smtpConfig, schedule, enabled };
-    fs.writeFileSync(CONFIG_PATH, JSON.stringify(config, null, 2));
-    
-    // Stop old job if exists
-    if (currentCronJob) {
-      currentCronJob.stop();
-      console.log("[BACKUP] Old job stopped.");
-    }
-    
-    if (enabled && schedule) {
-      console.log(`[BACKUP] New job scheduled: ${schedule}`);
-      currentCronJob = cron.schedule(schedule, runAutoBackup);
-    } else {
-      currentCronJob = null;
-    }
-
-    res.json({ success: true });
-  });
-
-
-  app.post("/api/send-backup", backupLimiter, checkApiKey, async (req, res) => {
-    const { email, fileName, fileData, tableList, tableStats } = req.body;
-    
-    const smtpConfig = {
-      host: process.env.SMTP_HOST || req.body.smtpConfig?.host,
-      port: process.env.SMTP_PORT || req.body.smtpConfig?.port,
-      user: process.env.SMTP_USER || req.body.smtpConfig?.user,
-      pass: process.env.SMTP_PASS || req.body.smtpConfig?.pass,
-      secure: process.env.SMTP_SECURE ? process.env.SMTP_SECURE === 'true' : req.body.smtpConfig?.secure
-    };
-
-    if (!email || !fileData || !smtpConfig.user || !smtpConfig.pass) {
-      return res.status(400).json({ error: "Thiếu thông tin cấu hình mail ngầm (SMTP) hoặc dữ liệu backup." });
-    }
-
-    try {
-      await sendEmail({
-        smtpConfig,
-        to: email,
-        subject: `[HỆ THỐNG] Sao lưu dữ liệu CDX - ${new Date().toLocaleDateString('vi-VN')}`,
-        fileName,
-        fileData,
-        tableList,
-        tableStats
-      });
-      res.json({ success: true, message: "Email sent successfully" });
-    } catch (error: any) {
-      console.error("[SMTP_ERROR] Log chi tiết lỗi gửi mail:", error);
-      res.status(500).json({ error: error.message || "Failed to send email" });
-    }
-  });
-
-  if (process.env.NODE_ENV !== "production") {
-    const vite = await createViteServer({ server: { middlewareMode: true }, appType: "spa" });
-    app.use(vite.middlewares);
+  // Stop old job if exists
+  if (currentCronJob) {
+    currentCronJob.stop();
+    console.log("[BACKUP] Old job stopped.");
+  }
+  
+  if (enabled && schedule) {
+    console.log(`[BACKUP] New job scheduled: ${schedule}`);
+    currentCronJob = cron.schedule(schedule, runAutoBackup);
   } else {
-    app.use(express.static("dist"));
-    app.get("*", (req, res) => res.sendFile("index.html", { root: "dist" }));
+    currentCronJob = null;
   }
 
+  res.json({ success: true });
+});
+
+app.post("/api/send-backup", backupLimiter, checkApiKey, async (req, res) => {
+  const { email, fileName, fileData, tableList, tableStats } = req.body;
+  
+  const smtpConfig = {
+    host: process.env.SMTP_HOST || req.body.smtpConfig?.host,
+    port: process.env.SMTP_PORT || req.body.smtpConfig?.port,
+    user: process.env.SMTP_USER || req.body.smtpConfig?.user,
+    pass: process.env.SMTP_PASS || req.body.smtpConfig?.pass,
+    secure: process.env.SMTP_SECURE ? process.env.SMTP_SECURE === 'true' : req.body.smtpConfig?.secure
+  };
+
+  if (!email || !fileData || !smtpConfig.user || !smtpConfig.pass) {
+    return res.status(400).json({ error: "Thiêu thông tin cấu hình mail ngầm (SMTP) hoặc dữ liệu backup." });
+  }
+
+  try {
+    await sendEmail({
+      smtpConfig,
+      to: email,
+      subject: `[HỆ THỐNG] Sao lưu dữ liệu CDX - ${new Date().toLocaleDateString('vi-VN')}`,
+      fileName,
+      fileData,
+      tableList,
+      tableStats
+    });
+    res.json({ success: true, message: "Email sent successfully" });
+  } catch (error: any) {
+    console.error("[SMTP_ERROR] Log chi tiết lỗi gửi mail:", error);
+    res.status(500).json({ error: error.message || "Failed to send email" });
+  }
+});
+
+// Middleware for static files or Vite
+if (process.env.NODE_ENV !== "production" && !process.env.VERCEL) {
+  const vite = await createViteServer({ server: { middlewareMode: true }, appType: "spa" });
+  app.use(vite.middlewares);
+} else {
+  app.use(express.static("dist"));
+  app.get("*", (req, res) => {
+    // Chỉ phục vụ index.html nếu không phải request API
+    if (!req.path.startsWith('/api/')) {
+       res.sendFile(path.join(__dirname, "dist", "index.html"));
+    } else {
+       res.status(404).json({ error: "API Route not found" });
+    }
+  });
+}
+
+// Chỉ chạy server thủ công nếu KHÔNG PHẢI Vercel
+if (!process.env.VERCEL) {
+  const PORT = process.env.PORT || 3000;
   app.listen(Number(PORT), "0.0.0.0", () => {
     console.log(`Server running on http://localhost:${PORT}`);
   });
 }
 
-startServer();
+export default app;

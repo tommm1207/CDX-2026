@@ -307,7 +307,7 @@ export default function App() {
     {
       title: 'CÔNG CỤ SAO LƯU',
       items: [
-        { id: 'backup-settings', label: 'Cấu hình Backup', icon: Settings },
+        { id: 'backup-settings', label: 'Backup', icon: Settings },
         { id: 'backup-now', label: 'Sao lưu ngay', icon: Download },
       ]
     }

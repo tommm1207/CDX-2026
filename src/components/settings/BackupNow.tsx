@@ -27,7 +27,7 @@ export const BackupNow = ({ onBack, addToast }: { onBack: () => void, addToast: 
 
         if (data && data.length > 0) {
           const worksheet = utils.json_to_sheet(data);
-          utils.book_append_sheet(workbook, worksheet, table.label.substring(0, 31));
+          utils.book_append_sheet(workbook, worksheet, table.label.substring(0, 31).replace(/\//g, '-'));
         }
       }
 
@@ -35,10 +35,8 @@ export const BackupNow = ({ onBack, addToast }: { onBack: () => void, addToast: 
       const fileName = `CDX_Full_Backup_${new Date().toISOString().split('T')[0]}.xlsx`;
 
       const email = localStorage.getItem('backup_email');
-      const smtpRaw = localStorage.getItem('smtp_config');
-      const smtpConfig = smtpRaw ? JSON.parse(smtpRaw) : null;
 
-      if (email && smtpConfig && smtpConfig.user && smtpConfig.pass) {
+      if (email) {
         setStatus(`Đang gửi email tới ${email}...`);
         const fileData = write(workbook, { type: 'base64', bookType: 'xlsx' });
 
@@ -46,13 +44,12 @@ export const BackupNow = ({ onBack, addToast }: { onBack: () => void, addToast: 
           method: 'POST',
           headers: { 
             'Content-Type': 'application/json',
-            'x-api-key': import.meta.env.VITE_API_SECRET_KEY
+            'x-api-key': 'cdx-secret-2026'
           },
           body: JSON.stringify({
             email,
             fileName,
-            fileData,
-            smtpConfig
+            fileData
           })
         });
 
@@ -61,8 +58,6 @@ export const BackupNow = ({ onBack, addToast }: { onBack: () => void, addToast: 
           throw new Error(errorData.error || 'Failed to send email');
         }
       }
-
-      writeFile(workbook, fileName);
 
       setStatus('Hoàn tất!');
       addToast('Sao lưu toàn bộ dữ liệu thành công!' + (email ? ` Đã gửi tới email ${email}.` : ''), 'success');

@@ -14,7 +14,10 @@ import {
   CalendarCheck,
   ArrowLeftRight,
   Plus,
-  X
+  X,
+  Package,
+  Layers,
+  Banknote
 } from 'lucide-react';
 import { supabase } from '../../supabaseClient';
 import { Employee } from '../../types';
@@ -179,53 +182,55 @@ export const Dashboard = ({ user, onNavigate, addToast, pendingApprovals = 0 }: 
   ];
 
   return (
-    <div className="p-4 md:p-8 space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
+    <div className="p-3 md:p-8 space-y-4 md:space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
       {/* Welcome Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
-        <div className="space-y-1">
-          <h1 className="text-3xl font-black text-gray-900 tracking-tight flex items-center gap-3">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
+        <div className="space-y-0.5">
+          <h1 className="text-2xl md:text-3xl font-black text-gray-900 tracking-tight flex items-center gap-3">
             Chào {user.full_name.split(' ').pop()}! 👋
           </h1>
-          <p className="text-gray-500 font-medium">Chúc bạn một ngày làm việc hiệu quả tại CDX.</p>
+          <p className="text-gray-500 font-medium text-sm">Chúc bạn một ngày làm việc hiệu quả tại CDX.</p>
         </div>
           <button 
             onClick={() => onNavigate('user-manual')}
-            className="flex items-center gap-3 bg-primary p-2 rounded-2xl shadow-lg shadow-primary/20 hover:bg-primary-hover transition-all"
+            className="flex items-center gap-2 bg-primary p-2 rounded-xl shadow-lg shadow-primary/20 hover:bg-primary-hover transition-all"
           >
-            <div className="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center text-white">
-              <FileText size={24} />
+            <div className="w-9 h-9 bg-white/20 rounded-lg flex items-center justify-center text-white">
+              <FileText size={18} />
             </div>
-            <div className="pr-4 border-r border-white/20 text-left">
-              <p className="text-[10px] font-bold text-white/70 uppercase tracking-widest leading-none mb-1">Tài liệu</p>
-              <p className="text-sm font-black text-white leading-none">Hướng dẫn app</p>
+            <div className="pr-3 border-r border-white/20 text-left">
+              <p className="text-[9px] font-bold text-white/70 uppercase tracking-widest leading-none mb-0.5">Tài liệu</p>
+              <p className="text-xs font-black text-white leading-none">Hướng dẫn app</p>
             </div>
-            <div className="pl-2 text-left">
-              <p className="text-[10px] font-bold text-white/70 uppercase tracking-widest leading-none mb-1">Vai trò</p>
-              <p className="text-sm font-black text-white leading-none uppercase">{user.role}</p>
+            <div className="pl-1 pr-1 text-left">
+              <p className="text-[9px] font-bold text-white/70 uppercase tracking-widest leading-none mb-0.5">Vai trò</p>
+              <p className="text-xs font-black text-white leading-none uppercase">{user.role}</p>
             </div>
           </button>
       </div>
 
-      {/* Quick Actions */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
-        {menuActions.map((action, idx) => (
+      {/* Quick Actions — 1 row compact on mobile, full cards on desktop */}
+      <div className="grid grid-cols-4 gap-2 md:gap-6 md:grid-cols-4">
+        {menuActions.map((action) => (
           (user.role === 'Admin' || user.role === 'Admin App' || ['stock-in', 'stock-out', 'transfer', 'cost-report'].includes(action.id)) && (
             <motion.div
               key={action.id}
-              whileHover={{ y: -5, scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
+              whileHover={{ y: -3, scale: 1.03 }}
+              whileTap={{ scale: 0.96 }}
               onClick={() => onNavigate(action.id)}
-              className="group bg-white p-5 md:p-6 rounded-[2rem] shadow-sm border border-gray-100 cursor-pointer hover:shadow-xl hover:shadow-gray-200/50 transition-all flex flex-col gap-4 relative overflow-hidden"
+              className="group bg-white md:p-6 rounded-xl md:rounded-[2rem] shadow-sm border border-gray-100 cursor-pointer hover:shadow-xl hover:shadow-gray-200/50 transition-all flex flex-col items-center justify-center py-2.5 px-1 md:items-start md:gap-4 relative overflow-hidden"
             >
-              <div className="absolute top-0 right-0 p-8 bg-gray-50 rounded-bl-full translate-x-4 -translate-y-4 group-hover:bg-primary/5 transition-colors" />
-              <div className={`w-12 h-12 ${action.color} rounded-2xl flex items-center justify-center text-white shadow-lg relative z-10 group-hover:rotate-12 transition-transform`}>
-                <action.icon size={24} />
+              <div className="absolute top-0 right-0 p-6 bg-gray-50 rounded-bl-full translate-x-4 -translate-y-4 group-hover:bg-primary/5 transition-colors hidden md:block" />
+              <div className={`w-8 h-8 md:w-12 md:h-12 flex-shrink-0 ${action.color} rounded-lg md:rounded-2xl flex items-center justify-center text-white shadow-sm md:shadow-lg relative z-10 group-hover:rotate-12 transition-transform`}>
+                <action.icon size={16} className="md:hidden" />
+                <action.icon size={24} className="hidden md:block" />
               </div>
-              <div className="relative z-10">
+              <p className="text-[10px] md:hidden font-semibold text-gray-600 text-center leading-tight mt-1.5 w-full px-0.5">{action.label}</p>
+              <div className="hidden md:block relative z-10">
                 <h3 className="text-base font-bold text-gray-800 group-hover:text-primary transition-colors">{action.label}</h3>
                 <p className="text-[10px] text-gray-400 font-medium leading-tight mt-1">{action.description}</p>
               </div>
-              <ArrowRight className="absolute bottom-6 right-6 text-gray-200 group-hover:text-primary group-hover:translate-x-1 transition-all" size={20} />
+              <ArrowRight className="hidden md:block absolute bottom-6 right-6 text-gray-200 group-hover:text-primary group-hover:translate-x-1 transition-all" size={20} />
             </motion.div>
           )
         ))}
@@ -267,55 +272,40 @@ export const Dashboard = ({ user, onNavigate, addToast, pendingApprovals = 0 }: 
         <div className="space-y-6">
           {/* Pending Approvals Widget - Now in Sidebar for Admin */}
           {(user.role === 'Admin' || user.role === 'Admin App') && (
-            <div className="bg-white rounded-[2.5rem] border border-gray-100 shadow-sm overflow-hidden">
-              <div 
-                className="p-8 pb-4 flex items-center justify-between cursor-pointer hover:bg-gray-50 transition-colors"
-                onClick={() => onNavigate('pending-approvals')}
-              >
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 bg-amber-50 text-amber-600 rounded-xl flex items-center justify-center">
-                    <Bell size={20} className="animate-bounce" />
+            <div
+              className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden cursor-pointer hover:bg-gray-50 transition-colors"
+              onClick={() => onNavigate('pending-approvals')}
+            >
+              <div className="px-4 py-3 flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <div className="w-7 h-7 bg-amber-50 text-amber-600 rounded-lg flex items-center justify-center">
+                    <Bell size={14} className="animate-bounce" />
                   </div>
-                  <h2 className="text-lg font-black text-gray-800 uppercase tracking-tight">Phiếu đang chờ duyệt</h2>
+                  <h2 className="text-xs font-black text-gray-700 uppercase tracking-tight">Phiếu chờ duyệt</h2>
                 </div>
-                <span className="px-4 py-1.5 bg-red-100 text-red-600 text-[10px] font-black rounded-full border-2 border-red-50">
-                  {pendingApprovals} PHIẾU
+                <span className="px-2.5 py-1 bg-red-100 text-red-600 text-[10px] font-black rounded-full">
+                  {pendingApprovals} phiếu
                 </span>
               </div>
-              <div className="px-8 pb-8 pt-4">
-                {pendingApprovals > 0 ? (
-                  <div className="bg-amber-50/50 border border-amber-100 rounded-2xl p-6 flex items-center justify-between group cursor-pointer" onClick={() => onNavigate('pending-approvals')}>
-                    <div className="flex gap-4 items-center">
-                      <div className="p-3 bg-amber-100 rounded-xl text-amber-600">
-                        <AlertCircle size={24} />
-                      </div>
-                      <div>
-                        <p className="text-sm font-bold text-amber-900">Yêu cầu mới</p>
-                        <p className="text-[10px] text-amber-700 font-medium">Bạn có {pendingApprovals} phiếu đang chờ.</p>
-                      </div>
+              {pendingApprovals > 0 && (
+                <div className="px-4 pb-3">
+                  <div className="bg-amber-50 border border-amber-100 rounded-xl px-3 py-2 flex items-center justify-between">
+                    <div className="flex gap-2 items-center">
+                      <AlertCircle size={14} className="text-amber-500 flex-shrink-0" />
+                      <p className="text-[11px] text-amber-800 font-medium">Bạn có {pendingApprovals} phiếu đang chờ</p>
                     </div>
-                    <button className="p-2 bg-amber-500 text-white rounded-lg shadow-lg shadow-amber-500/20 group-hover:translate-x-1 transition-transform">
-                      <ArrowRight size={16} />
-                    </button>
+                    <ArrowRight size={14} className="text-amber-500" />
                   </div>
-                ) : (
-                  <div className="flex flex-col items-center justify-center py-8 text-gray-400 border-2 border-dashed border-gray-100 rounded-[2rem]">
-                    <CheckCircle2 size={32} className="text-green-500/50 mb-2" />
-                    <p className="font-bold text-xs">Mọi thứ đã xong!</p>
-                  </div>
-                )}
-              </div>
+                </div>
+              )}
             </div>
           )}
           
-          <div className="bg-white rounded-[2.5rem] border border-gray-100 shadow-sm p-8">
-            <div className="bg-primary/5 rounded-3xl p-6 border border-primary/10">
-              <p className="text-[10px] font-bold text-primary uppercase tracking-widest mb-1">Trạng thái hệ thống</p>
-              <div className="flex items-center gap-2">
-                <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
-                <p className="text-sm font-black text-gray-800">Hoạt động ổn định</p>
-              </div>
-              <p className="text-[10px] text-gray-400 font-medium mt-2 leading-relaxed">Dữ liệu được bảo mật và sao lưu thời gian thực trên Cloud Server.</p>
+          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm px-4 py-3">
+            <div className="flex items-center gap-2">
+              <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse flex-shrink-0" />
+              <p className="text-xs font-bold text-gray-700">Hệ thống hoạt động ổn định</p>
+              <span className="ml-auto text-[10px] text-gray-400">Cloud Server</span>
             </div>
           </div>
         </div>
@@ -366,6 +356,82 @@ export const Dashboard = ({ user, onNavigate, addToast, pendingApprovals = 0 }: 
           </div>
         )}
       </AnimatePresence>
+
+      <RadialMenu onNavigate={onNavigate} />
     </div>
+  );
+};
+
+const RadialMenu = ({ onNavigate }: { onNavigate: (page: string, params?: any) => void }) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const items = [
+    { id: 'stock-in', label: 'Nhập kho', icon: ArrowDownCircle, color: 'bg-blue-500', action: () => onNavigate('stock-in', { action: 'add' }) },
+    { id: 'stock-out', label: 'Xuất kho', icon: ArrowUpCircle, color: 'bg-red-500', action: () => onNavigate('stock-out', { action: 'add' }) },
+    { id: 'transfer', label: 'Luân chuyển', icon: ArrowLeftRight, color: 'bg-orange-500', action: () => onNavigate('transfer', { action: 'add' }) },
+    { id: 'costs', label: 'Chi phí', icon: Wallet, color: 'bg-primary', action: () => onNavigate('costs', { action: 'add' }) },
+    { id: 'notes', label: 'Ghi chú', icon: FileText, color: 'bg-indigo-500', action: () => onNavigate('notes', { action: 'add' }) },
+    { id: 'reminders', label: 'Lời nhắc', icon: Bell, color: 'bg-emerald-500', action: () => onNavigate('reminders', { action: 'add' }) },
+  ];
+
+  return (
+    <>
+      {/* Overlay backdrop when open */}
+      <AnimatePresence>
+        {isOpen && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={() => setIsOpen(false)}
+            className="fixed inset-0 bg-black/20 backdrop-blur-sm z-[80]"
+          />
+        )}
+      </AnimatePresence>
+
+      <div className="fixed bottom-[90px] right-6 z-[90]">
+        <AnimatePresence>
+          {isOpen && (
+            <>
+              {items.map((item, index) => {
+                const angle = Math.PI + (Math.PI / 2) * (index / (items.length - 1)); 
+                const radius = 180; // Increased radius for wider spread for 6 items
+                const x = Math.round(radius * Math.cos(angle));
+                const y = Math.round(radius * Math.sin(angle));
+                
+                return (
+                  <motion.div
+                    key={item.id}
+                    initial={{ opacity: 0, scale: 0.5, x: 0, y: 0 }}
+                    animate={{ opacity: 1, scale: 1, x, y }}
+                    exit={{ opacity: 0, scale: 0.5, x: 0, y: 0 }}
+                    transition={{ type: 'spring', stiffness: 260, damping: 20, delay: index * 0.05 }}
+                    className="absolute inset-0 flex items-center justify-center pointer-events-none"
+                  >
+                    <button
+                      onClick={() => { setIsOpen(false); item.action(); }}
+                      className={`flex items-center justify-center w-12 h-12 rounded-full shadow-xl ${item.color} text-white hover:scale-110 hover:brightness-110 active:scale-95 transition-all outline-none pointer-events-auto group relative`}
+                      title={item.label}
+                    >
+                      <span className="absolute right-full mr-3 whitespace-nowrap bg-black/80 text-white text-xs font-bold px-2 py-1 rounded-md opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+                        {item.label}
+                      </span>
+                      <item.icon size={20} />
+                    </button>
+                  </motion.div>
+                );
+              })}
+            </>
+          )}
+        </AnimatePresence>
+        
+        <button 
+          onClick={() => setIsOpen(!isOpen)}
+          className={`w-14 h-14 rounded-full flex items-center justify-center shadow-2xl transition-all relative z-10 
+            ${isOpen ? 'bg-red-500 text-white rotate-45' : 'bg-primary text-white hover:bg-primary-hover hover:scale-105 active:scale-95'}`}
+        >
+          <Plus size={28} className="transition-transform duration-300" />
+        </button>
+      </div>
+    </>
   );
 };

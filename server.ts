@@ -3,6 +3,7 @@ import { createServer as createViteServer } from "vite";
 import nodemailer from "nodemailer";
 import bodyParser from "body-parser";
 import cron, { ScheduledTask } from "node-cron";
+import rateLimit from "express-rate-limit";
 import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
@@ -12,20 +13,27 @@ import dotenv from "dotenv";
 
 dotenv.config();
 
+console.log("[SMTP_DEBUG] SMTP_HOST:", process.env.SMTP_HOST);
+console.log("[SMTP_DEBUG] SMTP_PORT:", process.env.SMTP_PORT);
+console.log("[SMTP_DEBUG] SMTP_USER:", process.env.SMTP_USER);
+console.log("[SMTP_DEBUG] SMTP_PASS length:", process.env.SMTP_PASS?.length || 0);
+console.log("[SMTP_DEBUG] SMTP_SECURE:", process.env.SMTP_SECURE);
+
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const CONFIG_PATH = path.join(__dirname, "backup-config.json");
 let currentCronJob: ScheduledTask | null = null;
 
 const supabaseUrl = process.env.VITE_SUPABASE_URL || "";
-const supabaseKey = process.env.VITE_SUPABASE_ANON_KEY || "";
+// Dùng service_role key để bypass RLS khi backup (chỉ dùng server-side)
+const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.VITE_SUPABASE_ANON_KEY || "";
 const supabase = createClient(supabaseUrl, supabaseKey);
 
 const BACKUP_TABLES = [
   { id: 'users', label: 'Bảng Nhân sự' },
   { id: 'attendance', label: 'Bảng Chấm công' },
   { id: 'salary_settings', label: 'Cài đặt lương' },
-  { id: 'advances', label: 'Tạm ứng / Phụ cấp' },
+  { id: 'advances', label: 'Tạm ứng - Phụ cấp' },
   { id: 'stock_in', label: 'Báo cáo Nhập kho' },
   { id: 'stock_out', label: 'Báo cáo Xuất kho' },
   { id: 'transfers', label: 'Báo cáo Chuyển kho' },
@@ -33,7 +41,7 @@ const BACKUP_TABLES = [
   { id: 'materials', label: 'Danh mục Vật tư' },
   { id: 'material_groups', label: 'Nhóm vật tư' },
   { id: 'costs', label: 'Báo cáo Chi phí' },
-  { id: 'notes', label: 'Nhật ký / Ghi chú' },
+  { id: 'notes', label: 'Nhật ký - Ghi chú' },
   { id: 'reminders', label: 'Lịch nhắc' },
   { id: 'partners', label: 'Khách hàng & NCC' },
 ];
@@ -50,7 +58,16 @@ async function runAutoBackup() {
   }
 
   const config = JSON.parse(fs.readFileSync(CONFIG_PATH, "utf-8"));
-  if (!config.enabled || !config.email || !config.smtpConfig) {
+  
+  const smtpConfig = {
+    host: process.env.SMTP_HOST || config.smtpConfig?.host || '',
+    port: process.env.SMTP_PORT || config.smtpConfig?.port || '',
+    user: process.env.SMTP_USER || config.smtpConfig?.user || '',
+    pass: process.env.SMTP_PASS || config.smtpConfig?.pass || '',
+    secure: process.env.SMTP_SECURE === 'true' || config.smtpConfig?.secure || false
+  };
+
+  if (!config.enabled || !config.email || !smtpConfig.user || !smtpConfig.pass) {
     console.log("[BACKUP] Backup disabled or incomplete configuration. Skipping.");
     return;
   }
@@ -67,7 +84,7 @@ async function runAutoBackup() {
       }
       if (data && data.length > 0) {
         const worksheet = xlsx.utils.json_to_sheet(data);
-        xlsx.utils.book_append_sheet(workbook, worksheet, table.label.substring(0, 31));
+        xlsx.utils.book_append_sheet(workbook, worksheet, table.label.substring(0, 31).replace(/\//g, '-'));
       }
     }
 
@@ -75,12 +92,12 @@ async function runAutoBackup() {
     const fileData = xlsx.write(workbook, { type: 'base64', bookType: 'xlsx' });
 
     const transporter = nodemailer.createTransport({
-      host: config.smtpConfig.host,
-      port: parseInt(config.smtpConfig.port),
-      secure: config.smtpConfig.secure,
+      host: smtpConfig.host,
+      port: parseInt(smtpConfig.port.toString()),
+      secure: smtpConfig.secure,
       auth: {
-        user: config.smtpConfig.user,
-        pass: config.smtpConfig.pass,
+        user: smtpConfig.user,
+        pass: smtpConfig.pass,
       },
     });
 
@@ -99,22 +116,34 @@ async function runAutoBackup() {
     };
 
     await transporter.sendMail(mailOptions);
-    console.log(`[BACKUP] Successfully sent backup to ${config.email}`);
+    console.log(`[BACKUP] Successfully sent auto-backup to ${config.email}`);
   } catch (error) {
     console.error("[BACKUP] Critical error during automatic backup:", error);
   }
 }
 
 const checkApiKey = (req: express.Request, res: express.Response, next: express.NextFunction) => {
-  const apiKey = req.headers['x-api-key'];
   const secretKey = process.env.API_SECRET_KEY;
 
-  if (!secretKey || apiKey !== secretKey) {
+  // Nếu chưa cấu hình key → bỏ qua (dev mode / internal only)
+  if (!secretKey) return next();
+
+  const apiKey = req.headers['x-api-key'];
+  if (apiKey !== secretKey) {
     console.warn(`[AUTH] Unauthorized API access attempt from ${req.ip}`);
     return res.status(401).json({ error: 'Unauthorized' });
   }
   next();
 };
+
+// Rate limiter: tối đa 5 request / 10 phút cho backup endpoint
+const backupLimiter = rateLimit({
+  windowMs: 10 * 60 * 1000,
+  max: 5,
+  message: { error: 'Quá nhiều yêu cầu, vui lòng thử lại sau 10 phút.' },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
 
 async function startServer() {
   const app = express();
@@ -179,30 +208,68 @@ async function startServer() {
   });
 
 
-  app.post("/api/send-backup", checkApiKey, async (req, res) => {
-    const { email, fileName, fileData, smtpConfig } = req.body;
-    if (!email || !fileData || !smtpConfig) return res.status(400).json({ error: "Missing required fields" });
+  app.post("/api/send-backup", backupLimiter, checkApiKey, async (req, res) => {
+    const { email, fileName, fileData } = req.body;
+    
+    const smtpConfig = {
+      host: process.env.SMTP_HOST || req.body.smtpConfig?.host,
+      port: process.env.SMTP_PORT || req.body.smtpConfig?.port,
+      user: process.env.SMTP_USER || req.body.smtpConfig?.user,
+      pass: process.env.SMTP_PASS || req.body.smtpConfig?.pass,
+      secure: process.env.SMTP_SECURE ? process.env.SMTP_SECURE === 'true' : req.body.smtpConfig?.secure
+    };
+
+    if (!email || !fileData || !smtpConfig.user || !smtpConfig.pass) {
+      return res.status(400).json({ error: "Thiếu thông tin cấu hình mail ngầm (SMTP) hoặc dữ liệu backup." });
+    }
 
     try {
       const transporter = nodemailer.createTransport({
         host: smtpConfig.host,
-        port: parseInt(smtpConfig.port),
+        port: parseInt(smtpConfig.port.toString()),
         secure: smtpConfig.secure,
         auth: { user: smtpConfig.user, pass: smtpConfig.pass },
       });
 
       const mailOptions = {
-        from: `"Hệ thống Quản lý CDX" <${smtpConfig.user}>`,
+        from: `"Hệ thống Sao lưu CDX" <${smtpConfig.user}>`,
         to: email,
-        subject: `[BACKUP] ${fileName}`,
-        text: `Chào bạn,\n\nĐây là file sao lưu dữ liệu hệ thống được tạo vào lúc ${new Date().toLocaleString('vi-VN')}.\n\nTrân trọng.`,
+        subject: `[HỆ THỐNG] Sao lưu dữ liệu CDX - ${new Date().toLocaleDateString('vi-VN')}`,
+        html: `
+          <div style="font-family: sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; border: 1px solid #eee; border-radius: 10px; overflow: hidden;">
+            <div style="background-color: #008060; padding: 20px; text-align: center;">
+              <h1 style="color: white; margin: 0; font-size: 20px; text-transform: uppercase; letter-spacing: 2px;">Sao lưu dữ liệu định kỳ</h1>
+            </div>
+            <div style="padding: 30px;">
+              <p>Chào bạn,</p>
+              <p>Hệ thống vừa hoàn thành việc trích xuất và tạo file sao lưu dữ liệu cho tài khoản của bạn.</p>
+              
+              <div style="background-color: #f9f9f9; padding: 20px; border-radius: 8px; margin: 20px 0;">
+                <p style="margin: 5px 0;"><b>Tên file:</b> ${fileName}</p>
+                <p style="margin: 5px 0;"><b>Ngày tạo:</b> ${new Date().toLocaleString('vi-VN')}</p>
+                <p style="margin: 5px 0;"><b>Hệ thống:</b> Quản lý Kho & Nhân sự CDX 2026</p>
+              </div>
+
+              <p>File đính kèm dưới đây chứa toàn bộ dữ liệu bạn đã chọn ở định dạng Excel (.xlsx).</p>
+              
+              <p style="color: #666; font-size: 12px; margin-top: 30px; font-style: italic;">
+                Lưu ý: Nếu bạn thấy email này trong mục Thư rác, hãy nhấn <b>"Không phải thư rác"</b> (Not Spam) để các bản sao lưu sau này được gửi thẳng vào Hộp thư chính.
+              </p>
+            </div>
+            <div style="background-color: #f4f4f4; padding: 15px; text-align: center; font-size: 11px; color: #999;">
+                Đây là email tự động từ hệ thống CDX. Vui lòng không trả lời thư này.
+            </div>
+          </div>
+        `,
         attachments: [{ filename: fileName, content: fileData, encoding: 'base64' }]
       };
 
+      console.log(`[SMTP_DEBUG] Attempting to send email to ${email} via ${smtpConfig.user}...`);
       await transporter.sendMail(mailOptions);
+      console.log(`[SMTP_DEBUG] Successfully sent email to ${email}`);
       res.json({ success: true, message: "Email sent successfully" });
     } catch (error: any) {
-      console.error("Email sending error:", error);
+      console.error("[SMTP_ERROR] Log chi tiết lỗi gửi mail:", error);
       res.status(500).json({ error: error.message || "Failed to send email" });
     }
   });

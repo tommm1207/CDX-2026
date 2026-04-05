@@ -161,7 +161,7 @@ export const Backup = ({ onBack, addToast }: { onBack: () => void, addToast: (ms
             cell.fill = {
               type: 'pattern',
               pattern: 'solid',
-              fgColor: { argb: 'FF008060' }
+              fgColor: { argb: 'FF2D5A27' }
             };
             cell.font = { bold: true, color: { argb: 'FFFFFFFF' }, size: 11 };
             cell.alignment = { vertical: 'middle', horizontal: 'center' };

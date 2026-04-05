@@ -159,7 +159,7 @@ async function runAutoBackup() {
         const headerRow = sheet.addRow(columns);
         headerRow.height = 25;
         headerRow.eachCell((cell) => {
-          cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF008060' } };
+          cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF2D5A27' } };
           cell.font = { bold: true, color: { argb: 'FFFFFFFF' } };
           cell.alignment = { vertical: 'middle', horizontal: 'center' };
           cell.border = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } };

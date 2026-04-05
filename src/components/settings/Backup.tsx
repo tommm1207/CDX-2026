@@ -94,15 +94,48 @@ export const Backup = ({ onBack, addToast }: { onBack: () => void, addToast: (ms
     setBackupStatus('Đang truy xuất dữ liệu...');
 
     try {
-      const { utils, write, writeFile } = await import('xlsx');
+      const { utils, write } = await import('xlsx');
       const workbook = utils.book_new();
+
+      // 1. Tạo trang bìa TỔNG QUAN
+      const summaryData = [
+        ['HỆ THỐNG QUẢN LÝ KHO & NHÂN SỰ CDX 2026'],
+        [''],
+        ['BÁO CÁO SAO LƯU DỮ LIỆU'],
+        ['Ngày thực hiện:', new Date().toLocaleString('vi-VN')],
+        ['Số lượng bảng:', selectedTables.length],
+        ['Danh sách bảng:', selectedTables.map(id => BACKUP_TABLES.find(t => t.id === id)?.label).join(', ')],
+        [''],
+        ['Chi tiết các bảng dữ liệu được liệt kê ở các Tab bên dưới.'],
+      ];
+      const summarySheet = utils.aoa_to_sheet(summaryData);
+      summarySheet['!cols'] = [{ wch: 25 }, { wch: 60 }];
+      utils.book_append_sheet(workbook, summarySheet, 'TỔNG QUAN');
+
+      // 2. Thêm dữ liệu các bảng
+      const labels: string[] = [];
       for (const tableId of selectedTables) {
         const table = BACKUP_TABLES.find(t => t.id === tableId);
-        setBackupStatus(`Đang xử lý: ${table?.label}...`);
+        if (!table) continue;
+        labels.push(table.label);
+        
+        setBackupStatus(`Đang xử lý: ${table.label}...`);
         const { data } = await supabase.from(tableId).select('*');
+        
         if (data && data.length > 0) {
           const worksheet = utils.json_to_sheet(data);
-          utils.book_append_sheet(workbook, worksheet, (table?.label || tableId).substring(0, 31).replace(/\//g, '-'));
+          
+          // Tự động giãn cột
+          const keys = Object.keys(data[0]);
+          worksheet['!cols'] = keys.map(key => {
+            const maxLen = Math.max(
+              key.toString().length,
+              ...data.map(row => (row[key] ? row[key].toString().length : 0))
+            );
+            return { wch: Math.min(maxLen + 2, 50) };
+          });
+
+          utils.book_append_sheet(workbook, worksheet, table.label.substring(0, 31).replace(/\//g, '-'));
         }
       }
 
@@ -116,7 +149,7 @@ export const Backup = ({ onBack, addToast }: { onBack: () => void, addToast: (ms
           'Content-Type': 'application/json',
           'x-api-key': 'cdx-secret-2026'
         },
-        body: JSON.stringify({ email, fileName, fileData })
+        body: JSON.stringify({ email, fileName, fileData, tableList: labels })
       });
 
       if (!response.ok) {

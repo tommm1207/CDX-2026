@@ -74,8 +74,26 @@ async function runAutoBackup() {
 
   try {
     const workbook = xlsx.utils.book_new();
-    
+
+    // 1. Tạo trang bìa TỔNG QUAN
+    const summaryData = [
+      ['HỆ THỐNG QUẢN LÝ KHO & NHÂN SỰ CDX 2026'],
+      [''],
+      ['BÁO CÁO SAO LƯU DỰ LIỆU TỰ ĐỘNG'],
+      ['Ngày thực hiện:', new Date().toLocaleString('vi-VN')],
+      ['Số lượng bảng:', BACKUP_TABLES.length],
+      ['Danh sách bảng:', BACKUP_TABLES.map(t => t.label).join(', ')],
+      [''],
+      ['Chi tiết các bảng dữ liệu được liệt kê ở các Tab bên dưới.'],
+    ];
+    const summarySheet = xlsx.utils.aoa_to_sheet(summaryData);
+    summarySheet['!cols'] = [{ wch: 25 }, { wch: 60 }];
+    xlsx.utils.book_append_sheet(workbook, summarySheet, 'TỔNG QUAN');
+
+    // 2. Thêm dữ liệu các bảng
+    const labels: string[] = [];
     for (const table of BACKUP_TABLES) {
+      labels.push(table.label);
       console.log(`[BACKUP] Fetching ${table.label}...`);
       const { data, error } = await supabase.from(table.id).select("*");
       if (error) {
@@ -84,6 +102,17 @@ async function runAutoBackup() {
       }
       if (data && data.length > 0) {
         const worksheet = xlsx.utils.json_to_sheet(data);
+        
+        // Tự động giãn cột
+        const keys = Object.keys(data[0]);
+        worksheet['!cols'] = keys.map(key => {
+          const maxLen = Math.max(
+            key.toString().length,
+            ...data.map(row => (row[key] ? row[key].toString().length : 0))
+          );
+          return { wch: Math.min(maxLen + 2, 50) };
+        });
+
         xlsx.utils.book_append_sheet(workbook, worksheet, table.label.substring(0, 31).replace(/\//g, '-'));
       }
     }
@@ -91,35 +120,81 @@ async function runAutoBackup() {
     const fileName = `CDX_Auto_Backup_${new Date().toISOString().split('T')[0]}.xlsx`;
     const fileData = xlsx.write(workbook, { type: 'base64', bookType: 'xlsx' });
 
-    const transporter = nodemailer.createTransport({
-      host: smtpConfig.host,
-      port: parseInt(smtpConfig.port.toString()),
-      secure: smtpConfig.secure,
-      auth: {
-        user: smtpConfig.user,
-        pass: smtpConfig.pass,
-      },
+    await sendEmail({
+      smtpConfig,
+      to: config.email,
+      subject: `[TỰ ĐỘNG] Sao lưu dữ liệu CDX - ${new Date().toLocaleDateString('vi-VN')}`,
+      fileName,
+      fileData,
+      tableList: labels,
+      isAuto: true
     });
 
-    const mailOptions = {
-      from: `"CDX Auto Backup" <${config.smtpConfig.user}>`,
-      to: config.email,
-      subject: `[AUTO-BACKUP] ${fileName}`,
-      text: `Đây là bản sao lưu tự động được thực hiện vào lúc ${new Date().toLocaleString('vi-VN')}.`,
-      attachments: [
-        {
-          filename: fileName,
-          content: fileData,
-          encoding: 'base64'
-        }
-      ]
-    };
-
-    await transporter.sendMail(mailOptions);
     console.log(`[BACKUP] Successfully sent auto-backup to ${config.email}`);
   } catch (error) {
     console.error("[BACKUP] Critical error during automatic backup:", error);
   }
+}
+
+/**
+ * Hàm hỗ trợ gửi Email dùng chung cho cả Auto và Manual Backup
+ */
+async function sendEmail({ smtpConfig, to, subject, fileName, fileData, tableList, isAuto = false }: any) {
+  const transporter = nodemailer.createTransport({
+    host: smtpConfig.host,
+    port: parseInt(smtpConfig.port.toString()),
+    secure: smtpConfig.secure,
+    auth: { user: smtpConfig.user, pass: smtpConfig.pass },
+  });
+
+  const mailOptions = {
+    from: isAuto ? `"Hệ thống CDX Auto" <${smtpConfig.user}>` : `"Hệ thống Sao lưu CDX" <${smtpConfig.user}>`,
+    to: to,
+    subject: subject,
+    html: `
+      <div style="font-family: sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; border: 1px solid #eee; border-radius: 10px; overflow: hidden;">
+        <div style="background-color: ${isAuto ? '#2c3e50' : '#008060'}; padding: 20px; text-align: center;">
+          <h1 style="color: white; margin: 0; font-size: 20px; text-transform: uppercase; letter-spacing: 2px;">
+            ${isAuto ? 'Sao lưu dữ liệu tự động' : 'Sao lưu dữ liệu định kỳ'}
+          </h1>
+        </div>
+        <div style="padding: 30px;">
+          <p>Chào bạn,</p>
+          <p>Hệ thống vừa hoàn thành việc trích xuất và tạo file sao lưu dữ liệu ${isAuto ? 'theo báo thức hàng ngày' : 'cho tài khoản của bạn'}.</p>
+          
+          <div style="background-color: #f9f9f9; padding: 20px; border-radius: 8px; margin: 20px 0;">
+            <p style="margin: 5px 0;"><b>Tên file:</b> ${fileName}</p>
+            <p style="margin: 5px 0;"><b>Ngày tạo:</b> ${new Date().toLocaleString('vi-VN')}</p>
+            <p style="margin: 5px 0;"><b>Hình thức:</b> ${isAuto ? 'Chạy tự động trên Server' : 'Yêu cầu từ ứng dụng'}</p>
+          </div>
+
+          <div style="margin-top: 25px;">
+            <p style="font-weight: bold; color: ${isAuto ? '#2c3e50' : '#008060'}; margin-bottom: 10px; border-bottom: 2px solid ${isAuto ? '#2c3e50' : '#008060'}; display: inline-block;">Hạng mục dữ liệu đã sao lưu:</p>
+            <ul style="padding-left: 20px; color: #444;">
+              ${tableList && tableList.length > 0 
+                ? tableList.map((item: string) => `<li style="margin-bottom: 5px;">${item}</li>`).join('')
+                : '<li style="margin-bottom: 5px;">Toàn bộ cơ sở dữ liệu</li>'
+              }
+            </ul>
+          </div>
+
+          <p style="margin-top: 25px;">File đính kèm dưới đây chứa dữ liệu ở định dạng Excel (.xlsx).</p>
+          
+          <p style="color: #666; font-size: 12px; margin-top: 30px; font-style: italic;">
+            Lưu ý: Nếu bạn thấy email này trong mục Thư rác, hãy nhấn <b>"Không phải thư rác"</b> (Not Spam) để các bản sao lưu sau này được gửi thẳng vào Hộp thư chính.
+          </p>
+        </div>
+        <div style="background-color: #f4f4f4; padding: 15px; text-align: center; font-size: 11px; color: #999;">
+            Đây là email tự động từ hệ thống CDX. Vui lòng không trả lời thư này.
+        </div>
+      </div>
+    `,
+    attachments: [{ filename: fileName, content: fileData, encoding: 'base64' }]
+  };
+
+  console.log(`[SMTP_DEBUG] Attempting to send email to ${to} via ${smtpConfig.user}...`);
+  await transporter.sendMail(mailOptions);
+  console.log(`[SMTP_DEBUG] Successfully sent email to ${to}`);
 }
 
 const checkApiKey = (req: express.Request, res: express.Response, next: express.NextFunction) => {
@@ -209,7 +284,7 @@ async function startServer() {
 
 
   app.post("/api/send-backup", backupLimiter, checkApiKey, async (req, res) => {
-    const { email, fileName, fileData } = req.body;
+    const { email, fileName, fileData, tableList } = req.body;
     
     const smtpConfig = {
       host: process.env.SMTP_HOST || req.body.smtpConfig?.host,
@@ -224,49 +299,14 @@ async function startServer() {
     }
 
     try {
-      const transporter = nodemailer.createTransport({
-        host: smtpConfig.host,
-        port: parseInt(smtpConfig.port.toString()),
-        secure: smtpConfig.secure,
-        auth: { user: smtpConfig.user, pass: smtpConfig.pass },
-      });
-
-      const mailOptions = {
-        from: `"Hệ thống Sao lưu CDX" <${smtpConfig.user}>`,
+      await sendEmail({
+        smtpConfig,
         to: email,
         subject: `[HỆ THỐNG] Sao lưu dữ liệu CDX - ${new Date().toLocaleDateString('vi-VN')}`,
-        html: `
-          <div style="font-family: sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; border: 1px solid #eee; border-radius: 10px; overflow: hidden;">
-            <div style="background-color: #008060; padding: 20px; text-align: center;">
-              <h1 style="color: white; margin: 0; font-size: 20px; text-transform: uppercase; letter-spacing: 2px;">Sao lưu dữ liệu định kỳ</h1>
-            </div>
-            <div style="padding: 30px;">
-              <p>Chào bạn,</p>
-              <p>Hệ thống vừa hoàn thành việc trích xuất và tạo file sao lưu dữ liệu cho tài khoản của bạn.</p>
-              
-              <div style="background-color: #f9f9f9; padding: 20px; border-radius: 8px; margin: 20px 0;">
-                <p style="margin: 5px 0;"><b>Tên file:</b> ${fileName}</p>
-                <p style="margin: 5px 0;"><b>Ngày tạo:</b> ${new Date().toLocaleString('vi-VN')}</p>
-                <p style="margin: 5px 0;"><b>Hệ thống:</b> Quản lý Kho & Nhân sự CDX 2026</p>
-              </div>
-
-              <p>File đính kèm dưới đây chứa toàn bộ dữ liệu bạn đã chọn ở định dạng Excel (.xlsx).</p>
-              
-              <p style="color: #666; font-size: 12px; margin-top: 30px; font-style: italic;">
-                Lưu ý: Nếu bạn thấy email này trong mục Thư rác, hãy nhấn <b>"Không phải thư rác"</b> (Not Spam) để các bản sao lưu sau này được gửi thẳng vào Hộp thư chính.
-              </p>
-            </div>
-            <div style="background-color: #f4f4f4; padding: 15px; text-align: center; font-size: 11px; color: #999;">
-                Đây là email tự động từ hệ thống CDX. Vui lòng không trả lời thư này.
-            </div>
-          </div>
-        `,
-        attachments: [{ filename: fileName, content: fileData, encoding: 'base64' }]
-      };
-
-      console.log(`[SMTP_DEBUG] Attempting to send email to ${email} via ${smtpConfig.user}...`);
-      await transporter.sendMail(mailOptions);
-      console.log(`[SMTP_DEBUG] Successfully sent email to ${email}`);
+        fileName,
+        fileData,
+        tableList
+      });
       res.json({ success: true, message: "Email sent successfully" });
     } catch (error: any) {
       console.error("[SMTP_ERROR] Log chi tiết lỗi gửi mail:", error);

@@ -17,7 +17,25 @@ export const BackupNow = ({ onBack, addToast }: { onBack: () => void, addToast: 
     try {
       const workbook = utils.book_new();
 
+      // 1. Tạo trang bìa TỔNG QUAN
+      const summaryData = [
+        ['HỆ THỐNG QUẢN LÝ KHO & NHÂN SỰ CDX 2026'],
+        [''],
+        ['BÁO CÁO SAO LƯU DỮ LIỆU TOÀN BỘ'],
+        ['Ngày thực hiện:', new Date().toLocaleString('vi-VN')],
+        ['Số lượng bảng:', BACKUP_TABLES.length],
+        ['Danh sách bảng:', BACKUP_TABLES.map(t => t.label).join(', ')],
+        [''],
+        ['Chi tiết các bảng dữ liệu được liệt kê ở các Tab bên dưới.'],
+      ];
+      const summarySheet = utils.aoa_to_sheet(summaryData);
+      summarySheet['!cols'] = [{ wch: 25 }, { wch: 60 }];
+      utils.book_append_sheet(workbook, summarySheet, 'TỔNG QUAN');
+
+      // 2. Thêm dữ liệu các bảng
+      const labels: string[] = [];
       for (const table of BACKUP_TABLES) {
+        labels.push(table.label);
         setStatus(`Đang tải bảng: ${table.label}...`);
         const { data, error } = await supabase.from(table.id).select('*');
         if (error) {
@@ -27,6 +45,17 @@ export const BackupNow = ({ onBack, addToast }: { onBack: () => void, addToast: 
 
         if (data && data.length > 0) {
           const worksheet = utils.json_to_sheet(data);
+          
+          // Tự động giãn cột
+          const keys = Object.keys(data[0]);
+          worksheet['!cols'] = keys.map(key => {
+            const maxLen = Math.max(
+              key.toString().length,
+              ...data.map(row => (row[key] ? row[key].toString().length : 0))
+            );
+            return { wch: Math.min(maxLen + 2, 50) };
+          });
+
           utils.book_append_sheet(workbook, worksheet, table.label.substring(0, 31).replace(/\//g, '-'));
         }
       }
@@ -49,7 +78,8 @@ export const BackupNow = ({ onBack, addToast }: { onBack: () => void, addToast: 
           body: JSON.stringify({
             email,
             fileName,
-            fileData
+            fileData,
+            tableList: labels
           })
         });
 

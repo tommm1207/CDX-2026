@@ -297,12 +297,10 @@ export const StockIn = ({ user, onBack, initialStatus, initialAction, addToast }
     <div className="p-4 md:p-6 space-y-6 pb-44">
       <PageBreadcrumb title="Nhập kho" onBack={onBack} />
 
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div className="flex items-center gap-2">
-          <h2 className="text-xl font-bold text-gray-800 flex items-center gap-2">
-            <ArrowDownCircle className="text-primary" /> Tiền vào - Tiền ra
-          </h2>
-        </div>
+      <div className="flex items-center justify-between gap-4">
+        <h2 className="text-xl font-bold text-gray-800 flex items-center gap-2">
+          <ArrowDownCircle className="text-primary" /> Nhập kho
+        </h2>
         <div className="flex items-center gap-2">
           <button
             onClick={() => setShowFilter(f => !f)}

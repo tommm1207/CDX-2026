@@ -1,7 +1,9 @@
 import { useState, useEffect } from 'react';
 import * as XLSX from 'xlsx';
-import { Wallet, X, Eye, Printer, Download } from 'lucide-react';
+import { Wallet, X, Eye, Printer, Download, Image as ImageIcon } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
+import { toPng } from 'html-to-image';
+import { useRef } from 'react';
 import { supabase } from '../../supabaseClient';
 import { Employee } from '../../types';
 import { PageBreadcrumb } from '../shared/PageBreadcrumb';
@@ -87,6 +89,23 @@ export const MonthlySalary = ({ user, onBack, addToast }: {
 
   const [selectedSalary, setSelectedSalary] = useState<any>(null);
   const [showDetailModal, setShowDetailModal] = useState(false);
+  const billRef = useRef<HTMLDivElement>(null);
+
+  const handleSaveImage = async () => {
+    if (billRef.current === null) return;
+    
+    try {
+      const dataUrl = await toPng(billRef.current, { cacheBust: true, backgroundColor: '#fff', quality: 1 });
+      const link = document.createElement('a');
+      link.download = `Phieu_Luong_${selectedSalary.full_name}_T${selectedMonth}_${selectedYear}.png`;
+      link.href = dataUrl;
+      link.click();
+      if (addToast) addToast('Đã lưu ảnh phiếu lương thành công!', 'success');
+    } catch (err) {
+      console.error('Lỗi khi lưu ảnh:', err);
+      if (addToast) addToast('Lỗi khi tạo ảnh phiếu lương', 'error');
+    }
+  };
 
   const totalDaysAll = salaries.reduce((sum, s) => sum + s.totalDays, 0);
   const totalOTAll = salaries.reduce((sum, s) => sum + s.totalOT, 0);
@@ -221,103 +240,128 @@ export const MonthlySalary = ({ user, onBack, addToast }: {
 
       <AnimatePresence>
         {showDetailModal && selectedSalary && (
-          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm overflow-y-auto">
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm overflow-y-auto no-print">
+            <style>
+              {`
+                @media print {
+                  .no-print { display: none !important; }
+                  .print-only { display: block !important; }
+                  body { background: white !important; margin: 0; padding: 0; }
+                  @page { margin: 1cm; }
+                }
+              `}
+            </style>
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: 20 }}
-              className="bg-white rounded-3xl shadow-2xl w-full max-w-2xl my-8"
+              className="bg-white rounded-[2.5rem] shadow-2xl w-full max-w-xl my-8 relative"
             >
-              <div className="p-6 border-b border-gray-100 flex items-center justify-between">
+              <div className="p-8 pb-0 flex items-center justify-between">
                 <div>
-                  <h3 className="text-lg font-bold text-gray-800">Chi tiết lương cá nhân</h3>
-                  <p className="text-xs text-gray-500">Tháng {selectedMonth} năm {selectedYear}</p>
+                  <h3 className="text-xl font-black text-gray-800">Phiếu lương chi tiết</h3>
+                  <p className="text-xs text-gray-400 font-bold uppercase tracking-widest">Tháng {selectedMonth} năm {selectedYear}</p>
                 </div>
-                <Button 
-                  variant="ghost" 
-                  size="icon" 
+                <button 
                   onClick={() => setShowDetailModal(false)}
-                  icon={X} 
-                />
+                  className="w-10 h-10 bg-gray-50 text-gray-400 rounded-full flex items-center justify-center hover:bg-gray-100 transition-all no-print"
+                >
+                  <X size={20} />
+                </button>
               </div>
 
-              <div className="p-8 space-y-8">
-                {/* Header Info */}
-                <div className="flex items-center gap-4 bg-gray-50 p-6 rounded-2xl border border-gray-100">
-                  <div className="w-16 h-16 bg-primary/10 rounded-2xl flex items-center justify-center text-primary font-black text-xl">
+              <div ref={billRef} className="p-8 space-y-8 bg-white rounded-[2.5rem] print-only">
+                {/* Bill Header */}
+                <div className="text-center space-y-4 pt-4">
+                   <div className="w-20 h-20 bg-primary/10 rounded-3xl flex items-center justify-center text-primary font-black text-2xl mx-auto shadow-sm">
                     {selectedSalary.full_name.charAt(0)}
                   </div>
                   <div>
-                    <h4 className="text-xl font-black text-gray-800">{selectedSalary.full_name}</h4>
-                    <p className="text-xs text-gray-500 uppercase tracking-widest font-bold">Mã NV: {selectedSalary.code || selectedSalary.id.slice(0, 8)}</p>
+                    <h4 className="text-2xl font-black text-gray-800">{selectedSalary.full_name}</h4>
+                    <p className="text-[11px] text-gray-400 font-black uppercase tracking-[0.2em]">Mã nhân viên: {selectedSalary.code || selectedSalary.id.slice(0, 8)}</p>
                   </div>
                 </div>
 
-                {/* Calculation Table */}
-                <div className="space-y-4">
-                  <h5 className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Chi tiết tính toán</h5>
-                  <div className="space-y-3">
-                    <div className="flex justify-between items-center text-sm">
-                      <span className="text-gray-500">Lương ngày (8h)</span>
-                      <span className="font-bold text-gray-800">{formatCurrency(selectedSalary.dailyRate)}</span>
+                <div className="w-full h-px bg-gray-100 relative">
+                  <div className="absolute -left-10 -top-2 w-4 h-4 bg-gray-100 rounded-full no-print" />
+                  <div className="absolute -right-10 -top-2 w-4 h-4 bg-gray-100 rounded-full no-print" />
+                </div>
+
+                {/* Calculation Details */}
+                <div className="space-y-6">
+                  <div className="bg-gray-50/50 p-6 rounded-3xl border border-gray-100/50 space-y-3">
+                    <div className="flex justify-between items-center text-xs">
+                      <span className="text-gray-400 font-bold uppercase tracking-wider">Lương cơ bản (8h)</span>
+                      <span className="font-black text-gray-800">{formatCurrency(selectedSalary.dailyRate)}</span>
                     </div>
-                    <div className="flex justify-between items-center text-sm">
-                      <span className="text-gray-500">Lương giờ (Tăng ca)</span>
-                      <span className="font-bold text-gray-800">{formatCurrency(selectedSalary.hourlyRate)}</span>
+                    <div className="flex justify-between items-center text-xs">
+                      <span className="text-gray-400 font-bold uppercase tracking-wider">Lương tăng ca (1h)</span>
+                      <span className="font-black text-gray-800">{formatCurrency(selectedSalary.hourlyRate)}</span>
                     </div>
-                    <div className="h-px bg-gray-100" />
+                  </div>
+
+                  <div className="space-y-3 px-2">
                     <div className="flex justify-between items-center text-sm">
-                      <span className="text-gray-500">Tổng công ({selectedSalary.totalDays.toFixed(1)} ngày)</span>
+                      <span className="text-gray-500 font-medium text-xs">Lương ngày công ({selectedSalary.totalDays.toFixed(1)} ngày)</span>
                       <span className="font-bold text-gray-800">{formatCurrency(selectedSalary.earnedSalary)}</span>
                     </div>
                     <div className="flex justify-between items-center text-sm">
-                      <span className="text-gray-500">Tổng tăng ca ({selectedSalary.totalOT.toFixed(1)} giờ)</span>
+                      <span className="text-gray-500 font-medium text-xs">Lương tăng ca ({selectedSalary.totalOT.toFixed(1)} giờ)</span>
                       <span className="font-bold text-amber-600">+{formatCurrency(selectedSalary.otSalary)}</span>
                     </div>
                     <div className="flex justify-between items-center text-sm">
-                      <span className="text-gray-500">Tổng phụ cấp</span>
+                      <span className="text-gray-500 font-medium text-xs">Các khoản phụ cấp</span>
                       <span className="font-bold text-green-600">+{formatCurrency(selectedSalary.totalAll)}</span>
                     </div>
                     <div className="flex justify-between items-center text-sm">
-                      <span className="text-gray-500">Tổng tạm ứng</span>
-                      <span className="font-bold text-red-600">-{formatCurrency(selectedSalary.totalAdv)}</span>
+                      <span className="text-gray-500 font-medium text-xs">Tạm ứng trong tháng</span>
+                      <span className="font-bold text-red-500">-{formatCurrency(selectedSalary.totalAdv)}</span>
                     </div>
                     <div className="flex justify-between items-center text-sm">
-                      <span className="text-gray-500">Khấu trừ bảo hiểm</span>
-                      <span className="font-bold text-red-600">-{formatCurrency(selectedSalary.insuranceDeduction)}</span>
+                      <span className="text-gray-500 font-medium text-xs">Khấu trừ bảo hiểm</span>
+                      <span className="font-bold text-red-500">-{formatCurrency(selectedSalary.insuranceDeduction)}</span>
                     </div>
-                    <div className="pt-4 border-t-2 border-dashed border-gray-100 flex justify-between items-center">
-                      <span className="text-lg font-black text-gray-800 uppercase">Thực lĩnh</span>
-                      <span className="text-2xl font-black text-primary">{formatCurrency(selectedSalary.netSalary)}</span>
+                  </div>
+
+                  <div className="pt-6 border-t-4 border-double border-gray-100 flex justify-between items-end">
+                    <div className="space-y-1">
+                      <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest leading-none">Tổng thực lĩnh</p>
+                      <h4 className="text-sm font-black text-gray-800 uppercase leading-none">Net Salary</h4>
                     </div>
+                    <span className="text-3xl font-black text-primary leading-none tracking-tight">{formatCurrency(selectedSalary.netSalary)}</span>
                   </div>
                 </div>
 
                 {/* Footer Notes */}
-                <div className="p-4 bg-amber-50 rounded-xl border border-amber-100">
-                  <p className="text-[10px] text-amber-700 leading-relaxed italic">
-                    * Bảng lương này được tính toán tự động dựa trên dữ liệu chấm công và các khoản phát sinh trong tháng.
-                    Mọi thắc mắc vui lòng liên hệ bộ phận kế toán.
+                <div className="p-4 bg-amber-50/50 rounded-2xl border border-amber-100/30">
+                  <p className="text-[9px] text-amber-700/80 leading-relaxed text-center font-medium italic">
+                    * Bảng lương này được tính toán tự động dựa trên dữ liệu chấm công thực tế. 
+                    Mọi thắc mắc vui lòng phản hồi bộ phận kế toán trước ngày 05 hàng tháng.
                   </p>
                 </div>
+              </div>
 
+              <div className="p-8 pt-0 flex flex-col gap-3 no-print">
                 <div className="flex gap-3">
-                  <Button 
-                    variant="outline" 
-                    fullWidth 
-                    icon={Printer} 
+                  <button
+                    onClick={handleSaveImage}
+                    className="flex-1 bg-gray-900 text-white font-black py-3.5 rounded-2xl hover:bg-black transition-all flex items-center justify-center gap-2 shadow-lg"
+                  >
+                    <ImageIcon size={18} /> LƯU ẢNH
+                  </button>
+                  <button
                     onClick={() => window.print()}
+                    className="flex-1 bg-white text-gray-700 border-2 border-gray-100 font-black py-3.5 rounded-2xl hover:bg-gray-50 transition-all flex items-center justify-center gap-2"
                   >
-                    In bảng lương
-                  </Button>
-                  <Button 
-                    variant="primary" 
-                    fullWidth 
-                    onClick={() => setShowDetailModal(false)}
-                  >
-                    Đóng
-                  </Button>
+                    <Printer size={18} /> IN PHIẾU
+                  </button>
                 </div>
+                <button
+                  onClick={() => setShowDetailModal(false)}
+                  className="w-full bg-primary/5 text-primary font-black py-3.5 rounded-2xl hover:bg-primary/10 transition-all"
+                >
+                  ĐÓNG
+                </button>
               </div>
             </motion.div>
           </div>

@@ -15,9 +15,9 @@ export const COLUMN_MAP: Record<string, string> = {
   unit: 'Đơn vị tính',
   unit_price: 'Đơn giá',
   total_amount: 'Thành tiền',
-  employee_id: 'Mã Nhân viên',
-  warehouse_id: 'Mã Kho',
-  material_id: 'Mã Vật tư',
+  employee_id: 'Nhân viên',
+  warehouse_id: 'Kho hàng',
+  material_id: 'Vật tư',
   description: 'Mô tả chi tiết',
   type: 'Phân loại',
 
@@ -71,15 +71,30 @@ export const COLUMN_MAP: Record<string, string> = {
 
 /**
  * Hàm chuyển đổi mảng dữ liệu với các key kỹ thuật sang key tiếng Việt
+ * Kết hợp tra cứu ID để hiển thị Tên (Nhân viên, Kho, Vật tư)
  */
-export const formatDataForExcel = (data: any[]) => {
+export const formatDataForExcel = (data: any[], lookupData: any = {}) => {
   if (!data || data.length === 0) return [];
+
+  // Tạo lookup map nếu có truyền vào
+  const userMap = lookupData.users ? Object.fromEntries(lookupData.users.map((u: any) => [u.id, u.full_name])) : {};
+  const whMap = lookupData.warehouses ? Object.fromEntries(lookupData.warehouses.map((w: any) => [w.id, w.name])) : {};
+  const matMap = lookupData.materials ? Object.fromEntries(lookupData.materials.map((m: any) => [m.id, m.name])) : {};
+  const groupMap = lookupData.groups ? Object.fromEntries(lookupData.groups.map((g: any) => [g.id, g.name])) : {};
 
   return data.map(item => {
     const newItem: any = {};
     Object.keys(item).forEach(key => {
-      const label = COLUMN_MAP[key] || key; // Nếu không có trong map thì giữ nguyên key cũ
-      newItem[label] = item[key];
+      let value = item[key];
+
+      // Tự động chuyển đổi ID sang Tên nếu có trong lookup
+      if (key === 'employee_id' && userMap[value]) value = userMap[value];
+      if ((key === 'warehouse_id' || key === 'from_warehouse_id' || key === 'to_warehouse_id') && whMap[value]) value = whMap[value];
+      if (key === 'material_id' && matMap[value]) value = matMap[value];
+      if (key === 'group_id' && groupMap[value]) value = groupMap[value];
+
+      const label = COLUMN_MAP[key] || key;
+      newItem[label] = value;
     });
     return newItem;
   });

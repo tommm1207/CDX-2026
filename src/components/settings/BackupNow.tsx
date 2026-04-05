@@ -42,7 +42,17 @@ export const BackupNow = ({ onBack, addToast }: { onBack: () => void, addToast: 
       summarySheet.getColumn(1).width = 25;
       summarySheet.getColumn(2).width = 50;
 
-      // 2. Thêm dữ liệu các bảng
+      // 2. Chuẩn bị dữ liệu tra cứu (Lookup Data)
+      setStatus('Đang chuẩn bị dữ liệu tra cứu...');
+      const [{ data: users }, { data: warehouses }, { data: materials }, { data: groups }] = await Promise.all([
+        supabase.from('users').select('id, full_name'),
+        supabase.from('warehouses').select('id, name'),
+        supabase.from('materials').select('id, name'),
+        supabase.from('material_groups').select('id, name')
+      ]);
+      const lookupData = { users, warehouses, materials, groups };
+
+      // 3. Thêm dữ liệu các bảng
       const labels: string[] = [];
       const stats: Record<string, number> = {};
 
@@ -61,7 +71,7 @@ export const BackupNow = ({ onBack, addToast }: { onBack: () => void, addToast: 
 
         if (data && rowCount > 0) {
           const sheet = workbook.addWorksheet(table.label.substring(0, 31).replace(/\//g, '-'));
-          const formattedData = formatDataForExcel(data);
+          const formattedData = formatDataForExcel(data, lookupData);
           const columns = Object.keys(formattedData[0]);
 
           // Thiết lập tiêu đề (Header)

@@ -21,7 +21,7 @@ const COLUMN_MAP: Record<string, string> = {
   id: 'ID', code: 'Mã hiệu', name: 'Tên / Nội dung', created_at: 'Ngày tạo', updated_at: 'Ngày cập nhật',
   notes: 'Ghi chú', status: 'Trạng thái', date: 'Ngày', quantity: 'Số lượng', unit: 'Đơn vị tính',
   unit_price: 'Đơn giá', total_amount: 'Thành tiền', employee_id: 'Mã Nhân viên',
-  warehouse_id: 'Mã Kho', material_id: 'Mã Vật tư', description: 'Mô tả chi tiết', type: 'Phân loại',
+  warehouse_id: 'Kho hàng', material_id: 'Vật tư', description: 'Mô tả chi tiết', type: 'Phân loại',
   full_name: 'Họ và tên', email: 'Email liên hệ', phone: 'Số điện thoại', id_card: 'Số CMND/CCCD',
   dob: 'Ngày sinh', join_date: 'Ngày nhận việc', tax_id: 'Mã số thuế', department: 'Phòng ban / Bộ phận',
   position: 'Chức vụ', resign_date: 'Ngày nghỉ việc', role: 'Quyền hạn (Vai trò)',
@@ -32,13 +32,26 @@ const COLUMN_MAP: Record<string, string> = {
   hours_worked: 'Số giờ làm việc', overtime_hours: 'Số giờ tăng ca', content: 'Nội dung chi tiết'
 };
 
-const formatDataForExcel = (data: any[]) => {
+const formatDataForExcel = (data: any[], lookupData: any = {}) => {
   if (!data || data.length === 0) return [];
+
+  const userMap = lookupData.users ? Object.fromEntries(lookupData.users.map((u: any) => [u.id, u.full_name])) : {};
+  const whMap = lookupData.warehouses ? Object.fromEntries(lookupData.warehouses.map((w: any) => [w.id, w.name])) : {};
+  const matMap = lookupData.materials ? Object.fromEntries(lookupData.materials.map((m: any) => [m.id, m.name])) : {};
+  const groupMap = lookupData.groups ? Object.fromEntries(lookupData.groups.map((g: any) => [g.id, g.name])) : {};
+
   return data.map(item => {
     const newItem: any = {};
     Object.keys(item).forEach(key => {
+      let value = item[key];
+
+      if (key === 'employee_id' && userMap[value]) value = userMap[value];
+      if ((key === 'warehouse_id' || key === 'from_warehouse_id' || key === 'to_warehouse_id') && whMap[value]) value = whMap[value];
+      if (key === 'material_id' && matMap[value]) value = matMap[value];
+      if (key === 'group_id' && groupMap[value]) value = groupMap[value];
+
       const label = COLUMN_MAP[key] || key;
-      newItem[label] = item[key];
+      newItem[label] = value;
     });
     return newItem;
   });
@@ -57,7 +70,6 @@ const supabase = createClient(supabaseUrl, supabaseKey);
 const BACKUP_TABLES = [
   { id: 'users', label: 'Bảng Nhân sự' },
   { id: 'attendance', label: 'Bảng Chấm công' },
-  { id: 'salary_settings', label: 'Cài đặt lương' },
   { id: 'advances', label: 'Tạm ứng - Phụ cấp' },
   { id: 'stock_in', label: 'Báo cáo Nhập kho' },
   { id: 'stock_out', label: 'Báo cáo Xuất kho' },
@@ -112,7 +124,17 @@ async function runAutoBackup() {
     summarySheet.getColumn(1).width = 25;
     summarySheet.getColumn(2).width = 50;
 
-    // 2. Thêm dữ liệu các bảng
+    // 2. Chuẩn bị dữ liệu tra cứu (Lookup Data)
+    console.log("[BACKUP] Fetching lookup data...");
+    const [{ data: users }, { data: warehouses }, { data: materials }, { data: groups }] = await Promise.all([
+      supabase.from('users').select('id, full_name'),
+      supabase.from('warehouses').select('id, name'),
+      supabase.from('materials').select('id, name'),
+      supabase.from('material_groups').select('id, name')
+    ]);
+    const lookupData = { users, warehouses, materials, groups };
+
+    // 3. Thêm dữ liệu các bảng
     const labels: string[] = [];
     const stats: Record<string, number> = {};
 
@@ -130,7 +152,7 @@ async function runAutoBackup() {
 
       if (data && rowCount > 0) {
         const sheet = workbook.addWorksheet(table.label.substring(0, 31).replace(/\//g, '-'));
-        const formattedData = formatDataForExcel(data);
+        const formattedData = formatDataForExcel(data, lookupData);
         const columns = Object.keys(formattedData[0]);
 
         // Header

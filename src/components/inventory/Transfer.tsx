@@ -36,6 +36,8 @@ export const Transfer = ({ user, onBack, addToast, initialAction }: {
   const [showAddMaterial, setShowAddMaterial] = useState(false);
 
   const { warehouses, materials, groups, refreshAll, fetchWarehouses } = useInventoryData(user.data_view_permission);
+  const [showFilter, setShowFilter] = useState(false);
+  const [statusFilter, setStatusFilter] = useState('Tất cả');
 
 
   const initialFormState = {
@@ -53,7 +55,7 @@ export const Transfer = ({ user, onBack, addToast, initialAction }: {
 
   useEffect(() => {
     fetchSlips();
-  }, []);
+  }, [statusFilter]);
 
   useEffect(() => {
     if (formData.from_warehouse_id && formData.material_id && formData.date) {
@@ -85,9 +87,12 @@ export const Transfer = ({ user, onBack, addToast, initialAction }: {
     try {
       let query = supabase.from('transfers').select('*, from_wh:warehouses!from_warehouse_id(name, code), to_wh:warehouses!to_warehouse_id(name, code), materials(name, code, unit)');
       
+      if (statusFilter !== 'Tất cả') {
+        query = query.eq('status', statusFilter);
+      }
+
       const allowedWhIds = getAllowedWarehouses(user.data_view_permission);
       if (allowedWhIds) {
-        // Nếu giới hạn kho, hiển thị các phiếu mà kho nguồn HOẶC kho đích nằm trong danh sách cho phép
         query = query.or(`from_warehouse_id.in.(${allowedWhIds.join(',')}),to_warehouse_id.in.(${allowedWhIds.join(',')})`);
       }
 
@@ -241,14 +246,53 @@ export const Transfer = ({ user, onBack, addToast, initialAction }: {
   return (
     <div className="p-4 md:p-6 space-y-6 pb-44">
       <PageBreadcrumb title="Luân chuyển kho" onBack={onBack} />
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-4">
         <div>
           <h2 className="text-xl font-bold text-gray-800 flex items-center gap-2">
             <ArrowLeftRight className="text-orange-500" /> Luân chuyển kho
           </h2>
           <p className="text-xs text-gray-500 mt-1">Luân chuyển vật tư giữa các kho</p>
         </div>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setShowFilter(f => !f)}
+            className={`p-2.5 rounded-xl border transition-colors ${
+              showFilter ? 'bg-primary text-white border-primary' : 'bg-white text-gray-500 border-gray-200 hover:border-primary/40'
+            }`}
+          >
+            <Search size={16} />
+          </button>
+        </div>
       </div>
+
+      <AnimatePresence>
+        {showFilter && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
+            className="overflow-hidden"
+          >
+            <div className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 mb-4">
+              <label className="text-[10px] font-bold text-gray-400 uppercase block mb-2">Lọc theo trạng thái</label>
+              <div className="flex items-center gap-2 overflow-x-auto pb-2 md:pb-0 no-scrollbar">
+                {['Tất cả', 'Chờ duyệt', 'Đã duyệt', 'Từ chối'].map((status) => (
+                  <button
+                    key={status}
+                    onClick={() => setStatusFilter(status)}
+                    className={`px-4 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all ${statusFilter === status
+                        ? 'bg-primary text-white shadow-lg shadow-primary/20'
+                        : 'bg-white text-gray-500 hover:bg-gray-50 border border-gray-100'
+                      }`}
+                  >
+                    {status}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
         <div className="overflow-x-auto">

@@ -8,7 +8,6 @@ import { PageBreadcrumb } from '../shared/PageBreadcrumb';
 export const BACKUP_TABLES = [
   { id: 'users', label: 'Bảng Nhân sự' },
   { id: 'attendance', label: 'Bảng Chấm công' },
-  { id: 'salary_settings', label: 'Cài đặt lương' },
   { id: 'advances', label: 'Tạm ứng - Phụ cấp' },
   { id: 'stock_in', label: 'Báo cáo Nhập kho' },
   { id: 'stock_out', label: 'Báo cáo Xuất kho' },
@@ -125,7 +124,17 @@ export const Backup = ({ onBack, addToast }: { onBack: () => void, addToast: (ms
       summarySheet.getColumn(1).width = 25;
       summarySheet.getColumn(2).width = 50;
 
-      // 2. Thêm dữ liệu các bảng
+      // 2. Chuẩn bị dữ liệu tra cứu (Lookup Data)
+      setBackupStatus('Đang chuẩn bị dữ liệu tra cứu...');
+      const [{ data: users }, { data: warehouses }, { data: materials }, { data: groups }] = await Promise.all([
+        supabase.from('users').select('id, full_name'),
+        supabase.from('warehouses').select('id, name'),
+        supabase.from('materials').select('id, name'),
+        supabase.from('material_groups').select('id, name')
+      ]);
+      const lookupData = { users, warehouses, materials, groups };
+
+      // 3. Thêm dữ liệu các bảng
       const labels: string[] = [];
       const stats: Record<string, number> = {};
 
@@ -142,7 +151,7 @@ export const Backup = ({ onBack, addToast }: { onBack: () => void, addToast: (ms
 
         if (data && rowCount > 0) {
           const sheet = workbook.addWorksheet(tableDef.label.substring(0, 31).replace(/\//g, '-'));
-          const formattedData = formatDataForExcel(data);
+          const formattedData = formatDataForExcel(data, lookupData);
           const columns = Object.keys(formattedData[0]);
 
           // Thiết lập tiêu đề (Header)

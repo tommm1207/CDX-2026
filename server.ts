@@ -1,5 +1,4 @@
 import express from "express";
-import { createServer as createViteServer } from "vite";
 import nodemailer from "nodemailer";
 import bodyParser from "body-parser";
 import cron, { ScheduledTask } from "node-cron";
@@ -10,9 +9,13 @@ import { fileURLToPath } from "url";
 import * as xlsx from "xlsx";
 import ExcelJS from "exceljs";
 import { createClient } from "@supabase/supabase-js";
-import dotenv from "dotenv";
 
-dotenv.config();
+// Vercel already provides environment variables.
+// dotenv.config() is only needed for local dev:
+if (process.env.NODE_ENV !== "production" && !process.env.VERCEL) {
+  const dotenv = await import("dotenv");
+  dotenv.config();
+}
 
 /**
  * Ánh xạ tên cột Anh-Việt cho Excel (Đồng bộ với Frontend)
@@ -64,7 +67,20 @@ let currentCronJob: ScheduledTask | null = null;
 const supabaseUrl = process.env.VITE_SUPABASE_URL || "";
 // Dùng service_role key để bypass RLS khi backup (chỉ dùng server-side)
 const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.VITE_SUPABASE_ANON_KEY || "";
+
+if (!supabaseUrl) {
+  console.error("[CRITICAL] VITE_SUPABASE_URL is missing in environment variables.");
+}
+
 const supabase = createClient(supabaseUrl, supabaseKey);
+
+// Guard for API routes if config is missing
+const checkSupabaseConfig = (req: express.Request, res: express.Response, next: express.NextFunction) => {
+  if (!supabaseUrl || !supabaseKey) {
+    return res.status(500).json({ error: "System configuration missing: Supabase URL/Key not set in Vercel." });
+  }
+  next();
+};
 
 const BACKUP_TABLES = [
   { id: 'users', label: 'Bảng Nhân sự' },
@@ -357,12 +373,12 @@ async function initBackupScheduler() {
 // Gọi khởi tạo lần đầu (Khi server start)
 initBackupScheduler();
 
-app.get("/api/get-backup-config", checkApiKey, async (req, res) => {
+app.get("/api/get-backup-config", checkApiKey, checkSupabaseConfig, async (req, res) => {
   const config = await getBackupConfig();
   res.json(config || {});
 });
 
-app.get("/api/cron-status", checkApiKey, async (req, res) => {
+app.get("/api/cron-status", checkApiKey, checkSupabaseConfig, async (req, res) => {
   const config = await getBackupConfig();
   res.json({
     hasJob: !!currentCronJob,
@@ -372,7 +388,7 @@ app.get("/api/cron-status", checkApiKey, async (req, res) => {
   });
 });
 
-app.post("/api/save-backup-config", checkApiKey, async (req, res) => {
+app.post("/api/save-backup-config", checkApiKey, checkSupabaseConfig, async (req, res) => {
   const { email, smtpConfig, schedule, enabled } = req.body;
   const config = { email, smtpConfig, schedule, enabled };
   
@@ -395,7 +411,7 @@ app.post("/api/save-backup-config", checkApiKey, async (req, res) => {
   res.json({ success: true });
 });
 
-app.post("/api/send-backup", backupLimiter, checkApiKey, async (req, res) => {
+app.post("/api/send-backup", backupLimiter, checkApiKey, checkSupabaseConfig, async (req, res) => {
   const { email, fileName, fileData, tableList, tableStats } = req.body;
   
   const smtpConfig = {
@@ -428,15 +444,28 @@ app.post("/api/send-backup", backupLimiter, checkApiKey, async (req, res) => {
 });
 
 // Middleware for static files or Vite
-if (process.env.NODE_ENV !== "production" && !process.env.VERCEL) {
+const isProd = process.env.NODE_ENV === "production" || !!process.env.VERCEL;
+
+if (!isProd) {
+  const { createServer: createViteServer } = await import("vite");
   const vite = await createViteServer({ server: { middlewareMode: true }, appType: "spa" });
   app.use(vite.middlewares);
 } else {
-  app.use(express.static("dist"));
+  // Production: Serve static files from 'dist'
+  const distPath = path.join(__dirname, "dist");
+  if (fs.existsSync(distPath)) {
+    app.use(express.static(distPath));
+  }
+  
   app.get("*", (req, res) => {
-    // Chỉ phục vụ index.html nếu không phải request API
+    // Only serve index.html for non-API routes
     if (!req.path.startsWith('/api/')) {
-       res.sendFile(path.join(__dirname, "dist", "index.html"));
+       const indexPath = path.join(__dirname, "dist", "index.html");
+       if (fs.existsSync(indexPath)) {
+         res.sendFile(indexPath);
+       } else {
+         res.status(404).send("Front-end build not found. Please run 'npm run build'.");
+       }
     } else {
        res.status(404).json({ error: "API Route not found" });
     }

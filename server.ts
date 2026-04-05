@@ -443,6 +443,20 @@ app.post("/api/send-backup", backupLimiter, checkApiKey, checkSupabaseConfig, as
   }
 });
 
+app.get("/api/health-check", (req, res) => {
+  res.json({
+    status: "online",
+    vercel: !!process.env.VERCEL,
+    supabaseConfig: {
+      url: !!process.env.VITE_SUPABASE_URL,
+      key: !!process.env.VITE_SUPABASE_ANON_KEY,
+      serviceRole: !!process.env.SUPABASE_SERVICE_ROLE_KEY
+    },
+    apiKeySet: !!process.env.API_SECRET_KEY,
+    time: new Date().toISOString()
+  });
+});
+
 // Middleware for static files or Vite
 const isProd = process.env.NODE_ENV === "production" || !!process.env.VERCEL;
 

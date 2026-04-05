@@ -95,10 +95,11 @@ export const QuickAddMaterialModal = ({
           >
             <div className="bg-blue-600 p-6 text-white flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <div className="p-2 bg-white/20 rounded-xl"><PackagePlus size={24} /></div>
+                <button onClick={onClose} className="p-2 bg-white/20 hover:bg-white/30 rounded-xl transition-colors cursor-pointer">
+                  <PackagePlus size={24} />
+                </button>
                 <h3 className="font-bold text-lg">Thêm vật tư nhanh</h3>
               </div>
-              <button onClick={onClose} className="p-2 hover:bg-white/10 rounded-full transition-colors"><X size={20} /></button>
             </div>
             
             <div className="flex-1 overflow-y-auto p-6 space-y-4">

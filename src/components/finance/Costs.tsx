@@ -8,17 +8,20 @@ import { PageBreadcrumb } from '../shared/PageBreadcrumb';
 import { NumericInput } from '../shared/NumericInput';
 import { CreatableSelect } from '../shared/CreatableSelect';
 import { ToastType } from '../shared/Toast';
+import { FAB } from '../shared/FAB';
+import { ExcelButton } from '../shared/ExcelButton';
 import { formatCurrency, formatNumber, formatDate } from '../../utils/format';
 import { isUUID, getAllowedWarehouses } from '../../utils/helpers';
 import { isActiveWarehouse } from '../../utils/inventory';
 import { Button } from '../shared/Button';
 
-export const Costs = ({ user, onBack, addToast }: { 
+export const Costs = ({ user, onBack, addToast, initialAction }: { 
   user: Employee, 
   onBack?: () => void,
-  addToast?: (message: string, type?: ToastType) => void
+  addToast?: (message: string, type?: ToastType) => void,
+  initialAction?: string
 }) => {
-  const [showModal, setShowModal] = useState(false);
+  const [showModal, setShowModal] = useState(initialAction === 'add');
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [selectedCost, setSelectedCost] = useState<any>(null);
   const [costs, setCosts] = useState<any[]>([]);
@@ -37,6 +40,7 @@ export const Costs = ({ user, onBack, addToast }: {
   const [filterEmployeeId, setFilterEmployeeId] = useState('');
   const [filterWarehouseId, setFilterWarehouseId] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
+  const [showFilter, setShowFilter] = useState(false);
 
   const [employees, setEmployees] = useState<any[]>([]);
 
@@ -313,28 +317,23 @@ export const Costs = ({ user, onBack, addToast }: {
   return (
     <div className="p-4 md:p-6 space-y-6 pb-44">
       <PageBreadcrumb title="Quản lý Chi phí" onBack={onBack} />
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div className="flex items-center justify-between gap-2">
         <div>
           <h2 className="text-xl font-bold text-gray-800 flex items-center gap-2">
             <Wallet className="text-primary" /> Tiền vào - Tiền ra
           </h2>
           <p className="text-xs text-gray-500 mt-1">Theo dõi các khoản thu chi và lợi nhuận</p>
         </div>
-        <div className="flex gap-2">
-          <Button
-            variant="outline"
-            icon={FileSpreadsheet}
-            onClick={exportToExcel}
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setShowFilter(f => !f)}
+            className={`p-2 rounded-lg border transition-colors ${
+              showFilter ? 'bg-primary text-white border-primary' : 'bg-white text-gray-500 border-gray-200 hover:border-primary/40'
+            }`}
           >
-            Xuất Excel
-          </Button>
-          <Button
-            variant="primary"
-            icon={Plus}
-            onClick={() => { setIsEditing(false); setFormData(initialFormState); setShowModal(true); }}
-          >
-            Nhập giao dịch
-          </Button>
+            <Search size={18} />
+          </button>
+          <ExcelButton onClick={exportToExcel} />
         </div>
       </div>
 
@@ -377,37 +376,48 @@ export const Costs = ({ user, onBack, addToast }: {
         </div>
       </div>
 
-      <div className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-4">
-        <div className="space-y-1">
-          <label className="text-[10px] font-bold text-gray-400 uppercase">Từ ngày</label>
-          <input type="date" value={filterStartDate} onChange={(e) => setFilterStartDate(e.target.value)} className="w-full px-3 py-2 rounded-lg border border-gray-200 text-xs outline-none focus:ring-2 focus:ring-primary/20" />
-        </div>
-        <div className="space-y-1">
-          <label className="text-[10px] font-bold text-gray-400 uppercase">Đến ngày</label>
-          <input type="date" value={filterEndDate} onChange={(e) => setFilterEndDate(e.target.value)} className="w-full px-3 py-2 rounded-lg border border-gray-200 text-xs outline-none focus:ring-2 focus:ring-primary/20" />
-        </div>
-        <div className="space-y-1">
-          <label className="text-[10px] font-bold text-gray-400 uppercase">Nhân sự</label>
-          <select value={filterEmployeeId} onChange={(e) => setFilterEmployeeId(e.target.value)} className="w-full px-3 py-2 rounded-lg border border-gray-200 text-xs outline-none focus:ring-2 focus:ring-primary/20">
-            <option value="">-- Tất cả --</option>
-            {employees.map(emp => <option key={emp.id} value={emp.id}>{emp.full_name} ({emp.code})</option>)}
-          </select>
-        </div>
-        <div className="space-y-1">
-          <label className="text-[10px] font-bold text-gray-400 uppercase">Kho</label>
-          <select value={filterWarehouseId} onChange={(e) => setFilterWarehouseId(e.target.value)} className="w-full px-3 py-2 rounded-lg border border-gray-200 text-xs outline-none focus:ring-2 focus:ring-primary/20">
-            <option value="">-- Tất cả kho --</option>
-            {warehouses.map(w => <option key={w.id} value={w.id}>{w.name}</option>)}
-          </select>
-        </div>
-        <div className="space-y-1">
-          <label className="text-[10px] font-bold text-gray-400 uppercase">Tìm kiếm nhanh</label>
-          <div className="relative">
-            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-            <input type="text" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} placeholder="Gõ để tìm..." className="w-full pl-9 pr-3 py-2 rounded-lg border border-gray-200 text-xs outline-none focus:ring-2 focus:ring-primary/20" />
-          </div>
-        </div>
-      </div>
+      <AnimatePresence>
+        {showFilter && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
+            className="overflow-hidden"
+          >
+            <div className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-4">
+              <div className="space-y-1">
+                <label className="text-[10px] font-bold text-gray-400 uppercase">Từ ngày</label>
+                <input type="date" value={filterStartDate} onChange={(e) => setFilterStartDate(e.target.value)} className="w-full px-3 py-2 rounded-lg border border-gray-200 text-xs outline-none focus:ring-2 focus:ring-primary/20" />
+              </div>
+              <div className="space-y-1">
+                <label className="text-[10px] font-bold text-gray-400 uppercase">Đến ngày</label>
+                <input type="date" value={filterEndDate} onChange={(e) => setFilterEndDate(e.target.value)} className="w-full px-3 py-2 rounded-lg border border-gray-200 text-xs outline-none focus:ring-2 focus:ring-primary/20" />
+              </div>
+              <div className="space-y-1">
+                <label className="text-[10px] font-bold text-gray-400 uppercase">Nhân sự</label>
+                <select value={filterEmployeeId} onChange={(e) => setFilterEmployeeId(e.target.value)} className="w-full px-3 py-2 rounded-lg border border-gray-200 text-xs outline-none focus:ring-2 focus:ring-primary/20">
+                  <option value="">-- Tất cả --</option>
+                  {employees.map(emp => <option key={emp.id} value={emp.id}>{emp.full_name} ({emp.code})</option>)}
+                </select>
+              </div>
+              <div className="space-y-1">
+                <label className="text-[10px] font-bold text-gray-400 uppercase">Kho</label>
+                <select value={filterWarehouseId} onChange={(e) => setFilterWarehouseId(e.target.value)} className="w-full px-3 py-2 rounded-lg border border-gray-200 text-xs outline-none focus:ring-2 focus:ring-primary/20">
+                  <option value="">-- Tất cả kho --</option>
+                  {warehouses.map(w => <option key={w.id} value={w.id}>{w.name}</option>)}
+                </select>
+              </div>
+              <div className="space-y-1">
+                <label className="text-[10px] font-bold text-gray-400 uppercase">Tìm kiếm nhanh</label>
+                <div className="relative">
+                  <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                  <input type="text" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} placeholder="Gõ để tìm..." className="w-full pl-9 pr-3 py-2 rounded-lg border border-gray-200 text-xs outline-none focus:ring-2 focus:ring-primary/20" />
+                </div>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
         <div className="overflow-x-auto">
@@ -474,94 +484,68 @@ export const Costs = ({ user, onBack, addToast }: {
         </div>
       </div>
 
+      {/* Detail Panel — slide-up mobile, side panel desktop */}
       <AnimatePresence>
         {showDetailModal && selectedCost && (
-          <div 
-            className="fixed inset-0 z-[120] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm"
-            onClick={() => setShowDetailModal(false)}
-          >
+          <>
             <motion.div
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.95 }}
-              className="bg-white rounded-3xl shadow-2xl w-full max-w-lg"
-              onClick={(e) => e.stopPropagation()}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setShowDetailModal(false)}
+              className="fixed inset-0 z-[120] bg-black/40 backdrop-blur-sm"
+            />
+            <motion.div
+              initial={{ y: '100%' }}
+              animate={{ y: 0 }}
+              exit={{ y: '100%' }}
+              className="fixed inset-x-0 bottom-0 z-[121] bg-white rounded-t-3xl shadow-2xl flex flex-col max-h-[90dvh]
+                         md:inset-x-auto md:inset-y-0 md:right-0 md:w-[420px] md:rounded-t-none md:rounded-l-3xl md:max-h-full"
+              transition={{ type: 'spring', damping: 28, stiffness: 240 }}
             >
-              <div className="bg-primary p-6 text-white flex items-center justify-between rounded-t-3xl">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 bg-white/20 rounded-xl"><Wallet size={24} /></div>
-                  <h3 className="font-bold text-lg">Chi tiết chi phí</h3>
-                </div>
-                <Button variant="ghost" icon={X} className="text-white hover:bg-white/10" onClick={() => setShowDetailModal(false)} />
+              <div className="flex justify-center pt-3 pb-1 md:hidden">
+                <div className="w-10 h-1 bg-gray-200 rounded-full" />
               </div>
-              <div className="p-6 space-y-4">
-                <div className="grid grid-cols-2 gap-4 text-sm">
+              <div className="p-5 border-b border-gray-100 flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <button onClick={() => setShowDetailModal(false)} className="w-9 h-9 bg-primary/10 text-primary rounded-xl flex items-center justify-center hover:bg-primary/20 transition-colors cursor-pointer">
+                    <Wallet size={18} />
+                  </button>
                   <div>
-                    <p className="text-[10px] font-bold text-gray-400 uppercase">Mã chứng từ</p>
-                    <p className="font-bold text-primary">{selectedCost.cost_code}</p>
-                  </div>
-                  <div>
-                    <p className="text-[10px] font-bold text-gray-400 uppercase">Ngày chi</p>
-                    <p className="font-medium">{new Date(selectedCost.date).toLocaleDateString('vi-VN')}</p>
-                  </div>
-                  <div>
-                    <p className="text-[10px] font-bold text-gray-400 uppercase">Người chi</p>
-                    <p className="font-medium">{selectedCost.users?.full_name}</p>
-                  </div>
-                  <div>
-                    <p className="text-[10px] font-bold text-gray-400 uppercase">Kho</p>
-                    <p className="font-medium">{selectedCost.warehouses?.name}</p>
-                  </div>
-                  <div>
-                    <p className="text-[10px] font-bold text-gray-400 uppercase">Loại chi phí</p>
-                    <p className="font-medium">{selectedCost.cost_type}</p>
-                  </div>
-                  <div className="col-span-2">
-                    <p className="text-[10px] font-bold text-gray-400 uppercase">Nội dung</p>
-                    <p className="font-medium">{selectedCost.content}</p>
-                  </div>
-                  <div>
-                    <p className="text-[10px] font-bold text-gray-400 uppercase">Số lượng</p>
-                    <p className="font-medium">{selectedCost.quantity} {selectedCost.unit}</p>
-                  </div>
-                  <div>
-                    <p className="text-[10px] font-bold text-gray-400 uppercase">Số tiền</p>
-                    <p className="font-bold text-red-600 text-lg">{selectedCost.total_amount.toLocaleString('vi-VN')}đ</p>
-                  </div>
-                  <div>
-                    <p className="text-[10px] font-bold text-gray-400 uppercase">Trạng thái</p>
-                    <span className={`px-2 py-0.5 rounded text-[10px] font-bold inline-block mt-1 ${
-                      selectedCost.status === 'Đã duyệt' ? 'bg-green-100 text-green-700' :
-                      selectedCost.status === 'Từ chối' ? 'bg-red-100 text-red-700' :
-                      selectedCost.status === 'Đã hoàn thành' ? 'bg-blue-100 text-blue-700' :
-                      'bg-amber-100 text-amber-700'
-                    }`}>
-                      {selectedCost.status || 'Chờ duyệt'}
-                    </span>
-                  </div>
-                  <div className="col-span-2">
-                    <p className="text-[10px] font-bold text-gray-400 uppercase">Ghi chú</p>
-                    <p className="text-gray-600 italic">{selectedCost.notes || 'Không có ghi chú'}</p>
+                    <p className="text-sm font-black text-primary">{selectedCost.cost_code}</p>
+                    <p className="text-[10px] text-gray-400 uppercase font-bold tracking-widest">Chi phí</p>
                   </div>
                 </div>
-                <div className="p-4 border-t border-gray-100 rounded-b-3xl bg-gray-50 flex flex-col gap-3 w-full mt-auto">
-                  <div className={`grid gap-3 w-full ${selectedCost.status !== 'Đã duyệt' && selectedCost.status !== 'Từ chối' && selectedCost.status !== 'Đã hoàn thành' ? 'grid-cols-2' : 'grid-cols-1'}`}>
-                    <Button fullWidth variant="outline" icon={Trash2} onClick={() => { setShowDetailModal(false); handleDeleteClick(selectedCost.id); }} className="h-full text-red-600 border-red-200 bg-white hover:bg-red-50">
-                      Thùng rác
-                    </Button>
-                    {selectedCost.status !== 'Đã duyệt' && selectedCost.status !== 'Từ chối' && selectedCost.status !== 'Đã hoàn thành' && (
-                      <Button fullWidth variant="outline" icon={Edit} onClick={() => handleEdit(selectedCost)} className="h-full text-gray-700 border-gray-200 bg-white hover:bg-gray-50">
-                        Sửa
-                      </Button>
-                    )}
+              </div>
+              <div className="flex-1 overflow-y-auto p-5 space-y-3">
+                {[
+                  { label: 'Ngày', value: new Date(selectedCost.date).toLocaleDateString('vi-VN') },
+                  { label: 'Loại GD', value: selectedCost.transaction_type || 'Chi' },
+                  { label: 'Người lập', value: selectedCost.users?.full_name },
+                  { label: 'Kho', value: selectedCost.warehouses?.name || '—' },
+                  { label: 'Loại chi phí', value: selectedCost.cost_type },
+                  { label: 'Nội dung', value: selectedCost.content },
+                  { label: 'Số lượng', value: `${selectedCost.quantity} ${selectedCost.unit}` },
+                  { label: 'Số tiền', value: `${selectedCost.transaction_type === 'Thu' ? '+' : '-'}${formatCurrency(selectedCost.total_amount)}`, highlight: true },
+                  { label: 'Ghi chú', value: selectedCost.notes || '—' },
+                ].map(({ label, value, highlight }) => (
+                  <div key={label} className="flex justify-between items-start border-b border-gray-50 pb-3 gap-4">
+                    <span className="text-[10px] text-gray-400 font-bold uppercase shrink-0">{label}</span>
+                    <p className={`text-sm font-medium text-right ${highlight ? (selectedCost.transaction_type === 'Thu' ? 'text-green-600 font-bold' : 'text-red-600 font-bold') : 'text-gray-800'}`}>{value || '—'}</p>
                   </div>
-                  <Button fullWidth variant="outline" icon={ChevronDown} onClick={() => setShowDetailModal(false)} className="text-gray-600 border-gray-200 bg-white hover:bg-gray-50">
-                    Đóng
-                  </Button>
+                ))}
+              </div>
+              <div className="p-4 border-t border-gray-100 bg-gray-50 space-y-2">
+                <div className={`grid gap-2 ${selectedCost.status !== 'Đã duyệt' && selectedCost.status !== 'Từ chối' ? 'grid-cols-2' : 'grid-cols-1'}`}>
+                  <Button fullWidth variant="outline" icon={Trash2} onClick={() => { setShowDetailModal(false); handleDeleteClick(selectedCost.id); }} className="text-red-600 border-red-200 hover:bg-red-50">Thùng rác</Button>
+                  {selectedCost.status !== 'Đã duyệt' && selectedCost.status !== 'Từ chối' && selectedCost.status !== 'Đã hoàn thành' && (
+                    <Button fullWidth variant="outline" icon={Edit} onClick={() => handleEdit(selectedCost)} className="text-gray-700 hover:bg-gray-50">Sửa</Button>
+                  )}
                 </div>
+                <Button fullWidth variant="outline" icon={ChevronDown} onClick={() => setShowDetailModal(false)} className="text-gray-600 hover:bg-gray-50">Đóng</Button>
               </div>
             </motion.div>
-          </div>
+          </>
         )}
       </AnimatePresence>
 
@@ -607,13 +591,14 @@ export const Costs = ({ user, onBack, addToast }: {
             >
               <div className="bg-primary p-6 text-white flex items-center justify-between rounded-t-3xl flex-shrink-0">
                 <div className="flex items-center gap-3">
-                  <div className="p-2 bg-white/20 rounded-xl"><Wallet size={24} /></div>
+                  <button onClick={() => setShowModal(false)} className="p-2 bg-white/20 hover:bg-white/30 rounded-xl transition-colors cursor-pointer">
+                    <Wallet size={24} />
+                  </button>
                   <div>
                     <h3 className="font-bold text-lg">{isEditing ? 'Cập nhật chi phí' : 'Nhập chi phí'}</h3>
                     <p className="text-xs text-white/70">Vui lòng điền đầy đủ thông tin chi phí</p>
                   </div>
                 </div>
-                <Button variant="ghost" icon={X} className="text-white hover:bg-white/10" onClick={() => setShowModal(false)} />
               </div>
 
               <div className="flex-1 overflow-y-auto p-6 custom-scrollbar">
@@ -749,6 +734,11 @@ export const Costs = ({ user, onBack, addToast }: {
           </div>
         )}
       </AnimatePresence>
+      {/* FAB — Nhập giao dịch */}
+      <FAB
+        onClick={() => { setIsEditing(false); setFormData(initialFormState); setShowModal(true); }}
+        label="Nhập giao dịch"
+      />
     </div>
   );
 };

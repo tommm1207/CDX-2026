@@ -118,8 +118,12 @@ export const SalarySettings = ({ user, onBack, addToast }: {
           <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
             <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} className="bg-white rounded-3xl shadow-2xl w-full max-w-md overflow-hidden">
               <div className="bg-primary p-6 text-white flex items-center justify-between">
-                <h3 className="font-bold text-lg">Thiết lập lương</h3>
-                <button onClick={() => setShowModal(false)} className="p-2 hover:bg-white/10 rounded-full transition-colors"><X size={20} /></button>
+                <div className="flex items-center gap-3">
+                  <button onClick={() => setShowModal(false)} className="p-2 bg-white/20 hover:bg-white/30 rounded-xl transition-colors cursor-pointer">
+                    <Settings2 size={24} />
+                  </button>
+                  <h3 className="font-bold text-lg">Thiết lập lương</h3>
+                </div>
               </div>
               <form onSubmit={handleSubmit} className="p-6 space-y-4">
                 <NumericInput

@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-import { BarChart3, RefreshCw, EyeOff, Download } from 'lucide-react';
+import { BarChart3, RefreshCw, EyeOff, Download, Search } from 'lucide-react';
+import { motion, AnimatePresence } from 'motion/react';
 import { supabase } from '../../supabaseClient';
 import * as xlsx from 'xlsx';
 import { Employee } from '../../types';
@@ -10,6 +11,7 @@ import { formatNumber } from '../../utils/format';
 import { getTonKhoTable, TonKhoRow } from '../../utils/inventory';
 import { getAllowedWarehouses } from '../../utils/helpers';
 import { Button } from '../shared/Button';
+import { ExcelButton } from '../shared/ExcelButton';
 
 interface ReportRow extends TonKhoRow {
   materialName: string;
@@ -36,6 +38,7 @@ export const InventoryReport = ({ user, onBack, addToast }: {
   const [startDate, setStartDate] = useState<string>(firstOfYear);
   const [endDate, setEndDate] = useState<string>(today);
   const [hideEmpty, setHideEmpty] = useState(true);
+  const [showFilter, setShowFilter] = useState(false);
 
   useEffect(() => {
     Promise.all([
@@ -164,7 +167,7 @@ export const InventoryReport = ({ user, onBack, addToast }: {
     <div className="p-4 md:p-6 space-y-6 pb-44">
       <PageBreadcrumb title="Kiểm tra tồn kho" onBack={onBack} />
 
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div className="flex items-center justify-between gap-2">
         <div>
           <h2 className="text-xl font-bold text-gray-800 flex items-center gap-2">
             <BarChart3 className="text-primary" /> Kiểm tra tồn kho
@@ -173,57 +176,62 @@ export const InventoryReport = ({ user, onBack, addToast }: {
             Tồn đầu kỳ + Nhập - Xuất + Chuyển đến - Chuyển đi = Tồn cuối kỳ
           </p>
         </div>
-        <div className="flex items-center gap-3">
-          <Button
-            variant="primary"
-            icon={RefreshCw}
-            onClick={fetchReport}
+        <div className="flex items-center gap-2 flex-shrink-0">
+          <button
+            onClick={() => setShowFilter(f => !f)}
+            className={`p-2.5 rounded-xl border transition-colors ${
+              showFilter ? 'bg-primary text-white border-primary' : 'bg-white text-gray-500 border-gray-200 hover:border-primary/40'
+            }`}
           >
-            Làm mới
-          </Button>
-          <Button
-            variant="outline"
-            icon={Download}
-            onClick={handleExportExcel}
-            className="text-primary border-primary hover:bg-primary/5"
-          >
-            Xuất Excel
-          </Button>
+            <Search size={16} />
+          </button>
+          <ExcelButton onClick={handleExportExcel} />
         </div>
       </div>
 
       {/* Bộ lọc */}
-      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 flex flex-col md:flex-row gap-4">
-        <div className="flex-1">
-          <label className="text-[10px] font-bold text-gray-400 uppercase mb-1 block">Từ ngày (đầu kỳ)</label>
-          <input
-            type="date" value={startDate}
-            onChange={e => setStartDate(e.target.value)}
-            className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20"
-          />
-        </div>
-        <div className="flex-1">
-          <label className="text-[10px] font-bold text-gray-400 uppercase mb-1 block">Đến ngày (cuối kỳ)</label>
-          <input
-            type="date" value={endDate}
-            onChange={e => setEndDate(e.target.value)}
-            className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20"
-          />
-        </div>
-        <div className="flex-1">
-          <label className="text-[10px] font-bold text-gray-400 uppercase mb-1 block">Kho hàng</label>
-          <select
-            value={selectedWarehouse}
-            onChange={e => setSelectedWarehouse(e.target.value)}
-            className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20"
+      <AnimatePresence>
+        {showFilter && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
+            className="overflow-hidden"
           >
-            <option value="">Tất cả các kho</option>
-            {warehouses.map(wh => (
-              <option key={wh.id} value={wh.id}>{wh.name}</option>
-            ))}
-          </select>
-        </div>
-      </div>
+            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 flex flex-col md:flex-row gap-4 mb-4">
+              <div className="flex-1">
+                <label className="text-[10px] font-bold text-gray-400 uppercase mb-1 block">Từ ngày (đầu kỳ)</label>
+                <input
+                  type="date" value={startDate}
+                  onChange={e => setStartDate(e.target.value)}
+                  className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20"
+                />
+              </div>
+              <div className="flex-1">
+                <label className="text-[10px] font-bold text-gray-400 uppercase mb-1 block">Đến ngày (cuối kỳ)</label>
+                <input
+                  type="date" value={endDate}
+                  onChange={e => setEndDate(e.target.value)}
+                  className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20"
+                />
+              </div>
+              <div className="flex-1">
+                <label className="text-[10px] font-bold text-gray-400 uppercase mb-1 block">Kho hàng</label>
+                <select
+                  value={selectedWarehouse}
+                  onChange={e => setSelectedWarehouse(e.target.value)}
+                  className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20"
+                >
+                  <option value="">Tất cả các kho</option>
+                  {warehouses.map(wh => (
+                    <option key={wh.id} value={wh.id}>{wh.name}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       <div className="flex justify-end">
         <label className="flex items-center gap-2 cursor-pointer bg-white px-4 py-2 rounded-xl shadow-sm border border-gray-100 hover:bg-gray-50 transition-colors">

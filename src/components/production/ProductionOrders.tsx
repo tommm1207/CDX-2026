@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { ClipboardList, Plus, Search, Eye, CheckCircle2, XCircle, Clock } from 'lucide-react';
+import { motion, AnimatePresence } from 'motion/react';
 import { supabase } from '../../supabaseClient';
 import { Employee, ProductionOrder, BOMConfig } from '../../types';
 import { PageBreadcrumb } from '../shared/PageBreadcrumb';
@@ -16,6 +17,7 @@ export const ProductionOrders = ({ user, onBack, addToast, onOpenDetail }: {
   const [orders, setOrders] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
+  const [showFilter, setShowFilter] = useState(false);
 
   useEffect(() => {
     fetchOrders();
@@ -73,26 +75,47 @@ export const ProductionOrders = ({ user, onBack, addToast, onOpenDetail }: {
           </h2>
           <p className="text-xs text-gray-500 mt-1">Theo dõi tiến độ sản xuất và điều phối vật tư</p>
         </div>
-        <button
-          onClick={() => onOpenDetail()}
-          className="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-xl text-sm font-bold hover:bg-primary/90 transition-colors shadow-lg shadow-primary/20"
-        >
-          <Plus size={18} /> Tạo lệnh mới
-        </button>
-      </div>
-
-      <div className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 flex flex-col md:flex-row gap-4">
-        <div className="relative flex-1">
-          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-          <input
-            type="text"
-            placeholder="Tìm theo mã lệnh hoặc định mức..."
-            value={searchTerm}
-            onChange={e => setSearchTerm(e.target.value)}
-            className="w-full pl-9 pr-3 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20"
-          />
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setShowFilter(f => !f)}
+            className={`p-2.5 rounded-xl border transition-colors ${
+              showFilter ? 'bg-primary text-white border-primary' : 'bg-white text-gray-500 border-gray-200 hover:border-primary/40'
+            }`}
+          >
+            <Search size={16} />
+          </button>
+          <button
+            onClick={() => onOpenDetail()}
+            className="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-xl text-sm font-bold hover:bg-primary/90 transition-colors shadow-lg shadow-primary/20"
+          >
+            <Plus size={18} /> Tạo lệnh mới
+          </button>
         </div>
       </div>
+
+      <AnimatePresence>
+        {showFilter && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
+            className="overflow-hidden"
+          >
+            <div className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 flex flex-col md:flex-row gap-4">
+              <div className="relative flex-1">
+                <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                <input
+                  type="text"
+                  placeholder="Tìm theo mã lệnh hoặc định mức..."
+                  value={searchTerm}
+                  onChange={e => setSearchTerm(e.target.value)}
+                  className="w-full pl-9 pr-3 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20"
+                />
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
         <div className="overflow-x-auto">

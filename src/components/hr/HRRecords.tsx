@@ -1,10 +1,11 @@
 import { useState, useEffect, FormEvent } from 'react';
-import { Users, Plus, Search, Edit, Trash2, X, Eye } from 'lucide-react';
+import { Users, Plus, Search, Edit, Trash2, X, Eye, UserPlus } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { supabase } from '../../supabaseClient';
 import { Employee } from '../../types';
 import { PageBreadcrumb } from '../shared/PageBreadcrumb';
 import { ToastType } from '../shared/Toast';
+import { FAB } from '../shared/FAB';
 
 export const HRRecords = ({ user, onBack, addToast }: { 
   user: Employee, 
@@ -16,6 +17,7 @@ export const HRRecords = ({ user, onBack, addToast }: {
   const [searchTerm, setSearchTerm] = useState('');
   const [showModal, setShowModal] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [showFilter, setShowFilter] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
 
   const initialFormState = {
@@ -197,40 +199,47 @@ export const HRRecords = ({ user, onBack, addToast }: {
           <Users size={20} className="text-primary" /> Hồ sơ Nhân sự
         </h2>
         <button
-          onClick={async () => {
-            const nextCode = await generateNextEmployeeCode();
-            setFormData({ ...initialFormState, code: nextCode });
-            setIsEditing(false);
-            setShowModal(true);
-          }}
-          className="bg-primary text-white px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 hover:bg-primary-hover transition-colors"
+          onClick={() => setShowFilter(f => !f)}
+          className={`p-2 rounded-xl border transition-colors ${
+            showFilter ? 'bg-primary text-white border-primary' : 'bg-white text-gray-500 border-gray-200 hover:border-primary/40'
+          }`}
         >
-          <Plus size={18} /> Thêm mới
+          <Search size={16} />
         </button>
       </div>
 
       <div className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 space-y-4">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
-          <div className="relative lg:col-span-1">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
-            <input
-              type="text"
-              placeholder="Tìm kiếm nhanh..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 rounded-lg border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
-            />
-          </div>
-          <select className="px-4 py-2 rounded-lg border border-gray-200 text-sm outline-none">
-            <option>-- Nhân sự --</option>
-          </select>
-          <select className="px-4 py-2 rounded-lg border border-gray-200 text-sm outline-none">
-            <option>-- Kho --</option>
-          </select>
-          <input type="date" className="px-4 py-2 rounded-lg border border-gray-200 text-sm outline-none" />
-          <input type="date" className="px-4 py-2 rounded-lg border border-gray-200 text-sm outline-none" />
-        </div>
-
+        <AnimatePresence>
+          {showFilter && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: 'auto' }}
+              exit={{ opacity: 0, height: 0 }}
+              className="overflow-hidden"
+            >
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 mb-4">
+                <div className="relative lg:col-span-1">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
+                  <input
+                    type="text"
+                    placeholder="Tìm kiếm nhanh..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="w-full pl-10 pr-4 py-2 rounded-lg border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
+                  />
+                </div>
+                <select className="px-4 py-2 rounded-lg border border-gray-200 text-sm outline-none">
+                  <option>-- Nhân sự --</option>
+                </select>
+                <select className="px-4 py-2 rounded-lg border border-gray-200 text-sm outline-none">
+                  <option>-- Kho --</option>
+                </select>
+                <input type="date" className="px-4 py-2 rounded-lg border border-gray-200 text-sm outline-none" />
+                <input type="date" className="px-4 py-2 rounded-lg border border-gray-200 text-sm outline-none" />
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
         <div className="overflow-x-auto custom-scrollbar pb-2">
           <table className="w-full text-left border-separate border-spacing-0">
             <thead>
@@ -358,9 +367,13 @@ export const HRRecords = ({ user, onBack, addToast }: {
               exit={{ opacity: 0, scale: 0.95, y: 20 }}
               className="bg-white rounded-3xl shadow-2xl w-full max-w-4xl relative z-10 my-8 max-h-[90vh] flex flex-col"
             >
-              <div className="bg-primary p-4 flex items-center justify-between text-white rounded-t-3xl flex-shrink-0">
-                <h3 className="font-bold">{isEditing ? 'Cập Nhật Nhân Sự' : 'Thêm Mới Nhân Sự'}</h3>
-                <button onClick={() => setShowModal(false)} className="hover:bg-white/20 p-1 rounded-full"><X size={20} /></button>
+              <div className="bg-primary p-6 flex items-center justify-between text-white rounded-t-3xl flex-shrink-0">
+                <div className="flex items-center gap-3">
+                  <button onClick={() => setShowModal(false)} className="p-2 bg-white/20 hover:bg-white/30 rounded-xl transition-colors cursor-pointer">
+                    <UserPlus size={24} />
+                  </button>
+                  <h3 className="font-bold text-lg">{isEditing ? 'Cập Nhật Nhân Sự' : 'Thêm Mới Nhân Sự'}</h3>
+                </div>
               </div>
 
               <div className="flex-1 overflow-y-auto custom-scrollbar">
@@ -563,6 +576,16 @@ export const HRRecords = ({ user, onBack, addToast }: {
           </div>
         )}
       </AnimatePresence>
+      {/* FAB — Thêm nhân sự */}
+      <FAB
+        onClick={async () => {
+          const nextCode = await generateNextEmployeeCode();
+          setFormData({ ...initialFormState, code: nextCode });
+          setIsEditing(false);
+          setShowModal(true);
+        }}
+        label="Thêm nhân sự"
+      />
     </div>
   );
 };

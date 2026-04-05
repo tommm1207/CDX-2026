@@ -6,3 +6,12 @@ coverage/
 *.log
 .env*
 !.env.example
+
+# Temp / debug files
+tmp/
+tsc_output.txt
+backup-config.json
+check_db.js
+get_admin.js
+get_admin_creds.js
+get_users.js

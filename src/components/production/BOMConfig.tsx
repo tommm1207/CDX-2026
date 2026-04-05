@@ -6,6 +6,7 @@ import { Employee, Material, BOMConfig as IBOMConfig, BOMItem } from '../../type
 import { PageBreadcrumb } from '../shared/PageBreadcrumb';
 import { ToastType } from '../shared/Toast';
 import { CustomCombobox } from '../shared/CustomCombobox';
+import { FAB } from '../shared/FAB';
 
 export const BOMConfig = ({ user, onBack, addToast }: {
   user: Employee,
@@ -183,17 +184,13 @@ export const BOMConfig = ({ user, onBack, addToast }: {
           </h2>
           <p className="text-xs text-gray-500 mt-1">Cấu hình nguyên vật liệu tiêu hao cho mỗi loại thành phẩm</p>
         </div>
-        <button
-          onClick={() => {
-            setFormData({ product_item_id: '', name: '', notes: '', items: [] });
-            setIsEditing(false);
-            setShowModal(true);
-          }}
-          className="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-xl text-sm font-bold hover:bg-primary/90 transition-colors shadow-lg shadow-primary/20"
-        >
-          <Plus size={18} /> Thêm định mức
-        </button>
       </div>
+
+      <FAB onClick={() => {
+        setFormData({ product_item_id: '', name: '', notes: '', items: [] });
+        setIsEditing(false);
+        setShowModal(true);
+      }} />
 
       <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
         <div className="overflow-x-auto">
@@ -250,10 +247,11 @@ export const BOMConfig = ({ user, onBack, addToast }: {
             >
               <div className="bg-primary p-6 text-white flex items-center justify-between rounded-t-3xl flex-shrink-0">
                 <div className="flex items-center gap-3">
-                  <div className="p-2 bg-white/20 rounded-xl"><Calculator size={24} /></div>
+                  <button onClick={() => setShowModal(false)} className="p-2 bg-white/20 hover:bg-white/30 rounded-xl transition-colors cursor-pointer">
+                    <Calculator size={24} />
+                  </button>
                   <h3 className="font-bold text-lg">{isEditing ? 'Sửa định mức' : 'Thêm định mức mới'}</h3>
                 </div>
-                <button onClick={() => setShowModal(false)} className="p-2 hover:bg-white/10 rounded-full transition-colors"><X size={20} /></button>
               </div>
 
               <div className="flex-1 overflow-y-auto p-6 space-y-6">

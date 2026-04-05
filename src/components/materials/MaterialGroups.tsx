@@ -1,11 +1,12 @@
 import { useState, useEffect, FormEvent, MouseEvent, ChangeEvent } from 'react';
-import { Layers, Plus, Search, Edit, Trash2, X, Package, Eye, Image as ImageIcon } from 'lucide-react';
+import { Layers, Plus, Search, Edit, Trash2, X, Package, Eye, Image as ImageIcon, SlidersHorizontal } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { supabase } from '../../supabaseClient';
 import { Employee } from '../../types';
 import { PageBreadcrumb } from '../shared/PageBreadcrumb';
 import { isActiveWarehouse } from '../../utils/inventory';
 import { ToastType } from '../shared/Toast';
+import { FAB } from '../shared/FAB';
 
 export const MaterialGroups = ({ user, onBack, addToast }: { 
   user: Employee, 
@@ -29,6 +30,7 @@ export const MaterialGroups = ({ user, onBack, addToast }: {
   const [isEditing, setIsEditing] = useState(false);
   const [isEditingMaterial, setIsEditingMaterial] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
+  const [showFilter, setShowFilter] = useState(false);
 
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [itemToDelete, setItemToDelete] = useState<string | null>(null);
@@ -267,53 +269,46 @@ export const MaterialGroups = ({ user, onBack, addToast }: {
           <p className="text-xs text-gray-500 mt-1">Quản lý phân loại danh mục vật tư hệ thống</p>
         </div>
         <button
-          onClick={async () => {
-            const nextCode = await generateNextGroupCode();
-            setFormData({ ...initialFormState, code: nextCode });
-            setIsEditing(false);
-            setShowModal(true);
-          }}
-          className="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-xl text-sm font-bold hover:bg-primary-hover transition-colors shadow-lg shadow-primary/20"
+          onClick={() => setShowFilter(f => !f)}
+          className={`p-2.5 rounded-xl border transition-colors ${
+            showFilter ? 'bg-primary text-white border-primary' : 'bg-white text-gray-500 border-gray-200 hover:border-primary/40'
+          }`}
         >
-          <Plus size={18} /> Thêm mới
+          <Search size={16} />
         </button>
       </div>
 
-      <div className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-4">
-        <div className="space-y-1">
-          <label className="text-[10px] font-bold text-gray-400 uppercase">Từ ngày</label>
-          <input type="date" className="w-full px-3 py-2 rounded-lg border border-gray-200 text-xs outline-none focus:ring-2 focus:ring-primary/20" />
-        </div>
-        <div className="space-y-1">
-          <label className="text-[10px] font-bold text-gray-400 uppercase">Đến ngày</label>
-          <input type="date" className="w-full px-3 py-2 rounded-lg border border-gray-200 text-xs outline-none focus:ring-2 focus:ring-primary/20" />
-        </div>
-        <div className="space-y-1">
-          <label className="text-[10px] font-bold text-gray-400 uppercase">Nhân sự</label>
-          <select className="w-full px-3 py-2 rounded-lg border border-gray-200 text-xs outline-none focus:ring-2 focus:ring-primary/20">
-            <option>-- Tất cả --</option>
-          </select>
-        </div>
-        <div className="space-y-1">
-          <label className="text-[10px] font-bold text-gray-400 uppercase">Kho</label>
-          <select className="w-full px-3 py-2 rounded-lg border border-gray-200 text-xs outline-none focus:ring-2 focus:ring-primary/20">
-            <option>-- Tất cả kho --</option>
-          </select>
-        </div>
-        <div className="space-y-1">
-          <label className="text-[10px] font-bold text-gray-400 uppercase">Tìm kiếm nhanh</label>
-          <div className="relative">
-            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-            <input
-              type="text"
-              placeholder="Gõ để tìm..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-9 pr-3 py-2 rounded-lg border border-gray-200 text-xs outline-none focus:ring-2 focus:ring-primary/20"
-            />
-          </div>
-        </div>
-      </div>
+      <AnimatePresence>
+        {showFilter && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
+            className="overflow-hidden"
+          >
+            <div className="bg-white p-3 rounded-2xl shadow-sm border border-gray-100">
+              <div className="relative">
+                <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                <input
+                  type="text"
+                  placeholder="Tìm kiếm nhóm vật tư..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  autoFocus
+                  className="w-full pl-9 pr-3 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20"
+                />
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      <FAB onClick={async () => {
+        const nextCode = await generateNextGroupCode();
+        setFormData({ ...initialFormState, code: nextCode });
+        setIsEditing(false);
+        setShowModal(true);
+      }} />
 
       <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
         <div className="overflow-x-auto">
@@ -389,13 +384,14 @@ export const MaterialGroups = ({ user, onBack, addToast }: {
             >
               <div className="bg-primary p-6 text-white flex items-center justify-between rounded-t-3xl flex-shrink-0">
                 <div className="flex items-center gap-3">
-                  <div className="p-2 bg-white/20 rounded-xl"><Layers size={24} /></div>
+                  <button onClick={() => setShowModal(false)} className="p-2 bg-white/20 hover:bg-white/30 rounded-xl transition-colors cursor-pointer">
+                    <Layers size={24} />
+                  </button>
                   <div>
                     <h3 className="font-bold text-lg">{isEditing ? 'Cập nhật nhóm' : 'Thêm nhóm vật tư'}</h3>
                     <p className="text-xs text-white/70">Mã nhóm sẽ được hệ thống tự động sinh</p>
                   </div>
                 </div>
-                <button onClick={() => setShowModal(false)} className="p-2 hover:bg-white/10 rounded-full transition-colors"><X size={20} /></button>
               </div>
 
               <div className="flex-1 overflow-y-auto custom-scrollbar">
@@ -459,11 +455,13 @@ export const MaterialGroups = ({ user, onBack, addToast }: {
               exit={{ opacity: 0, scale: 0.95 }}
               className="bg-white rounded-3xl shadow-2xl w-full max-w-5xl max-h-[90vh] flex flex-col"
             >
-              <div className="p-6 border-b border-gray-100 flex items-center justify-between rounded-t-3xl">
-                <div className="text-center flex-1">
-                  <h3 className="text-xl font-bold text-primary uppercase tracking-widest">Chi tiết nhóm vật tư</h3>
+              <div className="bg-primary p-6 text-white flex items-center justify-between rounded-t-3xl">
+                <div className="flex items-center gap-3">
+                  <button onClick={() => setShowDetailModal(false)} className="p-2 bg-white/20 hover:bg-white/30 rounded-xl transition-colors cursor-pointer">
+                    <Layers size={24} />
+                  </button>
+                  <h3 className="text-xl font-bold uppercase tracking-widest">Chi tiết nhóm vật tư</h3>
                 </div>
-                <button onClick={() => setShowDetailModal(false)} className="p-2 hover:bg-gray-100 rounded-full transition-colors"><X size={20} /></button>
               </div>
 
               <div className="p-8 overflow-y-auto flex-1 space-y-8">
@@ -570,13 +568,14 @@ export const MaterialGroups = ({ user, onBack, addToast }: {
             >
               <div className="bg-blue-600 p-6 text-white flex items-center justify-between rounded-t-3xl flex-shrink-0">
                 <div className="flex items-center gap-3">
-                  <div className="p-2 bg-white/20 rounded-xl"><Package size={24} /></div>
+                  <button onClick={() => setShowMaterialModal(false)} className="p-2 bg-white/20 hover:bg-white/30 rounded-xl transition-colors cursor-pointer">
+                    <Package size={24} />
+                  </button>
                   <div>
                     <h3 className="font-bold text-lg">{isEditingMaterial ? 'Cập nhật vật tư' : 'Thêm vật tư mới'}</h3>
                     <p className="text-xs text-white/70">Thuộc nhóm: {selectedGroup?.name}</p>
                   </div>
                 </div>
-                <button onClick={() => setShowMaterialModal(false)} className="p-2 hover:bg-white/10 rounded-full transition-colors"><X size={20} /></button>
               </div>
 
               <div className="flex-1 overflow-y-auto custom-scrollbar">
@@ -715,11 +714,13 @@ export const MaterialGroups = ({ user, onBack, addToast }: {
               exit={{ opacity: 0, scale: 0.95 }}
               className="bg-white rounded-3xl shadow-2xl w-full max-w-3xl flex flex-col"
             >
-              <div className="p-6 border-b border-gray-100 flex items-center justify-between rounded-t-3xl">
-                <div className="text-center flex-1">
-                  <h3 className="text-xl font-bold text-primary uppercase tracking-widest">Chi tiết danh mục vật tư</h3>
+              <div className="bg-primary p-6 text-white flex items-center justify-between rounded-t-3xl">
+                <div className="flex items-center gap-3">
+                  <button onClick={() => setShowMaterialDetailModal(false)} className="p-2 bg-white/20 hover:bg-white/30 rounded-xl transition-colors cursor-pointer">
+                    <Package size={24} />
+                  </button>
+                  <h3 className="text-xl font-bold uppercase tracking-widest">Chi tiết danh mục vật tư</h3>
                 </div>
-                <button onClick={() => setShowMaterialDetailModal(false)} className="p-2 hover:bg-gray-100 rounded-full transition-colors"><X size={20} /></button>
               </div>
 
               <div className="p-8 space-y-8 overflow-y-auto">

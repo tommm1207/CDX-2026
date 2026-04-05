@@ -9,20 +9,22 @@ import { CreatableSelect } from '../shared/CreatableSelect';
 import { ToastType } from '../shared/Toast';
 import { ConfirmModal } from '../shared/ConfirmModal';
 import { QuickAddMaterialModal } from '../shared/QuickAddMaterialModal';
+import { FAB } from '../shared/FAB';
 import { useInventoryData } from '../../hooks/useInventoryData';
 import { formatDate, formatCurrency, formatNumber } from '../../utils/format';
 import { isUUID, generateCode, getAllowedWarehouses } from '../../utils/helpers';
 import { Button } from '../shared/Button';
 import { getAvailableStock } from '../../utils/inventory';
 
-export const StockOut = ({ user, onBack, addToast }: { 
+export const StockOut = ({ user, onBack, addToast, initialAction }: { 
   user: Employee, 
   onBack?: () => void,
-  addToast?: (message: string, type?: ToastType) => void 
+  addToast?: (message: string, type?: ToastType) => void,
+  initialAction?: string 
 }) => {
   const [slips, setSlips] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [showModal, setShowModal] = useState(false);
+  const [showModal, setShowModal] = useState(initialAction === 'add');
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [selectedSlip, setSelectedSlip] = useState<any>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -318,21 +320,6 @@ export const StockOut = ({ user, onBack, addToast }: {
           </h2>
           <p className="text-xs text-gray-500 mt-1">Quản lý phiếu xuất vật tư khỏi kho</p>
         </div>
-        <Button
-          variant="danger"
-          icon={Plus}
-          onClick={() => {
-            setFormData({
-              ...initialFormState,
-              export_code: generateCode('XK')
-            });
-            setIsEditing(false);
-            setEditingId(null);
-            setShowModal(true);
-          }}
-        >
-          Lập phiếu xuất
-        </Button>
       </div>
 
       <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
@@ -383,96 +370,76 @@ export const StockOut = ({ user, onBack, addToast }: {
         </div>
       </div>
 
+      {/* Detail Panel — slide-up mobile, side panel desktop */}
       <AnimatePresence>
         {showDetailModal && selectedSlip && (
-          <div 
-            className="fixed inset-0 z-[70] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm h-[100dvh] w-full"
-            onClick={() => setShowDetailModal(false)}
-          >
+          <>
             <motion.div
-              initial={{ opacity: 0, scale: 0.95, y: 16 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.95, y: 16 }}
-              className="bg-white rounded-3xl shadow-2xl w-full max-w-lg max-h-[90dvh] flex flex-col overflow-hidden"
-              onClick={(e) => e.stopPropagation()}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setShowDetailModal(false)}
+              className="fixed inset-0 z-[70] bg-black/40 backdrop-blur-sm"
+            />
+            <motion.div
+              initial={{ y: '100%' }}
+              animate={{ y: 0 }}
+              exit={{ y: '100%' }}
+              className="fixed inset-x-0 bottom-0 z-[71] bg-white rounded-t-3xl shadow-2xl flex flex-col max-h-[90dvh]
+                         md:inset-x-auto md:inset-y-0 md:right-0 md:w-[420px] md:rounded-t-none md:rounded-l-3xl md:max-h-full"
+              transition={{ type: 'spring', damping: 28, stiffness: 240 }}
             >
-              <div className="bg-red-600 p-6 text-white flex items-center justify-between">
-                <div>
-                  <h3 className="font-bold text-lg">Chi tiết phiếu xuất</h3>
-                  <p className="text-xs opacity-80 font-medium">{selectedSlip.export_code}</p>
-                </div>
-                <Button variant="ghost" icon={X} className="text-white hover:bg-white/10" onClick={() => setShowDetailModal(false)} />
+              <div className="flex justify-center pt-3 pb-1 md:hidden">
+                <div className="w-10 h-1 bg-gray-200 rounded-full" />
               </div>
-              <div className="p-6 space-y-4 max-h-[70vh] overflow-y-auto">
+              <div className="p-5 border-b border-gray-100 flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <button onClick={() => setShowDetailModal(false)} className="w-9 h-9 bg-red-100 text-red-600 rounded-xl flex items-center justify-center hover:bg-red-200 transition-colors cursor-pointer">
+                    <ArrowUpCircle size={18} />
+                  </button>
                   <div>
-                    <p className="text-[10px] font-bold text-gray-400 uppercase">Ngày xuất</p>
-                    <p className="text-sm font-bold text-gray-800">{formatDate(selectedSlip.date)}</p>
+                    <p className="text-sm font-black text-red-600">{selectedSlip.export_code}</p>
+                    <p className="text-[10px] text-gray-400 uppercase font-bold tracking-widest">Phiếu xuất kho</p>
                   </div>
-                  <div>
-                    <p className="text-[10px] font-bold text-gray-400 uppercase">Trạng thái</p>
-                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${selectedSlip.status === 'Đã duyệt' ? 'bg-green-100 text-green-600' :
-                        selectedSlip.status === 'Từ chối' ? 'bg-red-100 text-red-600' : 'bg-amber-100 text-amber-600'
-                      }`}>
-                      {selectedSlip.status || 'Chờ duyệt'}
-                    </span>
-                  </div>
-                  <div>
-                    <p className="text-[10px] font-bold text-gray-400 uppercase">Kho xuất</p>
-                    <p className="text-sm font-bold text-gray-800">{selectedSlip.warehouses?.name}</p>
-                    <p className="text-[10px] text-gray-400">Mã: {selectedSlip.warehouses?.code || selectedSlip.warehouse_id?.slice(0, 8)}</p>
-                  </div>
-                  <div>
-                    <p className="text-[10px] font-bold text-gray-400 uppercase">Vật tư</p>
-                    <p className="text-sm font-bold text-gray-800">{selectedSlip.materials?.name}</p>
-                    <p className="text-[10px] text-gray-400">Mã: {selectedSlip.materials?.code || selectedSlip.material_id?.slice(0, 8)}</p>
-                  </div>
-                  <div>
-                    <p className="text-[10px] font-bold text-red-400 uppercase">Số lượng</p>
-                    <p className="text-sm font-bold text-red-600">-{formatNumber(selectedSlip.quantity)}</p>
-                  </div>
-                  <div>
-                    <p className="text-[10px] font-bold text-gray-400 uppercase">Đơn giá bán</p>
-                    <p className="text-sm font-medium text-gray-800">{formatCurrency(selectedSlip.unit_price || 0)}</p>
-                  </div>
-                  <div>
-                    <p className="text-[10px] font-bold text-gray-400 uppercase">Thành tiền (Doanh thu)</p>
-                    <p className="text-sm font-bold text-green-600">{formatCurrency(selectedSlip.total_amount || 0)}</p>
-                  </div>
-                  <div>
-                    <p className="text-[10px] font-bold text-gray-400 uppercase">Ghi chú</p>
-                    <p className="text-sm text-gray-600 italic">{selectedSlip.notes || 'Không có ghi chú'}</p>
-                  </div>
-
-                <div className="p-4 border-t border-gray-100 rounded-b-3xl bg-gray-50 flex flex-col gap-3 w-full mt-auto">
-                  {selectedSlip.status !== 'Đã xóa' && (user.role === 'Admin' || user.role === 'Admin App') && selectedSlip.status === 'Chờ duyệt' && (
-                    <div className="grid grid-cols-2 gap-3 w-full">
-                      <Button fullWidth variant="danger" icon={X} onClick={() => handleApprove(selectedSlip.id, 'Từ chối')} className="h-full">
-                        Từ chối
-                      </Button>
-                      <Button fullWidth variant="success" icon={Check} onClick={() => handleApprove(selectedSlip.id, 'Đã duyệt')} className="h-full">
-                        Duyệt
-                      </Button>
-                    </div>
-                  )}
-
-                  {selectedSlip.status !== 'Đã xóa' && (
-                    <div className="grid grid-cols-2 gap-3 w-full">
-                      <Button fullWidth variant="outline" icon={Trash2} onClick={handleDelete} className="h-full text-red-600 border-red-200 bg-white hover:bg-red-50">
-                        Thùng rác
-                      </Button>
-                      <Button fullWidth variant="outline" icon={Edit} onClick={handleEdit} className="h-full text-gray-700 border-gray-200 bg-white hover:bg-gray-50">
-                        Sửa
-                      </Button>
-                    </div>
-                  )}
-
-                  <Button fullWidth variant="outline" icon={ChevronDown} onClick={() => setShowDetailModal(false)} className="text-gray-600 border-gray-200 bg-white hover:bg-gray-50">
-                    Đóng
-                  </Button>
                 </div>
+              </div>
+              <div className="flex-1 overflow-y-auto p-5 space-y-4">
+                {[
+                  { label: 'Ngày xuất', value: formatDate(selectedSlip.date) },
+                  { label: 'Kho xuất', value: selectedSlip.warehouses?.name, sub: `Mã: ${selectedSlip.warehouses?.code || '—'}` },
+                  { label: 'Vật tư', value: selectedSlip.materials?.name, sub: `Mã: ${selectedSlip.materials?.code || '—'}` },
+                  { label: 'Số lượng', value: `-${formatNumber(selectedSlip.quantity)}`, highlight: true },
+                  { label: 'Đơn giá bán', value: formatCurrency(selectedSlip.unit_price || 0) },
+                  { label: 'Thành tiền', value: formatCurrency(selectedSlip.total_amount || 0) },
+                  { label: 'Ghi chú', value: selectedSlip.notes || '—' },
+                  { label: 'Trạng thái', value: selectedSlip.status || 'Chờ duyệt' },
+                ].map(({ label, value, sub, highlight }) => (
+                  <div key={label} className="flex justify-between items-start border-b border-gray-50 pb-3 gap-4">
+                    <span className="text-[10px] text-gray-400 font-bold uppercase shrink-0">{label}</span>
+                    <div className="text-right">
+                      <p className={`text-sm font-medium ${highlight ? 'text-red-600 font-bold' : 'text-gray-800'}`}>{value || '—'}</p>
+                      {sub && <p className="text-[10px] text-gray-400">{sub}</p>}
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <div className="p-4 border-t border-gray-100 bg-gray-50 space-y-2">
+                {selectedSlip.status !== 'Đã xóa' && (user.role === 'Admin' || user.role === 'Admin App') && selectedSlip.status === 'Chờ duyệt' && (
+                  <div className="grid grid-cols-2 gap-2">
+                    <Button fullWidth variant="danger" icon={X} onClick={() => handleApprove(selectedSlip.id, 'Từ chối')}>Từ chối</Button>
+                    <Button fullWidth variant="success" icon={Check} onClick={() => handleApprove(selectedSlip.id, 'Đã duyệt')}>Duyệt</Button>
+                  </div>
+                )}
+                {selectedSlip.status !== 'Đã xóa' && (
+                  <div className="grid grid-cols-2 gap-2">
+                    <Button fullWidth variant="outline" icon={Trash2} onClick={handleDelete} className="text-red-600 border-red-200 hover:bg-red-50">Thùng rác</Button>
+                    <Button fullWidth variant="outline" icon={Edit} onClick={handleEdit} className="text-gray-700 hover:bg-gray-50">Sửa</Button>
+                  </div>
+                )}
+                <Button fullWidth variant="outline" icon={ChevronDown} onClick={() => setShowDetailModal(false)} className="text-gray-600 hover:bg-gray-50">Đóng</Button>
               </div>
             </motion.div>
-          </div>
+          </>
         )}
       </AnimatePresence>
 
@@ -491,10 +458,11 @@ export const StockOut = ({ user, onBack, addToast }: {
             >
               <div className="bg-red-600 p-6 text-white flex items-center justify-between rounded-t-3xl flex-shrink-0">
                 <div className="flex items-center gap-3">
-                  <div className="p-2 bg-white/20 rounded-xl"><ArrowUpCircle size={24} /></div>
+                  <button onClick={() => setShowModal(false)} className="p-2 bg-white/20 hover:bg-white/30 rounded-xl transition-colors cursor-pointer">
+                    <ArrowUpCircle size={24} />
+                  </button>
                   <h3 className="font-bold text-lg">{isEditing ? 'Sửa phiếu xuất kho' : 'Lập phiếu xuất kho'}</h3>
                 </div>
-                <Button variant="ghost" icon={X} className="text-white hover:bg-white/10" onClick={() => setShowModal(false)} />
               </div>
 
               <div className="flex-1 overflow-y-auto p-6 custom-scrollbar">
@@ -629,6 +597,17 @@ export const StockOut = ({ user, onBack, addToast }: {
         confirmText="Chuyển vào thùng rác"
         onConfirm={confirmDelete}
         onCancel={() => setShowDeleteConfirm(false)}
+      />
+
+      {/* FAB — Lập phiếu xuất */}
+      <FAB
+        onClick={() => {
+          setFormData({ ...initialFormState, export_code: generateCode('XK') });
+          setIsEditing(false);
+          setEditingId(null);
+          setShowModal(true);
+        }}
+        label="Lập phiếu xuất"
       />
     </div>
   );

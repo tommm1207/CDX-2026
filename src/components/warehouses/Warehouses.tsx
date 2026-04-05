@@ -6,6 +6,7 @@ import { Employee } from '../../types';
 import { PageBreadcrumb } from '../shared/PageBreadcrumb';
 import { ToastType } from '../shared/Toast';
 import { Button } from '../shared/Button';
+import { FAB } from '../shared/FAB';
 
 export const Warehouses = ({ user, onBack, addToast }: { 
   user: Employee, 
@@ -16,6 +17,7 @@ export const Warehouses = ({ user, onBack, addToast }: {
   const [warehouses, setWarehouses] = useState<any[]>([]);
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [loading, setLoading] = useState(true);
+  const [showFilter, setShowFilter] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -184,57 +186,62 @@ export const Warehouses = ({ user, onBack, addToast }: {
           </h2>
           <p className="text-xs text-gray-500 mt-1">Quản lý hệ thống bãi đúc và kho bãi công trình</p>
         </div>
-        <Button
-          variant="primary"
-          icon={Plus}
-          onClick={async () => {
-            const nextCode = await generateNextWarehouseCode();
-            setFormData({ ...initialFormState, code: nextCode });
-            setIsEditing(false);
-            setShowModal(true);
-          }}
+        <button
+          onClick={() => setShowFilter(f => !f)}
+          className={`p-2.5 rounded-xl border transition-colors ${
+            showFilter ? 'bg-primary text-white border-primary' : 'bg-white text-gray-500 border-gray-200 hover:border-primary/40'
+          }`}
         >
-          Thêm mới
-        </Button>
+          <Search size={16} />
+        </button>
       </div>
 
-      <div className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-4">
-        {/* Simplified filters, same as in original App.tsx */}
-        <div className="space-y-1">
-          <label className="text-[10px] font-bold text-gray-400 uppercase">Từ ngày</label>
-          <input type="date" className="w-full px-3 py-2 rounded-lg border border-gray-200 text-xs outline-none focus:ring-2 focus:ring-primary/20" />
-        </div>
-        <div className="space-y-1">
-          <label className="text-[10px] font-bold text-gray-400 uppercase">Đến ngày</label>
-          <input type="date" className="w-full px-3 py-2 rounded-lg border border-gray-200 text-xs outline-none focus:ring-2 focus:ring-primary/20" />
-        </div>
-        <div className="space-y-1">
-          <label className="text-[10px] font-bold text-gray-400 uppercase">Nhân sự</label>
-          <select className="w-full px-3 py-2 rounded-lg border border-gray-200 text-xs outline-none focus:ring-2 focus:ring-primary/20">
-            <option>-- Tất cả --</option>
-          </select>
-        </div>
-        <div className="space-y-1">
-          <label className="text-[10px] font-bold text-gray-400 uppercase">Kho</label>
-          <select 
-            className="w-full px-3 py-2 rounded-lg border border-gray-200 text-xs outline-none focus:ring-2 focus:ring-primary/20"
-            onChange={(e) => {
-              const wh = warehouses.find(w => w.id === e.target.value);
-              // Handle filter logic if needed, but the list is already filtered in fetchWarehouses
-            }}
+      <AnimatePresence>
+        {showFilter && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
+            className="overflow-hidden"
           >
-            <option value="">-- Tất cả kho --</option>
-            {warehouses.map(w => <option key={w.id} value={w.id}>{w.name}</option>)}
-          </select>
-        </div>
-        <div className="space-y-1">
-          <label className="text-[10px] font-bold text-gray-400 uppercase">Tìm kiếm nhanh</label>
-          <div className="relative">
-            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-            <input type="text" placeholder="Gõ để tìm..." className="w-full pl-9 pr-3 py-2 rounded-lg border border-gray-200 text-xs outline-none focus:ring-2 focus:ring-primary/20" />
-          </div>
-        </div>
-      </div>
+            <div className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-4">
+              <div className="space-y-1">
+                <label className="text-[10px] font-bold text-gray-400 uppercase">Từ ngày</label>
+                <input type="date" className="w-full px-3 py-2 rounded-lg border border-gray-200 text-xs outline-none focus:ring-2 focus:ring-primary/20" />
+              </div>
+              <div className="space-y-1">
+                <label className="text-[10px] font-bold text-gray-400 uppercase">Đến ngày</label>
+                <input type="date" className="w-full px-3 py-2 rounded-lg border border-gray-200 text-xs outline-none focus:ring-2 focus:ring-primary/20" />
+              </div>
+              <div className="space-y-1">
+                <label className="text-[10px] font-bold text-gray-400 uppercase">Nhân sự</label>
+                <select className="w-full px-3 py-2 rounded-lg border border-gray-200 text-xs outline-none focus:ring-2 focus:ring-primary/20">
+                  <option>-- Tất cả --</option>
+                </select>
+              </div>
+              <div className="space-y-1">
+                <label className="text-[10px] font-bold text-gray-400 uppercase">Kho</label>
+                <select 
+                  className="w-full px-3 py-2 rounded-lg border border-gray-200 text-xs outline-none focus:ring-2 focus:ring-primary/20"
+                  onChange={(e) => {
+                    // Logic lọc nội bộ nếu cần
+                  }}
+                >
+                  <option value="">-- Tất cả kho --</option>
+                  {warehouses.map(w => <option key={w.id} value={w.id}>{w.name}</option>)}
+                </select>
+              </div>
+              <div className="space-y-1">
+                <label className="text-[10px] font-bold text-gray-400 uppercase">Tìm kiếm nhanh</label>
+                <div className="relative">
+                  <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                  <input type="text" placeholder="Gõ để tìm..." className="w-full pl-9 pr-3 py-2 rounded-lg border border-gray-200 text-xs outline-none focus:ring-2 focus:ring-primary/20" />
+                </div>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
         <div className="overflow-x-auto">
@@ -328,13 +335,14 @@ export const Warehouses = ({ user, onBack, addToast }: {
             >
               <div className="bg-primary p-6 text-white flex items-center justify-between rounded-t-3xl flex-shrink-0">
                 <div className="flex items-center gap-3">
-                  <div className="p-2 bg-white/20 rounded-xl"><Warehouse size={24} /></div>
+                  <button onClick={() => setShowModal(false)} className="p-2 bg-white/20 hover:bg-white/30 rounded-xl transition-colors cursor-pointer">
+                    <Warehouse size={24} />
+                  </button>
                   <div>
                     <h3 className="font-bold text-lg">{isEditing ? 'Cập nhật thông tin kho' : 'Thêm mới kho bãi'}</h3>
                     <p className="text-xs text-white/70">Vui lòng điền đầy đủ thông tin chi tiết</p>
                   </div>
                 </div>
-                <Button variant="ghost" icon={X} className="text-white hover:bg-white/10" onClick={() => setShowModal(false)} />
               </div>
 
               <div className="flex-1 overflow-y-auto custom-scrollbar">
@@ -440,6 +448,16 @@ export const Warehouses = ({ user, onBack, addToast }: {
           </div>
         )}
       </AnimatePresence>
+      {/* FAB — Thêm kho */}
+      <FAB
+        onClick={async () => {
+          const nextCode = await generateNextWarehouseCode();
+          setFormData({ ...initialFormState, code: nextCode });
+          setIsEditing(false);
+          setShowModal(true);
+        }}
+        label="Thêm kho mới"
+      />
     </div>
   );
 };

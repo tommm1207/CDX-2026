@@ -364,10 +364,11 @@ export const Attendance = ({ user, onBack, addToast }: {
             >
               <div className="bg-primary p-6 text-white flex items-center justify-between flex-shrink-0">
                 <div className="flex items-center gap-3">
-                  <div className="p-2 bg-white/20 rounded-xl"><Users size={20} /></div>
+                  <button onClick={() => setShowBulkModal(false)} className="p-2 bg-white/20 hover:bg-white/30 rounded-xl transition-colors cursor-pointer">
+                    <Users size={20} />
+                  </button>
                   <h3 className="font-bold text-lg">Chấm công hàng loạt</h3>
                 </div>
-                <Button variant="ghost" icon={X} className="text-white hover:bg-white/10" onClick={() => setShowBulkModal(false)} />
               </div>
 
               <div className="p-6 md:p-8 overflow-y-auto space-y-8 custom-scrollbar">

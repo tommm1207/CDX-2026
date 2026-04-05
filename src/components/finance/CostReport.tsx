@@ -13,6 +13,8 @@ import { ToastType } from '../shared/Toast';
 import { formatCurrency, formatDate, numberToWords } from '../../utils/format';
 import { isUUID } from '../../utils/helpers';
 import { Button } from '../shared/Button';
+import { FAB } from '../shared/FAB';
+import { ExcelButton } from '../shared/ExcelButton';
 
 export const CostReport = ({ user, onBack, addToast }: { 
   user: Employee, 
@@ -372,27 +374,12 @@ export const CostReport = ({ user, onBack, addToast }: {
 
   return (
     <div className="p-4 md:p-6 space-y-6 pb-44">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div className="flex items-center justify-between gap-2">
         <PageBreadcrumb title="Báo cáo chi phí" onBack={onBack} />
-        <div className="flex items-center gap-3">
-          <Button
-            variant="primary"
-            icon={Plus}
-            onClick={handleAddReport}
-            className="min-w-[140px]"
-          >
-            Thêm báo cáo
-          </Button>
-          <Button
-            variant="outline"
-            icon={Download}
-            onClick={handleExportExcel}
-            className="text-primary border-primary hover:bg-primary/5 min-w-[140px]"
-          >
-            Xuất Excel
-          </Button>
-        </div>
+        <ExcelButton onClick={handleExportExcel} />
       </div>
+
+      <FAB onClick={handleAddReport} />
 
       <div className="flex flex-col lg:flex-row gap-6">
         <div className={`flex-1 bg-white rounded-2xl shadow-sm border border-gray-100 hidden lg:block`}>
@@ -589,13 +576,14 @@ export const CostReport = ({ user, onBack, addToast }: {
             >
               <div className="bg-primary p-6 text-white flex items-center justify-between rounded-t-3xl">
                 <div className="flex items-center gap-3">
-                  <div className="p-2 bg-white/20 rounded-xl"><FileText size={24} /></div>
+                  <button onClick={() => setShowMasterModal(false)} className="p-2 bg-white/20 hover:bg-white/30 rounded-xl transition-colors cursor-pointer">
+                    <FileText size={24} />
+                  </button>
                   <div>
                     <h3 className="font-bold text-lg">Chi phí không xóa</h3>
                     <p className="text-xs text-white/70">Mã: {generateCostCode(masterForm.date, masterForm.employee_id)}</p>
                   </div>
                 </div>
-                <Button variant="ghost" icon={X} className="text-white hover:bg-white/10" onClick={() => setShowMasterModal(false)} />
               </div>
 
               <div className="flex-1 overflow-y-auto p-6 custom-scrollbar space-y-6">
@@ -703,10 +691,11 @@ export const CostReport = ({ user, onBack, addToast }: {
             >
               <div className="bg-primary p-6 text-white flex items-center justify-between rounded-t-3xl">
                 <div className="flex items-center gap-3">
-                  <div className="p-2 bg-white/20 rounded-xl"><PlusCircle size={24} /></div>
+                  <button onClick={() => setShowDetailModal(false)} className="p-2 bg-white/20 hover:bg-white/30 rounded-xl transition-colors cursor-pointer">
+                    <PlusCircle size={24} />
+                  </button>
                   <h3 className="font-bold text-lg">Chi phí chi tiết</h3>
                 </div>
-                <Button variant="ghost" icon={X} className="text-white hover:bg-white/10" onClick={() => setShowDetailModal(false)} />
               </div>
 
               <div className="flex-1 overflow-y-auto p-6 custom-scrollbar">

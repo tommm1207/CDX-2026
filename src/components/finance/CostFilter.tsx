@@ -321,13 +321,14 @@ export const CostFilter = ({ user, onBack, addToast }: {
             >
               <div className="bg-primary p-6 text-white flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  <div className="p-2 bg-white/20 rounded-xl"><FileText size={24} /></div>
+                  <button onClick={() => setShowDetailModal(false)} className="p-2 bg-white/20 hover:bg-white/30 rounded-xl transition-colors cursor-pointer">
+                    <FileText size={24} />
+                  </button>
                   <div>
                     <h3 className="font-bold text-lg">Chi tiết chi phí</h3>
                     <p className="text-xs text-white/70">Mã: {selectedCost.cost_code || selectedCost.id.slice(0, 8)}</p>
                   </div>
                 </div>
-                <button onClick={() => setShowDetailModal(false)} className="p-2 hover:bg-white/10 rounded-full transition-colors"><X size={20} /></button>
               </div>
 
               <div className="p-6 space-y-6 overflow-y-auto max-h-[70vh] custom-scrollbar">

@@ -8,6 +8,7 @@ import { isActiveWarehouse } from '../../utils/inventory';
 import { CreatableSelect } from '../shared/CreatableSelect';
 import { ToastType } from '../shared/Toast';
 import { Button } from '../shared/Button';
+import { FAB } from '../shared/FAB';
 
 export const MaterialCatalog = ({ user, onBack, onNavigate, addToast }: { 
   user: Employee, 
@@ -24,6 +25,7 @@ export const MaterialCatalog = ({ user, onBack, onNavigate, addToast }: {
   const [selectedMaterial, setSelectedMaterial] = useState<any>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [showFilter, setShowFilter] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [groupFilter, setGroupFilter] = useState('');
 
@@ -228,56 +230,64 @@ export const MaterialCatalog = ({ user, onBack, onNavigate, addToast }: {
           </h2>
           <p className="text-xs text-gray-500 mt-1">Quản lý toàn bộ danh sách vật tư, thiết bị trong hệ thống</p>
         </div>
-        <Button
-          variant="primary"
-          icon={Plus}
-          onClick={async () => {
-            setFormData({ ...initialFormState });
-            setIsEditing(false);
-            setShowModal(true);
-          }}
+        <button
+          onClick={() => setShowFilter(f => !f)}
+          className={`p-2.5 rounded-xl border transition-colors ${
+            showFilter ? 'bg-primary text-white border-primary' : 'bg-white text-gray-500 border-gray-200 hover:border-primary/40'
+          }`}
         >
-          Thêm mới
-        </Button>
+          <Search size={16} />
+        </button>
       </div>
 
-      <div className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
-        <div className="space-y-1">
-          <label className="text-[10px] font-bold text-gray-400 uppercase">Nhóm vật tư</label>
-          <select
-            value={groupFilter}
-            onChange={(e) => setGroupFilter(e.target.value)}
-            className="w-full px-3 py-2 rounded-lg border border-gray-200 text-xs outline-none focus:ring-2 focus:ring-primary/20"
+      <AnimatePresence>
+        {showFilter && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
+            className="overflow-hidden"
           >
-            <option value="">-- Tất cả nhóm --</option>
-            {groups.map(g => <option key={g.id} value={g.id}>{g.name}</option>)}
-          </select>
-        </div>
-        <div className="md:col-span-2 space-y-1">
-          <label className="text-[10px] font-bold text-gray-400 uppercase">Tìm kiếm nhanh</label>
-          <div className="relative">
-            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-            <input
-              type="text"
-              placeholder="Tìm theo tên hoặc mã vật tư..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-9 pr-3 py-2 rounded-lg border border-gray-200 text-xs outline-none focus:ring-2 focus:ring-primary/20"
-            />
-          </div>
-        </div>
-        <div className="flex items-end">
-          <Button
-            variant="ghost"
-            icon={RefreshCw}
-            onClick={fetchMaterials}
-            fullWidth
-            className="bg-gray-100 text-gray-600 hover:bg-gray-200"
-          >
-            Làm mới dữ liệu
-          </Button>
-        </div>
-      </div>
+            <div className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+              <div className="space-y-1">
+                <label className="text-[10px] font-bold text-gray-400 uppercase">Nhóm vật tư</label>
+                <select
+                  value={groupFilter}
+                  onChange={(e) => setGroupFilter(e.target.value)}
+                  className="w-full px-3 py-2 rounded-lg border border-gray-200 text-xs outline-none focus:ring-2 focus:ring-primary/20"
+                >
+                  <option value="">-- Tất cả nhóm --</option>
+                  {groups.map(g => <option key={g.id} value={g.id}>{g.name}</option>)}
+                </select>
+              </div>
+              <div className="md:col-span-2 space-y-1">
+                <label className="text-[10px] font-bold text-gray-400 uppercase">Tìm kiếm nhanh</label>
+                <div className="relative">
+                  <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                  <input
+                    type="text"
+                    placeholder="Tìm theo tên hoặc mã vật tư..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="w-full pl-9 pr-3 py-2 rounded-lg border border-gray-200 text-xs outline-none focus:ring-2 focus:ring-primary/20"
+                  />
+                </div>
+              </div>
+              <div className="flex items-end">
+                <Button
+                  variant="ghost"
+                  icon={RefreshCw}
+                  onClick={fetchMaterials}
+                  fullWidth
+                  className="bg-gray-100 text-gray-600 hover:bg-gray-200"
+                >
+                  Làm mới dữ liệu
+                </Button>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
         <div className="overflow-x-auto">
@@ -366,13 +376,14 @@ export const MaterialCatalog = ({ user, onBack, onNavigate, addToast }: {
             >
               <div className="bg-primary p-6 text-white flex items-center justify-between rounded-t-3xl flex-shrink-0">
                 <div className="flex items-center gap-3">
-                  <div className="p-2 bg-white/20 rounded-xl"><Package size={24} /></div>
+                  <button onClick={() => setShowModal(false)} className="p-2 bg-white/20 hover:bg-white/30 rounded-xl transition-colors cursor-pointer">
+                    <Package size={24} />
+                  </button>
                   <div>
                     <h3 className="font-bold text-lg">{isEditing ? 'Cập nhật vật tư' : 'Thêm vật tư mới'}</h3>
                     <p className="text-xs text-white/70">Nhập thông tin chi tiết vật tư vào hệ thống</p>
                   </div>
                 </div>
-                <Button variant="ghost" icon={X} className="text-white hover:bg-white/10" onClick={() => setShowModal(false)} />
               </div>
 
               <div className="flex-1 overflow-y-auto custom-scrollbar">
@@ -517,11 +528,13 @@ export const MaterialCatalog = ({ user, onBack, onNavigate, addToast }: {
               exit={{ opacity: 0, scale: 0.95 }}
               className="bg-white rounded-3xl shadow-2xl w-full max-w-3xl flex flex-col"
             >
-              <div className="p-6 border-b border-gray-100 flex items-center justify-between rounded-t-3xl">
-                <div className="text-center flex-1">
-                  <h3 className="text-xl font-bold text-primary uppercase tracking-widest">Chi tiết vật tư</h3>
+              <div className="bg-primary p-6 text-white flex items-center justify-between rounded-t-3xl">
+                <div className="flex items-center gap-3">
+                  <button onClick={() => setShowDetailModal(false)} className="p-2 bg-white/20 hover:bg-white/30 rounded-xl transition-colors cursor-pointer">
+                    <Package size={24} />
+                  </button>
+                  <h3 className="text-xl font-bold uppercase tracking-widest">Chi tiết vật tư</h3>
                 </div>
-                <button onClick={() => setShowDetailModal(false)} className="p-2 hover:bg-gray-100 rounded-full transition-colors"><X size={20} /></button>
               </div>
 
               <div className="p-8 space-y-8 overflow-y-auto flex-1">
@@ -601,6 +614,15 @@ export const MaterialCatalog = ({ user, onBack, onNavigate, addToast }: {
           </div>
         )}
       </AnimatePresence>
+      {/* FAB — Thêm vật tư */}
+      <FAB
+        onClick={() => {
+          setFormData({ ...initialFormState });
+          setIsEditing(false);
+          setShowModal(true);
+        }}
+        label="Thêm vật tư"
+      />
     </div>
   );
 };

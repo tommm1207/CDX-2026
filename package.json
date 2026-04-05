@@ -1,5 +1,5 @@
 {
-  "name": "react-example",
+  "name": "cdx-team",
   "private": true,
   "version": "0.0.0",
   "type": "module",
@@ -19,6 +19,7 @@
     "body-parser": "^2.2.2",
     "dotenv": "^17.2.3",
     "express": "^4.21.2",
+    "express-rate-limit": "^8.3.2",
     "lucide-react": "^0.546.0",
     "motion": "^12.23.24",
     "node-cron": "^4.2.1",

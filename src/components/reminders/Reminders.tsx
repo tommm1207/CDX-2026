@@ -6,18 +6,20 @@ import { Employee } from '../../types';
 import { PageBreadcrumb } from '../shared/PageBreadcrumb';
 import { ToastType } from '../shared/Toast';
 
-export const Reminders = ({ user, onBack, addToast }: { 
+export const Reminders = ({ user, onBack, addToast, initialAction }: { 
   user: Employee, 
   onBack: () => void, 
-  addToast?: (message: string, type?: ToastType) => void 
+  addToast?: (message: string, type?: ToastType) => void,
+  initialAction?: string 
 }) => {
   const [reminders, setReminders] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [showSetReminder, setShowSetReminder] = useState(false);
-  const [showAddNew, setShowAddNew] = useState(false);
+  const [showAddNew, setShowAddNew] = useState(initialAction === 'add');
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [showFilter, setShowFilter] = useState(false);
 
   const getDefaultTime = () => {
     const d = new Date();
@@ -138,6 +140,14 @@ export const Reminders = ({ user, onBack, addToast }: {
         <PageBreadcrumb title="Thiết lập Lịch nhắc" onBack={onBack} />
         <div className="flex items-center gap-2">
           <button
+            onClick={() => setShowFilter(f => !f)}
+            className={`p-2.5 rounded-xl border transition-colors ${
+              showFilter ? 'bg-primary text-white border-primary' : 'bg-white text-gray-500 border-gray-200 hover:border-primary/40'
+            }`}
+          >
+            <Search size={16} />
+          </button>
+          <button
             onClick={() => {
               setEditingId(null);
               setFormData({ title: '', content: '', reminder_time: getDefaultTime(), browser_notification: true });
@@ -160,38 +170,50 @@ export const Reminders = ({ user, onBack, addToast }: {
         </div>
       </div>
 
-      <div className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 space-y-4">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
-          <div>
-            <label className="text-[10px] font-bold text-gray-400 uppercase">Từ ngày</label>
-            <input type="date" value={filters.fromDate} onChange={e => setFilters({ ...filters, fromDate: e.target.value })} className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm focus:ring-2 focus:ring-primary/20 outline-none mt-1" />
-          </div>
-          <div>
-            <label className="text-[10px] font-bold text-gray-400 uppercase">Đến ngày</label>
-            <input type="date" value={filters.toDate} onChange={e => setFilters({ ...filters, toDate: e.target.value })} className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm focus:ring-2 focus:ring-primary/20 outline-none mt-1" />
-          </div>
-          <div>
-            <label className="text-[10px] font-bold text-gray-400 uppercase">Nhân sự</label>
-            <select value={filters.employee} onChange={e => setFilters({ ...filters, employee: e.target.value })} className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm focus:ring-2 focus:ring-primary/20 outline-none mt-1">
-              <option value="">-- Tất cả --</option>
-              {employees.map(e => <option key={e.id} value={e.id}>{e.full_name}</option>)}
-            </select>
-          </div>
-          <div>
-            <label className="text-[10px] font-bold text-gray-400 uppercase">Kho</label>
-            <select className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm focus:ring-2 focus:ring-primary/20 outline-none mt-1">
-              <option value="">-- Tất cả kho --</option>
-            </select>
-          </div>
-          <div>
-            <label className="text-[10px] font-bold text-gray-400 uppercase">Tìm kiếm nhanh</label>
-            <div className="relative mt-1">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
-              <input type="text" placeholder="Gõ để tìm..." value={filters.search} onChange={e => setFilters({ ...filters, search: e.target.value })} className="w-full pl-10 pr-4 py-2 rounded-xl border border-gray-200 text-sm focus:ring-2 focus:ring-primary/20 outline-none" />
+      <AnimatePresence>
+        {showFilter && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
+            className="overflow-hidden"
+          >
+            <div className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 space-y-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+                <div>
+                  <label className="text-[10px] font-bold text-gray-400 uppercase">Từ ngày</label>
+                  <input type="date" value={filters.fromDate} onChange={e => setFilters({ ...filters, fromDate: e.target.value })} className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm focus:ring-2 focus:ring-primary/20 outline-none mt-1" />
+                </div>
+                <div>
+                  <label className="text-[10px] font-bold text-gray-400 uppercase">Đến ngày</label>
+                  <input type="date" value={filters.toDate} onChange={e => setFilters({ ...filters, toDate: e.target.value })} className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm focus:ring-2 focus:ring-primary/20 outline-none mt-1" />
+                </div>
+                <div>
+                  <label className="text-[10px] font-bold text-gray-400 uppercase">Nhân sự</label>
+                  <select value={filters.employee} onChange={e => setFilters({ ...filters, employee: e.target.value })} className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm focus:ring-2 focus:ring-primary/20 outline-none mt-1">
+                    <option value="">-- Tất cả --</option>
+                    {employees.map(e => <option key={e.id} value={e.id}>{e.full_name}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="text-[10px] font-bold text-gray-400 uppercase">Kho</label>
+                  <select className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm focus:ring-2 focus:ring-primary/20 outline-none mt-1">
+                    <option value="">-- Tất cả kho --</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="text-[10px] font-bold text-gray-400 uppercase">Tìm kiếm nhanh</label>
+                  <div className="relative mt-1">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
+                    <input type="text" placeholder="Gõ để tìm..." value={filters.search} onChange={e => setFilters({ ...filters, search: e.target.value })} className="w-full pl-10 pr-4 py-2 rounded-xl border border-gray-200 text-sm focus:ring-2 focus:ring-primary/20 outline-none" />
+                  </div>
+                </div>
+              </div>
             </div>
-          </div>
-        </div>
-      </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
 
       <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
         <div className="p-4 border-b border-gray-50 flex items-center justify-between bg-primary/5">
@@ -309,9 +331,13 @@ export const Reminders = ({ user, onBack, addToast }: {
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setShowAddNew(false)} className="absolute inset-0 bg-black/40 backdrop-blur-sm" />
             <motion.div initial={{ opacity: 0, scale: 0.95, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95, y: 20 }} className="bg-white rounded-3xl shadow-2xl w-full max-w-4xl overflow-hidden relative z-10">
-              <div className="p-6 border-b border-gray-50 flex items-center justify-between bg-primary">
-                <h3 className="text-lg font-bold text-white uppercase tracking-wide">Thêm Mới</h3>
-                <button onClick={() => setShowAddNew(false)} className="p-2 hover:bg-white/10 rounded-full transition-colors"><X size={20} className="text-white" /></button>
+              <div className="p-6 border-b border-gray-50 flex items-center justify-between bg-primary rounded-t-3xl">
+                <div className="flex items-center gap-3">
+                  <button onClick={() => setShowAddNew(false)} className="p-2 bg-white/20 hover:bg-white/30 rounded-xl transition-colors cursor-pointer">
+                    <Bell size={24} className="text-white" />
+                  </button>
+                  <h3 className="text-lg font-bold text-white tracking-wide">Thêm Mới</h3>
+                </div>
               </div>
               <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-6 max-h-[70vh] overflow-y-auto">
                 <div className="space-y-4">

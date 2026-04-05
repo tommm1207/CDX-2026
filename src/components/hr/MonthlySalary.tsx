@@ -9,6 +9,7 @@ import { ToastType } from '../shared/Toast';
 import { formatCurrency, formatDate } from '../../utils/format';
 import { MonthYearPicker } from '../shared/MonthYearPicker';
 import { Button } from '../shared/Button';
+import { ExcelButton } from '../shared/ExcelButton';
 
 export const MonthlySalary = ({ user, onBack, addToast }: { 
   user: Employee, 
@@ -149,14 +150,7 @@ export const MonthlySalary = ({ user, onBack, addToast }: {
             onMonthChange={setSelectedMonth}
             onYearChange={setSelectedYear}
           />
-          <Button
-            onClick={handleExportExcel}
-            disabled={salaries.length === 0}
-            variant="success"
-            icon={Download}
-          >
-            <span className="hidden md:inline">Xuất Excel</span>
-          </Button>
+          <ExcelButton onClick={handleExportExcel} loading={salaries.length === 0} />
         </div>
       </div>
 

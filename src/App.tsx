@@ -337,23 +337,23 @@ export default function App() {
       case 'dashboard': return <Dashboard user={user} onNavigate={navigateTo} addToast={addToast} pendingApprovals={pendingCount} />;
       case 'hr-records': return <HRRecords user={user} onBack={goBack} addToast={addToast} />;
       case 'attendance': return <Attendance user={user} onBack={goBack} addToast={addToast} />;
-      case 'costs': return <Costs user={user} onBack={goBack} addToast={addToast} />;
+      case 'costs': return <Costs user={user} onBack={goBack} addToast={addToast} initialAction={pageParams?.action} />;
       case 'warehouses': return <Warehouses user={user} onBack={goBack} addToast={addToast} />;
       case 'materials': return <MaterialCatalog user={user} onBack={goBack} onNavigate={navigateTo} addToast={addToast} />;
-      case 'stock-in': return <StockIn user={user} onBack={goBack} addToast={addToast} initialStatus={pageParams?.status} />;
+      case 'stock-in': return <StockIn user={user} onBack={goBack} addToast={addToast} initialStatus={pageParams?.status} initialAction={pageParams?.action} />;
       case 'pending-approvals': return <PendingApprovals user={user} onBack={goBack} onNavigate={navigateTo} onRefreshCount={fetchPendingCount} addToast={addToast} initialCount={pendingCount} />;
-      case 'stock-out': return <StockOut user={user} onBack={goBack} addToast={addToast} />;
-      case 'transfer': return <Transfer user={user} onBack={goBack} addToast={addToast} />;
+      case 'stock-out': return <StockOut user={user} onBack={goBack} addToast={addToast} initialAction={pageParams?.action} />;
+      case 'transfer': return <Transfer user={user} onBack={goBack} addToast={addToast} initialAction={pageParams?.action} />;
       case 'cost-report': return <CostReport user={user} onBack={goBack} addToast={addToast} />;
       case 'cost-filter': return <CostFilter user={user} onBack={goBack} addToast={addToast} />;
-      case 'advances': return <Advances user={user} onBack={goBack} addToast={addToast} />;
+      case 'advances': return <Advances user={user} onBack={goBack} addToast={addToast} initialAction={pageParams?.action} />;
       case 'payroll': return <MonthlySalary user={user} onBack={goBack} addToast={addToast} />;
       case 'salary-settings':
         if (user.role !== 'Admin' && user.role !== 'Admin App') return <Dashboard user={user} onNavigate={navigateTo} addToast={addToast} pendingApprovals={pendingCount} />;
         return <SalarySettings user={user} onBack={goBack} addToast={addToast} />;
-      case 'notes': return <Notes user={user} onBack={goBack} addToast={addToast} />;
+      case 'notes': return <Notes user={user} onBack={goBack} addToast={addToast} initialAction={pageParams?.action} />;
       case 'notifications': return <Notifications user={user} onBack={goBack} onNavigate={navigateTo} addToast={addToast} />;
-      case 'reminders': return <Reminders user={user} onBack={goBack} addToast={addToast} />;
+      case 'reminders': return <Reminders user={user} onBack={goBack} addToast={addToast} initialAction={pageParams?.action} />;
       case 'partners': return <PlaceholderPage title="Khách hàng & nhà cung cấp" onBack={goBack} />;
       case 'inventory-report': return <InventoryReport user={user} onBack={goBack} addToast={addToast} />;
       

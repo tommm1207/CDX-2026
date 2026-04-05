@@ -1,5 +1,5 @@
 import { useState, useEffect, FormEvent } from 'react';
-import { Plus, X, Edit2, Trash2, AlertTriangle } from 'lucide-react';
+import { Plus, X, Edit2, Trash2, AlertTriangle, Wallet } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { supabase } from '../../supabaseClient';
 import { Employee } from '../../types';
@@ -7,13 +7,14 @@ import { PageBreadcrumb } from '../shared/PageBreadcrumb';
 import { NumericInput } from '../shared/NumericInput';
 import { CreatableSelect } from '../shared/CreatableSelect';
 import { formatDate, formatCurrency } from '../../utils/format';
+import { FAB } from '../shared/FAB';
 
-export const Advances = ({ user, onBack, addToast }: { user: Employee, onBack?: () => void, addToast?: (msg: string, type?: any) => void }) => {
+export const Advances = ({ user, onBack, addToast, initialAction }: { user: Employee, onBack?: () => void, addToast?: (msg: string, type?: any) => void, initialAction?: string }) => {
   const [advances, setAdvances] = useState<any[]>([]);
   const [allowances, setAllowances] = useState<any[]>([]);
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [loading, setLoading] = useState(true);
-  const [showModal, setShowModal] = useState(false);
+  const [showModal, setShowModal] = useState(initialAction === 'add');
   const [activeTab, setActiveTab] = useState<'advances' | 'allowances'>('advances');
   const [submitting, setSubmitting] = useState(false);
   const [allowanceOptions, setAllowanceOptions] = useState<{id: string, name: string}[]>([
@@ -175,9 +176,6 @@ export const Advances = ({ user, onBack, addToast }: { user: Employee, onBack?: 
           <button onClick={() => setActiveTab('advances')} className={`px-4 py-2 rounded-xl text-sm font-bold transition-all ${activeTab === 'advances' ? 'bg-primary text-white shadow-lg shadow-primary/20' : 'text-gray-500 hover:bg-gray-50'}`}>Tạm ứng</button>
           <button onClick={() => setActiveTab('allowances')} className={`px-4 py-2 rounded-xl text-sm font-bold transition-all ${activeTab === 'allowances' ? 'bg-primary text-white shadow-lg shadow-primary/20' : 'text-gray-500 hover:bg-gray-50'}`}>Phụ cấp</button>
         </div>
-        <button onClick={() => setShowModal(true)} className="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-xl text-sm font-bold hover:bg-primary-hover transition-colors shadow-lg shadow-primary/20">
-          <Plus size={18} /> Thêm mới
-        </button>
       </div>
 
       <div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden overflow-x-auto custom-scrollbar pb-2">
@@ -258,8 +256,12 @@ export const Advances = ({ user, onBack, addToast }: { user: Employee, onBack?: 
           <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
             <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} className="bg-white rounded-3xl shadow-2xl w-full max-w-md overflow-hidden">
               <div className="bg-primary p-6 text-white flex items-center justify-between">
-                <h3 className="font-bold text-lg">{isEditing ? 'Cập nhật' : 'Thêm'} {activeTab === 'advances' ? 'tạm ứng' : 'phụ cấp'} mới</h3>
-                <button onClick={() => { setShowModal(false); setIsEditing(false); setSelectedItem(null); }} className="p-2 hover:bg-white/10 rounded-full transition-colors"><X size={20} /></button>
+                <div className="flex items-center gap-3">
+                  <button onClick={() => { setShowModal(false); setIsEditing(false); setSelectedItem(null); }} className="p-2 bg-white/20 hover:bg-white/30 rounded-xl transition-colors cursor-pointer">
+                    <Wallet size={24} />
+                  </button>
+                  <h3 className="font-bold text-lg">{isEditing ? 'Cập nhật' : 'Thêm'} {activeTab === 'advances' ? 'tạm ứng' : 'phụ cấp'} mới</h3>
+                </div>
               </div>
               <form onSubmit={handleSubmit} className="p-6 space-y-4">
                 <div className="space-y-1">
@@ -344,6 +346,11 @@ export const Advances = ({ user, onBack, addToast }: { user: Employee, onBack?: 
           </div>
         )}
       </AnimatePresence>
+      {/* FAB — Thêm tạm ứng/phụ cấp */}
+      <FAB
+        onClick={() => setShowModal(true)}
+        label={activeTab === 'advances' ? 'Thêm tạm ứng' : 'Thêm phụ cấp'}
+      />
     </div>
   );
 };

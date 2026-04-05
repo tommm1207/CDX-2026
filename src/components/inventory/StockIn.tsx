@@ -9,23 +9,26 @@ import { CreatableSelect } from '../shared/CreatableSelect';
 import { ToastType } from '../shared/Toast';
 import { ConfirmModal } from '../shared/ConfirmModal';
 import { QuickAddMaterialModal } from '../shared/QuickAddMaterialModal';
+import { FAB } from '../shared/FAB';
 import { useInventoryData } from '../../hooks/useInventoryData';
 import { formatDate, formatCurrency, formatNumber, numberToWords } from '../../utils/format';
 import { isUUID, getAllowedWarehouses } from '../../utils/helpers';
 import { Button } from '../shared/Button';
 
-export const StockIn = ({ user, onBack, initialStatus, addToast }: { 
+export const StockIn = ({ user, onBack, initialStatus, initialAction, addToast }: { 
   user: Employee, 
   onBack?: () => void, 
   initialStatus?: string,
+  initialAction?: string,
   addToast?: (message: string, type?: ToastType) => void 
 }) => {
   const [slips, setSlips] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [showModal, setShowModal] = useState(false);
+  const [showModal, setShowModal] = useState(initialAction === 'add');
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [selectedSlip, setSelectedSlip] = useState<any>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [showFilter, setShowFilter] = useState(false);
   const [statusFilter, setStatusFilter] = useState(initialStatus || 'Tất cả');
   const [materialHistory, setMaterialHistory] = useState<any[]>([]);
   const [loadingHistory, setLoadingHistory] = useState(false);
@@ -295,35 +298,51 @@ export const StockIn = ({ user, onBack, initialStatus, addToast }: {
       <PageBreadcrumb title="Nhập kho" onBack={onBack} />
 
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div className="flex items-center gap-2 overflow-x-auto pb-2 md:pb-0 no-scrollbar">
-          {['Tất cả', 'Chờ duyệt', 'Đã duyệt', 'Từ chối'].map((status) => (
-            <button
-              key={status}
-              onClick={() => setStatusFilter(status)}
-              className={`px-4 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all ${statusFilter === status
-                  ? 'bg-primary text-white shadow-lg shadow-primary/20'
-                  : 'bg-white text-gray-500 hover:bg-gray-50 border border-gray-100'
-                }`}
-            >
-              {status}
-            </button>
-          ))}
+        <div className="flex items-center gap-2">
+          <h2 className="text-xl font-bold text-gray-800 flex items-center gap-2">
+            <ArrowDownCircle className="text-primary" /> Tiền vào - Tiền ra
+          </h2>
         </div>
-        <Button
-          variant="primary"
-          icon={Plus}
-          onClick={() => {
-            setFormData({
-              ...initialFormState,
-              import_code: `NK-${new Date().getFullYear().toString().slice(-2)}${(new Date().getMonth() + 1).toString().padStart(2, '0')}${new Date().getDate().toString().padStart(2, '0')}-${Math.floor(1000 + Math.random() * 9000)}`
-            });
-            setIsEditing(false);
-            setShowModal(true);
-          }}
-        >
-          Lập phiếu nhập
-        </Button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setShowFilter(f => !f)}
+            className={`p-2.5 rounded-xl border transition-colors ${
+              showFilter ? 'bg-primary text-white border-primary' : 'bg-white text-gray-500 border-gray-200 hover:border-primary/40'
+            }`}
+          >
+            <Search size={16} />
+          </button>
+        </div>
       </div>
+
+      <AnimatePresence>
+        {showFilter && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
+            className="overflow-hidden"
+          >
+            <div className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 mb-4">
+              <label className="text-[10px] font-bold text-gray-400 uppercase block mb-2">Lọc theo trạng thái</label>
+              <div className="flex items-center gap-2 overflow-x-auto pb-2 md:pb-0 no-scrollbar">
+                {['Tất cả', 'Chờ duyệt', 'Đã duyệt', 'Từ chối'].map((status) => (
+                  <button
+                    key={status}
+                    onClick={() => setStatusFilter(status)}
+                    className={`px-4 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all ${statusFilter === status
+                        ? 'bg-primary text-white shadow-lg shadow-primary/20'
+                        : 'bg-white text-gray-500 hover:bg-gray-50 border border-gray-100'
+                      }`}
+                  >
+                    {status}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
         <div className="overflow-x-auto">
@@ -378,129 +397,104 @@ export const StockIn = ({ user, onBack, initialStatus, addToast }: {
         </div>
       </div>
 
-      {/* Detail Modal */}
+      {/* Detail Panel — slide-up mobile, side panel desktop */}
       <AnimatePresence>
         {showDetailModal && selectedSlip && (
-          <div 
-            className="fixed inset-0 z-[70] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm h-[100dvh] w-full"
-            onClick={() => setShowDetailModal(false)}
-          >
+          <>
+            {/* Backdrop */}
             <motion.div
-              initial={{ opacity: 0, scale: 0.95, y: 16 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.95, y: 16 }}
-              className="bg-white rounded-3xl shadow-2xl w-full max-w-lg max-h-[90dvh] flex flex-col"
-              onClick={(e) => e.stopPropagation()}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setShowDetailModal(false)}
+              className="fixed inset-0 z-[70] bg-black/40 backdrop-blur-sm"
+            />
+            {/* Panel — slide-up mobile / slide-in right desktop */}
+            <motion.div
+              initial={{ y: '100%', x: 0 }}
+              animate={{ y: 0, x: 0 }}
+              exit={{ y: '100%', x: 0 }}
+              style={{ willChange: 'transform' }}
+              className="fixed inset-x-0 bottom-0 z-[71] bg-white rounded-t-3xl shadow-2xl
+                         flex flex-col max-h-[90dvh]
+                         md:inset-x-auto md:inset-y-0 md:right-0 md:w-[420px] md:rounded-t-none md:rounded-l-3xl md:max-h-full"
+              transition={{ type: 'spring', damping: 28, stiffness: 240 }}
             >
-              <div className="p-6 border-b border-gray-100 flex items-center justify-between">
-                <h3 className="text-lg font-bold text-gray-800">Chi tiết vật tư nhập</h3>
-                <Button variant="ghost" size="icon" icon={X} onClick={() => setShowDetailModal(false)} />
+              {/* Drag handle (mobile only) */}
+              <div className="flex justify-center pt-3 pb-1 md:hidden">
+                <div className="w-10 h-1 bg-gray-200 rounded-full" />
               </div>
 
-              <div className="flex-1 overflow-y-auto p-8 space-y-6">
-                <div className="flex flex-col items-center gap-4 mb-8">
-                  <div className="w-16 h-16 bg-primary/10 text-primary rounded-full flex items-center justify-center">
-                    <Navigation size={32} />
-                  </div>
-                  <div className="text-center">
+              <div className="p-5 border-b border-gray-100 flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <button onClick={() => setShowDetailModal(false)} className="w-9 h-9 bg-primary/10 text-primary rounded-xl flex items-center justify-center hover:bg-primary/20 transition-colors cursor-pointer">
+                    <Navigation size={18} />
+                  </button>
+                  <div>
                     <p className="text-sm font-black text-primary">{selectedSlip.import_code}</p>
-                    <p className="text-[10px] text-gray-400 uppercase font-bold tracking-widest mt-1">Mã phiếu nhập kho</p>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 gap-6">
-                  <div className="flex justify-between items-center border-b border-gray-50 pb-3">
-                    <span className="text-xs text-gray-400 font-bold uppercase">Vật tư</span>
-                    <div className="text-right">
-                      <p className="text-sm font-medium text-gray-800">{selectedSlip.materials?.name || 'N/A'}</p>
-                      <p className="text-[10px] text-gray-400">Mã: {selectedSlip.materials?.code || selectedSlip.material_id?.slice(0, 8)}</p>
-                    </div>
-                  </div>
-                  <div className="flex justify-between items-center border-b border-gray-50 pb-3">
-                    <span className="text-xs text-gray-400 font-bold uppercase">Kho nhập</span>
-                    <div className="text-right">
-                      <p className="text-sm font-medium text-gray-800">{selectedSlip.warehouses?.name || 'N/A'}</p>
-                      <p className="text-[10px] text-gray-400">Mã: {selectedSlip.warehouses?.code || selectedSlip.warehouse_id?.slice(0, 8)}</p>
-                    </div>
-                  </div>
-                  <div className="flex justify-between items-center border-b border-gray-50 pb-3">
-                    <span className="text-xs text-gray-400 font-bold uppercase">Ngày</span>
-                    <span className="text-sm font-medium text-gray-800">{formatDate(selectedSlip.date)}</span>
-                  </div>
-                  <div className="flex justify-between items-center border-b border-gray-50 pb-3">
-                    <span className="text-xs text-gray-400 font-bold uppercase">Số lượng nhập</span>
-                    <span className="text-sm font-bold text-red-600">{formatNumber(selectedSlip.quantity)}</span>
-                  </div>
-                  <div className="flex justify-between items-center border-b border-gray-50 pb-3">
-                    <span className="text-xs text-gray-400 font-bold uppercase">Đơn vị tính</span>
-                    <span className="text-sm font-medium text-gray-800">{selectedSlip.unit || selectedSlip.materials?.unit || '-'}</span>
-                  </div>
-                  <div className="flex justify-between items-center border-b border-gray-50 pb-3">
-                    <span className="text-xs text-gray-400 font-bold uppercase">Đơn giá</span>
-                    <span className="text-sm font-medium text-gray-800">{formatCurrency(selectedSlip.unit_price || 0)}</span>
-                  </div>
-                  <div className="flex justify-between items-center border-b border-gray-50 pb-3">
-                    <span className="text-xs text-gray-400 font-bold uppercase">Thành tiền</span>
-                    <span className="text-sm font-bold text-red-600">{formatCurrency(selectedSlip.total_amount || 0)}</span>
-                  </div>
-                  <div className="flex flex-col gap-1 border-b border-gray-50 pb-3">
-                    <span className="text-xs text-gray-400 font-bold uppercase">Thành tiền bằng chữ</span>
-                    <span className="text-sm font-medium text-blue-600 italic">{numberToWords(selectedSlip.total_amount || 0)}</span>
-                  </div>
-                  <div className="flex flex-col gap-1 border-b border-gray-50 pb-3">
-                    <span className="text-xs text-gray-400 font-bold uppercase">Diễn giải</span>
-                    <span className="text-sm font-medium text-gray-800">{selectedSlip.notes || '-'}</span>
-                  </div>
-                  <div className="flex flex-col gap-3 border-b border-gray-50 pb-3">
-                    <span className="text-xs text-gray-400 font-bold uppercase">Lịch sử nhập gần đây</span>
-                    {loadingHistory ? (
-                      <p className="text-xs text-gray-400 italic">Đang tải lịch sử...</p>
-                    ) : materialHistory.length === 0 ? (
-                      <p className="text-xs text-gray-400 italic">Chưa có lịch sử nhập</p>
-                    ) : (
-                      <div className="space-y-2">
-                        {materialHistory.map((h, i) => (
-                          <div key={i} className="flex justify-between items-center text-[11px] bg-gray-50 p-2 rounded-lg">
-                            <span className="text-gray-500">{formatDate(h.date)}</span>
-                            <span className="font-bold text-primary">{formatNumber(h.quantity)} {h.unit}</span>
-                            <span className="text-gray-400">{h.warehouses?.name}</span>
-                          </div>
-                        ))}
-                      </div>
-                    )}
+                    <p className="text-[10px] text-gray-400 uppercase font-bold tracking-widest">Phiếu nhập kho</p>
                   </div>
                 </div>
               </div>
 
-              <div className="p-4 border-t border-gray-100 rounded-b-3xl bg-gray-50 flex flex-col gap-3 w-full mt-auto">
-                {selectedSlip.status !== 'Đã xóa' && (user.role === 'Admin' || user.role === 'Admin App') && selectedSlip.status === 'Chờ duyệt' && (
-                  <div className="grid grid-cols-2 gap-3 w-full">
-                    <Button fullWidth variant="danger" icon={X} onClick={() => handleApprove(selectedSlip.id, 'Từ chối')} className="h-full">
-                      Từ chối
-                    </Button>
-                    <Button fullWidth variant="success" icon={Check} onClick={() => handleApprove(selectedSlip.id, 'Đã duyệt')} className="h-full">
-                      Duyệt
-                    </Button>
+              <div className="flex-1 overflow-y-auto p-5 space-y-4">
+                {[
+                  { label: 'Vật tư', value: selectedSlip.materials?.name, sub: `Mã: ${selectedSlip.materials?.code || '—'}` },
+                  { label: 'Kho nhập', value: selectedSlip.warehouses?.name, sub: `Mã: ${selectedSlip.warehouses?.code || '—'}` },
+                  { label: 'Ngày nhập', value: formatDate(selectedSlip.date) },
+                  { label: 'Số lượng', value: `${formatNumber(selectedSlip.quantity)} ${selectedSlip.unit || selectedSlip.materials?.unit || ''}` },
+                  { label: 'Đơn giá', value: formatCurrency(selectedSlip.unit_price || 0) },
+                  { label: 'Thành tiền', value: formatCurrency(selectedSlip.total_amount || 0), highlight: true },
+                  { label: 'Diễn giải', value: selectedSlip.notes || '—' },
+                ].map(({ label, value, sub, highlight }) => (
+                  <div key={label} className="flex justify-between items-start border-b border-gray-50 pb-3 gap-4">
+                    <span className="text-[10px] text-gray-400 font-bold uppercase shrink-0">{label}</span>
+                    <div className="text-right">
+                      <p className={`text-sm font-medium ${highlight ? 'text-primary font-bold' : 'text-gray-800'}`}>{value || '—'}</p>
+                      {sub && <p className="text-[10px] text-gray-400">{sub}</p>}
+                    </div>
                   </div>
-                )}
-                
-                {selectedSlip.status !== 'Đã xóa' && (
-                  <div className="grid grid-cols-2 gap-3 w-full">
-                    <Button fullWidth variant="outline" icon={Trash2} onClick={handleDelete} className="h-full text-red-600 border-red-200 bg-white hover:bg-red-50">
-                      Thùng rác
-                    </Button>
-                    <Button fullWidth variant="outline" icon={Edit} onClick={handleEdit} className="h-full text-gray-700 border-gray-200 bg-white hover:bg-gray-50">
-                      Sửa
-                    </Button>
-                  </div>
-                )}
+                ))}
 
-                <Button fullWidth variant="outline" icon={ChevronDown} onClick={() => setShowDetailModal(false)} className="text-gray-600 border-gray-200 bg-white hover:bg-gray-50">
-                  Đóng
-                </Button>
+                {/* Thành tiền bằng chữ */}
+                <div className="bg-blue-50 rounded-xl p-3">
+                  <p className="text-[10px] text-blue-400 font-bold uppercase mb-1">Thành tiền bằng chữ</p>
+                  <p className="text-xs text-blue-700 italic font-medium">{numberToWords(selectedSlip.total_amount || 0)}</p>
+                </div>
+
+                {/* Lịch sử nhập */}
+                {materialHistory.length > 0 && (
+                  <div className="space-y-2">
+                    <p className="text-[10px] text-gray-400 font-bold uppercase">Lịch sử nhập gần đây</p>
+                    {materialHistory.map((h, i) => (
+                      <div key={i} className="flex justify-between items-center text-[11px] bg-gray-50 p-2 rounded-lg">
+                        <span className="text-gray-500">{formatDate(h.date)}</span>
+                        <span className="font-bold text-primary">{formatNumber(h.quantity)} {h.unit}</span>
+                        <span className="text-gray-400">{h.warehouses?.name}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Action buttons */}
+              <div className="p-4 border-t border-gray-100 bg-gray-50 rounded-b-3xl md:rounded-b-none space-y-2">
+                {selectedSlip.status !== 'Đã xóa' && (user.role === 'Admin' || user.role === 'Admin App') && selectedSlip.status === 'Chờ duyệt' && (
+                  <div className="grid grid-cols-2 gap-2">
+                    <Button fullWidth variant="danger" icon={X} onClick={() => handleApprove(selectedSlip.id, 'Từ chối')}>Từ chối</Button>
+                    <Button fullWidth variant="success" icon={Check} onClick={() => handleApprove(selectedSlip.id, 'Đã duyệt')}>Duyệt</Button>
+                  </div>
+                )}
+                {selectedSlip.status !== 'Đã xóa' && (
+                  <div className="grid grid-cols-2 gap-2">
+                    <Button fullWidth variant="outline" icon={Trash2} onClick={handleDelete} className="text-red-600 border-red-200 hover:bg-red-50">Thùng rác</Button>
+                    <Button fullWidth variant="outline" icon={Edit} onClick={handleEdit} className="text-gray-700 hover:bg-gray-50">Sửa</Button>
+                  </div>
+                )}
+                <Button fullWidth variant="outline" icon={ChevronDown} onClick={() => setShowDetailModal(false)} className="text-gray-600 hover:bg-gray-50">Đóng</Button>
               </div>
             </motion.div>
-          </div>
+          </>
         )}
       </AnimatePresence>
 
@@ -520,10 +514,11 @@ export const StockIn = ({ user, onBack, initialStatus, addToast }: {
             >
               <div className="bg-primary p-6 text-white flex items-center justify-between rounded-t-3xl flex-shrink-0">
                 <div className="flex items-center gap-3">
-                  <div className="p-2 bg-white/20 rounded-xl"><ArrowDownCircle size={24} /></div>
+                  <button onClick={() => setShowModal(false)} className="p-2 bg-white/20 hover:bg-white/30 rounded-xl transition-colors cursor-pointer">
+                    <ArrowDownCircle size={24} />
+                  </button>
                   <h3 className="font-bold text-lg">{isEditing ? 'Sửa phiếu nhập kho' : 'Lập phiếu nhập kho'}</h3>
                 </div>
-                <Button variant="ghost" icon={X} className="text-white hover:bg-white/10" onClick={() => setShowModal(false)} />
               </div>
 
               <div className="flex-1 overflow-y-auto p-6 custom-scrollbar">
@@ -654,6 +649,19 @@ export const StockIn = ({ user, onBack, initialStatus, addToast }: {
         confirmText="Chuyển vào thùng rác"
         onConfirm={confirmDelete}
         onCancel={() => setShowDeleteConfirm(false)}
+      />
+
+      {/* FAB — Lập phiếu nhập */}
+      <FAB
+        onClick={() => {
+          setFormData({
+            ...initialFormState,
+            import_code: `NK-${new Date().getFullYear().toString().slice(-2)}${(new Date().getMonth() + 1).toString().padStart(2, '0')}${new Date().getDate().toString().padStart(2, '0')}-${Math.floor(1000 + Math.random() * 9000)}`
+          });
+          setIsEditing(false);
+          setShowModal(true);
+        }}
+        label="Lập phiếu nhập"
       />
     </div>
   );

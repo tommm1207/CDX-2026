@@ -225,15 +225,14 @@ export const PendingApprovals = ({ user, onBack, onNavigate, onRefreshCount, add
               {/* Header */}
               <div className={`p-5 rounded-t-3xl flex items-center justify-between ${typeColor(selectedSlip.type)}`}>
                 <div className="flex items-center gap-3">
-                  {typeIcon(selectedSlip.type, 24)}
+                  <button onClick={() => setSelectedSlip(null)} className="p-2 rounded-xl hover:bg-black/10 transition-colors cursor-pointer">
+                    {typeIcon(selectedSlip.type, 24)}
+                  </button>
                   <div>
                     <p className="font-bold text-base">{selectedSlip.type}</p>
                     <p className="text-[11px] font-mono opacity-75">{slipCode(selectedSlip)}</p>
                   </div>
                 </div>
-                <button onClick={() => setSelectedSlip(null)} className="p-2 rounded-xl hover:bg-black/10 transition-colors">
-                  <X size={20} />
-                </button>
               </div>
 
               {/* Body */}

@@ -14,7 +14,7 @@ export default defineConfig(({mode}) => {
         registerType: 'autoUpdate',
         includeAssets: ['logo.png'],
         workbox: {
-          maximumFileSizeToCacheInBytes: 5 * 1024 * 1024, // 5MB
+          maximumFileSizeToCacheInBytes: 3 * 1024 * 1024, // 3MB (after splitting, chunks are smaller)
         },
         manifest: {
           name: 'Quản Lý Thi Công CDX',
@@ -51,6 +51,26 @@ export default defineConfig(({mode}) => {
       alias: {
         '@': path.resolve(__dirname, '.'),
       },
+    },
+    build: {
+      rollupOptions: {
+        output: {
+          manualChunks(id) {
+            if (id.includes('exceljs') || id.includes('xlsx')) {
+              return 'excel';
+            }
+            if (id.includes('lucide-react') || id.includes('motion')) {
+              return 'ui';
+            }
+            if (id.includes('html-to-image')) {
+              return 'utils';
+            }
+            if (id.includes('node_modules')) {
+              return 'vendor';
+            }
+          }
+        }
+      }
     },
     server: {
       // HMR is disabled in AI Studio via DISABLE_HMR env var.

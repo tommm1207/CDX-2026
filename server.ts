@@ -459,13 +459,14 @@ app.get("/api/health-check", (req, res) => {
 
 // Middleware for static files or Vite
 const isProd = process.env.NODE_ENV === "production" || !!process.env.VERCEL;
+const isVercel = !!process.env.VERCEL;
 
 if (!isProd) {
   const { createServer: createViteServer } = await import("vite");
   const vite = await createViteServer({ server: { middlewareMode: true }, appType: "spa" });
   app.use(vite.middlewares);
-} else {
-  // Production: Serve static files from 'dist'
+} else if (!isVercel) {
+  // Local Production (Non-Vercel): Serve static files from 'dist'
   const distPath = path.join(__dirname, "dist");
   if (fs.existsSync(distPath)) {
     app.use(express.static(distPath));
@@ -486,8 +487,11 @@ if (!isProd) {
   });
 }
 
+// Trên Vercel, chúng ta không set app.get("*") vì Vercel native routing sẽ xử lý index.html.
+// Việc lồng thêm Express router có thể gây treo Serverless Function.
+
 // Chỉ chạy server thủ công nếu KHÔNG PHẢI Vercel
-if (!process.env.VERCEL) {
+if (!isVercel) {
   const PORT = process.env.PORT || 3000;
   app.listen(Number(PORT), "0.0.0.0", () => {
     console.log(`Server running on http://localhost:${PORT}`);

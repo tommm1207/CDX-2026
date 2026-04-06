@@ -1,0 +1,20 @@
+name: Auto Backup Trigger
+
+on:
+  schedule:
+    # Chạy tự động mỗi 30 phút một lần
+    # Nó sẽ ping đến server Vercel, nếu trùng với Giờ Backup người dùng thiết lập,
+    # Vercel Serverless sẽ bắt đầu tạo và gửi báo cáo.
+    - cron: '*/30 * * * *'
+  workflow_dispatch: # Cho phép kích hoạt bằng nút bấm thủ công
+
+jobs:
+  ping-backup:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping Vercel Auto-Cron Endpoint
+        run: |
+          # Gọi đến domain CDX trên Vercel
+          # x-api-key được dùng để xác thực quyền truy cập tác vụ tự động
+          curl -X GET "https://cdx-2026.vercel.app/api/auto-cron" \
+               -H "x-api-key: cdx-secret-2026"

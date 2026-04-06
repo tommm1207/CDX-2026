@@ -63,14 +63,14 @@ const supabase = createClient(
 );
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
-  // Authentication via Vercel Cron header
-  if (req.headers.authorization !== `Bearer ${process.env.CRON_SECRET}`) {
+  // Authentication via Vercel Cron header or custom API Key from Github Actions
+  const authHeader = req.headers.authorization;
+  const apiKey = req.headers['x-api-key'] || req.query.apiKey;
+  const validSecret = process.env.CRON_SECRET || process.env.API_SECRET_KEY || 'cdx-secret-2026';
+  
+  if (authHeader !== `Bearer ${validSecret}` && apiKey !== validSecret) {
     console.warn("Unauthenticated cron request execution attempted");
-    if (!process.env.CRON_SECRET) {
-       console.warn("CRON_SECRET is not set limit. Continuing for development.");
-    } else {
-       return res.status(401).end('Unauthorized');
-    }
+    return res.status(401).end('Unauthorized');
   }
 
   try {
@@ -101,11 +101,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       const vnTime = new Date(now.toLocaleString("en-US", { timeZone: "Asia/Ho_Chi_Minh" }));
       const currentHour = vnTime.getHours();
       
-      // We are running daily cron on Vercel Hobby plan (only allowed once a day).
-      // So we ignore the precise hour check to ensure it actually runs.
-      // if (currentHour !== targetHour) {
-      //    return res.status(200).json({ status: 'Not the target hour yet', targetHour, currentHour });
-      // }
+      // We rely on GitHub actions to ping hourly/each 30 mins
+      // Here we restore the check to backup accurately near the set hour
+      if (currentHour !== targetHour) {
+         return res.status(200).json({ status: 'Not the target hour yet', targetHour, currentHour });
+      }
       
       // Also check if frequency limits.
       // Day of week: 0 for weekly. Date: 1 for monthly.

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Settings, Mail, Info, RefreshCw, Layers, Save, Play, Clock, Check } from 'lucide-react';
+import { Settings, Mail, Info, RefreshCw, Layers, Save, Play, Clock, Check, ChevronDown } from 'lucide-react';
 import ExcelJS from 'exceljs';
 import { formatDataForExcel } from '../../utils/excelHelper';
 import { supabase } from '../../supabaseClient';
@@ -21,8 +21,8 @@ export const BACKUP_TABLES = [
   { id: 'partners', label: 'Khách hàng & NCC' },
 ];
 
-export const Backup = ({ onBack, addToast }: { onBack: () => void, addToast: (msg: string, type?: 'success' | 'error' | 'info') => void }) => {
-  const [email, setEmail] = useState(() => localStorage.getItem('backup_email') || '');
+export const Backup = ({ user, onBack, addToast }: { user?: any, onBack: () => void, addToast: (msg: string, type?: 'success' | 'error' | 'info') => void }) => {
+  const [email, setEmail] = useState(() => localStorage.getItem(`backup_email_${user?.id}`) || '');
   const [frequency, setFrequency] = useState('Thủ công (không tự động)');
   const [time, setTime] = useState('06:00');
   const [selectedTables, setSelectedTables] = useState<string[]>(BACKUP_TABLES.map(t => t.id));
@@ -38,8 +38,22 @@ export const Backup = ({ onBack, addToast }: { onBack: () => void, addToast: (ms
         });
         if (response.ok) {
           const config = await response.json();
-          if (config.email) setEmail(config.email);
-          if (config.enabled) setEnabled(config.enabled);
+          const localEmail = localStorage.getItem(`backup_email_${user?.id}`);
+          if (!localEmail && config.email) {
+            setEmail(config.email);
+          }
+          if (config.enabled !== undefined) setEnabled(config.enabled);
+
+          if (config.schedule) {
+            const parts = config.schedule.split(' ');
+            if (parts.length >= 2) {
+              const prevTime = `${parts[1].padStart(2, '0')}:${parts[0].padStart(2, '0')}`;
+              setTime(prevTime);
+              if (config.schedule.endsWith('* * *')) setFrequency('Hàng ngày');
+              else if (config.schedule.endsWith('* * 0')) setFrequency('Hàng tuần');
+              else if (config.schedule.endsWith('1 * *')) setFrequency('Hàng tháng');
+            }
+          }
         }
       } catch (err) {
         console.error('Lỗi khi tải cấu hình backup:', err);
@@ -58,7 +72,7 @@ export const Backup = ({ onBack, addToast }: { onBack: () => void, addToast: (ms
   const deselectAll = () => setSelectedTables([]);
 
   const handleSave = async () => {
-    localStorage.setItem('backup_email', email);
+    localStorage.setItem(`backup_email_${user?.id}`, email);
     
     const [hours, minutes] = time.split(':');
     let cronSchedule = `${minutes} ${hours} * * *`;
@@ -294,16 +308,19 @@ export const Backup = ({ onBack, addToast }: { onBack: () => void, addToast: (ms
                 <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2 ml-1 flex items-center gap-2">
                   <RefreshCw size={14} className="text-primary" /> Tần suất
                 </label>
-                <select
-                  value={frequency}
-                  onChange={e => setFrequency(e.target.value)}
-                  className="w-full px-4 py-3.5 rounded-2xl border border-gray-100 bg-gray-50/50 focus:bg-white focus:ring-4 focus:ring-primary/10 focus:border-primary outline-none text-sm font-medium"
-                >
-                  <option>Thủ công (không tự động)</option>
-                  <option>Hàng ngày</option>
-                  <option>Hàng tuần</option>
-                  <option>Hàng tháng</option>
-                </select>
+                <div className="relative">
+                  <select
+                    value={frequency}
+                    onChange={e => setFrequency(e.target.value)}
+                    className="w-full px-4 py-3.5 rounded-2xl border border-gray-100 bg-gray-50/50 focus:bg-white focus:ring-4 focus:ring-primary/10 focus:border-primary outline-none text-sm font-medium appearance-none"
+                  >
+                    <option>Thủ công (không tự động)</option>
+                    <option>Hàng ngày</option>
+                    <option>Hàng tuần</option>
+                    <option>Hàng tháng</option>
+                  </select>
+                  <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" size={16} />
+                </div>
               </div>
               <div>
                 <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2 ml-1 flex items-center gap-2">

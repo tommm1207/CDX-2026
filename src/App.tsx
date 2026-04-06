@@ -371,7 +371,7 @@ export default function App() {
       case 'material-groups': return <MaterialGroups user={user} onBack={goBack} addToast={addToast} />;
       case 'backup-settings':
         if (user.role !== 'Admin' && user.role !== 'Admin App') return <Dashboard user={user} onNavigate={navigateTo} addToast={addToast} pendingApprovals={pendingCount} />;
-        return <Backup onBack={goBack} addToast={addToast} />;
+        return <Backup user={user} onBack={goBack} addToast={addToast} />;
       case 'backup-now':
         if (user.role !== 'Admin' && user.role !== 'Admin App') return <Dashboard user={user} onNavigate={navigateTo} addToast={addToast} pendingApprovals={pendingCount} />;
         return <BackupNow onBack={goBack} addToast={addToast} />;

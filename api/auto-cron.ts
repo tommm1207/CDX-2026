@@ -185,8 +185,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         }
       }
       
-      const fileName = \`CDX_Auto_Backup_\${vnTime.toISOString().split('T')[0]}.xlsx\`;
-      const buffer = await workbook.xlsx.writeBuffer();
+      const fileName = `CDX_Auto_Backup_${vnTime.toISOString().split('T')[0]}.xlsx`;
+      const buffer = await (workbook.xlsx as any).writeBuffer();
       const fileData = Buffer.from(buffer).toString('base64');
       
       const transporter = nodemailer.createTransport({
@@ -197,10 +197,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       });
       
       await transporter.sendMail({
-        from: \`"Hệ thống Auto CDX" <\${smtpUser}>\`,
+        from: `"Hệ thống Auto CDX" <${smtpUser}>`,
         to: config.email,
-        subject: \`[TỰ ĐỘNG] Sao lưu dữ liệu CDX - \${vnTime.toLocaleDateString('vi-VN')}\`,
-        html: \`<p>Tệp sao lưu tự động đính kèm.</p>\`,
+        subject: `[TỰ ĐỘNG] Sao lưu dữ liệu CDX - ${vnTime.toLocaleDateString('vi-VN')}`,
+        html: `<p>Tệp sao lưu tự động đính kèm.</p>`,
         attachments: [{ filename: fileName, content: fileData, encoding: 'base64' }]
       });
       

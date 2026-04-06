@@ -101,11 +101,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       const vnTime = new Date(now.toLocaleString("en-US", { timeZone: "Asia/Ho_Chi_Minh" }));
       const currentHour = vnTime.getHours();
       
-      // We are running hourly cron. The current hour must match target hour. 
-      // Note: hourly cron executes near the 0th minute, so we just check if it's the right hour.
-      if (currentHour !== targetHour) {
-         return res.status(200).json({ status: 'Not the target hour yet', targetHour, currentHour });
-      }
+      // We are running daily cron on Vercel Hobby plan (only allowed once a day).
+      // So we ignore the precise hour check to ensure it actually runs.
+      // if (currentHour !== targetHour) {
+      //    return res.status(200).json({ status: 'Not the target hour yet', targetHour, currentHour });
+      // }
       
       // Also check if frequency limits.
       // Day of week: 0 for weekly. Date: 1 for monthly.

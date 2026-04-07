@@ -8,7 +8,7 @@ import { PageBreadcrumb } from '../shared/PageBreadcrumb';
 export const BACKUP_TABLES = [
   { id: 'users', label: 'Bảng Nhân sự' },
   { id: 'attendance', label: 'Bảng Chấm công' },
-  { id: 'advances', label: 'Tạm ứng - Phụ cấp' },
+  { id: 'advances', label: 'Tạm ứng & Phụ cấp' },
   { id: 'stock_in', label: 'Báo cáo Nhập kho' },
   { id: 'stock_out', label: 'Báo cáo Xuất kho' },
   { id: 'transfers', label: 'Báo cáo Chuyển kho' },
@@ -16,7 +16,7 @@ export const BACKUP_TABLES = [
   { id: 'materials', label: 'Danh mục Vật tư' },
   { id: 'material_groups', label: 'Nhóm vật tư' },
   { id: 'costs', label: 'Báo cáo Chi phí' },
-  { id: 'notes', label: 'Nhật ký - Ghi chú' },
+  { id: 'notes', label: 'Nhật ký & Ghi chú' },
   { id: 'reminders', label: 'Lịch nhắc' },
   { id: 'partners', label: 'Khách hàng & NCC' },
 ];

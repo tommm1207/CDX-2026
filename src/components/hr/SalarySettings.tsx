@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { supabase } from '@/lib/supabase';
 import { Employee } from '@/types';
 import { PageBreadcrumb } from '../shared/PageBreadcrumb';
+import { Button } from '../shared/Button';
 import { NumericInput } from '../shared/NumericInput';
 import { ToastType } from '../shared/Toast';
 import { formatCurrency } from '@/utils/format';
@@ -125,34 +126,58 @@ export const SalarySettings = ({ user, onBack, addToast }: {
       <AnimatePresence>
         {showModal && (
           <div 
-            className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm"
+            className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-black/50 backdrop-blur-md overflow-hidden"
             onClick={() => setShowModal(false)}
           >
-            <motion.div 
-              initial={{ opacity: 0, scale: 0.95 }} 
-              animate={{ opacity: 1, scale: 1 }} 
-              exit={{ opacity: 0, scale: 0.95 }} 
-              className="bg-white rounded-3xl shadow-2xl w-full max-w-md overflow-hidden"
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              className="bg-white rounded-[2rem] md:rounded-[2.5rem] shadow-2xl w-full max-w-md overflow-hidden m-4"
               onClick={(e) => e.stopPropagation()}
             >
-              <div className="bg-primary p-6 text-white flex items-center justify-between">
+              <div className="bg-primary p-6 text-white flex items-center justify-between transition-colors">
                 <div className="flex items-center gap-3">
-                  <button onClick={() => setShowModal(false)} className="p-2 bg-white/20 hover:bg-white/30 rounded-xl transition-colors cursor-pointer">
+                  <div 
+                    className="p-2 bg-white/20 rounded-xl cursor-pointer hover:bg-white/30 transition-all active:scale-95"
+                    onClick={() => setShowModal(false)}
+                  >
                     <Settings2 size={24} />
-                  </button>
+                  </div>
                   <h3 className="font-bold text-lg">Thiết lập lương</h3>
                 </div>
+                <button 
+                  onClick={() => setShowModal(false)}
+                  className="p-2 hover:bg-white/20 rounded-xl transition-all"
+                >
+                  <X size={24} />
+                </button>
               </div>
-              <form onSubmit={handleSubmit} className="p-6 space-y-4">
+              <form onSubmit={handleSubmit} className="p-8 space-y-6">
+                <div className="p-4 bg-primary/5 rounded-2xl border border-primary/10 mb-2">
+                  <p className="text-[10px] text-primary/60 font-black uppercase tracking-widest mb-1 italic">Nhân viên</p>
+                  <p className="text-sm font-black text-gray-800">{selectedEmp?.full_name}</p>
+                </div>
+
                 <NumericInput
-                  label="Lương theo ngày công *"
+                  label="Lương theo ngày công (8h) *"
                   required
                   value={formData.daily_rate}
                   onChange={(val) => setFormData({ ...formData, daily_rate: val })}
                 />
-                <button type="submit" disabled={submitting} className="w-full py-3 bg-primary text-white rounded-xl font-bold hover:bg-primary-hover transition-colors shadow-lg shadow-primary/20 disabled:opacity-50">
-                  Cập nhật
-                </button>
+                
+                <div className="flex gap-3 pt-2">
+                  <Button variant="outline" fullWidth onClick={() => setShowModal(false)}>Hủy bỏ</Button>
+                  <Button 
+                    type="submit" 
+                    variant="primary" 
+                    fullWidth 
+                    isLoading={submitting}
+                    className="shadow-lg shadow-primary/20"
+                  >
+                    Cập nhật
+                  </Button>
+                </div>
               </form>
             </motion.div>
           </div>

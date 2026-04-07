@@ -439,14 +439,23 @@ export const StockOut = ({ user, onBack, addToast, initialAction }: {
               </div>
               <div className="p-5 border-b border-gray-100 flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  <button onClick={() => setShowDetailModal(false)} className="w-9 h-9 bg-red-100 text-red-600 rounded-xl flex items-center justify-center hover:bg-red-200 transition-colors cursor-pointer">
-                    <ArrowUpCircle size={18} />
-                  </button>
+                  <div 
+                    className="w-10 h-10 bg-red-100 text-red-600 rounded-xl flex items-center justify-center hover:bg-red-200 transition-all active:scale-95 cursor-pointer shadow-sm border border-red-200"
+                    onClick={() => setShowDetailModal(false)}
+                  >
+                    <ArrowUpCircle size={20} />
+                  </div>
                   <div>
                     <p className="text-sm font-black text-red-600">{selectedSlip.export_code}</p>
-                    <p className="text-[10px] text-gray-400 uppercase font-bold tracking-widest">Phiếu xuất kho</p>
+                    <p className="text-[10px] text-gray-400 uppercase font-bold tracking-widest">Chi tiết xuất kho</p>
                   </div>
                 </div>
+                <button 
+                  onClick={() => setShowDetailModal(false)}
+                  className="p-2 hover:bg-gray-100 rounded-xl transition-all active:scale-95 text-gray-400"
+                >
+                  <X size={24} />
+                </button>
               </div>
               <div className="flex-1 overflow-y-auto p-5 space-y-4">
                 {[
@@ -479,7 +488,7 @@ export const StockOut = ({ user, onBack, addToast, initialAction }: {
                     <Button fullWidth variant="outline" icon={Edit} onClick={handleEdit} className="text-gray-700 hover:bg-gray-50">Sửa</Button>
                   </div>
                 )}
-                <Button fullWidth variant="outline" icon={ChevronDown} onClick={() => setShowDetailModal(false)} className="text-gray-600 hover:bg-gray-50">Đóng</Button>
+                <Button fullWidth variant="outline" icon={X} onClick={() => setShowDetailModal(false)} className="text-gray-600 hover:bg-gray-50 border-gray-200">Đóng cửa sổ</Button>
               </div>
             </motion.div>
           </>

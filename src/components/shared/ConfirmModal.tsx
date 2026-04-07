@@ -37,42 +37,50 @@ export const ConfirmModal = ({
     <AnimatePresence>
       {show && (
         <div 
-          className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm"
+          className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/50 backdrop-blur-md overflow-hidden"
           onClick={onCancel}
         >
           <motion.div
             initial={{ opacity: 0, scale: 0.95, y: 20 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: 20 }}
-            className="bg-white rounded-3xl shadow-2xl w-full max-w-sm overflow-hidden"
+            className="bg-white rounded-[2rem] md:rounded-[2.5rem] shadow-2xl w-full max-w-sm overflow-hidden m-4 relative z-10"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className={`p-6 ${colors.bg} text-white flex items-center justify-between`}>
-              <div className="flex items-center gap-2">
-                <AlertTriangle size={20} />
-                <h3 className="font-bold">{title}</h3>
+            <div className={`p-6 ${colors.bg} text-white flex items-center justify-between transition-colors`}>
+              <div className="flex items-center gap-3">
+                <div 
+                  className="p-2 bg-white/20 rounded-xl cursor-pointer hover:bg-white/30 transition-all active:scale-95"
+                  onClick={onCancel}
+                >
+                  <AlertTriangle size={20} />
+                </div>
+                <h3 className="font-bold text-lg">{title}</h3>
               </div>
-              <button onClick={onCancel} className="p-1 hover:bg-white/10 rounded-full transition-colors">
-                <X size={18} />
+              <button 
+                onClick={onCancel} 
+                className="p-2 hover:bg-white/20 rounded-xl transition-all"
+              >
+                <X size={24} />
               </button>
             </div>
             <div className="p-8 text-center space-y-6">
-              <div className={`w-16 h-16 ${colors.light} ${colors.text} rounded-full flex items-center justify-center mx-auto`}>
-                <AlertTriangle size={32} />
+              <div className={`w-20 h-20 ${colors.light} ${colors.text} rounded-2xl flex items-center justify-center mx-auto border border-${type === 'danger' ? 'red' : type === 'warning' ? 'amber' : 'blue'}-100 shadow-sm`}>
+                <AlertTriangle size={40} />
               </div>
-              <p className="text-sm text-gray-600 leading-relaxed font-medium">
+              <p className="text-sm text-gray-500 leading-relaxed font-medium px-2">
                 {message}
               </p>
               <div className="flex gap-3 pt-2">
                 <button
                   onClick={onCancel}
-                  className="flex-1 py-3 bg-gray-100 text-gray-500 rounded-xl text-sm font-bold hover:bg-gray-200 transition-all active:scale-95"
+                  className="flex-1 py-3 bg-gray-100 text-gray-500 rounded-2xl text-sm font-bold hover:bg-gray-200 transition-all active:scale-95"
                 >
                   {cancelText}
                 </button>
                 <button
                   onClick={onConfirm}
-                  className={`flex-1 py-3 ${colors.bg} text-white rounded-xl text-sm font-bold ${colors.hover} transition-all shadow-lg active:scale-95`}
+                  className={`flex-1 py-3 ${colors.bg} text-white rounded-2xl text-sm font-bold ${colors.hover} transition-all shadow-lg shadow-${type === 'danger' ? 'red' : type === 'warning' ? 'amber' : 'blue'}-500/20 active:scale-95`}
                 >
                   {confirmText}
                 </button>

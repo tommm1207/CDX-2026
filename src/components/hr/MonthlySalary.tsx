@@ -241,40 +241,49 @@ export const MonthlySalary = ({ user, onBack, addToast }: {
       <AnimatePresence>
         {showDetailModal && selectedSalary && (
           <div 
-            className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm overflow-y-auto no-print"
+            className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/50 backdrop-blur-md overflow-hidden no-print"
             onClick={() => setShowDetailModal(false)}
           >
-            <style>
-              {`
-                @media print {
-                  .no-print { display: none !important; }
-                  .print-only { display: block !important; }
-                  body { background: white !important; margin: 0; padding: 0; }
-                  @page { margin: 1cm; }
-                }
-              `}
-            </style>
             <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: 20 }}
-              className="bg-white rounded-[2.5rem] shadow-2xl w-full max-w-xl my-8 relative"
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              className="bg-white rounded-[2rem] md:rounded-[2.5rem] shadow-2xl w-full max-w-xl overflow-hidden m-4 relative"
               onClick={(e) => e.stopPropagation()}
             >
-              <div className="p-8 pb-0 flex items-center justify-between">
-                <div>
-                  <h3 className="text-xl font-black text-gray-800">Phiếu lương chi tiết</h3>
-                  <p className="text-xs text-gray-400 font-bold uppercase tracking-widest">Tháng {selectedMonth} năm {selectedYear}</p>
+              <div className="bg-primary p-6 text-white flex items-center justify-between no-print transition-colors">
+                <div className="flex items-center gap-3">
+                  <div 
+                    className="p-2 bg-white/20 rounded-xl cursor-pointer hover:bg-white/30 transition-all active:scale-95"
+                    onClick={() => setShowDetailModal(false)}
+                  >
+                    <Wallet size={24} />
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-lg leading-tight">Phiếu lương chi tiết</h3>
+                    <p className="text-[10px] text-white/70 font-bold uppercase tracking-widest">Tháng {selectedMonth}/{selectedYear}</p>
+                  </div>
                 </div>
                 <button 
                   onClick={() => setShowDetailModal(false)}
-                  className="w-10 h-10 bg-gray-50 text-gray-400 rounded-full flex items-center justify-center hover:bg-gray-100 transition-all no-print"
+                  className="p-2 hover:bg-white/20 rounded-xl transition-all"
                 >
-                  <X size={20} />
+                  <X size={24} />
                 </button>
               </div>
 
-              <div ref={billRef} className="p-8 space-y-8 bg-white rounded-[2.5rem] print-only">
+              <div className="max-h-[70dvh] overflow-y-auto">
+                <style>
+                  {`
+                    @media print {
+                      .no-print { display: none !important; }
+                      .print-only { display: block !important; }
+                      body { background: white !important; margin: 0; padding: 0; }
+                      @page { margin: 1cm; }
+                    }
+                  `}
+                </style>
+                <div ref={billRef} className="p-8 space-y-8 bg-white rounded-b-[2rem] md:rounded-b-[2.5rem] print-only">
                 {/* Bill Header */}
                 <div className="text-center space-y-4 pt-4">
                    <div className="w-20 h-20 bg-primary/10 rounded-3xl flex items-center justify-center text-primary font-black text-2xl mx-auto shadow-sm">
@@ -344,27 +353,28 @@ export const MonthlySalary = ({ user, onBack, addToast }: {
                   </p>
                 </div>
               </div>
+            </div>
 
-              <div className="p-8 pt-0 flex flex-col gap-3 no-print">
+              <div className="p-8 pt-0 flex flex-col gap-3 no-print mt-2">
                 <div className="flex gap-3">
                   <button
                     onClick={handleSaveImage}
-                    className="flex-1 bg-gray-900 text-white font-black py-3.5 rounded-2xl hover:bg-black transition-all flex items-center justify-center gap-2 shadow-lg"
+                    className="flex-1 bg-gray-900 text-white font-black py-3.5 rounded-2xl hover:bg-black transition-all flex items-center justify-center gap-2 shadow-lg active:scale-95"
                   >
                     <ImageIcon size={18} /> LƯU ẢNH
                   </button>
                   <button
                     onClick={() => window.print()}
-                    className="flex-1 bg-white text-gray-700 border-2 border-gray-100 font-black py-3.5 rounded-2xl hover:bg-gray-50 transition-all flex items-center justify-center gap-2"
+                    className="flex-1 bg-white text-gray-700 border-2 border-gray-100 font-black py-3.5 rounded-2xl hover:bg-gray-50 transition-all flex items-center justify-center gap-2 active:scale-95"
                   >
                     <Printer size={18} /> IN PHIẾU
                   </button>
                 </div>
                 <button
                   onClick={() => setShowDetailModal(false)}
-                  className="w-full bg-primary/5 text-primary font-black py-3.5 rounded-2xl hover:bg-primary/10 transition-all"
+                  className="w-full bg-primary/5 text-primary font-black py-3.5 rounded-2xl hover:bg-primary/10 transition-all active:scale-95 border border-primary/10"
                 >
-                  ĐÓNG
+                  <X size={18} className="inline mr-2" /> ĐÓNG CỬA SỔ
                 </button>
               </div>
             </motion.div>

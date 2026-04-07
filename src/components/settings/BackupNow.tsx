@@ -2,8 +2,8 @@ import { useState } from 'react';
 import { Download } from 'lucide-react';
 import { motion } from 'motion/react';
 import ExcelJS from 'exceljs';
-import { supabase } from '../../supabaseClient';
-import { formatDataForExcel } from '../../utils/excelHelper';
+import { supabase } from '@/lib/supabase';
+import { formatDataForExcel } from '@/utils/excelHelper';
 import { PageBreadcrumb } from '../shared/PageBreadcrumb';
 import { BACKUP_TABLES } from './Backup';
 

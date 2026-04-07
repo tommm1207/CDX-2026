@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, ChangeEvent } from 'react';
 import { Minus, Plus } from 'lucide-react';
-import { formatNumber } from '../../utils/format';
+import { formatNumber } from '@/utils/format';
 
 export const NumericInput = ({
   label,

@@ -4,11 +4,11 @@ import { Wallet, X, Eye, Printer, Download, Image as ImageIcon } from 'lucide-re
 import { motion, AnimatePresence } from 'motion/react';
 import { toPng } from 'html-to-image';
 import { useRef } from 'react';
-import { supabase } from '../../supabaseClient';
-import { Employee } from '../../types';
+import { supabase } from '@/lib/supabase';
+import { Employee } from '@/types';
 import { PageBreadcrumb } from '../shared/PageBreadcrumb';
 import { ToastType } from '../shared/Toast';
-import { formatCurrency, formatDate } from '../../utils/format';
+import { formatCurrency, formatDate } from '@/utils/format';
 import { MonthYearPicker } from '../shared/MonthYearPicker';
 import { Button } from '../shared/Button';
 import { ExcelButton } from '../shared/ExcelButton';

@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { X, PackagePlus } from 'lucide-react';
-import { supabase } from '../../supabaseClient';
-import { generateNextMaterialCode } from '../../utils/inventory';
+import { supabase } from '@/lib/supabase';
+import { generateNextMaterialCode } from '@/utils/inventory';
 
 interface QuickAddMaterialModalProps {
   show: boolean;

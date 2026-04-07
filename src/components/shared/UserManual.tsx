@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { PageBreadcrumb } from '../shared/PageBreadcrumb';
-import { Employee } from '../../types';
+import { Employee } from '@/types';
 import { 
   LayoutDashboard, Package, Wallet, UserCircle, Settings, Shield, 
   ArrowLeftRight, ArrowDownCircle, ArrowUpCircle, ClipboardCheck, 

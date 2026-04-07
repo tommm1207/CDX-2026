@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
 import { Settings, Mail, Info, RefreshCw, Layers, Save, Play, Clock, Check, ChevronDown } from 'lucide-react';
 import ExcelJS from 'exceljs';
-import { formatDataForExcel } from '../../utils/excelHelper';
-import { supabase } from '../../supabaseClient';
+import { formatDataForExcel } from '@/utils/excelHelper';
+import { supabase } from '@/lib/supabase';
 import { PageBreadcrumb } from '../shared/PageBreadcrumb';
 
 export const BACKUP_TABLES = [

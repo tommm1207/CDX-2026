@@ -1,15 +1,15 @@
 import { useState, useEffect } from 'react';
 import { BarChart3, RefreshCw, EyeOff, Download, Search } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import { supabase } from '../../supabaseClient';
+import { supabase } from '@/lib/supabase';
 import * as xlsx from 'xlsx';
-import { Employee } from '../../types';
+import { Employee } from '@/types';
 import { PageBreadcrumb } from '../shared/PageBreadcrumb';
-import { isActiveWarehouse } from '../../utils/inventory';
+import { isActiveWarehouse } from '@/utils/inventory';
 import { ToastType } from '../shared/Toast';
-import { formatNumber } from '../../utils/format';
-import { getTonKhoTable, TonKhoRow } from '../../utils/inventory';
-import { getAllowedWarehouses } from '../../utils/helpers';
+import { formatNumber } from '@/utils/format';
+import { getTonKhoTable, TonKhoRow } from '@/utils/inventory';
+import { getAllowedWarehouses } from '@/utils/helpers';
 import { Button } from '../shared/Button';
 import { ExcelButton } from '../shared/ExcelButton';
 

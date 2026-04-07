@@ -11,11 +11,9 @@
     "lint": "tsc --noEmit"
   },
   "dependencies": {
-    "@google/genai": "^1.29.0",
     "@supabase/supabase-js": "^2.98.0",
     "@tailwindcss/vite": "^4.1.14",
     "@vitejs/plugin-react": "^5.0.4",
-    "better-sqlite3": "^12.4.1",
     "body-parser": "^2.2.2",
     "dotenv": "^17.2.3",
     "exceljs": "^4.4.0",

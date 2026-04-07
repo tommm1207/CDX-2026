@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { Search, X, UserCircle, Package, ArrowDownCircle, Wallet, Command, FileText } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import { supabase } from '../../supabaseClient';
+import { supabase } from '@/lib/supabase';
 
 interface GlobalSearchProps {
   isOpen: boolean;

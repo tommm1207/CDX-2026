@@ -1,12 +1,12 @@
 import { useState, useEffect, FormEvent } from 'react';
 import { Settings2, X, Edit } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import { supabase } from '../../supabaseClient';
-import { Employee } from '../../types';
+import { supabase } from '@/lib/supabase';
+import { Employee } from '@/types';
 import { PageBreadcrumb } from '../shared/PageBreadcrumb';
 import { NumericInput } from '../shared/NumericInput';
 import { ToastType } from '../shared/Toast';
-import { formatCurrency } from '../../utils/format';
+import { formatCurrency } from '@/utils/format';
 
 export const SalarySettings = ({ user, onBack, addToast }: { 
   user: Employee, 

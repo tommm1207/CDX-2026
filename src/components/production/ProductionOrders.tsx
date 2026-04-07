@@ -1,12 +1,12 @@
 import { useState, useEffect } from 'react';
 import { ClipboardList, Plus, Search, Eye, CheckCircle2, XCircle, Clock } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import { supabase } from '../../supabaseClient';
-import { Employee, ProductionOrder, BOMConfig } from '../../types';
+import { supabase } from '@/lib/supabase';
+import { Employee, ProductionOrder, BOMConfig } from '@/types';
 import { PageBreadcrumb } from '../shared/PageBreadcrumb';
 import { ToastType } from '../shared/Toast';
-import { formatNumber } from '../../utils/format';
-import { getAllowedWarehouses } from '../../utils/helpers';
+import { formatNumber } from '@/utils/format';
+import { getAllowedWarehouses } from '@/utils/helpers';
 
 export const ProductionOrders = ({ user, onBack, addToast, onOpenDetail }: {
   user: Employee,

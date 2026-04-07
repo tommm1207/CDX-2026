@@ -1,8 +1,8 @@
 import { useState, useEffect, FormEvent } from 'react';
 import { Warehouse, Plus, Search, Edit, Trash2, X, Navigation, MapPin } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import { supabase } from '../../supabaseClient';
-import { Employee } from '../../types';
+import { supabase } from '@/lib/supabase';
+import { Employee } from '@/types';
 import { PageBreadcrumb } from '../shared/PageBreadcrumb';
 import { ToastType } from '../shared/Toast';
 import { Button } from '../shared/Button';

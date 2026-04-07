@@ -1,8 +1,8 @@
 import { useState, useEffect, FormEvent } from 'react';
 import { Plus, Search, ChevronRight, X, ArrowDownCircle, Edit, Navigation, Trash2, PackagePlus, ChevronDown, Check } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import { supabase } from '../../supabaseClient';
-import { Employee } from '../../types';
+import { supabase } from '@/lib/supabase';
+import { Employee } from '@/types';
 import { PageBreadcrumb } from '../shared/PageBreadcrumb';
 import { NumericInput } from '../shared/NumericInput';
 import { CreatableSelect } from '../shared/CreatableSelect';
@@ -10,9 +10,9 @@ import { ToastType } from '../shared/Toast';
 import { ConfirmModal } from '../shared/ConfirmModal';
 import { QuickAddMaterialModal } from '../shared/QuickAddMaterialModal';
 import { FAB } from '../shared/FAB';
-import { useInventoryData } from '../../hooks/useInventoryData';
-import { formatDate, formatCurrency, formatNumber, numberToWords } from '../../utils/format';
-import { isUUID, getAllowedWarehouses } from '../../utils/helpers';
+import { useInventoryData } from '@/hooks/useInventoryData';
+import { formatDate, formatCurrency, formatNumber, numberToWords } from '@/utils/format';
+import { isUUID, getAllowedWarehouses } from '@/utils/helpers';
 import { Button } from '../shared/Button';
 
 export const StockIn = ({ user, onBack, initialStatus, initialAction, addToast }: { 

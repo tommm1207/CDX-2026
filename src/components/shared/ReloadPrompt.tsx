@@ -3,7 +3,11 @@ import { useRegisterSW } from 'virtual:pwa-register/react';
 import { RefreshCw, X, Download } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
-export function ReloadPrompt() {
+interface ReloadPromptProps {
+  currentPage?: string;
+}
+
+export function ReloadPrompt({ currentPage }: ReloadPromptProps) {
   const {
     offlineReady: [offlineReady, setOfflineReady],
     needRefresh: [needRefresh, setNeedRefresh],
@@ -23,22 +27,29 @@ export function ReloadPrompt() {
     },
   });
 
-  // Kiểm tra cập nhật khi người dùng quay lại tab (focus vào ứng dụng)
+  // Kiểm tra cập nhật khi người dùng quay lại tab hoặc đổi tính năng
   useEffect(() => {
-    const handleVisibilityChange = () => {
-      if (document.visibilityState === 'visible') {
-        // useRegisterSW trả về cách đăng ký thông qua script virtual
-        // Chúng ta có thể dùng registration từ onRegistered hoặc đơn giản là reload check
-        // Một cách an toàn là fetch lại sw.js thông qua trình duyệt
+    const handleCheckUpdate = () => {
+      if (navigator.serviceWorker) {
         navigator.serviceWorker.getRegistration().then(reg => {
           if (reg) reg.update();
         });
       }
     };
 
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        handleCheckUpdate();
+      }
+    };
+
     window.addEventListener('visibilitychange', handleVisibilityChange);
+    
+    // Check ngay khi đổi trang (currentPage thay đổi)
+    handleCheckUpdate();
+
     return () => window.removeEventListener('visibilitychange', handleVisibilityChange);
-  }, []);
+  }, [currentPage]);
 
   const close = () => {
     setOfflineReady(false);

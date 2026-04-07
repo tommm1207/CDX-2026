@@ -500,9 +500,13 @@ export const StockOut = ({ user, onBack, addToast, initialAction }: {
               className="bg-white rounded-[2rem] md:rounded-[2.5rem] shadow-2xl w-full max-w-4xl max-h-[90dvh] flex flex-col overflow-hidden m-4"
               onClick={(e) => e.stopPropagation()}
             >
-              <div className="bg-orange-500 p-6 text-white flex items-center justify-between rounded-t-[2rem] md:rounded-t-[2.5rem] flex-shrink-0 relative">
+              <div className="bg-red-600 p-6 text-white flex items-center justify-between rounded-t-[2rem] md:rounded-t-[2.5rem] flex-shrink-0 relative">
                 <div className="flex items-center gap-3">
-                  <div className="p-2 bg-white/20 rounded-xl">
+                  <div 
+                    className="p-2 bg-white/20 rounded-xl cursor-pointer hover:bg-white/30 transition-all active:scale-95"
+                    onClick={() => setShowModal(false)}
+                    title="Đóng"
+                  >
                     <ArrowDownCircle size={24} />
                   </div>
                   <h3 className="font-bold text-lg">{isEditing ? 'Sửa phiếu xuất kho' : 'Lập phiếu xuất kho'}</h3>
@@ -525,7 +529,7 @@ export const StockOut = ({ user, onBack, addToast, initialAction }: {
                         required 
                         value={formData.date} 
                         onChange={(e) => setFormData({ ...formData, date: e.target.value })} 
-                        className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-orange-600/20" 
+                        className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-red-600/20" 
                       />
                       <p className="text-[10px] text-gray-400">Tồn kho sẽ được kiểm tra tại ngày này</p>
                     </div>
@@ -611,11 +615,11 @@ export const StockOut = ({ user, onBack, addToast, initialAction }: {
 
                   <div className="md:col-span-2 flex justify-end gap-3 mt-4">
                     <Button variant="outline" onClick={() => setShowModal(false)}>Hủy</Button>
-                    <Button
-                      type="submit"
-                      className="bg-orange-500 hover:bg-orange-600 text-white min-w-[120px]"
+                    <Button 
+                      type="submit" 
+                      className="bg-red-600 hover:bg-red-700 text-white min-w-[120px]"
                       isLoading={submitting}
-                      disabled={availableStock !== null && Number(formData.quantity) > availableStock}
+                      disabled={availableStock !== null && Number(formData.quantity) > availableStock} 
                       title={availableStock !== null && Number(formData.quantity) > availableStock ? `Không đủ tồn kho (tồn: ${availableStock})` : undefined}
                     >
                       {isEditing ? 'Cập nhật' : 'Lưu phiếu xuất'}

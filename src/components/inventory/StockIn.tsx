@@ -513,7 +513,11 @@ export const StockIn = ({ user, onBack, initialStatus, initialAction, addToast }
             >
               <div className="bg-blue-500 p-6 text-white flex items-center justify-between rounded-t-[2rem] md:rounded-t-[2.5rem] flex-shrink-0 relative">
                 <div className="flex items-center gap-3">
-                  <div className="p-2 bg-white/20 rounded-xl">
+                  <div 
+                    className="p-2 bg-white/20 rounded-xl cursor-pointer hover:bg-white/30 transition-all active:scale-95"
+                    onClick={() => setShowModal(false)}
+                    title="Đóng (Bấm icon hoặc X)"
+                  >
                     <ArrowDownCircle size={24} />
                   </div>
                   <h3 className="font-bold text-lg">{isEditing ? 'Sửa phiếu nhập kho' : 'Lập phiếu nhập kho'}</h3>

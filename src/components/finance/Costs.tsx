@@ -592,7 +592,11 @@ export const Costs = ({ user, onBack, addToast, initialAction }: {
             >
               <div className="bg-primary p-6 text-white flex items-center justify-between rounded-t-[2rem] md:rounded-t-[2.5rem] flex-shrink-0 relative">
                 <div className="flex items-center gap-3">
-                  <div className="p-2 bg-white/20 rounded-xl">
+                  <div 
+                    className="p-2 bg-white/20 rounded-xl cursor-pointer hover:bg-white/30 transition-all active:scale-95"
+                    onClick={() => setShowModal(false)}
+                    title="Đóng"
+                  >
                     <Wallet size={24} />
                   </div>
                   <div>
@@ -600,6 +604,12 @@ export const Costs = ({ user, onBack, addToast, initialAction }: {
                     <p className="text-xs text-white/70">Vui lòng điền đầy đủ thông tin chi phí</p>
                   </div>
                 </div>
+                <button 
+                  onClick={() => setShowModal(false)}
+                  className="p-2 hover:bg-white/20 rounded-xl transition-all"
+                >
+                  <X size={24} />
+                </button>
               </div>
 
               <div className="flex-1 overflow-y-auto p-6 custom-scrollbar">
@@ -719,14 +729,14 @@ export const Costs = ({ user, onBack, addToast, initialAction }: {
                   </div>
 
                   <div className="mt-8 flex justify-end gap-3">
-                    <Button variant="outline" onClick={() => setShowModal(false)} disabled={submitting}>Hủy</Button>
+                    <Button variant="outline" onClick={() => setShowModal(false)}>Hủy</Button>
                     <Button 
                       type="submit" 
-                      variant="primary" 
-                      isLoading={submitting}
+                      variant="primary"
                       className="min-w-[120px]"
+                      isLoading={submitting}
                     >
-                      Lưu chi phí
+                      Lưu bản ghi
                     </Button>
                   </div>
                 </form>

@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { X, ChevronDown, Plus } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import { isUUID } from '../../utils/helpers';
+import { isUUID } from '@/utils/helpers';
 
 export const CreatableSelect = ({
   label,

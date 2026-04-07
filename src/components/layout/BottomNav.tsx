@@ -1,5 +1,5 @@
 import { Home, ClipboardCheck, CalendarCheck, UserCircle, ArrowDownCircle, ArrowUpCircle, ArrowLeftRight, FileText } from 'lucide-react';
-import { Employee } from '../../types';
+import { Employee } from '@/types';
 
 export const BottomNav = ({ currentPage, onNavigate, user, pendingCount }: { currentPage: string, onNavigate: (page: string) => void, user: Employee, pendingCount: number }) => {
   const navItems = (user.role === 'Admin' || user.role === 'Admin App')

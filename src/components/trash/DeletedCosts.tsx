@@ -1,10 +1,10 @@
 import { useState, useEffect } from 'react';
 import { Wallet, RefreshCw, Trash2, AlertTriangle, X, Check } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import { supabase } from '../../supabaseClient';
+import { supabase } from '@/lib/supabase';
 import { PageBreadcrumb } from '../shared/PageBreadcrumb';
 import { ConfirmModal } from '../shared/ConfirmModal';
-import { formatCurrency } from '../../utils/format';
+import { formatCurrency } from '@/utils/format';
 
 export const DeletedCosts = ({ onBack, addToast }: { onBack: () => void, addToast: (msg: string, type?: 'success' | 'error' | 'info') => void }) => {
   const [costs, setCosts] = useState<any[]>([]);

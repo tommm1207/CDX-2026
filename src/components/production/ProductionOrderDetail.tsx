@@ -1,14 +1,14 @@
 import { useState, useEffect, FormEvent } from 'react';
 import { ClipboardList, Plus, Trash2, X, Save, CheckCircle2, AlertTriangle, Package, Warehouse, Calendar, Info, Settings, Calculator } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import { supabase } from '../../supabaseClient';
-import { Employee, Material, BOMConfig, BOMItem, ProductionOrder } from '../../types';
+import { supabase } from '@/lib/supabase';
+import { Employee, Material, BOMConfig, BOMItem, ProductionOrder } from '@/types';
 import { PageBreadcrumb } from '../shared/PageBreadcrumb';
 import { ToastType } from '../shared/Toast';
 import { CustomCombobox } from '../shared/CustomCombobox';
-import { formatNumber } from '../../utils/format';
-import { getAvailableStock, isActiveWarehouse } from '../../utils/inventory';
-import { getAllowedWarehouses } from '../../utils/helpers';
+import { formatNumber } from '@/utils/format';
+import { getAvailableStock, isActiveWarehouse } from '@/utils/inventory';
+import { getAllowedWarehouses } from '@/utils/helpers';
 
 export const ProductionOrderDetail = ({ user, orderId, onBack, addToast }: {
   user: Employee,

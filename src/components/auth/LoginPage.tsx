@@ -1,10 +1,10 @@
 import { useState, useEffect, FormEvent } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { User as UserIcon, Lock, AlertCircle, RefreshCw, ArrowRight, Download, X, ArrowUpCircle, Menu as MenuIcon } from 'lucide-react';
-import { supabase } from '../../supabaseClient';
-import { Employee } from '../../types';
-import { isUUID } from '../../utils/helpers';
-import { LOGO_URL } from '../../constants/options';
+import { supabase } from '@/lib/supabase';
+import { Employee } from '@/types';
+import { isUUID } from '@/utils/helpers';
+import { LOGO_URL } from '@/constants/options';
 
 export const LoginPage = ({ onLogin }: { onLogin: (user: Employee) => void }) => {
   const [employeeId, setEmployeeId] = useState('');

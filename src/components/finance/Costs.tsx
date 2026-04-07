@@ -2,17 +2,17 @@ import { useState, useEffect, FormEvent, useRef, useMemo } from 'react';
 import { Search, Plus, Filter, PackageOpen, Download, Upload, AlertCircle, Edit, Trash2, Settings, ArrowRight, ArrowLeft, MoreVertical, Wallet, XCircle, CheckCircle, Calculator, CreditCard, RefreshCw, X, Check, ChevronDown, FileSpreadsheet, ArrowDownCircle, ArrowUpCircle, Info } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { utils, writeFile } from 'xlsx';
-import { supabase } from '../../supabaseClient';
-import { Employee } from '../../types';
+import { supabase } from '@/lib/supabase';
+import { Employee } from '@/types';
 import { PageBreadcrumb } from '../shared/PageBreadcrumb';
 import { NumericInput } from '../shared/NumericInput';
 import { CreatableSelect } from '../shared/CreatableSelect';
 import { ToastType } from '../shared/Toast';
 import { FAB } from '../shared/FAB';
 import { ExcelButton } from '../shared/ExcelButton';
-import { formatCurrency, formatNumber, formatDate } from '../../utils/format';
-import { isUUID, getAllowedWarehouses } from '../../utils/helpers';
-import { isActiveWarehouse } from '../../utils/inventory';
+import { formatCurrency, formatNumber, formatDate } from '@/utils/format';
+import { isUUID, getAllowedWarehouses } from '@/utils/helpers';
+import { isActiveWarehouse } from '@/utils/inventory';
 import { Button } from '../shared/Button';
 
 export const Costs = ({ user, onBack, addToast, initialAction }: { 

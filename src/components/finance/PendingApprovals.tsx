@@ -1,11 +1,11 @@
 import { useState, useEffect } from 'react';
 import { ClipboardCheck, ArrowDownCircle, ArrowUpCircle, ArrowLeftRight, Check, X, RefreshCw, AlertCircle, Wallet, ChevronRight, Trash2, Edit, ChevronDown } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import { supabase } from '../../supabaseClient';
-import { Employee } from '../../types';
+import { supabase } from '@/lib/supabase';
+import { Employee } from '@/types';
 import { PageBreadcrumb } from '../shared/PageBreadcrumb';
 import { ToastType } from '../shared/Toast';
-import { formatDate, formatNumber, formatCurrency } from '../../utils/format';
+import { formatDate, formatNumber, formatCurrency } from '@/utils/format';
 import { Button } from '../shared/Button';
 
 interface ConfirmState { slip: any; action: 'approve' | 'reject' }

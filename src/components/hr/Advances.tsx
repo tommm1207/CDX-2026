@@ -1,12 +1,12 @@
 import { useState, useEffect, FormEvent } from 'react';
 import { Plus, X, Edit2, Trash2, AlertTriangle, Wallet } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import { supabase } from '../../supabaseClient';
-import { Employee } from '../../types';
+import { supabase } from '@/lib/supabase';
+import { Employee } from '@/types';
 import { PageBreadcrumb } from '../shared/PageBreadcrumb';
 import { NumericInput } from '../shared/NumericInput';
 import { CreatableSelect } from '../shared/CreatableSelect';
-import { formatDate, formatCurrency } from '../../utils/format';
+import { formatDate, formatCurrency } from '@/utils/format';
 import { FAB } from '../shared/FAB';
 
 export const Advances = ({ user, onBack, addToast, initialAction }: { user: Employee, onBack?: () => void, addToast?: (msg: string, type?: any) => void, initialAction?: string }) => {

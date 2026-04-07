@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
-import { supabase } from '../supabaseClient';
-import { isActiveWarehouse } from '../utils/inventory';
-import { getAllowedWarehouses } from '../utils/helpers';
+import { supabase } from '@/lib/supabase';
+import { isActiveWarehouse } from '@/utils/inventory';
+import { getAllowedWarehouses } from '@/utils/helpers';
 
 export const useInventoryData = (dataViewPermission?: string) => {
   const [warehouses, setWarehouses] = useState<any[]>([]);

@@ -19,9 +19,9 @@ import {
   Layers,
   Banknote
 } from 'lucide-react';
-import { supabase } from '../../supabaseClient';
-import { Employee } from '../../types';
-import { formatCurrency, formatNumber } from '../../utils/format';
+import { supabase } from '@/lib/supabase';
+import { Employee } from '@/types';
+import { formatCurrency, formatNumber } from '@/utils/format';
 import { AttendanceTable } from '../hr/AttendanceTable';
 import { NumericInput } from '../shared/NumericInput';
 import { ToastType } from '../shared/Toast';

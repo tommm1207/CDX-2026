@@ -1,11 +1,11 @@
 import { useState, useEffect } from 'react';
 import { Archive, RefreshCw, Trash2, AlertTriangle, X, Check } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import { supabase } from '../../supabaseClient';
+import { supabase } from '@/lib/supabase';
 import { PageBreadcrumb } from '../shared/PageBreadcrumb';
 import { ConfirmModal } from '../shared/ConfirmModal';
 import { ToastType } from '../shared/Toast';
-import { formatDate, formatNumber } from '../../utils/format';
+import { formatDate, formatNumber } from '@/utils/format';
 
 export const DeletedSlips = ({ onBack, addToast }: { 
   onBack: () => void,

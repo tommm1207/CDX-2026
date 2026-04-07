@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
 import { CalendarCheck, Plus, X, Users, Check, RefreshCw } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import { supabase } from '../../supabaseClient';
-import { Employee } from '../../types';
+import { supabase } from '@/lib/supabase';
+import { Employee } from '@/types';
 import { PageBreadcrumb } from '../shared/PageBreadcrumb';
 import { NumericInput } from '../shared/NumericInput';
 import { ToastType } from '../shared/Toast';

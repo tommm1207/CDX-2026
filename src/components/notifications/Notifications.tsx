@@ -1,8 +1,8 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Bell, CheckCircle, Trash2, Clock, RefreshCw } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import { supabase } from '../../supabaseClient';
-import { Employee } from '../../types';
+import { supabase } from '@/lib/supabase';
+import { Employee } from '@/types';
 import { PageBreadcrumb } from '../shared/PageBreadcrumb';
 import { ToastType } from '../shared/Toast';
 

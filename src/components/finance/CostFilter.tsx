@@ -1,15 +1,15 @@
 import { useState, useEffect } from 'react';
 import { Filter, RotateCcw, Search, Download, Printer, User, Warehouse, FileText, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import { supabase } from '../../supabaseClient';
-import { Employee } from '../../types';
+import { supabase } from '@/lib/supabase';
+import { Employee } from '@/types';
 import { PageBreadcrumb } from '../shared/PageBreadcrumb';
-import { isActiveWarehouse } from '../../utils/inventory';
+import { isActiveWarehouse } from '@/utils/inventory';
 import { CustomCombobox } from '../shared/CustomCombobox';
 import { DetailItem } from '../shared/DetailItem';
 import { ToastType } from '../shared/Toast';
-import { formatCurrency, formatDate, numberToWords } from '../../utils/format';
-import { isUUID } from '../../utils/helpers';
+import { formatCurrency, formatDate, numberToWords } from '@/utils/format';
+import { isUUID } from '@/utils/helpers';
 
 export const CostFilter = ({ user, onBack, addToast }: { 
   user: Employee, 

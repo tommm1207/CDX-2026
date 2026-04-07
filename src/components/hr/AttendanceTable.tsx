@@ -1,6 +1,6 @@
 import { Plus } from 'lucide-react';
-import { Employee } from '../../types';
-import { getDayOfWeekStr, convertSolarToLunar } from '../../utils/lunar';
+import { Employee } from '@/types';
+import { getDayOfWeekStr, convertSolarToLunar } from '@/utils/lunar';
 
 interface AttendanceTableProps {
   employees: Employee[];

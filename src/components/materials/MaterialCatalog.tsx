@@ -1,10 +1,10 @@
 import { useState, useEffect, FormEvent, ChangeEvent } from 'react';
 import { Package, Plus, Search, Edit, Trash2, X, Image as ImageIcon, RefreshCw } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import { supabase } from '../../supabaseClient';
-import { Employee } from '../../types';
+import { supabase } from '@/lib/supabase';
+import { Employee } from '@/types';
 import { PageBreadcrumb } from '../shared/PageBreadcrumb';
-import { isActiveWarehouse } from '../../utils/inventory';
+import { isActiveWarehouse } from '@/utils/inventory';
 import { CreatableSelect } from '../shared/CreatableSelect';
 import { ToastType } from '../shared/Toast';
 import { Button } from '../shared/Button';

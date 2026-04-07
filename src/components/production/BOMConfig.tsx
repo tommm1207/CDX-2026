@@ -1,8 +1,8 @@
 import { useState, useEffect, FormEvent } from 'react';
 import { Settings, Plus, Edit, Trash2, X, Package, Save, Calculator } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import { supabase } from '../../supabaseClient';
-import { Employee, Material, BOMConfig as IBOMConfig, BOMItem } from '../../types';
+import { supabase } from '@/lib/supabase';
+import { Employee, Material, BOMConfig as IBOMConfig, BOMItem } from '@/types';
 import { PageBreadcrumb } from '../shared/PageBreadcrumb';
 import { ToastType } from '../shared/Toast';
 import { CustomCombobox } from '../shared/CustomCombobox';

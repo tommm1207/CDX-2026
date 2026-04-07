@@ -1,4 +1,4 @@
-import { supabase } from '../supabaseClient';
+import { supabase } from '@/lib/supabase';
 
 /**
  * Tổng nhập kho của 1 mặt hàng tại 1 kho trong khoảng [startDate, endDate].

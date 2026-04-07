@@ -467,8 +467,6 @@ export const StockOut = ({ user, onBack, addToast, initialAction }: {
                     </div>
                   </div>
                 ))}
-              </div>
-              <div className="p-4 border-t border-gray-100 bg-gray-50 space-y-2">
                 {selectedSlip.status !== 'Đã xóa' && (user.role === 'Admin' || user.role === 'Admin App') && selectedSlip.status === 'Chờ duyệt' && (
                   <div className="grid grid-cols-2 gap-2">
                     <Button fullWidth variant="danger" icon={X} onClick={() => handleApprove(selectedSlip.id, 'Từ chối')}>Từ chối</Button>
@@ -491,25 +489,30 @@ export const StockOut = ({ user, onBack, addToast, initialAction }: {
       <AnimatePresence>
         {showModal && (
           <div 
-            className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm h-[100dvh] w-full"
+            className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/50 backdrop-blur-md overflow-hidden"
             onClick={() => setShowModal(false)}
           >
             <motion.div
-              initial={{ opacity: 0, y: 100 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: 100 }}
+              initial={{ opacity: 0, scale: 0.9, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.9, y: 20 }}
               transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-              className="bg-white rounded-t-[2.5rem] md:rounded-3xl shadow-2xl w-full max-w-4xl h-auto max-h-[95dvh] md:max-h-[90dvh] flex flex-col mt-auto md:mt-0 overflow-hidden"
+              className="bg-white rounded-[2rem] md:rounded-[2.5rem] shadow-2xl w-full max-w-4xl max-h-[90dvh] flex flex-col overflow-hidden m-4"
               onClick={(e) => e.stopPropagation()}
             >
-              <div className="bg-orange-500 p-6 pt-8 md:pt-6 text-white flex items-center justify-between rounded-t-[2.5rem] md:rounded-t-3xl flex-shrink-0 relative">
-                <div className="absolute top-2 left-1/2 -translate-x-1/2 w-12 h-1.5 bg-white/30 rounded-full md:hidden" />
+              <div className="bg-orange-500 p-6 text-white flex items-center justify-between rounded-t-[2rem] md:rounded-t-[2.5rem] flex-shrink-0 relative">
                 <div className="flex items-center gap-3">
-                  <button onClick={() => setShowModal(false)} className="p-2 bg-white/20 hover:bg-white/30 rounded-xl transition-colors cursor-pointer">
+                  <div className="p-2 bg-white/20 rounded-xl">
                     <ArrowDownCircle size={24} />
-                  </button>
+                  </div>
                   <h3 className="font-bold text-lg">{isEditing ? 'Sửa phiếu xuất kho' : 'Lập phiếu xuất kho'}</h3>
                 </div>
+                <button 
+                  onClick={() => setShowModal(false)}
+                  className="p-2 hover:bg-white/20 rounded-xl transition-all"
+                >
+                  <X size={24} />
+                </button>
               </div>
 
               <div className="flex-1 overflow-y-auto p-6 custom-scrollbar">

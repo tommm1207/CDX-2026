@@ -16,7 +16,27 @@ import { AppRouter } from '@/routes/AppRouter';
 import { LoginPage } from '@/components/auth/LoginPage';
 
 export default function App() {
-  const [user, setUser] = useState<Employee | null>(null);
+  const [user, setUser] = useState<Employee | null>(() => {
+    const saved = localStorage.getItem('cdx_user');
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch (e) {
+        return null;
+      }
+    }
+    return null;
+  });
+
+  const handleLogin = useCallback((u: Employee) => {
+    setUser(u);
+    localStorage.setItem('cdx_user', JSON.stringify(u));
+  }, []);
+
+  const handleLogout = useCallback(() => {
+    setUser(null);
+    localStorage.removeItem('cdx_user');
+  }, []);
   
   // Check for missing configuration
   const isConfigMissing = !import.meta.env.VITE_SUPABASE_URL || !import.meta.env.VITE_SUPABASE_ANON_KEY;
@@ -147,7 +167,7 @@ export default function App() {
   }
 
   if (!user) {
-    return <LoginPage onLogin={setUser} />;
+    return <LoginPage onLogin={handleLogin} />;
   }
 
   return (
@@ -159,7 +179,7 @@ export default function App() {
         refreshKey={refreshKey}
         filteredMenuGroups={filteredMenuGroups}
         onNavigate={navigateTo}
-        onLogout={() => setUser(null)}
+        onLogout={handleLogout}
         onRefresh={() => { fetchPendingCount(); setRefreshKey(prev => prev + 1); }}
       >
         <AppRouter 

@@ -152,7 +152,7 @@ export const MainLayout = ({
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               onClick={() => setIsSidebarOpen(false)}
-              className="fixed inset-x-0 bottom-0 bg-black/20 backdrop-blur-sm z-[60] lg:hidden"
+              className="fixed inset-x-0 bottom-0 bg-black/20 backdrop-blur-sm z-[80] lg:hidden"
               style={{ top: 'calc(3.5rem + env(safe-area-inset-top))' }}
             />
           )}
@@ -165,7 +165,7 @@ export const MainLayout = ({
               animate={{ x: 0, opacity: 1 }}
               exit={{ x: -280, opacity: 0 }}
               transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-               className="bg-white border-r border-gray-200 overflow-y-auto flex-shrink-0 z-[60] lg:z-30 fixed lg:relative lg:top-0 h-[calc(100vh-3.5rem-env(safe-area-inset-top))] lg:h-[calc(100vh-3.5rem)] w-[280px] shadow-2xl lg:shadow-none custom-scrollbar"
+               className="bg-white border-r border-gray-200 overflow-y-auto flex-shrink-0 z-[90] lg:z-30 fixed lg:relative lg:top-0 h-[calc(100vh-3.5rem-env(safe-area-inset-top))] lg:h-[calc(100vh-3.5rem)] w-[280px] shadow-2xl lg:shadow-none custom-scrollbar"
                style={{ top: window.innerWidth < 1024 ? 'calc(3.5rem + env(safe-area-inset-top))' : undefined }}
             >
               <div className="p-4 space-y-6 pb-44 lg:pb-4">

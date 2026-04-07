@@ -282,7 +282,7 @@ export const ProductionOrderDetail = ({ user, orderId, onBack, addToast }: {
 
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <div className="p-3 bg-primary text-white rounded-2xl shadow-lg shadow-primary/20">
+          <div className="p-3 bg-red-600 text-white rounded-2xl shadow-lg shadow-red-600/20">
             <ClipboardList size={24} />
           </div>
           <div>
@@ -325,7 +325,7 @@ export const ProductionOrderDetail = ({ user, orderId, onBack, addToast }: {
             <button
               onClick={handleApprove}
               disabled={submitting}
-              className="flex items-center gap-2 px-6 py-2 bg-primary text-white rounded-xl text-sm font-bold hover:bg-primary-hover transition-colors shadow-lg shadow-primary/20"
+              className="flex items-center gap-2 px-6 py-2 bg-red-600 text-white rounded-xl text-sm font-bold hover:bg-red-700 transition-colors shadow-lg shadow-red-600/20"
             >
               <CheckCircle2 size={18} /> Duyệt & Hoàn thành
             </button>
@@ -372,7 +372,7 @@ export const ProductionOrderDetail = ({ user, orderId, onBack, addToast }: {
                       const val = parseFloat(e.target.value) || 0;
                       setOrder({ ...order, quantity: val });
                     }}
-                    className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20 px-4"
+                    className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-red-600/20 px-4"
                   />
                 </div>
               </div>
@@ -408,7 +408,7 @@ export const ProductionOrderDetail = ({ user, orderId, onBack, addToast }: {
                     type="date"
                     value={order.planned_date}
                     onChange={e => setOrder({ ...order, planned_date: e.target.value })}
-                    className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20 bg-white"
+                    className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-red-600/20 bg-white"
                   />
                 </div>
               </div>
@@ -421,7 +421,7 @@ export const ProductionOrderDetail = ({ user, orderId, onBack, addToast }: {
                 rows={2}
                 value={order.notes || ''}
                 onChange={e => setOrder({ ...order, notes: e.target.value })}
-                className="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20 resize-none"
+                className="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-red-600/20 resize-none"
                 placeholder="Thông tin bổ sung..."
               />
             </div>
@@ -431,7 +431,7 @@ export const ProductionOrderDetail = ({ user, orderId, onBack, addToast }: {
           <div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
             <div className="p-4 border-b border-gray-50 bg-gray-50/50 flex items-center justify-between">
               <h3 className="text-sm font-bold text-gray-700 uppercase tracking-wider flex items-center gap-2">
-                <Package size={16} className="text-primary" /> Chi tiết tiêu hao nguyên liệu
+                <Package size={16} className="text-red-600" /> Chi tiết tiêu hao nguyên liệu
               </h3>
               <div className="text-[10px] text-gray-400 italic">
                 (Tự động tính dựa trên định mức)
@@ -461,7 +461,7 @@ export const ProductionOrderDetail = ({ user, orderId, onBack, addToast }: {
                         </td>
                         <td className="px-4 py-3 text-xs text-right text-gray-600">{item.quantity_per_unit}</td>
                         <td className="px-4 py-3 text-[10px] text-center text-gray-500">{item.unit}</td>
-                        <td className="px-4 py-3 text-sm font-bold text-right text-primary">{formatNumber(totalNeeded)}</td>
+                        <td className="px-4 py-3 text-sm font-bold text-right text-red-600">{formatNumber(totalNeeded)}</td>
                         <td className="px-4 py-3 text-xs text-right font-medium text-gray-700">{formatNumber(item.available || 0)}</td>
                         <td className="px-4 py-3">
                           <div className="flex justify-center">
@@ -493,7 +493,7 @@ export const ProductionOrderDetail = ({ user, orderId, onBack, addToast }: {
         </div>
 
         <div className="space-y-6 text-sm font-medium text-gray-800">
-          <div className="bg-gradient-to-br from-primary to-primary-hover rounded-3xl p-6 text-white shadow-xl shadow-primary/20">
+          <div className="bg-gradient-to-br from-red-600 to-red-700 rounded-3xl p-6 text-white shadow-xl shadow-red-600/20">
             <h3 className="text-[10px] font-black uppercase tracking-widest opacity-70 mb-4">Tóm tắt sản xuất</h3>
             <div className="space-y-4">
               <div className="flex justify-between items-end border-b border-white/20 pb-2">

@@ -579,7 +579,7 @@ export const Costs = ({ user, onBack, addToast, initialAction }: {
       <AnimatePresence>
         {showModal && (
           <div 
-            className="fixed inset-0 z-[120] flex md:items-center justify-center p-0 md:p-4 bg-black/40 backdrop-blur-sm overflow-y-auto"
+            className="fixed inset-0 z-[100] flex md:items-center justify-center p-0 md:p-4 bg-black/40 backdrop-blur-sm overflow-y-auto"
             onClick={() => setShowModal(false)}
           >
             <motion.div
@@ -589,7 +589,7 @@ export const Costs = ({ user, onBack, addToast, initialAction }: {
               className="bg-white rounded-none md:rounded-3xl shadow-2xl w-full max-w-2xl h-full md:h-auto md:max-h-[90vh] flex flex-col mt-auto md:mt-0"
               onClick={(e) => e.stopPropagation()}
             >
-              <div className="bg-primary p-6 pt-[calc(1.5rem+env(safe-area-inset-top))] md:pt-6 text-white flex items-center justify-between rounded-none md:rounded-t-3xl flex-shrink-0">
+              <div className="bg-red-600 p-6 pt-[calc(1.5rem+env(safe-area-inset-top))] md:pt-6 text-white flex items-center justify-between rounded-none md:rounded-t-3xl flex-shrink-0">
                 <div className="flex items-center gap-3">
                   <button onClick={() => setShowModal(false)} className="p-2 bg-white/20 hover:bg-white/30 rounded-xl transition-colors cursor-pointer">
                     <Wallet size={24} />
@@ -634,7 +634,7 @@ export const Costs = ({ user, onBack, addToast, initialAction }: {
                             required
                             value={formData.date}
                             onChange={(e) => setFormData({ ...formData, date: e.target.value })}
-                            className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20"
+                            className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-red-600/20"
                           />
                         </div>
                         <div className="space-y-1">
@@ -701,7 +701,7 @@ export const Costs = ({ user, onBack, addToast, initialAction }: {
                         required
                         value={formData.total_amount}
                         onChange={(val) => setFormData({ ...formData, total_amount: val })}
-                        inputClassName="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20 font-bold text-primary"
+                        inputClassName="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-red-600/20 font-bold text-red-600"
                       />
 
                       <div className="space-y-1">
@@ -711,7 +711,7 @@ export const Costs = ({ user, onBack, addToast, initialAction }: {
                           placeholder="Ghi chú thêm..."
                           value={formData.notes}
                           onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-                          className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20 resize-none"
+                          className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-red-600/20 resize-none"
                         />
                       </div>
                     </div>
@@ -721,7 +721,7 @@ export const Costs = ({ user, onBack, addToast, initialAction }: {
                     <Button variant="outline" onClick={() => setShowModal(false)} disabled={submitting}>Hủy</Button>
                     <Button 
                       type="submit" 
-                      variant="primary" 
+                      variant="danger" 
                       isLoading={submitting}
                       className="min-w-[120px]"
                     >

@@ -413,7 +413,7 @@ export const Transfer = ({ user, onBack, addToast, initialAction }: {
       <AnimatePresence>
         {showModal && (
           <div 
-            className="fixed inset-0 z-[110] flex md:items-center justify-center p-0 md:p-4 bg-black/40 backdrop-blur-sm h-[100dvh] w-full"
+            className="fixed inset-0 z-[100] flex md:items-center justify-center p-0 md:p-4 bg-black/40 backdrop-blur-sm overflow-y-auto"
             onClick={() => setShowModal(false)}
           >
             <motion.div
@@ -423,7 +423,7 @@ export const Transfer = ({ user, onBack, addToast, initialAction }: {
               className="bg-white rounded-none md:rounded-3xl shadow-2xl w-full max-w-2xl h-full md:h-auto md:max-h-[90dvh] flex flex-col mt-auto md:mt-0"
               onClick={(e) => e.stopPropagation()}
             >
-              <div className="bg-orange-500 p-6 pt-[calc(1.5rem+env(safe-area-inset-top))] md:pt-6 text-white flex items-center justify-between rounded-none md:rounded-t-3xl flex-shrink-0">
+              <div className="bg-red-600 p-6 pt-[calc(1.5rem+env(safe-area-inset-top))] md:pt-6 text-white flex items-center justify-between rounded-none md:rounded-t-3xl flex-shrink-0">
                 <div className="flex items-center gap-3">
                   <button onClick={() => setShowModal(false)} className="p-2 bg-white/20 hover:bg-white/30 rounded-xl transition-colors cursor-pointer">
                     <ArrowLeftRight size={24} />
@@ -442,7 +442,7 @@ export const Transfer = ({ user, onBack, addToast, initialAction }: {
                         required 
                         value={formData.date} 
                         onChange={(e) => setFormData({ ...formData, date: e.target.value })} 
-                        className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-orange-500/20" 
+                        className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-red-600/20" 
                       />
                       <p className="text-[10px] text-gray-400">Tồn kho sẽ được kiểm tra tại ngày này</p>
                     </div>
@@ -523,19 +523,21 @@ export const Transfer = ({ user, onBack, addToast, initialAction }: {
                     </div>
                     <div className="space-y-1">
                       <label className="text-[10px] font-bold text-gray-400 uppercase">Ghi chú</label>
-                      <textarea rows={3} value={formData.notes} onChange={(e) => setFormData({ ...formData, notes: e.target.value })} className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-orange-500/20 resize-none" />
+                      <textarea rows={3} value={formData.notes} onChange={(e) => setFormData({ ...formData, notes: e.target.value })} className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-red-600/20 resize-none" />
                     </div>
                   </div>
                   <div className="md:col-span-2 flex justify-end gap-3 mt-4">
-                    <button type="button" onClick={() => setShowModal(false)} className="px-6 py-2 rounded-xl text-sm font-bold text-gray-500 hover:bg-gray-100 transition-colors">Hủy</button>
-                    <button 
+                    <Button variant="outline" onClick={() => setShowModal(false)}>Hủy</Button>
+                    <Button 
                       type="submit" 
-                      disabled={submitting || (availableStock !== null && Number(formData.quantity) > availableStock)} 
+                      variant="danger"
+                      isLoading={submitting}
+                      disabled={availableStock !== null && Number(formData.quantity) > availableStock} 
                       title={availableStock !== null && Number(formData.quantity) > availableStock ? `Không đủ tồn kho (tồn: ${availableStock})` : undefined}
-                      className="px-8 py-2 rounded-xl bg-orange-500 text-white text-sm font-bold hover:bg-orange-600 transition-colors shadow-lg shadow-orange-500/20 disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="min-w-[120px]"
                     >
-                      {submitting ? 'Đang lưu...' : (isEditing ? 'Cập nhật' : 'Lưu phiếu chuyển')}
-                    </button>
+                      {isEditing ? 'Cập nhật' : 'Lưu phiếu chuyển'}
+                    </Button>
                   </div>
                 </form>
               </div>

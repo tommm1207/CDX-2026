@@ -11,7 +11,7 @@ export default defineConfig(({mode}) => {
       react(), 
       tailwindcss(),
       VitePWA({
-        registerType: 'autoUpdate',
+        registerType: 'prompt',
         includeAssets: ['logo.png'],
         workbox: {
           maximumFileSizeToCacheInBytes: 3 * 1024 * 1024, // 3MB (after splitting, chunks are smaller)

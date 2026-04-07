@@ -504,13 +504,15 @@ export const StockIn = ({ user, onBack, initialStatus, initialAction, addToast }
             onClick={() => setShowModal(false)}
           >
             <motion.div
-              initial={{ opacity: 0, scale: 0.95, y: 16 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.95, y: 16 }}
-              className="bg-white rounded-none md:rounded-3xl shadow-2xl w-full max-w-2xl h-full md:h-auto md:max-h-[90dvh] flex flex-col mt-auto md:mt-0"
+              initial={{ opacity: 0, y: 100 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 100 }}
+              transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+              className="bg-white rounded-t-[2.5rem] md:rounded-3xl shadow-2xl w-full max-w-2xl h-auto max-h-[95dvh] md:max-h-[90dvh] flex flex-col mt-auto md:mt-0 overflow-hidden"
               onClick={(e) => e.stopPropagation()}
             >
-              <div className="bg-primary p-6 pt-[calc(1.5rem+env(safe-area-inset-top))] md:pt-6 text-white flex items-center justify-between rounded-none md:rounded-t-3xl flex-shrink-0">
+              <div className="bg-blue-500 p-6 pt-8 md:pt-6 text-white flex items-center justify-between rounded-t-[2.5rem] md:rounded-t-3xl flex-shrink-0 relative">
+                <div className="absolute top-2 left-1/2 -translate-x-1/2 w-12 h-1.5 bg-white/30 rounded-full md:hidden" />
                 <div className="flex items-center gap-3">
                   <button onClick={() => setShowModal(false)} className="p-2 bg-white/20 hover:bg-white/30 rounded-xl transition-colors cursor-pointer">
                     <ArrowDownCircle size={24} />
@@ -529,7 +531,7 @@ export const StockIn = ({ user, onBack, initialStatus, initialAction, addToast }
                         required 
                         value={formData.date} 
                         onChange={(e) => setFormData({ ...formData, date: e.target.value })} 
-                        className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20" 
+                        className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-blue-500/20" 
                       />
                     </div>
 
@@ -575,7 +577,7 @@ export const StockIn = ({ user, onBack, initialStatus, initialAction, addToast }
 
                     <div className="space-y-1">
                       <label className="text-[10px] font-bold text-gray-400 uppercase">Thành tiền</label>
-                      <div className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm text-center bg-gray-50 outline-none font-bold text-primary">
+                      <div className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm text-center bg-gray-50 outline-none font-bold text-blue-600">
                         {formatCurrency(formData.quantity * formData.unit_price)}
                       </div>
                     </div>
@@ -594,7 +596,7 @@ export const StockIn = ({ user, onBack, initialStatus, initialAction, addToast }
 
                     <div className="space-y-1">
                       <label className="text-[10px] font-bold text-gray-400 uppercase">Đơn vị tính</label>
-                      <input type="text" value={formData.unit} onChange={(e) => setFormData({ ...formData, unit: e.target.value })} className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20" />
+                      <input type="text" value={formData.unit} onChange={(e) => setFormData({ ...formData, unit: e.target.value })} className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-blue-500/20" />
                     </div>
 
                     <NumericInput
@@ -607,7 +609,7 @@ export const StockIn = ({ user, onBack, initialStatus, initialAction, addToast }
 
                     <div className="space-y-1">
                       <label className="text-[10px] font-bold text-gray-400 uppercase">Diễn giải</label>
-                      <textarea rows={2} value={formData.notes} onChange={(e) => setFormData({ ...formData, notes: e.target.value })} className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20 resize-none" />
+                      <textarea rows={2} value={formData.notes} onChange={(e) => setFormData({ ...formData, notes: e.target.value })} className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-blue-500/20 resize-none" />
                     </div>
                   </div>
 
@@ -615,9 +617,8 @@ export const StockIn = ({ user, onBack, initialStatus, initialAction, addToast }
                     <Button variant="outline" onClick={() => setShowModal(false)}>Hủy</Button>
                     <Button 
                       type="submit" 
-                      variant="primary" 
+                      className="bg-blue-500 hover:bg-blue-600 text-white min-w-[120px]"
                       isLoading={submitting}
-                      className="min-w-[120px]"
                     >
                       Lưu phiếu nhập
                     </Button>

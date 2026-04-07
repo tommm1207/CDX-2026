@@ -11,6 +11,7 @@ import { ToastContainer, ToastMessage, ToastType } from '@/components/shared/Toa
 // Layout & Router
 import { MainLayout } from '@/layouts/MainLayout';
 import { AppRouter } from '@/routes/AppRouter';
+import { ReloadPrompt } from '@/components/shared/ReloadPrompt';
 
 // Auth
 import { LoginPage } from '@/components/auth/LoginPage';
@@ -194,6 +195,7 @@ export default function App() {
         />
       </MainLayout>
       <ToastContainer toasts={toasts} removeToast={removeToast} />
+      <ReloadPrompt />
     </>
   );
 }

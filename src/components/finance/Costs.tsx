@@ -579,28 +579,37 @@ export const Costs = ({ user, onBack, addToast, initialAction }: {
       <AnimatePresence>
         {showModal && (
           <div 
-            className="fixed inset-0 z-[100] flex md:items-center justify-center p-0 md:p-4 bg-black/40 backdrop-blur-sm overflow-y-auto"
+            className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/50 backdrop-blur-md"
             onClick={() => setShowModal(false)}
           >
             <motion.div
-              initial={{ opacity: 0, y: 100 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: 100 }}
+              initial={{ opacity: 0, scale: 0.9, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.9, y: 20 }}
               transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-              className="bg-white rounded-t-[2.5rem] md:rounded-3xl shadow-2xl w-full max-w-2xl h-auto max-h-[92dvh] md:max-h-[85dvh] flex flex-col mt-auto md:mt-0 overflow-hidden"
+              className="bg-white rounded-[2rem] md:rounded-[2.5rem] shadow-2xl w-full max-w-2xl max-h-[90dvh] flex flex-col overflow-hidden m-4"
               onClick={(e) => e.stopPropagation()}
             >
-              <div className="bg-primary p-6 pt-8 md:pt-6 text-white flex items-center justify-between rounded-t-[2.5rem] md:rounded-t-3xl flex-shrink-0 relative">
-                <div className="absolute top-2 left-1/2 -translate-x-1/2 w-12 h-1.5 bg-white/30 rounded-full md:hidden" />
+              <div className="bg-primary p-6 text-white flex items-center justify-between rounded-t-[2rem] md:rounded-t-[2.5rem] flex-shrink-0 relative">
                 <div className="flex items-center gap-3">
-                  <button onClick={() => setShowModal(false)} className="p-2 bg-white/20 hover:bg-white/30 rounded-xl transition-colors cursor-pointer">
+                  <div 
+                    className="p-2 bg-white/20 rounded-xl cursor-pointer hover:bg-white/30 transition-all active:scale-95"
+                    onClick={() => setShowModal(false)}
+                    title="Đóng"
+                  >
                     <Wallet size={24} />
-                  </button>
+                  </div>
                   <div>
                     <h3 className="font-bold text-lg">{isEditing ? 'Cập nhật chi phí' : 'Nhập chi phí'}</h3>
                     <p className="text-xs text-white/70">Vui lòng điền đầy đủ thông tin chi phí</p>
                   </div>
                 </div>
+                <button 
+                  onClick={() => setShowModal(false)}
+                  className="p-2 hover:bg-white/20 rounded-xl transition-all"
+                >
+                  <X size={24} />
+                </button>
               </div>
 
               <div className="flex-1 overflow-y-auto p-6 custom-scrollbar">
@@ -720,14 +729,14 @@ export const Costs = ({ user, onBack, addToast, initialAction }: {
                   </div>
 
                   <div className="mt-8 flex justify-end gap-3">
-                    <Button variant="outline" onClick={() => setShowModal(false)} disabled={submitting}>Hủy</Button>
+                    <Button variant="outline" onClick={() => setShowModal(false)}>Hủy</Button>
                     <Button 
                       type="submit" 
-                      variant="primary" 
-                      isLoading={submitting}
+                      variant="primary"
                       className="min-w-[120px]"
+                      isLoading={submitting}
                     >
-                      Lưu chi phí
+                      Lưu bản ghi
                     </Button>
                   </div>
                 </form>

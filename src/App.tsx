@@ -195,7 +195,7 @@ export default function App() {
         />
       </MainLayout>
       <ToastContainer toasts={toasts} removeToast={removeToast} />
-      <ReloadPrompt />
+      <ReloadPrompt currentPage={currentPage} />
     </>
   );
 }

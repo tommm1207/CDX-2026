@@ -11,10 +11,16 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   res.setHeader('Content-Type', 'application/json');
 
   try {
+    const { userId } = req.query;
+    
+    if (!userId) {
+      return res.status(400).json({ error: 'Missing userId' });
+    }
+
     const { data, error } = await supabase
       .from('system_configs')
       .select('value')
-      .eq('key', 'backup_settings')
+      .eq('key', `backup_settings_${userId}`)
       .single();
 
     if (error || !data) {

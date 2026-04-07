@@ -15,10 +15,18 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   try {
-    const config = req.body;
+    const { userId, ...config } = req.body;
+    
+    if (!userId) {
+      return res.status(400).json({ error: 'Missing userId' });
+    }
+
     const { error } = await supabase
       .from('system_configs')
-      .upsert({ key: 'backup_settings', value: config }, { onConflict: 'key' });
+      .upsert({ 
+        key: `backup_settings_${userId}`, 
+        value: config 
+      }, { onConflict: 'key' });
 
     if (error) throw error;
 

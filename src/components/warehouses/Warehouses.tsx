@@ -265,7 +265,11 @@ export const Warehouses = ({ user, onBack, addToast }: {
                 <tr><td colSpan={8} className="px-4 py-8 text-center text-gray-400 italic">Chưa có dữ liệu kho bãi</td></tr>
               ) : (
                 warehouses.map((item) => (
-                  <tr key={item.id} className="hover:bg-gray-50 transition-colors group">
+                  <tr 
+                    key={item.id} 
+                    className="hover:bg-gray-50 transition-colors group cursor-pointer"
+                    onClick={() => handleEdit(item)}
+                  >
                     <td className="px-4 py-3 text-xs font-bold text-gray-700">{item.code || item.id.slice(0, 8)}</td>
                     <td className="px-4 py-3 text-xs text-gray-600">{item.name}</td>
                     <td className="px-4 py-3 text-xs text-gray-600">{item.address}</td>
@@ -275,7 +279,7 @@ export const Warehouses = ({ user, onBack, addToast }: {
                         <span className="truncate max-w-[100px]">{item.coordinates}</span>
                         {item.coordinates && (
                           <button
-                            onClick={() => openInGoogleMaps(item.coordinates)}
+                            onClick={(e) => { e.stopPropagation(); openInGoogleMaps(item.coordinates); }}
                             className="p-1 text-primary hover:bg-primary/10 rounded transition-colors"
                             title="Chỉ đường Google Maps"
                           >
@@ -288,8 +292,8 @@ export const Warehouses = ({ user, onBack, addToast }: {
                     <td className="px-4 py-3 text-xs text-gray-600">{item.capacity}</td>
                     <td className="px-4 py-3 text-center">
                       <div className="flex items-center justify-center gap-1 transition-opacity">
-                        <button onClick={() => handleEdit(item)} className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"><Edit size={14} /></button>
-                        <button onClick={() => handleDeleteClick(item.id)} className="p-1.5 text-red-600 hover:bg-red-50 rounded-lg transition-colors"><Trash2 size={14} /></button>
+                        <button onClick={(e) => { e.stopPropagation(); handleEdit(item); }} className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"><Edit size={14} /></button>
+                        <button onClick={(e) => { e.stopPropagation(); handleDeleteClick(item.id); }} className="p-1.5 text-red-600 hover:bg-red-50 rounded-lg transition-colors"><Trash2 size={14} /></button>
                       </div>
                     </td>
                   </tr>
@@ -303,12 +307,16 @@ export const Warehouses = ({ user, onBack, addToast }: {
       {/* Delete Confirmation Modal */}
       <AnimatePresence>
         {showDeleteModal && (
-          <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
+          <div 
+            className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm"
+            onClick={() => setShowDeleteModal(false)}
+          >
             <motion.div
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
               className="bg-white rounded-2xl shadow-xl p-6 max-w-sm w-full text-center"
+              onClick={(e) => e.stopPropagation()}
             >
               <div className="w-16 h-16 bg-red-50 text-red-600 rounded-full flex items-center justify-center mx-auto mb-4">
                 <Trash2 size={32} />
@@ -326,12 +334,16 @@ export const Warehouses = ({ user, onBack, addToast }: {
 
       <AnimatePresence>
         {showModal && (
-          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm overflow-y-auto">
+          <div 
+            className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm overflow-y-auto"
+            onClick={() => setShowModal(false)}
+          >
             <motion.div
               initial={{ opacity: 0, scale: 0.95, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 20 }}
               className="bg-white rounded-3xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col my-8"
+              onClick={(e) => e.stopPropagation()}
             >
               <div className="bg-primary p-6 text-white flex items-center justify-between rounded-t-3xl flex-shrink-0">
                 <div className="flex items-center gap-3">

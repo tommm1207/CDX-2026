@@ -239,7 +239,11 @@ export const Reminders = ({ user, onBack, addToast, initialAction }: {
               ) : filteredReminders.length === 0 ? (
                 <tr><td colSpan={7} className="px-4 py-8 text-center text-gray-400 italic">Không có lịch nhắc nào</td></tr>
               ) : filteredReminders.map((rem) => (
-                <tr key={rem.id} className="hover:bg-gray-50/50 transition-colors group">
+                <tr 
+                  key={rem.id} 
+                  className="hover:bg-gray-50/50 transition-colors cursor-pointer group"
+                  onClick={() => handleEdit(rem)}
+                >
                   <td className="px-4 py-3">
                     <span className={`px-2 py-1 rounded-md text-[10px] font-bold uppercase ${rem.status === 'reminded' ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'}`}>
                       {rem.status === 'reminded' ? 'Đã nhắc' : 'Chờ nhắc'}
@@ -250,8 +254,8 @@ export const Reminders = ({ user, onBack, addToast, initialAction }: {
                   <td className="px-4 py-3 text-sm font-medium text-gray-700">{rem.title}</td>
                   <td className="px-4 py-3">
                     <div className="flex items-center justify-center gap-2">
-                      <button onClick={() => handleEdit(rem)} className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition-all"><Edit size={14} /></button>
-                      <button onClick={() => confirmDelete(rem.id)} className="p-1.5 text-red-600 hover:bg-red-50 rounded-lg transition-all"><Trash2 size={14} /></button>
+                      <button onClick={(e) => { e.stopPropagation(); handleEdit(rem); }} className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition-all"><Edit size={14} /></button>
+                      <button onClick={(e) => { e.stopPropagation(); confirmDelete(rem.id); }} className="p-1.5 text-red-600 hover:bg-red-50 rounded-lg transition-all"><Trash2 size={14} /></button>
                     </div>
                   </td>
                 </tr>

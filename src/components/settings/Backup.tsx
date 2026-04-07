@@ -32,9 +32,10 @@ export const Backup = ({ user, onBack, addToast }: { user?: any, onBack: () => v
 
   useEffect(() => {
     const fetchConfig = async () => {
+      if (!user?.id) return;
       try {
-        const response = await fetch('/api/get-backup-config', {
-          headers: { 'x-api-key': 'cdx-secret-2026' } // Fallback for local
+        const response = await fetch(`/api/get-backup-config?userId=${user.id}`, {
+          headers: { 'x-api-key': 'cdx-secret-2026' }
         });
         if (response.ok) {
           const config = await response.json();
@@ -86,7 +87,7 @@ export const Backup = ({ user, onBack, addToast }: { user?: any, onBack: () => v
           'Content-Type': 'application/json',
           'x-api-key': 'cdx-secret-2026'
         },
-        body: JSON.stringify({ email, schedule: cronSchedule, enabled })
+        body: JSON.stringify({ userId: user?.id, email, schedule: cronSchedule, enabled })
       });
 
       if (response.ok) {

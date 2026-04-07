@@ -100,11 +100,20 @@ export const SalarySettings = ({ user, onBack, addToast }: {
               <tr><td colSpan={3} className="px-4 py-8 text-center text-gray-400 italic">Đang tải...</td></tr>
             ) : (
               employees.map((emp) => (
-                <tr key={emp.id} className="hover:bg-gray-50 transition-colors">
+                <tr
+                  key={emp.id}
+                  className="hover:bg-primary/5 transition-colors cursor-pointer"
+                  onClick={() => handleEdit(emp)}
+                >
                   <td className="px-4 py-3 text-xs font-bold text-gray-800">{emp.full_name}</td>
                   <td className="px-4 py-3 text-right text-xs font-bold text-primary">{formatCurrency(emp.settings.daily_rate)}</td>
                   <td className="px-4 py-3 text-center">
-                    <button onClick={() => handleEdit(emp)} className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"><Edit size={14} /></button>
+                    <button
+                      onClick={(e) => { e.stopPropagation(); handleEdit(emp); }}
+                      className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                    >
+                      <Edit size={14} />
+                    </button>
                   </td>
                 </tr>
               ))
@@ -115,8 +124,17 @@ export const SalarySettings = ({ user, onBack, addToast }: {
 
       <AnimatePresence>
         {showModal && (
-          <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
-            <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} className="bg-white rounded-3xl shadow-2xl w-full max-w-md overflow-hidden">
+          <div 
+            className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm"
+            onClick={() => setShowModal(false)}
+          >
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.95 }} 
+              animate={{ opacity: 1, scale: 1 }} 
+              exit={{ opacity: 0, scale: 0.95 }} 
+              className="bg-white rounded-3xl shadow-2xl w-full max-w-md overflow-hidden"
+              onClick={(e) => e.stopPropagation()}
+            >
               <div className="bg-primary p-6 text-white flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <button onClick={() => setShowModal(false)} className="p-2 bg-white/20 hover:bg-white/30 rounded-xl transition-colors cursor-pointer">

@@ -290,7 +290,11 @@ export const Notes = ({ user, onBack, addToast, initialAction }: { user: Employe
               ) : filteredNotes.length === 0 ? (
                 <tr><td colSpan={5} className="px-4 py-8 text-center text-gray-400 italic">Không có ghi chú nào</td></tr>
               ) : filteredNotes.map((note) => (
-                <tr key={note.id} className="hover:bg-gray-50/50 transition-colors group">
+                <tr 
+                  key={note.id} 
+                  className="hover:bg-gray-50/50 transition-colors cursor-pointer group"
+                  onClick={() => handleEdit(note)}
+                >
                   <td className="px-4 py-3">
                     <p className="text-sm font-medium text-gray-700">{note.related_object || 'N/A'}</p>
                     <p className="text-[10px] text-gray-400">{note.content}</p>
@@ -300,8 +304,8 @@ export const Notes = ({ user, onBack, addToast, initialAction }: { user: Employe
                   <td className="px-4 py-3 text-sm text-gray-600">{note.location || '0.000000, 0.000000'}</td>
                   <td className="px-4 py-3">
                     <div className="flex items-center justify-center gap-2">
-                      <button onClick={() => handleEdit(note)} className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition-all"><Edit size={14} /></button>
-                      <button onClick={() => confirmDelete(note.id)} className="p-1.5 text-red-600 hover:bg-red-50 rounded-lg transition-all"><Trash2 size={14} /></button>
+                      <button onClick={(e) => { e.stopPropagation(); handleEdit(note); }} className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition-all"><Edit size={14} /></button>
+                      <button onClick={(e) => { e.stopPropagation(); confirmDelete(note.id); }} className="p-1.5 text-red-600 hover:bg-red-50 rounded-lg transition-all"><Trash2 size={14} /></button>
                     </div>
                   </td>
                 </tr>

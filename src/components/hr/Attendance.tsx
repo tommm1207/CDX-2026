@@ -310,12 +310,16 @@ export const Attendance = ({ user, onBack, addToast }: {
       {/* Edit Attendance Modal */}
       <AnimatePresence>
         {showEditModal && editingAtt && (
-          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
+          <div 
+            className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm"
+            onClick={() => setShowEditModal(false)}
+          >
             <motion.div
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
               className="bg-white rounded-2xl shadow-xl p-6 max-w-sm w-full"
+              onClick={(e) => e.stopPropagation()}
             >
               <div className="flex items-center justify-between mb-4">
                 <h3 className="font-bold text-gray-800">Chi tiết ngày {editingAtt.day}</h3>
@@ -355,12 +359,16 @@ export const Attendance = ({ user, onBack, addToast }: {
       {/* Bulk Attendance Modal */}
       <AnimatePresence>
         {showBulkModal && (
-          <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
+          <div 
+            className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm"
+            onClick={() => setShowBulkModal(false)}
+          >
             <motion.div
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
               className="bg-white rounded-3xl shadow-2xl w-full max-w-2xl overflow-hidden flex flex-col max-h-[90vh]"
+              onClick={(e) => e.stopPropagation()}
             >
               <div className="bg-primary p-6 text-white flex items-center justify-between flex-shrink-0">
                 <div className="flex items-center gap-3">
@@ -544,12 +552,16 @@ export const Attendance = ({ user, onBack, addToast }: {
       {/* Confirmation Modal for Bulk Attendance */}
       <AnimatePresence>
         {showConfirmBulk && (
-          <div className="fixed inset-0 z-[120] flex items-center justify-center p-4 bg-black/60 backdrop-blur-md">
+          <div 
+            className="fixed inset-0 z-[120] flex items-center justify-center p-4 bg-black/60 backdrop-blur-md"
+            onClick={() => setShowConfirmBulk(false)}
+          >
             <motion.div
               initial={{ opacity: 0, scale: 0.9, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.9, y: 20 }}
               className="bg-white rounded-3xl shadow-2xl p-8 max-w-md w-full border border-gray-100"
+              onClick={(e) => e.stopPropagation()}
             >
               <div className="flex flex-col items-center text-center gap-4">
                 <div className="w-16 h-16 bg-amber-100 text-amber-600 rounded-full flex items-center justify-center">

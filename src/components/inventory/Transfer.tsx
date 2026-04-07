@@ -413,17 +413,17 @@ export const Transfer = ({ user, onBack, addToast, initialAction }: {
       <AnimatePresence>
         {showModal && (
           <div 
-            className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm h-[100dvh] w-full"
+            className="fixed inset-0 z-[110] flex md:items-center justify-center p-0 md:p-4 bg-black/40 backdrop-blur-sm h-[100dvh] w-full"
             onClick={() => setShowModal(false)}
           >
             <motion.div
               initial={{ opacity: 0, scale: 0.95, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 20 }}
-              className="bg-white rounded-3xl shadow-2xl w-full max-w-2xl max-h-[90dvh] flex flex-col"
+              className="bg-white rounded-none md:rounded-3xl shadow-2xl w-full max-w-2xl h-full md:h-auto md:max-h-[90dvh] flex flex-col mt-auto md:mt-0"
               onClick={(e) => e.stopPropagation()}
             >
-              <div className="bg-orange-500 p-6 text-white flex items-center justify-between rounded-t-3xl flex-shrink-0">
+              <div className="bg-orange-500 p-6 pt-[calc(1.5rem+env(safe-area-inset-top))] md:pt-6 text-white flex items-center justify-between rounded-none md:rounded-t-3xl flex-shrink-0">
                 <div className="flex items-center gap-3">
                   <button onClick={() => setShowModal(false)} className="p-2 bg-white/20 hover:bg-white/30 rounded-xl transition-colors cursor-pointer">
                     <ArrowLeftRight size={24} />

@@ -327,12 +327,16 @@ export const HRRecords = ({ user, onBack, addToast }: {
 
       <AnimatePresence>
         {showDeleteModal && (
-          <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
+          <div 
+            className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm"
+            onClick={() => setShowDeleteModal(false)}
+          >
             <motion.div
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
               className="bg-white rounded-2xl shadow-xl p-6 max-w-sm w-full text-center"
+              onClick={(e) => e.stopPropagation()}
             >
               <div className="w-16 h-16 bg-red-50 text-red-600 rounded-full flex items-center justify-center mx-auto mb-4">
                 <Trash2 size={32} />
@@ -360,12 +364,16 @@ export const HRRecords = ({ user, onBack, addToast }: {
 
       <AnimatePresence>
         {showModal && (
-          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm overflow-y-auto">
+          <div 
+            className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm overflow-y-auto"
+            onClick={() => setShowModal(false)}
+          >
             <motion.div
               initial={{ opacity: 0, scale: 0.95, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 20 }}
               className="bg-white rounded-3xl shadow-2xl w-full max-w-4xl relative z-10 my-8 max-h-[90vh] flex flex-col"
+              onClick={(e) => e.stopPropagation()}
             >
               <div className="bg-primary p-6 flex items-center justify-between text-white rounded-t-3xl flex-shrink-0">
                 <div className="flex items-center gap-3">

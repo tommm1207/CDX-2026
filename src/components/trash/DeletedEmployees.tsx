@@ -107,7 +107,11 @@ export const DeletedEmployees = ({ onBack, addToast }: { onBack: () => void, add
                 <tr><td colSpan={5} className="px-4 py-8 text-center text-gray-400 italic">Thùng rác trống</td></tr>
               ) : (
                 employees.map((item) => (
-                  <tr key={item.id} className="hover:bg-gray-50/50 transition-colors">
+                  <tr 
+                    key={item.id} 
+                    className="hover:bg-gray-50/50 transition-colors cursor-pointer group"
+                    onClick={() => handleRestoreClick(item.id, item.full_name)}
+                  >
                     <td className="px-4 py-3 text-xs text-gray-600 font-mono font-bold text-primary">{item.code || item.id.slice(0, 8)}</td>
                     <td className="px-4 py-3 text-xs text-gray-800 font-bold">{item.full_name}</td>
                     <td className="px-4 py-3 text-xs text-gray-600 truncate max-w-[200px]">
@@ -117,14 +121,14 @@ export const DeletedEmployees = ({ onBack, addToast }: { onBack: () => void, add
                     <td className="px-4 py-3 text-right">
                       <div className="flex justify-end gap-2">
                         <button
-                          onClick={() => handleRestoreClick(item.id, item.full_name)}
+                          onClick={(e) => { e.stopPropagation(); handleRestoreClick(item.id, item.full_name); }}
                           className="p-2 bg-green-50 text-green-600 rounded-lg hover:bg-green-100 transition-colors"
                           title="Khôi phục"
                         >
                           <RefreshCw size={16} />
                         </button>
                         <button
-                          onClick={() => handleDeleteClick(item.id, item.full_name, item.role)}
+                          onClick={(e) => { e.stopPropagation(); handleDeleteClick(item.id, item.full_name, item.role); }}
                           className="p-2 bg-red-50 text-red-600 rounded-lg hover:bg-red-100 transition-colors"
                           title="Xóa vĩnh viễn"
                         >
@@ -143,12 +147,16 @@ export const DeletedEmployees = ({ onBack, addToast }: { onBack: () => void, add
       {/* Delete/Restore Modals */}
       <AnimatePresence>
         {showRestoreModal && selectedItem && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center px-4 bg-gray-900/50 backdrop-blur-sm">
+          <div 
+            className="fixed inset-0 z-50 flex items-center justify-center px-4 bg-gray-900/50 backdrop-blur-sm"
+            onClick={() => setShowRestoreModal(false)}
+          >
             <motion.div
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
               className="bg-white rounded-3xl shadow-xl w-full max-w-md overflow-hidden"
+              onClick={(e) => e.stopPropagation()}
             >
               <div className="p-6">
                 <div className="w-16 h-16 rounded-2xl bg-green-100 text-green-600 flex items-center justify-center mb-6 mx-auto">

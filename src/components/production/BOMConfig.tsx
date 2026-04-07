@@ -212,7 +212,11 @@ export const BOMConfig = ({ user, onBack, addToast }: {
                 boms.map((bom) => {
                   const product = materials.find(m => m.id === bom.product_item_id);
                   return (
-                    <tr key={bom.id} className="hover:bg-gray-50/50 transition-colors">
+                    <tr 
+                      key={bom.id} 
+                      className="hover:bg-gray-50/50 transition-colors cursor-pointer"
+                      onClick={() => handleEdit(bom)}
+                    >
                       <td className="px-4 py-3 text-sm font-bold text-gray-800">{bom.name}</td>
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-2">
@@ -223,8 +227,8 @@ export const BOMConfig = ({ user, onBack, addToast }: {
                       <td className="px-4 py-3 text-xs text-gray-500">{bom.notes || '-'}</td>
                       <td className="px-4 py-3">
                         <div className="flex items-center justify-center gap-2">
-                          <button onClick={() => handleEdit(bom)} className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"><Edit size={14} /></button>
-                          <button onClick={() => handleDelete(bom.id)} className="p-1.5 text-red-600 hover:bg-red-50 rounded-lg transition-colors"><Trash2 size={14} /></button>
+                          <button onClick={(e) => { e.stopPropagation(); handleEdit(bom); }} className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"><Edit size={14} /></button>
+                          <button onClick={(e) => { e.stopPropagation(); handleDelete(bom.id); }} className="p-1.5 text-red-600 hover:bg-red-50 rounded-lg transition-colors"><Trash2 size={14} /></button>
                         </div>
                       </td>
                     </tr>
@@ -238,12 +242,16 @@ export const BOMConfig = ({ user, onBack, addToast }: {
 
       <AnimatePresence>
         {showModal && (
-          <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm overflow-y-auto">
+          <div 
+            className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm overflow-y-auto"
+            onClick={() => setShowModal(false)}
+          >
             <motion.div
               initial={{ opacity: 0, scale: 0.95, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 20 }}
               className="bg-white rounded-3xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col my-8"
+              onClick={(e) => e.stopPropagation()}
             >
               <div className="bg-primary p-6 text-white flex items-center justify-between rounded-t-3xl flex-shrink-0">
                 <div className="flex items-center gap-3">

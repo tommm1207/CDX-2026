@@ -349,7 +349,7 @@ export default function App() {
       case 'advances': return <Advances user={user} onBack={goBack} addToast={addToast} initialAction={pageParams?.action} />;
       case 'payroll': return <MonthlySalary user={user} onBack={goBack} addToast={addToast} />;
       case 'salary-settings':
-        if (user.role !== 'Admin' && user.role !== 'Admin App') return <Dashboard user={user} onNavigate={navigateTo} addToast={addToast} pendingApprovals={pendingCount} />;
+        if (!['Admin', 'Admin App'].includes(user.role)) return <Dashboard user={user} onNavigate={navigateTo} addToast={addToast} pendingApprovals={pendingCount} />;
         return <SalarySettings user={user} onBack={goBack} addToast={addToast} />;
       case 'notes': return <Notes user={user} onBack={goBack} addToast={addToast} initialAction={pageParams?.action} />;
       case 'notifications': return <Notifications user={user} onBack={goBack} onNavigate={navigateTo} addToast={addToast} />;
@@ -392,7 +392,7 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-[#F8F9FA] flex flex-col font-sans">
-      <header className="bg-primary text-white h-14 flex items-center justify-between px-4 sticky top-0 z-[100] shadow-md">
+      <header className="bg-primary text-white flex items-center justify-between px-4 sticky top-0 z-[50] shadow-md h-[calc(3.5rem+env(safe-area-inset-top))] pt-[env(safe-area-inset-top)]">
         <div className="flex items-center gap-2">
           <button
             onClick={() => setIsSidebarOpen(!isSidebarOpen)}
@@ -502,7 +502,8 @@ export default function App() {
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               onClick={() => setIsSidebarOpen(false)}
-              className="fixed top-14 inset-x-0 bottom-0 bg-black/20 backdrop-blur-sm z-[60] lg:hidden"
+              className="fixed inset-x-0 bottom-0 bg-black/20 backdrop-blur-sm z-[60] lg:hidden"
+              style={{ top: 'calc(3.5rem + env(safe-area-inset-top))' }}
             />
           )}
         </AnimatePresence>
@@ -514,7 +515,8 @@ export default function App() {
               animate={{ x: 0, opacity: 1 }}
               exit={{ x: -280, opacity: 0 }}
               transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-               className="bg-white border-r border-gray-200 overflow-y-auto flex-shrink-0 z-[60] lg:z-30 fixed lg:relative top-14 lg:top-0 h-[calc(100vh-3.5rem)] w-[280px] shadow-2xl lg:shadow-none custom-scrollbar"
+               className="bg-white border-r border-gray-200 overflow-y-auto flex-shrink-0 z-[60] lg:z-30 fixed lg:relative lg:top-0 h-[calc(100vh-3.5rem-env(safe-area-inset-top))] lg:h-[calc(100vh-3.5rem)] w-[280px] shadow-2xl lg:shadow-none custom-scrollbar"
+               style={{ top: window.innerWidth < 1024 ? 'calc(3.5rem + env(safe-area-inset-top))' : undefined }}
             >
               <div className="p-4 space-y-6 pb-44 lg:pb-4">
                 <div className="flex items-center justify-between px-2">

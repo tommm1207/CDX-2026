@@ -240,7 +240,10 @@ export const MonthlySalary = ({ user, onBack, addToast }: {
 
       <AnimatePresence>
         {showDetailModal && selectedSalary && (
-          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm overflow-y-auto no-print">
+          <div 
+            className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm overflow-y-auto no-print"
+            onClick={() => setShowDetailModal(false)}
+          >
             <style>
               {`
                 @media print {
@@ -256,6 +259,7 @@ export const MonthlySalary = ({ user, onBack, addToast }: {
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: 20 }}
               className="bg-white rounded-[2.5rem] shadow-2xl w-full max-w-xl my-8 relative"
+              onClick={(e) => e.stopPropagation()}
             >
               <div className="p-8 pb-0 flex items-center justify-between">
                 <div>

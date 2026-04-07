@@ -424,13 +424,13 @@ export const StockOut = ({ user, onBack, addToast, initialAction }: {
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               onClick={() => setShowDetailModal(false)}
-              className="fixed inset-0 z-[70] bg-black/40 backdrop-blur-sm"
+              className="fixed inset-0 z-[110] bg-black/40 backdrop-blur-sm"
             />
             <motion.div
               initial={{ y: '100%' }}
               animate={{ y: 0 }}
               exit={{ y: '100%' }}
-              className="fixed inset-x-0 bottom-0 z-[71] bg-white rounded-t-3xl shadow-2xl flex flex-col max-h-[90dvh]
+              className="fixed inset-x-0 bottom-0 z-[111] bg-white rounded-t-3xl shadow-2xl flex flex-col max-h-[90dvh]
                          md:inset-x-auto md:inset-y-0 md:right-0 md:w-[420px] md:rounded-t-none md:rounded-l-3xl md:max-h-full"
               transition={{ type: 'spring', damping: 28, stiffness: 240 }}
             >

@@ -202,7 +202,11 @@ export const Advances = ({ user, onBack, addToast, initialAction }: { user: Empl
               <tr><td colSpan={4} className="px-4 py-8 text-center text-gray-400 italic">Chưa có dữ liệu</td></tr>
             ) : (
               (activeTab === 'advances' ? advances : allowances).map((item) => (
-                <tr key={item.id} className="hover:bg-gray-50 transition-colors group">
+                <tr 
+                  key={item.id} 
+                  className="hover:bg-gray-50 transition-colors group cursor-pointer"
+                  onClick={() => handleEdit(item)}
+                >
                   <td className="px-4 py-3 text-xs text-gray-600">{formatDate(item.date)}</td>
                   <td className="px-4 py-3 text-xs font-bold text-gray-800">{item.users?.full_name}</td>
                   <td className="px-4 py-3 text-xs font-black text-red-600">{formatCurrency(item.amount)}</td>
@@ -253,8 +257,17 @@ export const Advances = ({ user, onBack, addToast, initialAction }: { user: Empl
 
       <AnimatePresence>
         {showModal && (
-          <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
-            <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} className="bg-white rounded-3xl shadow-2xl w-full max-w-md overflow-hidden">
+          <div 
+            className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm"
+            onClick={() => { setShowModal(false); setIsEditing(false); setSelectedItem(null); }}
+          >
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.95 }} 
+              animate={{ opacity: 1, scale: 1 }} 
+              exit={{ opacity: 0, scale: 0.95 }} 
+              className="bg-white rounded-3xl shadow-2xl w-full max-w-md overflow-hidden"
+              onClick={(e) => e.stopPropagation()}
+            >
               <div className="bg-primary p-6 text-white flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <button onClick={() => { setShowModal(false); setIsEditing(false); setSelectedItem(null); }} className="p-2 bg-white/20 hover:bg-white/30 rounded-xl transition-colors cursor-pointer">
@@ -311,8 +324,17 @@ export const Advances = ({ user, onBack, addToast, initialAction }: { user: Empl
 
       <AnimatePresence>
         {showDeleteModal && (
-          <div className="fixed inset-0 z-[120] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
-            <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} className="bg-white rounded-3xl shadow-2xl w-full max-w-sm overflow-hidden p-6 text-center space-y-4">
+          <div 
+            className="fixed inset-0 z-[120] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm"
+            onClick={() => { setShowDeleteModal(false); setDeletingId(null); }}
+          >
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.95 }} 
+              animate={{ opacity: 1, scale: 1 }} 
+              exit={{ opacity: 0, scale: 0.95 }} 
+              className="bg-white rounded-3xl shadow-2xl w-full max-w-sm overflow-hidden p-6 text-center space-y-4"
+              onClick={(e) => e.stopPropagation()}
+            >
               <div className="w-16 h-16 bg-red-50 text-red-600 rounded-2xl flex items-center justify-center mx-auto mb-2 border border-red-100">
                 <AlertTriangle size={32} />
               </div>

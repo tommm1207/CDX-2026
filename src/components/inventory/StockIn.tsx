@@ -405,7 +405,7 @@ export const StockIn = ({ user, onBack, initialStatus, initialAction, addToast }
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               onClick={() => setShowDetailModal(false)}
-              className="fixed inset-0 z-[70] bg-black/40 backdrop-blur-sm"
+              className="fixed inset-0 z-[110] bg-black/40 backdrop-blur-sm"
             />
             {/* Panel — slide-up mobile / slide-in right desktop */}
             <motion.div
@@ -413,7 +413,7 @@ export const StockIn = ({ user, onBack, initialStatus, initialAction, addToast }
               animate={{ y: 0, x: 0 }}
               exit={{ y: '100%', x: 0 }}
               style={{ willChange: 'transform' }}
-              className="fixed inset-x-0 bottom-0 z-[71] bg-white rounded-t-3xl shadow-2xl
+              className="fixed inset-x-0 bottom-0 z-[111] bg-white rounded-t-3xl shadow-2xl
                          flex flex-col max-h-[90dvh]
                          md:inset-x-auto md:inset-y-0 md:right-0 md:w-[420px] md:rounded-t-none md:rounded-l-3xl md:max-h-full"
               transition={{ type: 'spring', damping: 28, stiffness: 240 }}
@@ -500,17 +500,17 @@ export const StockIn = ({ user, onBack, initialStatus, initialAction, addToast }
       <AnimatePresence>
         {showModal && (
           <div 
-            className="fixed inset-0 z-[70] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm h-[100dvh] w-full"
+            className="fixed inset-0 z-[110] flex md:items-center justify-center p-0 md:p-4 bg-black/40 backdrop-blur-sm h-[100dvh] w-full"
             onClick={() => setShowModal(false)}
           >
             <motion.div
               initial={{ opacity: 0, scale: 0.95, y: 16 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 16 }}
-              className="bg-white rounded-3xl shadow-2xl w-full max-w-2xl max-h-[90dvh] flex flex-col"
+              className="bg-white rounded-none md:rounded-3xl shadow-2xl w-full max-w-2xl h-full md:h-auto md:max-h-[90dvh] flex flex-col mt-auto md:mt-0"
               onClick={(e) => e.stopPropagation()}
             >
-              <div className="bg-primary p-6 text-white flex items-center justify-between rounded-t-3xl flex-shrink-0">
+              <div className="bg-primary p-6 pt-[calc(1.5rem+env(safe-area-inset-top))] md:pt-6 text-white flex items-center justify-between rounded-none md:rounded-t-3xl flex-shrink-0">
                 <div className="flex items-center gap-3">
                   <button onClick={() => setShowModal(false)} className="p-2 bg-white/20 hover:bg-white/30 rounded-xl transition-colors cursor-pointer">
                     <ArrowDownCircle size={24} />

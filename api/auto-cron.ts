@@ -74,53 +74,42 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   try {
-    const { data: configData } = await supabase
+    const { data: configs } = await supabase
       .from('system_configs')
       .select('value')
-      .eq('key', 'backup_settings')
-      .single();
+      .like('key', 'backup_settings_%');
 
-    if (!configData || !configData.value) {
-      return res.status(200).json({ status: 'No config found' });
+    if (!configs || configs.length === 0) {
+      return res.status(200).json({ status: 'No user configs found' });
     }
 
-    const config = configData.value;
-    if (!config.enabled || !config.schedule || !config.email) {
-      return res.status(200).json({ status: 'Backup disabled or incomplete configuration' });
-    }
+    const results = [];
+    const now = new Date();
+    const vnTime = new Date(now.toLocaleString("en-US", { timeZone: "Asia/Ho_Chi_Minh" }));
+    const currentHour = vnTime.getHours();
 
-    // Determine target schedule time vs current time. 
-    // Format: "MM HH * * *" (minute, hour).
-    const parts = config.schedule.split(' ');
-    if (parts.length >= 2) {
+    for (const configData of configs) {
+      const config = configData.value;
+      if (!config.enabled || !config.schedule || !config.email) continue;
+
+      // Determine target schedule time vs current time. 
+      // Format: "MM HH * * *" (minute, hour).
+      const parts = config.schedule.split(' ');
+      if (parts.length < 2) continue;
+
       const targetMin = parseInt(parts[0], 10);
       const targetHour = parseInt(parts[1], 10);
       
-      const now = new Date();
-      // Server runs in UTC by default on Vercel. We need to convert it to GMT+7 (Vietnam time)
-      const vnTime = new Date(now.toLocaleString("en-US", { timeZone: "Asia/Ho_Chi_Minh" }));
-      const currentHour = vnTime.getHours();
+      // Hourly ping check
+      if (currentHour !== targetHour) continue;
       
-      // We rely on GitHub actions to ping hourly/each 30 mins
-      // Here we restore the check to backup accurately near the set hour
-      if (currentHour !== targetHour) {
-         return res.status(200).json({ status: 'Not the target hour yet', targetHour, currentHour });
-      }
-      
-      // Also check if frequency limits.
-      // Day of week: 0 for weekly. Date: 1 for monthly.
       const targetDayOfWeek = parts[4];
       const targetDate = parts[2];
       
-      if (targetDayOfWeek !== '*') {
-         if (vnTime.getDay().toString() !== targetDayOfWeek) return res.status(200).json({ status: 'Not the target day of week' });
-      }
+      if (targetDayOfWeek !== '*' && vnTime.getDay().toString() !== targetDayOfWeek) continue;
+      if (targetDate !== '*' && vnTime.getDate().toString() !== targetDate) continue;
       
-      if (targetDate !== '*') {
-         if (vnTime.getDate().toString() !== targetDate) return res.status(200).json({ status: 'Not the target date' });
-      }
-      
-      // Proceed to backup
+      // Proceed to backup for THIS user
       const smtpHost = process.env.SMTP_HOST || config.smtpConfig?.host;
       const smtpPort = process.env.SMTP_PORT || config.smtpConfig?.port;
       const smtpUser = process.env.SMTP_USER || config.smtpConfig?.user;
@@ -128,7 +117,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       const smtpSecure = process.env.SMTP_SECURE === 'true' || config.smtpConfig?.secure === true;
       
       if (!smtpUser || !smtpPass) {
-        return res.status(500).json({ error: 'Missing SMTP credentials' });
+        results.push({ email: config.email, status: 'Error: Missing SMTP credentials' });
+        continue;
       }
       
       // Start generating Excel
@@ -153,23 +143,16 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       ]);
       const lookupData = { users, warehouses, materials, groups };
       
-      const labels: string[] = [];
-      const stats: Record<string, number> = {};
-      
       for (const table of BACKUP_TABLES) {
-        labels.push(table.label);
         const { data, error } = await supabase.from(table.id).select("*");
         if (error) continue;
         
         const rowCount = data?.length || 0;
-        stats[table.label] = rowCount;
-        
         if (data && rowCount > 0) {
           const sheet = workbook.addWorksheet(table.label.substring(0, 31).replace(/\//g, '-'));
           const formattedData = formatDataForExcel(data, lookupData);
           if(formattedData.length > 0) {
             const columns = Object.keys(formattedData[0]);
-            
             const headerRow = sheet.addRow(columns);
             headerRow.height = 25;
             headerRow.eachCell((cell) => {
@@ -177,7 +160,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
               cell.font = { bold: true, color: { argb: 'FFFFFFFF' } };
               cell.alignment = { vertical: 'middle', horizontal: 'center' };
             });
-            
             formattedData.forEach((item) => {
                sheet.addRow(Object.values(item));
             });
@@ -204,10 +186,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         attachments: [{ filename: fileName, content: fileData, encoding: 'base64' }]
       });
       
-      return res.status(200).json({ status: 'Success', executedAt: vnTime.toISOString() });
+      results.push({ email: config.email, status: 'Success' });
     }
 
-    return res.status(200).json({ status: 'Invalid schedule format' });
+    return res.status(200).json({ status: 'Processed', executedAt: vnTime.toISOString(), results });
   } catch (err: any) {
     return res.status(500).json({ error: err.message });
   }

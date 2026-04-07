@@ -555,8 +555,23 @@ export const CostReport = ({ user, onBack, addToast }: {
                     'text-amber-600 font-bold'
                   } />
                   <DetailItem label="Ghi chú" value={selectedItem.notes || 'Không có ghi chú'} className="col-span-full" />
-                  <div className="col-span-full pt-4 border-t border-gray-50">
-                    <DetailItem label="Số tiền bằng chữ" value={numberToWords(selectedItem.total_amount)} color="text-primary font-medium italic" />
+                  <div className="col-span-full pt-4 border-t border-gray-50 flex items-center justify-between gap-3">
+                    <Button
+                      variant="danger"
+                      icon={Trash2}
+                      onClick={() => { setSelectedItem(null); handleEditReport(selectedGroup); }} 
+                      className="flex-1 text-xs"
+                    >
+                      Xóa / Thùng rác
+                    </Button>
+                    <Button
+                      variant="warning"
+                      icon={Edit}
+                      onClick={() => { setSelectedItem(null); handleEditReport(selectedGroup); }}
+                      className="flex-1 text-xs"
+                    >
+                      Sửa báo cáo
+                    </Button>
                   </div>
                 </div>
               </motion.div>
@@ -567,14 +582,18 @@ export const CostReport = ({ user, onBack, addToast }: {
 
       <AnimatePresence>
         {showMasterModal && (
-          <div className="fixed inset-0 z-[150] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm overflow-y-auto">
+          <div 
+            className="fixed inset-0 z-[150] flex md:items-center justify-center p-0 md:p-4 bg-black/60 backdrop-blur-sm overflow-y-auto"
+            onClick={() => setShowMasterModal(false)}
+          >
             <motion.div
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
-              className="bg-white rounded-3xl shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col"
+              className="bg-white rounded-none md:rounded-3xl shadow-2xl w-full max-w-4xl h-full md:h-auto md:max-h-[90vh] flex flex-col mt-auto md:mt-0"
+              onClick={(e) => e.stopPropagation()}
             >
-              <div className="bg-primary p-6 text-white flex items-center justify-between rounded-t-3xl">
+              <div className="bg-primary p-6 pt-[calc(1.5rem+env(safe-area-inset-top))] md:pt-6 text-white flex items-center justify-between rounded-none md:rounded-t-3xl">
                 <div className="flex items-center gap-3">
                   <button onClick={() => setShowMasterModal(false)} className="p-2 bg-white/20 hover:bg-white/30 rounded-xl transition-colors cursor-pointer">
                     <FileText size={24} />
@@ -682,14 +701,14 @@ export const CostReport = ({ user, onBack, addToast }: {
 
       <AnimatePresence>
         {showDetailModal && (
-          <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm overflow-y-auto">
+          <div className="fixed inset-0 z-[200] flex md:items-center justify-center p-0 md:p-4 bg-black/60 backdrop-blur-sm overflow-y-auto">
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: 20 }}
-              className="bg-white rounded-3xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col"
+              className="bg-white rounded-none md:rounded-3xl shadow-2xl w-full max-w-2xl h-full md:h-auto md:max-h-[90vh] flex flex-col mt-auto md:mt-0"
             >
-              <div className="bg-primary p-6 text-white flex items-center justify-between rounded-t-3xl">
+              <div className="bg-primary p-6 pt-[calc(1.5rem+env(safe-area-inset-top))] md:pt-6 text-white flex items-center justify-between rounded-none md:rounded-t-3xl">
                 <div className="flex items-center gap-3">
                   <button onClick={() => setShowDetailModal(false)} className="p-2 bg-white/20 hover:bg-white/30 rounded-xl transition-colors cursor-pointer">
                     <PlusCircle size={24} />

@@ -101,18 +101,18 @@ const BACKUP_TABLES = [
 /**
  * Lấy cấu hình backup từ Supabase (thay thế tệp JSON)
  */
-async function getBackupConfig() {
+async function getBackupConfig(userId: string) {
   try {
     const { data, error } = await supabase
       .from('system_configs')
       .select('value')
-      .eq('key', 'backup_settings')
+      .eq('key', `backup_settings_${userId}`)
       .single();
 
     if (error || !data) return null;
     return data.value;
   } catch (err) {
-    console.error("[CONFIG] Error fetching config from Supabase:", err);
+    console.error(`[CONFIG] Error fetching config for user ${userId} from Supabase:`, err);
     return null;
   }
 }
@@ -120,16 +120,16 @@ async function getBackupConfig() {
 /**
  * Lưu cấu hình backup vào Supabase
  */
-async function saveBackupConfig(config: any) {
+async function saveBackupConfig(userId: string, config: any) {
   try {
     const { error } = await supabase
       .from('system_configs')
-      .upsert({ key: 'backup_settings', value: config }, { onConflict: 'key' });
+      .upsert({ key: `backup_settings_${userId}`, value: config }, { onConflict: 'key' });
 
     if (error) throw error;
     return true;
   } catch (err) {
-    console.error("[CONFIG] Error saving config to Supabase:", err);
+    console.error(`[CONFIG] Error saving config for user ${userId} to Supabase:`, err);
     return false;
   }
 }
@@ -139,120 +139,126 @@ async function runAutoBackup() {
   console.log(`[BACKUP] >>> AUTOMATIC BACKUP TRIGGERED AT: ${new Date().toLocaleString('vi-VN')}`);
   console.log("----------------------------------------------------------------");
   
-  const config = await getBackupConfig();
-  if (!config) {
-    console.log("[BACKUP] No configuration found in Supabase. Skipping.");
+  const { data: configs } = await supabase
+    .from('system_configs')
+    .select('value')
+    .like('key', 'backup_settings_%');
+
+  if (!configs || configs.length === 0) {
+    console.log("[BACKUP] No user configurations found in Supabase. Skipping.");
     return;
   }
 
-  const smtpConfig = {
-    host: process.env.SMTP_HOST || config.smtpConfig?.host || '',
-    port: process.env.SMTP_PORT || config.smtpConfig?.port || '',
-    user: process.env.SMTP_USER || config.smtpConfig?.user || '',
-    pass: process.env.SMTP_PASS || config.smtpConfig?.pass || '',
-    secure: process.env.SMTP_SECURE === 'true' || config.smtpConfig?.secure || false
-  };
+  const vnTime = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Ho_Chi_Minh" }));
+  const currentHour = vnTime.getHours();
+  const currentMin = vnTime.getMinutes();
 
-  if (!config.enabled || !config.email || !smtpConfig.user || !smtpConfig.pass) {
-    console.log("[BACKUP] Backup disabled or incomplete configuration. Skipping.");
-    return;
-  }
+  for (const configData of configs) {
+    const config = configData.value;
+    if (!config || !config.enabled || !config.email || !config.schedule) continue;
 
-  try {
-    const workbook = new ExcelJS.Workbook();
-    workbook.creator = 'CDX Auto System';
-    
-    // 1. Tạo trang bìa TỔNG QUAN
-    const summarySheet = workbook.addWorksheet('TỔNG QUAN', { views: [{ showGridLines: false }] });
-    summarySheet.getCell('A1').value = 'HỆ THỐNG QUẢN LÝ KHO & NHÂN SỰ CDX 2026';
-    summarySheet.getCell('A1').font = { size: 18, bold: true, color: { argb: 'FF008060' } };
-    summarySheet.getCell('A3').value = 'BÁO CÁO SAO LƯU DỰ LIỆU TỰ ĐỘNG (HÀNG NGÀY)';
-    summarySheet.getCell('A3').font = { size: 14, bold: true };
-    summarySheet.getCell('A5').value = 'Ngày thực hiện:';
-    summarySheet.getCell('B5').value = new Date().toLocaleString('vi-VN');
-    summarySheet.getColumn(1).width = 25;
-    summarySheet.getColumn(2).width = 50;
+    // Check schedule
+    const parts = config.schedule.split(' ');
+    if (parts.length < 2) continue;
+    const targetMin = parseInt(parts[0], 10);
+    const targetHour = parseInt(parts[1], 10);
 
-    // 2. Chuẩn bị dữ liệu tra cứu (Lookup Data)
-    console.log("[BACKUP] Fetching lookup data...");
-    const [{ data: users }, { data: warehouses }, { data: materials }, { data: groups }] = await Promise.all([
-      supabase.from('users').select('id, full_name'),
-      supabase.from('warehouses').select('id, name'),
-      supabase.from('materials').select('id, name'),
-      supabase.from('material_groups').select('id, name')
-    ]);
-    const lookupData = { users, warehouses, materials, groups };
+    // We check if current time matches the target time (to the minute)
+    // Note: Local scheduler runs every minute.
+    if (currentHour !== targetHour || currentMin !== targetMin) continue;
 
-    // 3. Thêm dữ liệu các bảng
-    const labels: string[] = [];
-    const stats: Record<string, number> = {};
+    console.log(`[BACKUP] Processing backup for ${config.email}...`);
 
-    for (const table of BACKUP_TABLES) {
-      labels.push(table.label);
-      console.log(`[BACKUP] Fetching ${table.label}...`);
-      const { data, error } = await supabase.from(table.id).select("*");
-      if (error) {
-        console.error(`[BACKUP] Error fetching ${table.id}:`, error);
-        continue;
-      }
+    const smtpConfig = {
+      host: process.env.SMTP_HOST || config.smtpConfig?.host || '',
+      port: process.env.SMTP_PORT || config.smtpConfig?.port || '',
+      user: process.env.SMTP_USER || config.smtpConfig?.user || '',
+      pass: process.env.SMTP_PASS || config.smtpConfig?.pass || '',
+      secure: process.env.SMTP_SECURE === 'true' || config.smtpConfig?.secure || false
+    };
 
-      const rowCount = data?.length || 0;
-      stats[table.label] = rowCount;
-
-      if (data && rowCount > 0) {
-        const sheet = workbook.addWorksheet(table.label.substring(0, 31).replace(/\//g, '-'));
-        const formattedData = formatDataForExcel(data, lookupData);
-        const columns = Object.keys(formattedData[0]);
-
-        // Header
-        const headerRow = sheet.addRow(columns);
-        headerRow.height = 25;
-        headerRow.eachCell((cell) => {
-          cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF2D5A27' } };
-          cell.font = { bold: true, color: { argb: 'FFFFFFFF' } };
-          cell.alignment = { vertical: 'middle', horizontal: 'center' };
-          cell.border = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } };
-        });
-
-        // Data
-        formattedData.forEach((item) => {
-          const row = sheet.addRow(Object.values(item));
-          row.eachCell((cell) => {
-            cell.border = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } };
-            if (typeof cell.value === 'number') cell.alignment = { horizontal: 'right' };
-          });
-        });
-
-        // Auto-width
-        sheet.columns.forEach(column => {
-          let maxLen = 0;
-          column.eachCell!({ includeEmpty: true }, (cell) => {
-            const len = cell.value ? cell.value.toString().length : 10;
-            if (len > maxLen) maxLen = len;
-          });
-          column.width = Math.min(maxLen + 4, 50);
-        });
-      }
+    if (!smtpConfig.user || !smtpConfig.pass) {
+      console.log(`[BACKUP] Missing SMTP credentials for ${config.email}. Skipping.`);
+      continue;
     }
 
-    const fileName = `CDX_Auto_Professional_Backup_${new Date().toISOString().split('T')[0]}.xlsx`;
-    const buffer = await workbook.xlsx.writeBuffer();
-    const fileData = Buffer.from(buffer).toString('base64');
+    try {
+      const workbook = new ExcelJS.Workbook();
+      workbook.creator = 'CDX Auto System';
+      
+      const summarySheet = workbook.addWorksheet('TỔNG QUAN', { views: [{ showGridLines: false }] });
+      summarySheet.getCell('A1').value = 'HỆ THỐNG QUẢN LÝ KHO & NHÂN SỰ CDX 2026';
+      summarySheet.getCell('A1').font = { size: 18, bold: true, color: { argb: 'FF008060' } };
+      summarySheet.getCell('A3').value = 'BÁO CÁO SAO LƯU DỮ LIỆU TỰ ĐỘNG';
+      summarySheet.getCell('A3').font = { size: 14, bold: true };
+      summarySheet.getCell('A5').value = 'Ngày thực hiện:';
+      summarySheet.getCell('B5').value = vnTime.toLocaleString('vi-VN');
+      summarySheet.getColumn(1).width = 25;
+      summarySheet.getColumn(2).width = 50;
 
-    await sendEmail({
-      smtpConfig,
-      to: config.email,
-      subject: `[TỰ ĐỘNG] Sao lưu dữ liệu CDX - ${new Date().toLocaleDateString('vi-VN')}`,
-      fileName,
-      fileData,
-      tableList: labels,
-      tableStats: stats,
-      isAuto: true
-    });
+      const [{ data: users }, { data: warehouses }, { data: materials }, { data: groups }] = await Promise.all([
+        supabase.from('users').select('id, full_name'),
+        supabase.from('warehouses').select('id, name'),
+        supabase.from('materials').select('id, name'),
+        supabase.from('material_groups').select('id, name')
+      ]);
+      const lookupData = { users, warehouses, materials, groups };
 
-    console.log(`[BACKUP] Successfully sent auto-backup to ${config.email}`);
-  } catch (error) {
-    console.error("[BACKUP] Critical error during automatic backup:", error);
+      const labels: string[] = [];
+      const stats: Record<string, number> = {};
+
+      for (const table of BACKUP_TABLES) {
+        const { data, error } = await supabase.from(table.id).select("*");
+        if (error) continue;
+
+        labels.push(table.label);
+        const rowCount = data?.length || 0;
+        stats[table.label] = rowCount;
+
+        if (data && rowCount > 0) {
+          const sheet = workbook.addWorksheet(table.label.substring(0, 31).replace(/\//g, '-'));
+          const formattedData = formatDataForExcel(data, lookupData);
+          if (formattedData.length > 0) {
+            const columns = Object.keys(formattedData[0]);
+            const headerRow = sheet.addRow(columns);
+            headerRow.height = 25;
+            headerRow.eachCell((cell) => {
+              cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF2D5A27' } };
+              cell.font = { bold: true, color: { argb: 'FFFFFFFF' } };
+              cell.alignment = { vertical: 'middle', horizontal: 'center' };
+              cell.border = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } };
+            });
+
+            formattedData.forEach((item) => {
+              const row = sheet.addRow(Object.values(item));
+              row.eachCell((cell) => {
+                cell.border = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } };
+                if (typeof cell.value === 'number') cell.alignment = { horizontal: 'right' };
+              });
+            });
+          }
+        }
+      }
+
+      const fileName = `CDX_Auto_Backup_${vnTime.toISOString().split('T')[0]}.xlsx`;
+      const buffer = await workbook.xlsx.writeBuffer();
+      const fileData = Buffer.from(buffer).toString('base64');
+
+      await sendEmail({
+        smtpConfig,
+        to: config.email,
+        subject: `[TỰ ĐỘNG] Sao lưu dữ liệu CDX - ${vnTime.toLocaleDateString('vi-VN')}`,
+        fileName,
+        fileData,
+        tableList: labels,
+        tableStats: stats,
+        isAuto: true
+      });
+
+      console.log(`[BACKUP] Successfully sent auto-backup to ${config.email}`);
+    } catch (error) {
+      console.error(`[BACKUP] Error during backup for ${config.email}:`, error);
+    }
   }
 }
 
@@ -363,10 +369,22 @@ app.use(bodyParser.urlencoded({ limit: '50mb', extended: true }));
  * Khởi tạo lịch trình Backup
  */
 async function initBackupScheduler() {
-  const config = await getBackupConfig();
-  if (config && config.enabled && config.schedule) {
-    console.log(`[BACKUP] Scheduling backup with cron: ${config.schedule}`);
-    currentCronJob = cron.schedule(config.schedule, runAutoBackup);
+  console.log("[BACKUP] Initializing Backup Scheduler...");
+  
+  const { data: configs } = await supabase
+    .from('system_configs')
+    .select('value')
+    .like('key', 'backup_settings_%');
+
+  if (configs && configs.length > 0) {
+    // For local Express server, we currently only support one cron job in this simple implementation.
+    // However, the auto-cron serverless function handles multiple users by iterating.
+    // For local dev, let's just pick the first one or logic that covers all.
+    // A better approach is multiple jobs or a single minute-by-minute job.
+    
+    // To keep it simple and consistent with serverless, we'll run a job every minute that checks all configs.
+    cron.schedule("* * * * *", runAutoBackup);
+    console.log("[BACKUP] Global scheduler started (checks all user configs every minute).");
   }
 }
 
@@ -374,14 +392,20 @@ async function initBackupScheduler() {
 initBackupScheduler();
 
 app.get("/api/get-backup-config", checkApiKey, checkSupabaseConfig, async (req, res) => {
-  const config = await getBackupConfig();
+  const { userId } = req.query;
+  if (!userId) return res.status(400).json({ error: "Missing userId" });
+  
+  const config = await getBackupConfig(userId as string);
   res.json(config || {});
 });
 
 app.get("/api/cron-status", checkApiKey, checkSupabaseConfig, async (req, res) => {
-  const config = await getBackupConfig();
+  const { userId } = req.query;
+  if (!userId) return res.status(400).json({ error: "Missing userId" });
+
+  const config = await getBackupConfig(userId as string);
   res.json({
-    hasJob: !!currentCronJob,
+    hasJob: true, // We now use a global minute-by-minute checker
     schedule: config?.schedule,
     enabled: config?.enabled,
     nextRun: config?.enabled && config?.schedule ? "Scheduled" : "Disabled"
@@ -389,25 +413,15 @@ app.get("/api/cron-status", checkApiKey, checkSupabaseConfig, async (req, res) =
 });
 
 app.post("/api/save-backup-config", checkApiKey, checkSupabaseConfig, async (req, res) => {
-  const { email, smtpConfig, schedule, enabled } = req.body;
+  const { userId, email, smtpConfig, schedule, enabled } = req.body;
+  if (!userId) return res.status(400).json({ error: "Missing userId" });
+  
   const config = { email, smtpConfig, schedule, enabled };
   
-  const saved = await saveBackupConfig(config);
+  const saved = await saveBackupConfig(userId, config);
   if (!saved) return res.status(500).json({ error: "Failed to save config to database" });
 
-  // Stop old job if exists
-  if (currentCronJob) {
-    currentCronJob.stop();
-    console.log("[BACKUP] Old job stopped.");
-  }
-  
-  if (enabled && schedule) {
-    console.log(`[BACKUP] New job scheduled: ${schedule}`);
-    currentCronJob = cron.schedule(schedule, runAutoBackup);
-  } else {
-    currentCronJob = null;
-  }
-
+  // No need to stop/start cron here because the global scheduler checks every minute
   res.json({ success: true });
 });
 

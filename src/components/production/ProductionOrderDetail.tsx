@@ -251,6 +251,27 @@ export const ProductionOrderDetail = ({ user, orderId, onBack, addToast }: {
     }
   };
 
+  const handleDelete = async () => {
+    if (!orderId) return;
+    if (!window.confirm('Bạn có chắc chắn muốn xóa lệnh sản xuất này?')) return;
+
+    setSubmitting(true);
+    try {
+      const { error } = await supabase
+        .from('production_orders')
+        .update({ status: 'Đã xóa' })
+        .eq('id', orderId);
+
+      if (error) throw error;
+      if (addToast) addToast('Đã xóa lệnh sản xuất', 'success');
+      onBack();
+    } catch (err: any) {
+      if (addToast) addToast('Lỗi xóa lệnh: ' + err.message, 'error');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   if (loading) return <div className="p-12 text-center text-gray-400 italic">Đang tải chi tiết lệnh...</div>;
 
   const isViewOnly = order.status !== 'Mới';
@@ -280,7 +301,17 @@ export const ProductionOrderDetail = ({ user, orderId, onBack, addToast }: {
           </div>
         </div>
 
-        <div className="flex gap-3">
+        <div className="flex gap-2">
+          {orderId && (
+            <button
+              onClick={handleDelete}
+              disabled={submitting}
+              className="flex items-center gap-2 px-4 py-2 bg-red-50 text-red-600 border border-red-100 rounded-xl text-sm font-bold hover:bg-red-100 transition-colors"
+              title="Xóa lệnh"
+            >
+              <Trash2 size={18} /> <span className="hidden md:inline">Xóa lệnh</span>
+            </button>
+          )}
           {!isViewOnly && (
             <button
               onClick={handleSave}

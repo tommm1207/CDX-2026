@@ -138,7 +138,11 @@ export const ProductionOrders = ({ user, onBack, addToast, onOpenDetail }: {
                 <tr><td colSpan={7} className="px-4 py-12 text-center text-gray-400 italic">Chưa có lệnh sản xuất nào</td></tr>
               ) : (
                 filteredOrders.map((order) => (
-                  <tr key={order.id} className="hover:bg-gray-50/50 transition-colors">
+                  <tr 
+                    key={order.id} 
+                    className="hover:bg-gray-50/50 transition-colors cursor-pointer"
+                    onClick={() => onOpenDetail(order.id)}
+                  >
                     <td className="px-4 py-3 text-xs font-bold text-gray-800">{order.order_code}</td>
                     <td className="px-4 py-3 text-xs text-gray-500">{new Date(order.created_at).toLocaleDateString('vi-VN')}</td>
                     <td className="px-4 py-3">
@@ -155,7 +159,7 @@ export const ProductionOrders = ({ user, onBack, addToast, onOpenDetail }: {
                     <td className="px-4 py-3">
                       <div className="flex justify-center">
                         <button
-                          onClick={() => onOpenDetail(order.id)}
+                          onClick={(e) => { e.stopPropagation(); onOpenDetail(order.id); }}
                           className="p-1.5 text-primary hover:bg-primary/10 rounded-lg transition-colors"
                         >
                           <Eye size={16} />

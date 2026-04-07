@@ -583,13 +583,15 @@ export const Costs = ({ user, onBack, addToast, initialAction }: {
             onClick={() => setShowModal(false)}
           >
             <motion.div
-              initial={{ opacity: 0, scale: 0.95, y: 20 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.95, y: 20 }}
-              className="bg-white rounded-none md:rounded-3xl shadow-2xl w-full max-w-2xl h-full md:h-auto md:max-h-[90vh] flex flex-col mt-auto md:mt-0"
+              initial={{ opacity: 0, y: 100 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 100 }}
+              transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+              className="bg-white rounded-t-[2.5rem] md:rounded-3xl shadow-2xl w-full max-w-2xl h-auto max-h-[92dvh] md:max-h-[85dvh] flex flex-col mt-auto md:mt-0 overflow-hidden"
               onClick={(e) => e.stopPropagation()}
             >
-              <div className="bg-primary p-6 pt-[calc(1.5rem+env(safe-area-inset-top))] md:pt-6 text-white flex items-center justify-between rounded-none md:rounded-t-3xl flex-shrink-0">
+              <div className="bg-primary p-6 pt-8 md:pt-6 text-white flex items-center justify-between rounded-t-[2.5rem] md:rounded-t-3xl flex-shrink-0 relative">
+                <div className="absolute top-2 left-1/2 -translate-x-1/2 w-12 h-1.5 bg-white/30 rounded-full md:hidden" />
                 <div className="flex items-center gap-3">
                   <button onClick={() => setShowModal(false)} className="p-2 bg-white/20 hover:bg-white/30 rounded-xl transition-colors cursor-pointer">
                     <Wallet size={24} />

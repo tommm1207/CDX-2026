@@ -1,5 +1,5 @@
 import { useState, useEffect, FormEvent } from 'react';
-import { Search, Plus, ArrowLeftRight, Edit, Trash2, ChevronDown, X, PackagePlus } from 'lucide-react';
+import { Search, Plus, ArrowLeftRight, Edit, Trash2, ChevronDown, X, PackagePlus, ArrowDownCircle } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { supabase } from '@/lib/supabase';
 import { Employee } from '@/types';
@@ -417,16 +417,18 @@ export const Transfer = ({ user, onBack, addToast, initialAction }: {
             onClick={() => setShowModal(false)}
           >
             <motion.div
-              initial={{ opacity: 0, scale: 0.95, y: 20 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.95, y: 20 }}
-              className="bg-white rounded-none md:rounded-3xl shadow-2xl w-full max-w-2xl h-full md:h-auto md:max-h-[90dvh] flex flex-col mt-auto md:mt-0"
+              initial={{ opacity: 0, y: 100 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 100 }}
+              transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+              className="bg-white rounded-t-[2.5rem] md:rounded-3xl shadow-2xl w-full max-w-2xl h-auto max-h-[92dvh] md:max-h-[85dvh] flex flex-col mt-auto md:mt-0 overflow-hidden"
               onClick={(e) => e.stopPropagation()}
             >
-              <div className="bg-orange-500 p-6 pt-[calc(1.5rem+env(safe-area-inset-top))] md:pt-6 text-white flex items-center justify-between rounded-none md:rounded-t-3xl flex-shrink-0">
+              <div className="bg-green-600 p-6 pt-8 md:pt-6 text-white flex items-center justify-between rounded-t-[2.5rem] md:rounded-t-3xl flex-shrink-0 relative">
+                <div className="absolute top-2 left-1/2 -translate-x-1/2 w-12 h-1.5 bg-white/30 rounded-full md:hidden" />
                 <div className="flex items-center gap-3">
                   <button onClick={() => setShowModal(false)} className="p-2 bg-white/20 hover:bg-white/30 rounded-xl transition-colors cursor-pointer">
-                    <ArrowLeftRight size={24} />
+                    <ArrowDownCircle size={24} />
                   </button>
                   <h3 className="font-bold text-lg">{isEditing ? 'Sửa phiếu chuyển kho' : 'Lập phiếu chuyển kho'}</h3>
                 </div>
@@ -442,7 +444,7 @@ export const Transfer = ({ user, onBack, addToast, initialAction }: {
                         required 
                         value={formData.date} 
                         onChange={(e) => setFormData({ ...formData, date: e.target.value })} 
-                        className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-orange-500/20" 
+                        className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-green-600/20" 
                       />
                       <p className="text-[10px] text-gray-400">Tồn kho sẽ được kiểm tra tại ngày này</p>
                     </div>
@@ -523,18 +525,17 @@ export const Transfer = ({ user, onBack, addToast, initialAction }: {
                     </div>
                     <div className="space-y-1">
                       <label className="text-[10px] font-bold text-gray-400 uppercase">Ghi chú</label>
-                      <textarea rows={3} value={formData.notes} onChange={(e) => setFormData({ ...formData, notes: e.target.value })} className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-orange-500/20 resize-none" />
+                      <textarea rows={2} value={formData.notes} onChange={(e) => setFormData({ ...formData, notes: e.target.value })} className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-green-600/20 resize-none" />
                     </div>
                   </div>
                   <div className="md:col-span-2 flex justify-end gap-3 mt-4">
                     <Button variant="outline" onClick={() => setShowModal(false)}>Hủy</Button>
                     <Button 
                       type="submit" 
-                      variant="danger"
+                      className="bg-green-600 hover:bg-green-700 text-white min-w-[120px]"
                       isLoading={submitting}
                       disabled={availableStock !== null && Number(formData.quantity) > availableStock} 
                       title={availableStock !== null && Number(formData.quantity) > availableStock ? `Không đủ tồn kho (tồn: ${availableStock})` : undefined}
-                      className="min-w-[120px] bg-orange-500 hover:bg-orange-600"
                     >
                       {isEditing ? 'Cập nhật' : 'Lưu phiếu chuyển'}
                     </Button>

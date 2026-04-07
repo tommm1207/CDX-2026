@@ -1,3 +1,4 @@
+// CDX Unified UI System - Refined with Premium Red Theme
 import React, { useState } from 'react';
 import { 
   Home, 

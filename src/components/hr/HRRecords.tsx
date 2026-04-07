@@ -328,34 +328,24 @@ export const HRRecords = ({ user, onBack, addToast }: {
       <AnimatePresence>
         {showDeleteModal && (
           <div 
-            className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm"
+            className="fixed inset-0 z-[120] flex items-center justify-center p-4 bg-black/50 backdrop-blur-md overflow-hidden"
             onClick={() => setShowDeleteModal(false)}
           >
             <motion.div
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.95 }}
-              className="bg-white rounded-2xl shadow-xl p-6 max-w-sm w-full text-center"
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              className="bg-white rounded-[2rem] md:rounded-[2.5rem] shadow-2xl p-8 max-w-sm w-full text-center m-4 relative z-10"
               onClick={(e) => e.stopPropagation()}
             >
-              <div className="w-16 h-16 bg-red-50 text-red-600 rounded-full flex items-center justify-center mx-auto mb-4">
+              <div className="w-16 h-16 bg-red-50 text-red-600 rounded-2xl flex items-center justify-center mx-auto mb-4 border border-red-100">
                 <Trash2 size={32} />
               </div>
-              <h3 className="text-lg font-bold text-gray-800 mb-2">Chuyển vào thùng rác?</h3>
-              <p className="text-sm text-gray-500 mb-6">Bạn có chắc chắn muốn chuyển nhân sự <strong>{employees.find(e => e.id === itemToDelete)?.code || itemToDelete.slice(0, 8)}</strong> vào thùng rác?</p>
+              <h3 className="text-xl font-bold text-gray-800 mb-2">Xác nhận xóa?</h3>
+              <p className="text-sm text-gray-500 mb-6 font-medium">Bạn có chắc chắn muốn chuyển nhân sự <strong>{employees.find(e => e.id === itemToDelete)?.code || itemToDelete?.slice(0, 8)}</strong> vào thùng rác?<br/>Hành động này có thể hoàn tác trong mục Thùng rác.</p>
               <div className="flex gap-3">
-                <button
-                  onClick={() => setShowDeleteModal(false)}
-                  className="flex-1 px-4 py-2 rounded-xl border border-gray-200 text-sm font-bold text-gray-500 hover:bg-gray-50 transition-colors"
-                >
-                  Hủy bỏ
-                </button>
-                  <button
-                    onClick={confirmDelete}
-                    className="flex-1 px-4 py-2 rounded-xl bg-red-600 text-white text-sm font-bold hover:bg-red-700 transition-colors"
-                  >
-                    Di chuyển
-                  </button>
+                <button onClick={() => setShowDeleteModal(false)} className="flex-1 px-4 py-2 rounded-xl border border-gray-200 text-sm font-bold text-gray-500 hover:bg-gray-50 transition-colors">Hủy bỏ</button>
+                <button onClick={confirmDelete} className="flex-1 px-4 py-2 rounded-xl bg-red-600 text-white text-sm font-bold hover:bg-red-700 transition-colors shadow-lg shadow-red-500/20">Di chuyển</button>
               </div>
             </motion.div>
           </div>
@@ -365,23 +355,32 @@ export const HRRecords = ({ user, onBack, addToast }: {
       <AnimatePresence>
         {showModal && (
           <div 
-            className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm overflow-y-auto"
+            className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/50 backdrop-blur-md overflow-hidden"
             onClick={() => setShowModal(false)}
           >
             <motion.div
               initial={{ opacity: 0, scale: 0.95, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 20 }}
-              className="bg-white rounded-3xl shadow-2xl w-full max-w-4xl relative z-10 my-8 max-h-[90vh] flex flex-col"
+              className="bg-white rounded-[2rem] md:rounded-[2.5rem] shadow-2xl w-full max-w-4xl relative z-10 my-8 m-4 max-h-[90vh] flex flex-col overflow-hidden"
               onClick={(e) => e.stopPropagation()}
             >
-              <div className="bg-primary p-6 flex items-center justify-between text-white rounded-t-3xl flex-shrink-0">
+              <div className="bg-primary p-6 flex items-center justify-between text-white rounded-t-[2rem] md:rounded-t-[2.5rem] flex-shrink-0 transition-colors">
                 <div className="flex items-center gap-3">
-                  <button onClick={() => setShowModal(false)} className="p-2 bg-white/20 hover:bg-white/30 rounded-xl transition-colors cursor-pointer">
+                  <div 
+                    className="p-2 bg-white/20 rounded-xl cursor-pointer hover:bg-white/30 transition-all active:scale-95"
+                    onClick={() => setShowModal(false)}
+                  >
                     <UserPlus size={24} />
-                  </button>
+                  </div>
                   <h3 className="font-bold text-lg">{isEditing ? 'Cập Nhật Nhân Sự' : 'Thêm Mới Nhân Sự'}</h3>
                 </div>
+                <button 
+                  onClick={() => setShowModal(false)} 
+                  className="p-2 hover:bg-white/20 rounded-xl transition-all"
+                >
+                  <X size={24} />
+                </button>
               </div>
 
               <div className="flex-1 overflow-y-auto custom-scrollbar">

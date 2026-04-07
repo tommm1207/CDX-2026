@@ -345,24 +345,24 @@ export const MaterialCatalog = ({ user, onBack, onNavigate, addToast }: {
       <AnimatePresence>
         {showDeleteModal && (
           <div 
-            className="fixed inset-0 z-[120] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm"
+            className="fixed inset-0 z-[120] flex items-center justify-center p-4 bg-black/50 backdrop-blur-md overflow-hidden"
             onClick={() => setShowDeleteModal(false)}
           >
             <motion.div
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.95 }}
-              className="bg-white rounded-2xl shadow-xl p-6 max-w-sm w-full text-center"
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              className="bg-white rounded-[2rem] md:rounded-[2.5rem] shadow-2xl p-8 max-w-sm w-full text-center m-4 relative z-10"
               onClick={(e) => e.stopPropagation()}
             >
-              <div className="w-16 h-16 bg-red-50 text-red-600 rounded-full flex items-center justify-center mx-auto mb-4">
+              <div className="w-16 h-16 bg-red-50 text-red-600 rounded-2xl flex items-center justify-center mx-auto mb-4 border border-red-100">
                 <Trash2 size={32} />
               </div>
-              <h3 className="text-lg font-bold text-gray-800 mb-2">Xác nhận xóa?</h3>
-              <p className="text-sm text-gray-500 mb-6">Bạn có chắc chắn muốn xóa vật tư <strong>{materials.find(m => m.id === itemToDelete)?.code || itemToDelete?.slice(0, 8)}</strong>? Hành động này không thể hoàn tác.</p>
+              <h3 className="text-xl font-bold text-gray-800 mb-2">Xác nhận xóa?</h3>
+              <p className="text-sm text-gray-500 mb-6 font-medium">Bạn có chắc chắn muốn xóa vật tư <strong>{materials.find(m => m.id === itemToDelete)?.code || itemToDelete?.slice(0, 8)}</strong>?<br/>Hành động này không thể hoàn tác.</p>
               <div className="flex gap-3">
-                <Button variant="outline" fullWidth onClick={() => setShowDeleteModal(false)}>Hủy bỏ</Button>
-                <Button variant="danger" fullWidth onClick={confirmDelete}>Xóa ngay</Button>
+                <Button variant="ghost" fullWidth onClick={() => setShowDeleteModal(false)} className="bg-gray-100 hover:bg-gray-200">Hủy bỏ</Button>
+                <Button variant="danger" fullWidth onClick={confirmDelete} className="shadow-lg shadow-red-500/20">Xóa ngay</Button>
               </div>
             </motion.div>
           </div>
@@ -372,26 +372,35 @@ export const MaterialCatalog = ({ user, onBack, onNavigate, addToast }: {
       <AnimatePresence>
         {showModal && (
           <div 
-            className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm overflow-y-auto"
+            className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-black/50 backdrop-blur-md overflow-hidden"
             onClick={() => setShowModal(false)}
           >
             <motion.div
               initial={{ opacity: 0, scale: 0.95, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 20 }}
-              className="bg-white rounded-3xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col my-8"
+              className="bg-white rounded-[2rem] md:rounded-[2.5rem] shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col my-8 m-4 overflow-hidden relative z-10"
               onClick={(e) => e.stopPropagation()}
             >
-              <div className="bg-primary p-6 text-white flex items-center justify-between rounded-t-3xl flex-shrink-0">
+              <div className="bg-primary p-6 text-white flex items-center justify-between rounded-t-[2rem] md:rounded-t-[2.5rem] flex-shrink-0">
                 <div className="flex items-center gap-3">
-                  <button onClick={() => setShowModal(false)} className="p-2 bg-white/20 hover:bg-white/30 rounded-xl transition-colors cursor-pointer">
+                  <div 
+                    className="p-2 bg-white/20 rounded-xl cursor-pointer hover:bg-white/30 transition-all active:scale-95"
+                    onClick={() => setShowModal(false)}
+                  >
                     <Package size={24} />
-                  </button>
+                  </div>
                   <div>
                     <h3 className="font-bold text-lg">{isEditing ? 'Cập nhật vật tư' : 'Thêm vật tư mới'}</h3>
-                    <p className="text-xs text-white/70">Nhập thông tin chi tiết vật tư vào hệ thống</p>
+                    <p className="text-xs text-white/70">Thông tin chi tiết vật tư hệ thống</p>
                   </div>
                 </div>
+                <button 
+                  onClick={() => setShowModal(false)} 
+                  className="p-2 hover:bg-white/20 rounded-xl transition-all"
+                >
+                  <X size={24} />
+                </button>
               </div>
 
               <div className="flex-1 overflow-y-auto custom-scrollbar">
@@ -530,23 +539,32 @@ export const MaterialCatalog = ({ user, onBack, onNavigate, addToast }: {
       <AnimatePresence>
         {showDetailModal && selectedMaterial && (
           <div 
-            className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm"
+            className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/50 backdrop-blur-md overflow-hidden"
             onClick={() => setShowDetailModal(false)}
           >
             <motion.div
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.95 }}
-              className="bg-white rounded-3xl shadow-2xl w-full max-w-3xl flex flex-col"
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              className="bg-white rounded-[2rem] md:rounded-[2.5rem] shadow-2xl w-full max-w-3xl max-h-[90vh] flex flex-col my-8 m-4 overflow-hidden relative z-10"
               onClick={(e) => e.stopPropagation()}
             >
-              <div className="bg-primary p-6 text-white flex items-center justify-between rounded-t-3xl">
+              <div className="bg-primary p-6 text-white flex items-center justify-between rounded-t-[2rem] md:rounded-t-[2.5rem] flex-shrink-0">
                 <div className="flex items-center gap-3">
-                  <button onClick={() => setShowDetailModal(false)} className="p-2 bg-white/20 hover:bg-white/30 rounded-xl transition-colors cursor-pointer">
+                  <div 
+                    className="p-2 bg-white/20 rounded-xl cursor-pointer hover:bg-white/30 transition-all active:scale-95"
+                    onClick={() => setShowDetailModal(false)}
+                  >
                     <Package size={24} />
-                  </button>
+                  </div>
                   <h3 className="text-xl font-bold uppercase tracking-widest">Chi tiết vật tư</h3>
                 </div>
+                <button 
+                  onClick={() => setShowDetailModal(false)} 
+                  className="p-2 hover:bg-white/20 rounded-xl transition-all"
+                >
+                  <X size={24} />
+                </button>
               </div>
 
               <div className="p-8 space-y-8 overflow-y-auto flex-1">

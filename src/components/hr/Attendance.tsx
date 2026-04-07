@@ -311,29 +311,42 @@ export const Attendance = ({ user, onBack, addToast }: {
       <AnimatePresence>
         {showEditModal && editingAtt && (
           <div 
-            className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm"
+            className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/50 backdrop-blur-md overflow-hidden"
             onClick={() => setShowEditModal(false)}
           >
             <motion.div
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.95 }}
-              className="bg-white rounded-2xl shadow-xl p-6 max-w-sm w-full"
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              className="bg-white rounded-[2rem] md:rounded-[2.5rem] shadow-2xl w-full max-w-sm overflow-hidden m-4"
               onClick={(e) => e.stopPropagation()}
             >
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="font-bold text-gray-800">Chi tiết ngày {editingAtt.day}</h3>
-                <Button variant="ghost" size="icon" icon={X} onClick={() => setShowEditModal(false)} />
+              <div className="bg-primary p-6 text-white flex items-center justify-between transition-colors">
+                <div className="flex items-center gap-3">
+                  <div 
+                    className="p-2 bg-white/20 rounded-xl cursor-pointer hover:bg-white/30 transition-all active:scale-95"
+                    onClick={() => setShowEditModal(false)}
+                  >
+                    <CalendarCheck size={20} />
+                  </div>
+                  <h3 className="font-bold text-lg">Ngày {editingAtt.day}</h3>
+                </div>
+                <button 
+                  onClick={() => setShowEditModal(false)}
+                  className="p-2 hover:bg-white/20 rounded-xl transition-all"
+                >
+                  <X size={24} />
+                </button>
               </div>
-              <div className="space-y-4">
+              <div className="p-6 space-y-6">
                 <div>
-                  <label className="text-[10px] font-bold text-gray-400 uppercase">Trạng thái công</label>
-                  <div className="grid grid-cols-3 gap-2 mt-1">
+                  <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1 mb-2 block">Trạng thái công</label>
+                  <div className="grid grid-cols-3 gap-2">
                     {['present', 'half-day', 'absent'].map(s => (
                       <button
                         key={s}
                         onClick={() => setEditFormData({ ...editFormData, status: s })}
-                        className={`py-2 rounded-xl text-xs font-bold border transition-all ${editFormData.status === s ? 'bg-primary text-white border-primary' : 'bg-white text-gray-500 border-gray-200'}`}
+                        className={`py-3 rounded-2xl text-xs font-bold border transition-all active:scale-95 ${editFormData.status === s ? 'bg-primary text-white border-primary shadow-lg shadow-primary/20' : 'bg-gray-50 text-gray-400 border-gray-100 hover:bg-gray-100'}`}
                       >
                         {getStatusLabel(s)}
                       </button>
@@ -348,8 +361,8 @@ export const Attendance = ({ user, onBack, addToast }: {
                   isDecimal={true}
                 />
                 <div className="flex gap-3 pt-2">
-                  <Button variant="outline" fullWidth onClick={() => setShowEditModal(false)}>Hủy</Button>
-                  <Button variant="primary" fullWidth onClick={saveEdit}>Lưu</Button>
+                  <Button variant="outline" fullWidth onClick={() => setShowEditModal(false)}>Hủy bỏ</Button>
+                  <Button variant="primary" fullWidth onClick={saveEdit}>Cập nhật</Button>
                 </div>
               </div>
             </motion.div>
@@ -360,23 +373,32 @@ export const Attendance = ({ user, onBack, addToast }: {
       <AnimatePresence>
         {showBulkModal && (
           <div 
-            className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm"
+            className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-black/50 backdrop-blur-md overflow-hidden"
             onClick={() => setShowBulkModal(false)}
           >
             <motion.div
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.95 }}
-              className="bg-white rounded-3xl shadow-2xl w-full max-w-2xl overflow-hidden flex flex-col max-h-[90vh]"
+              initial={{ opacity: 0, scale: 0.95, y: 30 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 30 }}
+              className="bg-white rounded-[2rem] md:rounded-[2.5rem] shadow-2xl w-full max-w-4xl overflow-hidden flex flex-col max-h-[90dvh] m-4"
               onClick={(e) => e.stopPropagation()}
             >
-              <div className="bg-primary p-6 text-white flex items-center justify-between flex-shrink-0">
+              <div className="bg-primary p-6 text-white flex items-center justify-between flex-shrink-0 transition-colors">
                 <div className="flex items-center gap-3">
-                  <button onClick={() => setShowBulkModal(false)} className="p-2 bg-white/20 hover:bg-white/30 rounded-xl transition-colors cursor-pointer">
-                    <Users size={20} />
-                  </button>
+                  <div 
+                    className="p-2 bg-white/20 rounded-xl cursor-pointer hover:bg-white/30 transition-all active:scale-95"
+                    onClick={() => setShowBulkModal(false)}
+                  >
+                    <Users size={24} />
+                  </div>
                   <h3 className="font-bold text-lg">Chấm công hàng loạt</h3>
                 </div>
+                <button 
+                  onClick={() => setShowBulkModal(false)}
+                  className="p-2 hover:bg-white/20 rounded-xl transition-all"
+                >
+                  <X size={24} />
+                </button>
               </div>
 
               <div className="p-6 md:p-8 overflow-y-auto space-y-8 custom-scrollbar">
@@ -553,37 +575,54 @@ export const Attendance = ({ user, onBack, addToast }: {
       <AnimatePresence>
         {showConfirmBulk && (
           <div 
-            className="fixed inset-0 z-[120] flex items-center justify-center p-4 bg-black/60 backdrop-blur-md"
+            className="fixed inset-0 z-[120] flex items-center justify-center p-4 bg-black/50 backdrop-blur-md overflow-hidden"
             onClick={() => setShowConfirmBulk(false)}
           >
             <motion.div
-              initial={{ opacity: 0, scale: 0.9, y: 20 }}
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.9, y: 20 }}
-              className="bg-white rounded-3xl shadow-2xl p-8 max-w-md w-full border border-gray-100"
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              className="bg-white rounded-[2rem] md:rounded-[2.5rem] shadow-2xl max-w-sm w-full overflow-hidden m-4"
               onClick={(e) => e.stopPropagation()}
             >
-              <div className="flex flex-col items-center text-center gap-4">
-                <div className="w-16 h-16 bg-amber-100 text-amber-600 rounded-full flex items-center justify-center">
-                  <CalendarCheck size={32} />
+              <div className="p-6 bg-amber-500 text-white flex items-center justify-between transition-colors">
+                <div className="flex items-center gap-3">
+                  <div 
+                    className="p-2 bg-white/20 rounded-xl cursor-pointer hover:bg-white/30 transition-all active:scale-95"
+                    onClick={() => setShowConfirmBulk(false)}
+                  >
+                    <CalendarCheck size={20} />
+                  </div>
+                  <h3 className="font-bold text-lg">Xác nhận</h3>
                 </div>
-                <h3 className="text-xl font-bold text-gray-800">Xác nhận chấm công</h3>
-                <p className="text-sm text-gray-500 leading-relaxed">
+                <button 
+                  onClick={() => setShowConfirmBulk(false)}
+                  className="p-2 hover:bg-white/20 rounded-xl transition-all"
+                >
+                  <X size={24} />
+                </button>
+              </div>
+              <div className="p-8 text-center space-y-6">
+                <div className="w-20 h-20 bg-amber-50 text-amber-500 rounded-2xl flex items-center justify-center mx-auto border border-amber-100 shadow-sm">
+                  <CalendarCheck size={40} />
+                </div>
+                <p className="text-sm text-gray-500 leading-relaxed font-medium px-2">
                   Xác nhận chấm công cho <span className="font-bold text-primary">{selectedEmployees.length}</span> nhân viên <br /> 
-                  ngày <span className="font-bold text-gray-700">{new Date(bulkFormData.date).toLocaleDateString('vi-VN')}</span>?
+                  ngày <span className="font-bold text-gray-800">{new Date(bulkFormData.date).toLocaleDateString('vi-VN')}</span>?
                 </p>
-                <div className="flex gap-3 w-full pt-4">
+                <div className="flex gap-3 pt-2">
                   <Button 
                     variant="outline" 
                     fullWidth 
                     onClick={() => setShowConfirmBulk(false)}
                   >
-                    Hủy
+                    Kiểm tra lại
                   </Button>
                   <Button 
                     variant="primary" 
                     fullWidth 
                     onClick={confirmAndSaveBulk}
+                    className="bg-amber-500 hover:bg-amber-600 border-amber-500 !shadow-amber-500/20"
                   >
                     Xác nhận
                   </Button>

@@ -508,14 +508,23 @@ export const Costs = ({ user, onBack, addToast, initialAction }: {
               </div>
               <div className="p-5 border-b border-gray-100 flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  <button onClick={() => setShowDetailModal(false)} className="w-9 h-9 bg-primary/10 text-primary rounded-xl flex items-center justify-center hover:bg-primary/20 transition-colors cursor-pointer">
-                    <Wallet size={18} />
-                  </button>
+                  <div 
+                    className="w-10 h-10 bg-primary/10 text-primary rounded-xl flex items-center justify-center hover:bg-primary/20 transition-all active:scale-95 cursor-pointer shadow-sm border border-primary/10"
+                    onClick={() => setShowDetailModal(false)}
+                  >
+                    <Wallet size={20} />
+                  </div>
                   <div>
                     <p className="text-sm font-black text-primary">{selectedCost.cost_code}</p>
-                    <p className="text-[10px] text-gray-400 uppercase font-bold tracking-widest">Chi phí</p>
+                    <p className="text-[10px] text-gray-400 uppercase font-bold tracking-widest">Chi tiết chứng từ</p>
                   </div>
                 </div>
+                <button 
+                  onClick={() => setShowDetailModal(false)}
+                  className="p-2 hover:bg-gray-100 rounded-xl transition-all active:scale-95 text-gray-400"
+                >
+                  <X size={24} />
+                </button>
               </div>
               <div className="flex-1 overflow-y-auto p-5 space-y-3">
                 {[
@@ -542,7 +551,7 @@ export const Costs = ({ user, onBack, addToast, initialAction }: {
                     <Button fullWidth variant="outline" icon={Edit} onClick={() => handleEdit(selectedCost)} className="text-gray-700 hover:bg-gray-50">Sửa</Button>
                   )}
                 </div>
-                <Button fullWidth variant="outline" icon={ChevronDown} onClick={() => setShowDetailModal(false)} className="text-gray-600 hover:bg-gray-50">Đóng</Button>
+                <Button fullWidth variant="outline" icon={X} onClick={() => setShowDetailModal(false)} className="text-gray-600 hover:bg-gray-50 border-gray-200">Đóng cửa sổ</Button>
               </div>
             </motion.div>
           </>
@@ -552,24 +561,24 @@ export const Costs = ({ user, onBack, addToast, initialAction }: {
       <AnimatePresence>
         {showDeleteModal && (
           <div 
-            className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm"
+            className="fixed inset-0 z-[120] flex items-center justify-center p-4 bg-black/50 backdrop-blur-md overflow-hidden"
             onClick={() => setShowDeleteModal(false)}
           >
             <motion.div
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.95 }}
-              className="bg-white rounded-2xl shadow-xl p-6 max-w-sm w-full text-center"
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              className="bg-white rounded-[2rem] md:rounded-[2.5rem] shadow-2xl p-8 max-w-sm w-full text-center m-4 relative z-10"
               onClick={(e) => e.stopPropagation()}
             >
-              <div className="w-16 h-16 bg-red-50 text-red-600 rounded-full flex items-center justify-center mx-auto mb-4">
+              <div className="w-16 h-16 bg-red-50 text-red-600 rounded-2xl flex items-center justify-center mx-auto mb-4 border border-red-100">
                 <Trash2 size={32} />
               </div>
-              <h3 className="text-lg font-bold text-gray-800 mb-2">Chuyển vào thùng rác?</h3>
-              <p className="text-sm text-gray-500 mb-6">Bạn có chắc chắn muốn chuyển bản ghi này vào thùng rác?</p>
+              <h3 className="text-xl font-bold text-gray-800 mb-2">Xác nhận xóa?</h3>
+              <p className="text-sm text-gray-500 mb-6 font-medium">Bạn có chắc chắn muốn chuyển chứng từ này vào thùng rác?<br/>Hành động này có thể hoàn tác trong mục Thùng rác.</p>
               <div className="flex gap-3">
-                <Button variant="outline" fullWidth onClick={() => setShowDeleteModal(false)}>Hủy bỏ</Button>
-                <Button variant="danger" fullWidth onClick={confirmDelete}>Di chuyển</Button>
+                <Button variant="ghost" fullWidth onClick={() => setShowDeleteModal(false)} className="bg-gray-100 hover:bg-gray-200">Hủy bỏ</Button>
+                <Button variant="danger" fullWidth onClick={confirmDelete} className="shadow-lg shadow-red-500/20">Xác nhận</Button>
               </div>
             </motion.div>
           </div>

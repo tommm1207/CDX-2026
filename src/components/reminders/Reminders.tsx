@@ -267,14 +267,33 @@ export const Reminders = ({ user, onBack, addToast, initialAction }: {
 
       <AnimatePresence>
         {showSetReminder && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setShowSetReminder(false)} className="absolute inset-0 bg-black/40 backdrop-blur-sm" />
-            <motion.div initial={{ opacity: 0, scale: 0.95, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95, y: 20 }} className="bg-white rounded-3xl shadow-2xl w-full max-w-lg overflow-hidden relative z-10">
-              <div className="p-6 border-b border-gray-50 flex items-center justify-between">
-                <h3 className="text-lg font-bold text-primary flex items-center gap-2 uppercase tracking-wide">
-                  <Bell size={20} /> {editingId ? 'Sửa lịch nhắc' : 'Đặt lịch nhắc'}
-                </h3>
-                <button onClick={() => setShowSetReminder(false)} className="p-2 hover:bg-gray-100 rounded-full transition-colors"><X size={20} className="text-gray-400" /></button>
+          <div 
+            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-md overflow-hidden"
+            onClick={() => setShowSetReminder(false)}
+          >
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.95, y: 20 }} 
+              animate={{ opacity: 1, scale: 1, y: 0 }} 
+              exit={{ opacity: 0, scale: 0.95, y: 20 }} 
+              className="bg-white rounded-[2rem] md:rounded-[2.5rem] shadow-2xl w-full max-w-lg overflow-hidden relative z-10 m-4 flex flex-col"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="p-6 text-white flex items-center justify-between bg-primary rounded-t-[2rem] md:rounded-t-[2.5rem] flex-shrink-0">
+                <div className="flex items-center gap-3">
+                  <div 
+                    className="p-2 bg-white/20 rounded-xl cursor-pointer hover:bg-white/30 transition-all active:scale-95"
+                    onClick={() => setShowSetReminder(false)}
+                  >
+                    <Bell size={20} />
+                  </div>
+                  <h3 className="text-lg font-bold uppercase tracking-wide">{editingId ? 'Sửa lịch nhắc' : 'Đặt lịch nhắc'}</h3>
+                </div>
+                <button 
+                  onClick={() => setShowSetReminder(false)} 
+                  className="p-2 hover:bg-white/20 rounded-xl transition-all"
+                >
+                  <X size={20} />
+                </button>
               </div>
               <div className="p-6 space-y-4">
                 <div>
@@ -316,7 +335,7 @@ export const Reminders = ({ user, onBack, addToast, initialAction }: {
                   <label htmlFor="notify" className="text-sm text-gray-700 font-medium cursor-pointer">Nhắc qua thông báo trình duyệt</label>
                 </div>
               </div>
-              <div className="p-6 bg-gray-50 flex gap-3">
+              <div className="p-6 bg-gray-50 flex gap-3 flex-shrink-0">
                 <button
                   onClick={handleSave}
                   className="flex-1 py-3 bg-primary text-white rounded-xl font-bold text-sm hover:bg-primary-dark transition-all shadow-lg shadow-primary/20 flex items-center justify-center gap-2"
@@ -332,16 +351,33 @@ export const Reminders = ({ user, onBack, addToast, initialAction }: {
 
       <AnimatePresence>
         {showAddNew && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setShowAddNew(false)} className="absolute inset-0 bg-black/40 backdrop-blur-sm" />
-            <motion.div initial={{ opacity: 0, scale: 0.95, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95, y: 20 }} className="bg-white rounded-3xl shadow-2xl w-full max-w-4xl overflow-hidden relative z-10">
-              <div className="p-6 border-b border-gray-50 flex items-center justify-between bg-primary rounded-t-3xl">
+          <div 
+            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-md overflow-hidden"
+            onClick={() => setShowAddNew(false)}
+          >
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.95, y: 20 }} 
+              animate={{ opacity: 1, scale: 1, y: 0 }} 
+              exit={{ opacity: 0, scale: 0.95, y: 20 }} 
+              className="bg-white rounded-[2rem] md:rounded-[2.5rem] shadow-2xl w-full max-w-4xl overflow-hidden relative z-10 m-4 flex flex-col"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="p-6 text-white flex items-center justify-between bg-primary rounded-t-[2rem] md:rounded-t-[2.5rem] flex-shrink-0">
                 <div className="flex items-center gap-3">
-                  <button onClick={() => setShowAddNew(false)} className="p-2 bg-white/20 hover:bg-white/30 rounded-xl transition-colors cursor-pointer">
+                  <div 
+                    className="p-2 bg-white/20 rounded-xl cursor-pointer hover:bg-white/30 transition-all active:scale-95"
+                    onClick={() => setShowAddNew(false)}
+                  >
                     <Bell size={24} className="text-white" />
-                  </button>
-                  <h3 className="text-lg font-bold text-white tracking-wide">Thêm Mới</h3>
+                  </div>
+                  <h3 className="text-lg font-bold tracking-wide">Thêm Mới</h3>
                 </div>
+                <button 
+                  onClick={() => setShowAddNew(false)} 
+                  className="p-2 hover:bg-white/20 rounded-xl transition-all"
+                >
+                  <X size={24} />
+                </button>
               </div>
               <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-6 max-h-[70vh] overflow-y-auto">
                 <div className="space-y-4">
@@ -379,7 +415,7 @@ export const Reminders = ({ user, onBack, addToast, initialAction }: {
                   </div>
                 </div>
               </div>
-              <div className="p-6 bg-gray-50 flex justify-end gap-3">
+              <div className="p-6 bg-gray-50 flex justify-end gap-3 flex-shrink-0">
                 <button onClick={() => setShowAddNew(false)} className="px-6 py-2.5 text-gray-500 font-bold text-sm hover:bg-gray-100 rounded-xl transition-all">Hủy bỏ</button>
                 <button onClick={handleSave} className="px-8 py-2.5 bg-primary text-white rounded-xl font-bold text-sm hover:bg-primary-dark transition-all shadow-lg shadow-primary/20">Lưu dữ liệu</button>
               </div>

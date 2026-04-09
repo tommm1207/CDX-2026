@@ -107,37 +107,37 @@ export default function App() {
       const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
       const { data } = await supabase
         .from('reminders')
-        .select('*')
-        .neq('status', 'Đã xóa') // Lấy tất cả trừ mẫu đã xoá
+        .select('*, sender:users!created_by(full_name)') // Lấy thông tin người gửi
+        .neq('status', 'Đã xóa')
         .lte('reminder_time', now)
         .gte('reminder_time', twentyFourHoursAgo);
 
       if (data && data.length > 0) {
         let hasNew = false;
-        
-        // Quản lý trạng thái đã cảnh báo của trình duyệt tại Client RAM/Storage thay vì DB
         const notifiedRaw = localStorage.getItem('notified_reminders') || '[]';
         const notifiedMap = new Set(JSON.parse(notifiedRaw));
 
         data.forEach((rem) => {
           const payload = parseReminderContent(rem.content);
+          const isParticipant = payload.assignees.length === 0 || payload.assignees.includes(user.id);
           
-          // Lọc nếu lịch nhắc riêng tư không có tên user hiện tại
-          if (payload.assignees.length > 0 && !payload.assignees.includes(user.id)) return;
+          if (!isParticipant) return;
 
           if (!notifiedMap.has(rem.id)) {
-            // Push Notification (System/OS level)
+            const senderName = (rem as any).sender?.full_name || 'Hệ thống';
+            const scopeText = payload.assignees.length === 0 ? 'Toàn bộ' : 'Cá nhân';
+            const displayTitle = `🔔 ${rem.title} (Từ: ${senderName})`;
+            const displayMessage = `${payload.text}\n[Gửi: ${scopeText}]`;
+
+            // Push Notification
             if (rem.browser_notification && Notification.permission === "granted") {
               try {
-                new Notification(rem.title, { body: payload.text, icon: '/logo.png' });
-              } catch (e) {
-                // Ignore Safari/iOS error if they dont support old Notification API format
-              }
+                new Notification(displayTitle, { body: payload.text, icon: '/logo.png' });
+              } catch (e) {}
             }
 
-            // In-app Notification Popup (Toast)
-            // Hiển thị bóng bong báo nhắc nhở 8 giây (8000ms) trước khi tự mất
-            addToast(payload.text, 'notification', rem.title, 8000);
+            // In-app Notification (Toast)
+            addToast(displayMessage, 'notification', displayTitle, 10000); // 10s
 
             notifiedMap.add(rem.id);
             hasNew = true;

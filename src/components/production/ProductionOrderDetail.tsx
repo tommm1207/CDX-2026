@@ -9,6 +9,7 @@ import { CustomCombobox } from '../shared/CustomCombobox';
 import { formatNumber } from '@/utils/format';
 import { getAvailableStock, isActiveWarehouse } from '@/utils/inventory';
 import { getAllowedWarehouses } from '@/utils/helpers';
+import { Button } from '../shared/Button';
 
 export const ProductionOrderDetail = ({ user, orderId, onBack, addToast }: {
   user: Employee,
@@ -312,32 +313,35 @@ export const ProductionOrderDetail = ({ user, orderId, onBack, addToast }: {
 
         <div className="flex gap-2">
           {orderId && (
-            <button
+            <Button
+              variant="danger"
               onClick={handleDelete}
               disabled={submitting}
-              className="flex items-center gap-2 px-4 py-2 bg-red-50 text-red-600 border border-red-100 rounded-xl text-sm font-bold hover:bg-red-100 transition-colors"
+              icon={Trash2}
               title="Xóa lệnh"
             >
-              <Trash2 size={18} /> <span className="hidden md:inline">Xóa lệnh</span>
-            </button>
+              <span className="hidden md:inline">Xóa lệnh</span>
+            </Button>
           )}
           {!isViewOnly && (
-            <button
+            <Button
+              variant="outline"
               onClick={handleSave}
               disabled={submitting}
-              className="flex items-center gap-2 px-6 py-2 bg-white border border-gray-200 text-gray-700 rounded-xl text-sm font-bold hover:bg-gray-50 transition-colors"
+              icon={Save}
             >
-              <Save size={18} /> Lưu dự thảo
-            </button>
+              Lưu dự thảo
+            </Button>
           )}
           {user.role === 'Admin' && order.status === 'Mới' && (
-            <button
+            <Button
+              variant="success"
               onClick={handleApprove}
               disabled={submitting}
-              className="flex items-center gap-2 px-6 py-2 bg-primary text-white rounded-xl text-sm font-bold hover:bg-primary-dark transition-colors shadow-lg shadow-primary/20"
+              icon={CheckCircle2}
             >
-              <CheckCircle2 size={18} /> Duyệt & Hoàn thành
-            </button>
+              Duyệt & Hoàn thành
+            </Button>
           )}
         </div>
       </div>

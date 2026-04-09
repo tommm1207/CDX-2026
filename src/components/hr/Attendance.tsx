@@ -10,6 +10,7 @@ import { MonthYearPicker } from '../shared/MonthYearPicker';
 import { Button } from '../shared/Button';
 
 import { AttendanceTable } from './AttendanceTable';
+import { FAB } from '../shared/FAB';
 
 export const Attendance = ({ user, onBack, addToast }: { 
   user: Employee, 
@@ -277,15 +278,6 @@ export const Attendance = ({ user, onBack, addToast }: {
           <p className="text-xs text-gray-500 mt-1">Quản lý chuyên cần và giờ làm việc</p>
         </div>
         <div className="flex items-center gap-2">
-          {user.role !== 'User' && (
-            <Button
-              variant="secondary"
-              icon={Users}
-              onClick={openBulkModal}
-            >
-              Chấm công hàng loạt
-            </Button>
-          )}
           <MonthYearPicker
             selectedMonth={selectedMonth}
             selectedYear={selectedYear}
@@ -632,6 +624,15 @@ export const Attendance = ({ user, onBack, addToast }: {
           </div>
         )}
       </AnimatePresence>
+      {user.role !== 'User' && (
+        <FAB
+          onClick={openBulkModal}
+          label="Chấm công"
+          icon={Users}
+          showLabel={true}
+          color="bg-primary"
+        />
+      )}
     </div>
   );
 };

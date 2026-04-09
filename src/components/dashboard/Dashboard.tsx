@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import {
   Wallet,
@@ -210,8 +210,9 @@ export const Dashboard = ({ user, onNavigate, addToast, pendingApprovals = 0 }: 
 
   const menuActions = [
     { id: 'stock-in', label: 'Nhập kho', icon: ArrowDownCircle, color: 'bg-blue-500', description: 'Tạo phiếu nhập vật tư mới' },
-    { id: 'stock-out', label: 'Xuất kho', icon: ArrowUpCircle, color: 'bg-orange-500', description: 'Tạo phiếu xuất kho vật tư' },
-    { id: 'transfer', label: 'Luân chuyển kho', icon: ArrowLeftRight, color: 'bg-green-600', description: 'Chuyển vật tư giữa các kho' },
+    { id: 'stock-out', label: 'Xuất kho', icon: ArrowUpCircle, color: 'bg-red-600', description: 'Tạo phiếu xuất kho vật tư' },
+    { id: 'transfer', label: 'Luân chuyển kho', icon: ArrowLeftRight, color: 'bg-orange-500', description: 'Chuyển vật tư giữa các kho' },
+    { id: 'production-list', label: 'Lệnh sản xuất', icon: Layers, color: 'bg-indigo-600', description: 'Điều phối sản xuất và vật tư' },
     { id: 'cost-report', label: 'Báo cáo chi phí', icon: FileText, color: 'bg-primary', description: 'Ghi chép chi tiêu dự án' },
   ];
 
@@ -238,7 +239,7 @@ export const Dashboard = ({ user, onNavigate, addToast, pendingApprovals = 0 }: 
 
           <button 
             onClick={() => onNavigate('notifications')}
-            className="group relative flex items-center justify-center bg-white hover:bg-gray-50 text-gray-700 w-[46px] h-[46px] rounded-xl transition-all shadow-sm border border-gray-100"
+            className="group relative flex items-center justify-center bg-white hover:bg-gray-50 text-gray-700 w-[46px] h-[46px] rounded-xl transition-all shadow-sm border border-gray-100 mr-2 md:mr-0"
           >
             <Bell size={22} className={totalNotifs > 0 ? "text-amber-500 group-hover:scale-110 transition-transform" : "text-gray-400"} />
             {totalNotifs > 0 && (
@@ -411,11 +412,12 @@ const RadialMenu = ({ onNavigate }: { onNavigate: (page: string, params?: any) =
   const [isOpen, setIsOpen] = useState(false);
   const items = [
     { id: 'stock-in', label: 'Nhập kho', icon: ArrowDownCircle, color: 'bg-blue-500', action: () => onNavigate('stock-in', { action: 'add' }) },
-    { id: 'stock-out', label: 'Xuất kho', icon: ArrowUpCircle, color: 'bg-red-500', action: () => onNavigate('stock-out', { action: 'add' }) },
+    { id: 'stock-out', label: 'Xuất kho', icon: ArrowUpCircle, color: 'bg-red-600', action: () => onNavigate('stock-out', { action: 'add' }) },
     { id: 'transfer', label: 'Luân chuyển', icon: ArrowLeftRight, color: 'bg-orange-500', action: () => onNavigate('transfer', { action: 'add' }) },
+    { id: 'production-list', label: 'Sản xuất', icon: Layers, color: 'bg-indigo-600', action: () => onNavigate('production-list', { action: 'add' }) },
     { id: 'costs', label: 'Chi phí', icon: Wallet, color: 'bg-primary', action: () => onNavigate('costs', { action: 'add' }) },
-    { id: 'notes', label: 'Ghi chú', icon: FileText, color: 'bg-indigo-500', action: () => onNavigate('notes', { action: 'add' }) },
-    { id: 'reminders', label: 'Lời nhắc', icon: Bell, color: 'bg-emerald-500', action: () => onNavigate('reminders', { action: 'add' }) },
+    { id: 'notes', label: 'Ghi chú', icon: FileText, color: 'bg-amber-500', action: () => onNavigate('notes', { action: 'add' }) },
+    { id: 'reminders', label: 'Lời nhắc', icon: Bell, color: 'bg-primary', action: () => onNavigate('reminders', { action: 'add' }) },
   ];
 
   return (
@@ -433,36 +435,62 @@ const RadialMenu = ({ onNavigate }: { onNavigate: (page: string, params?: any) =
         )}
       </AnimatePresence>
 
-      <div className="fixed bottom-[90px] right-6 z-[90]">
+      <div className="fixed bottom-[90px] right-10 z-[90]">
         <AnimatePresence>
           {isOpen && (
             <>
               {items.map((item, index) => {
-                const angle = Math.PI + (Math.PI / 2) * (index / (items.length - 1)); 
-                const radius = 180; // Increased radius for wider spread for 6 items
-                const x = Math.round(radius * Math.cos(angle));
-                const y = Math.round(radius * Math.sin(angle));
+                // Strictly controlled arc to stay within screen boundaries (approx 171 to 261 degrees)
+                const startAngle = Math.PI * 0.95; 
+                const endAngle = Math.PI * 1.45;   
+                const angle = startAngle + (endAngle - startAngle) * (index / (items.length - 1)); 
                 
+                // Rotated labels (Tia mặt trời) with bounded rotation
+                const rotationDegrees = (angle - Math.PI) * (180 / Math.PI);
+                
+                const iconRadius = 240; // Icons on the outer arc
+                const labelRadius = 145; // Labels on the inner arc
+                
+                const ix = Math.round(iconRadius * Math.cos(angle));
+                const iy = Math.round(iconRadius * Math.sin(angle));
+                
+                const lx = Math.round(labelRadius * Math.cos(angle));
+                const ly = Math.round(labelRadius * Math.sin(angle));
+
                 return (
-                  <motion.div
-                    key={item.id}
-                    initial={{ opacity: 0, scale: 0.5, x: 0, y: 0 }}
-                    animate={{ opacity: 1, scale: 1, x, y }}
-                    exit={{ opacity: 0, scale: 0.5, x: 0, y: 0 }}
-                    transition={{ type: 'spring', stiffness: 260, damping: 20, delay: index * 0.05 }}
-                    className="absolute inset-0 flex items-center justify-center pointer-events-none"
-                  >
-                    <button
-                      onClick={() => { setIsOpen(false); item.action(); }}
-                      className={`flex items-center justify-center w-12 h-12 rounded-full shadow-xl ${item.color} text-white hover:scale-110 hover:brightness-110 active:scale-95 transition-all outline-none pointer-events-auto group relative`}
-                      title={item.label}
+                  <div key={item.id}>
+                    {/* Inner Label - Rotated & Slim */}
+                    <motion.div
+                      initial={{ opacity: 0, scale: 0.5, x: 0, y: 0 }}
+                      animate={{ opacity: 1, scale: 1, x: lx, y: ly }}
+                      exit={{ opacity: 0, scale: 0.5, x: 0, y: 0 }}
+                      transition={{ type: 'spring', stiffness: 200, damping: 25, delay: index * 0.05 }}
+                      className="absolute inset-x-0 bottom-0 flex items-center justify-center pointer-events-none"
                     >
-                      <span className="absolute right-full mr-3 whitespace-nowrap bg-black/80 text-white text-xs font-bold px-2 py-1 rounded-md opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+                      <div 
+                        className="bg-white/95 backdrop-blur-md text-gray-800 font-bold text-[9px] uppercase tracking-wide px-2.5 py-1 rounded-lg shadow-sm border border-white/50 whitespace-nowrap"
+                        style={{ transform: `rotate(${rotationDegrees}deg)` }}
+                      >
                         {item.label}
-                      </span>
-                      <item.icon size={20} />
-                    </button>
-                  </motion.div>
+                      </div>
+                    </motion.div>
+
+                    {/* Outer Icon Button */}
+                    <motion.div
+                      initial={{ opacity: 0, scale: 0, x: 0, y: 0 }}
+                      animate={{ opacity: 1, scale: 1, x: ix, y: iy }}
+                      exit={{ opacity: 0, scale: 0, x: 0, y: 0 }}
+                      transition={{ type: 'spring', stiffness: 260, damping: 20, delay: index * 0.05 }}
+                      className="absolute inset-x-0 bottom-0 flex items-center justify-center pointer-events-none"
+                    >
+                      <button
+                        onClick={() => { setIsOpen(false); item.action(); }}
+                        className={`flex items-center justify-center w-12 h-12 rounded-full shadow-2xl ${item.color} text-white hover:scale-110 hover:brightness-110 active:scale-95 transition-all outline-none pointer-events-auto shrink-0`}
+                      >
+                        <item.icon size={20} />
+                      </button>
+                    </motion.div>
+                  </div>
                 );
               })}
             </>

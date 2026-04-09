@@ -16,7 +16,7 @@ import { isUUID, generateCode, getAllowedWarehouses } from '@/utils/helpers';
 import { getAvailableStock } from '@/utils/inventory';
 import { Button } from '../shared/Button';
 
-export const Transfer = ({ user, onBack, addToast, initialAction }: { 
+export const Transfer = ({ user, onBack, addToast, initialAction, setHideBottomNav }: { 
   user: Employee, 
   onBack?: () => void,
   addToast?: (message: string, type?: ToastType) => void,

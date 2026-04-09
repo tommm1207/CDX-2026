@@ -15,7 +15,7 @@ import { isUUID, getAllowedWarehouses } from '@/utils/helpers';
 import { isActiveWarehouse } from '@/utils/inventory';
 import { Button } from '../shared/Button';
 
-export const Costs = ({ user, onBack, addToast, initialAction }: { 
+export const Costs = ({ user, onBack, addToast, initialAction, setHideBottomNav }: { 
   user: Employee, 
   onBack?: () => void,
   addToast?: (message: string, type?: ToastType) => void,

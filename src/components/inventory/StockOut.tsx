@@ -16,7 +16,7 @@ import { isUUID, generateCode, getAllowedWarehouses } from '@/utils/helpers';
 import { Button } from '../shared/Button';
 import { getAvailableStock } from '@/utils/inventory';
 
-export const StockOut = ({ user, onBack, addToast, initialAction }: { 
+export const StockOut = ({ user, onBack, addToast, initialAction, setHideBottomNav }: { 
   user: Employee, 
   onBack?: () => void,
   addToast?: (message: string, type?: ToastType) => void,

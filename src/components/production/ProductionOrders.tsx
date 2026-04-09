@@ -10,7 +10,7 @@ import { getAllowedWarehouses } from '@/utils/helpers';
 import { FAB } from '../shared/FAB';
 import { Button } from '../shared/Button';
 
-export const ProductionOrders = ({ user, onBack, addToast, onOpenDetail }: {
+export const ProductionOrders = ({ user, onBack, addToast, onOpenDetail, setHideBottomNav }: {
   user: Employee,
   onBack?: () => void,
   addToast?: (message: string, type?: ToastType) => void,

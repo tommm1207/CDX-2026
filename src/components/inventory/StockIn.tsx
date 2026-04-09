@@ -16,7 +16,7 @@ import { isUUID, getAllowedWarehouses } from '@/utils/helpers';
 import { getAvailableStock } from '@/utils/inventory';
 import { Button } from '../shared/Button';
 
-export const StockIn = ({ user, onBack, initialStatus, initialAction, addToast }: {
+export const StockIn = ({ user, onBack, initialStatus, initialAction, addToast, setHideBottomNav }: {
   user: Employee,
   onBack?: () => void,
   initialStatus?: string,

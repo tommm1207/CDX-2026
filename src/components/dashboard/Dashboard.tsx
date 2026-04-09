@@ -440,40 +440,47 @@ const RadialMenu = ({ onNavigate }: { onNavigate: (page: string, params?: any) =
           {isOpen && (
             <>
               {items.map((item, index) => {
-                const y = -(index + 1) * 60; // Simple vertical stacking
+                const angle = Math.PI + (Math.PI / 2) * (index / (items.length - 1)); 
+                const iconRadius = 160; 
+                const labelRadius = 245; // Further out for "Ray" effect
                 
+                const ix = Math.round(iconRadius * Math.cos(angle));
+                const iy = Math.round(iconRadius * Math.sin(angle));
+                
+                const lx = Math.round(labelRadius * Math.cos(angle));
+                const ly = Math.round(labelRadius * Math.sin(angle));
+
                 return (
-                  <motion.div
-                    key={item.id}
-                    initial={{ opacity: 0, scale: 0.5, y: 0 }}
-                    animate={{ opacity: 1, scale: 1, y }}
-                    exit={{ opacity: 0, scale: 0.5, y: 0 }}
-                    transition={{ type: 'spring', stiffness: 260, damping: 20, delay: index * 0.05 }}
-                    className="absolute inset-x-0 bottom-0 flex items-center justify-center pointer-events-none"
-                  >
-                    <div className="flex items-center justify-end w-full max-w-[200px] mb-2 pointer-events-none">
-                      <motion.div 
-                        initial={{ opacity: 0, x: 20 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        transition={{ delay: 0.1 + index * 0.05 }}
-                        className="bg-white/95 backdrop-blur-md text-gray-800 text-[10px] font-black uppercase tracking-wider px-3 py-1.5 rounded-xl shadow-lg border border-white/50 mr-3 hidden md:block"
-                      >
-                        {item.label}
-                      </motion.div>
-                      
-                      {/* Mobile Label version: always show but smaller/aligned */}
-                      <div className="bg-white/95 backdrop-blur-md text-gray-800 text-[9px] font-black uppercase tracking-wider px-2.5 py-1.5 rounded-xl shadow-lg border border-white/50 mr-3 md:hidden">
+                  <React.Fragment key={item.id}>
+                    {/* Label - Radial Ray style */}
+                    <motion.div
+                      initial={{ opacity: 0, scale: 0.5, x: 0, y: 0 }}
+                      animate={{ opacity: 1, scale: 1, x: lx, y: ly }}
+                      exit={{ opacity: 0, scale: 0.5, x: 0, y: 0 }}
+                      transition={{ type: 'spring', stiffness: 200, damping: 25, delay: index * 0.05 }}
+                      className="absolute inset-x-0 bottom-0 flex items-center justify-center pointer-events-none"
+                    >
+                      <div className="bg-white/95 backdrop-blur-md text-gray-800 text-[9px] font-black uppercase tracking-wider px-2.5 py-1.5 rounded-xl shadow-xl border border-white/50">
                         {item.label}
                       </div>
+                    </motion.div>
 
+                    {/* Icon Button */}
+                    <motion.div
+                      initial={{ opacity: 0, scale: 0, x: 0, y: 0 }}
+                      animate={{ opacity: 1, scale: 1, x: ix, y: iy }}
+                      exit={{ opacity: 0, scale: 0, x: 0, y: 0 }}
+                      transition={{ type: 'spring', stiffness: 260, damping: 20, delay: index * 0.05 }}
+                      className="absolute inset-x-0 bottom-0 flex items-center justify-center pointer-events-none"
+                    >
                       <button
                         onClick={() => { setIsOpen(false); item.action(); }}
-                        className={`flex items-center justify-center w-12 h-12 rounded-full shadow-xl ${item.color} text-white hover:scale-110 hover:brightness-110 active:scale-95 transition-all outline-none pointer-events-auto shrink-0`}
+                        className={`flex items-center justify-center w-12 h-12 rounded-full shadow-2xl ${item.color} text-white hover:scale-110 hover:brightness-110 active:scale-95 transition-all outline-none pointer-events-auto shrink-0`}
                       >
                         <item.icon size={20} />
                       </button>
-                    </div>
-                  </motion.div>
+                    </motion.div>
+                  </React.Fragment>
                 );
               })}
             </>

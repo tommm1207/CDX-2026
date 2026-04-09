@@ -440,37 +440,39 @@ const RadialMenu = ({ onNavigate }: { onNavigate: (page: string, params?: any) =
           {isOpen && (
             <>
               {items.map((item, index) => {
-                const angle = Math.PI + (Math.PI / 2) * (index / (items.length - 1)); 
-                const radius = 210; // Increased radius to prevent overlap
-                const x = Math.round(radius * Math.cos(angle));
-                const y = Math.round(radius * Math.sin(angle));
+                const y = -(index + 1) * 60; // Simple vertical stacking
                 
-                // Adjust label position based on index to avoid overlapping buttons
-                // Higher index = closer to the top. Lower index = closer to the side.
-                const labelYOffset = index > 3 ? -10 : (index < 2 ? 10 : 0);
-
                 return (
                   <motion.div
                     key={item.id}
-                    initial={{ opacity: 0, scale: 0.5, x: 0, y: 0 }}
-                    animate={{ opacity: 1, scale: 1, x, y }}
-                    exit={{ opacity: 0, scale: 0.5, x: 0, y: 0 }}
+                    initial={{ opacity: 0, scale: 0.5, y: 0 }}
+                    animate={{ opacity: 1, scale: 1, y }}
+                    exit={{ opacity: 0, scale: 0.5, y: 0 }}
                     transition={{ type: 'spring', stiffness: 260, damping: 20, delay: index * 0.05 }}
-                    className="absolute inset-0 flex items-center justify-center pointer-events-none"
+                    className="absolute inset-x-0 bottom-0 flex items-center justify-center pointer-events-none"
                   >
-                    <button
-                      onClick={() => { setIsOpen(false); item.action(); }}
-                      className={`flex items-center justify-center w-12 h-12 rounded-full shadow-xl ${item.color} text-white hover:scale-110 hover:brightness-110 active:scale-95 transition-all outline-none pointer-events-auto group relative`}
-                      title={item.label}
-                    >
-                      <span 
-                        className="absolute right-full mr-4 whitespace-nowrap bg-white/95 backdrop-blur-md text-gray-800 text-[9px] font-black uppercase tracking-wider px-2.5 py-1 rounded-lg opacity-100 shadow-xl border border-white/50 pointer-events-none transition-transform"
-                        style={{ transform: `translateY(${labelYOffset}px)` }}
+                    <div className="flex items-center justify-end w-full max-w-[200px] mb-2 pointer-events-none">
+                      <motion.div 
+                        initial={{ opacity: 0, x: 20 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ delay: 0.1 + index * 0.05 }}
+                        className="bg-white/95 backdrop-blur-md text-gray-800 text-[10px] font-black uppercase tracking-wider px-3 py-1.5 rounded-xl shadow-lg border border-white/50 mr-3 hidden md:block"
                       >
                         {item.label}
-                      </span>
-                      <item.icon size={20} />
-                    </button>
+                      </motion.div>
+                      
+                      {/* Mobile Label version: always show but smaller/aligned */}
+                      <div className="bg-white/95 backdrop-blur-md text-gray-800 text-[9px] font-black uppercase tracking-wider px-2.5 py-1.5 rounded-xl shadow-lg border border-white/50 mr-3 md:hidden">
+                        {item.label}
+                      </div>
+
+                      <button
+                        onClick={() => { setIsOpen(false); item.action(); }}
+                        className={`flex items-center justify-center w-12 h-12 rounded-full shadow-xl ${item.color} text-white hover:scale-110 hover:brightness-110 active:scale-95 transition-all outline-none pointer-events-auto shrink-0`}
+                      >
+                        <item.icon size={20} />
+                      </button>
+                    </div>
                   </motion.div>
                 );
               })}

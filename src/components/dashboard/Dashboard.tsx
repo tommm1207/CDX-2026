@@ -441,10 +441,14 @@ const RadialMenu = ({ onNavigate }: { onNavigate: (page: string, params?: any) =
             <>
               {items.map((item, index) => {
                 const angle = Math.PI + (Math.PI / 2) * (index / (items.length - 1)); 
-                const radius = 180; // Increased radius for wider spread for 6 items
+                const radius = 210; // Increased radius to prevent overlap
                 const x = Math.round(radius * Math.cos(angle));
                 const y = Math.round(radius * Math.sin(angle));
                 
+                // Adjust label position based on index to avoid overlapping buttons
+                // Higher index = closer to the top. Lower index = closer to the side.
+                const labelYOffset = index > 3 ? -10 : (index < 2 ? 10 : 0);
+
                 return (
                   <motion.div
                     key={item.id}
@@ -459,7 +463,10 @@ const RadialMenu = ({ onNavigate }: { onNavigate: (page: string, params?: any) =
                       className={`flex items-center justify-center w-12 h-12 rounded-full shadow-xl ${item.color} text-white hover:scale-110 hover:brightness-110 active:scale-95 transition-all outline-none pointer-events-auto group relative`}
                       title={item.label}
                     >
-                      <span className="absolute right-full mr-4 whitespace-nowrap bg-white/90 backdrop-blur-md text-gray-800 text-[10px] font-black uppercase tracking-wider px-3 py-1.5 rounded-xl opacity-100 shadow-lg border border-white/50 pointer-events-none">
+                      <span 
+                        className="absolute right-full mr-4 whitespace-nowrap bg-white/95 backdrop-blur-md text-gray-800 text-[9px] font-black uppercase tracking-wider px-2.5 py-1 rounded-lg opacity-100 shadow-xl border border-white/50 pointer-events-none transition-transform"
+                        style={{ transform: `translateY(${labelYOffset}px)` }}
+                      >
                         {item.label}
                       </span>
                       <item.icon size={20} />

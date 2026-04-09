@@ -37,12 +37,18 @@ export const Reminders = ({ user, onBack, addToast, initialAction }: {
     search: ''
   });
 
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<{
+    title: string;
+    content: string;
+    reminder_time: string;
+    browser_notification: boolean;
+    assignees: string[];
+  }>({
     title: '',
     content: '',
     reminder_time: getDefaultTime(),
     browser_notification: true,
-    assignee_id: ''
+    assignees: []
   });
 
   useEffect(() => {
@@ -67,7 +73,7 @@ export const Reminders = ({ user, onBack, addToast, initialAction }: {
     try {
       const payload = {
         title: formData.title,
-        content: serializeReminderContent(formData.content, formData.assignee_id ? [formData.assignee_id] : []),
+        content: serializeReminderContent(formData.content, formData.assignees),
         browser_notification: formData.browser_notification,
         reminder_time: new Date(formData.reminder_time).toISOString(),
       };
@@ -110,7 +116,7 @@ export const Reminders = ({ user, onBack, addToast, initialAction }: {
       content: parsed.text || '',
       reminder_time: localStr,
       browser_notification: rem.browser_notification ?? true,
-      assignee_id: parsed.assignees[0] || ''
+      assignees: parsed.assignees || []
     });
     setEditingId(rem.id);
     setShowSetReminder(true);
@@ -158,7 +164,7 @@ export const Reminders = ({ user, onBack, addToast, initialAction }: {
           <button
             onClick={() => {
               setEditingId(null);
-              setFormData({ title: '', content: '', reminder_time: getDefaultTime(), browser_notification: true, assignee_id: '' });
+              setFormData({ title: '', content: '', reminder_time: getDefaultTime(), browser_notification: true, assignees: [] });
               setShowSetReminder(true);
             }}
             className="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-xl text-sm font-bold hover:bg-primary-dark transition-all shadow-lg shadow-primary/20"
@@ -168,7 +174,7 @@ export const Reminders = ({ user, onBack, addToast, initialAction }: {
           <button
             onClick={() => {
               setEditingId(null);
-              setFormData({ title: '', content: '', reminder_time: getDefaultTime(), browser_notification: true, assignee_id: '' });
+              setFormData({ title: '', content: '', reminder_time: getDefaultTime(), browser_notification: true, assignees: [] });
               setShowAddNew(true);
             }}
             className="flex items-center gap-2 px-4 py-2 bg-white text-gray-700 border border-gray-200 rounded-xl text-sm font-bold hover:bg-gray-50 transition-all shadow-sm"
@@ -324,17 +330,25 @@ export const Reminders = ({ user, onBack, addToast, initialAction }: {
                   />
                 </div>
                 <div>
-                  <label className="text-[10px] font-bold text-gray-400 uppercase">Gửi đến (Nhân sự) <span className="text-gray-400 font-normal italic">- Bỏ trống để gửi toàn công ty</span></label>
-                  <select
-                    value={formData.assignee_id}
-                    onChange={e => setFormData({ ...formData, assignee_id: e.target.value })}
-                    className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm focus:ring-2 focus:ring-primary/20 outline-none mt-1"
-                  >
-                    <option value="">-- Tất cả nhân viên --</option>
+                  <label className="text-[10px] font-bold text-gray-400 uppercase">Gửi đến (Nhân sự) <span className="text-gray-400 font-normal italic">- Không chọn ai = Gửi tất cả</span></label>
+                  <div className="mt-1 border border-gray-200 rounded-xl max-h-40 overflow-y-auto bg-white/50">
                     {employees.map(emp => (
-                      <option key={emp.id} value={emp.id}>{emp.full_name} ({emp.code})</option>
+                      <label key={emp.id} className="flex items-center gap-3 px-4 py-2.5 hover:bg-gray-50 border-b border-gray-100 last:border-0 cursor-pointer transition-colors">
+                        <input
+                          type="checkbox"
+                          checked={formData.assignees.includes(emp.id)}
+                          onChange={e => {
+                            const newAssignees = e.target.checked 
+                              ? [...formData.assignees, emp.id]
+                              : formData.assignees.filter(id => id !== emp.id);
+                            setFormData({ ...formData, assignees: newAssignees });
+                          }}
+                          className="w-4 h-4 rounded border-gray-300 text-primary focus:ring-primary flex-shrink-0"
+                        />
+                        <span className="text-sm text-gray-700 font-medium truncate">{emp.full_name} <span className="text-gray-400 text-xs font-normal">({emp.code})</span></span>
+                      </label>
                     ))}
-                  </select>
+                  </div>
                 </div>
                 <div>
                   <label className="text-[10px] font-bold text-gray-400 uppercase">Thời gian nhắc <span className="text-red-500">*</span></label>
@@ -435,18 +449,25 @@ export const Reminders = ({ user, onBack, addToast, initialAction }: {
                     <input type="text" value={formData.title} onChange={e => setFormData({ ...formData, title: e.target.value })} className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm focus:ring-2 focus:ring-primary/20 outline-none mt-1" />
                   </div>
                   <div>
-                    <label className="text-[10px] font-bold text-gray-400 uppercase">Gửi đến (Nhân sự)</label>
-                    <select
-                      value={formData.assignee_id}
-                      onChange={e => setFormData({ ...formData, assignee_id: e.target.value })}
-                      className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm focus:ring-2 focus:ring-primary/20 outline-none mt-1"
-                    >
-                      <option value="">-- Tất cả nhân viên --</option>
+                    <label className="text-[10px] font-bold text-gray-400 uppercase">Gửi đến (Nhân sự) <span className="text-gray-400 font-normal italic">- Không chọn ai = Gửi tất cả</span></label>
+                    <div className="mt-1 border border-gray-200 rounded-xl max-h-48 overflow-y-auto bg-white/50">
                       {employees.map(emp => (
-                        <option key={emp.id} value={emp.id}>{emp.full_name} ({emp.code})</option>
+                        <label key={emp.id} className="flex items-center gap-3 px-4 py-2 hover:bg-gray-50 border-b border-gray-100 last:border-0 cursor-pointer transition-colors">
+                          <input
+                            type="checkbox"
+                            checked={formData.assignees.includes(emp.id)}
+                            onChange={e => {
+                              const newAssignees = e.target.checked 
+                                ? [...formData.assignees, emp.id]
+                                : formData.assignees.filter(id => id !== emp.id);
+                              setFormData({ ...formData, assignees: newAssignees });
+                            }}
+                            className="w-4 h-4 rounded border-gray-300 text-primary focus:ring-primary flex-shrink-0"
+                          />
+                          <span className="text-sm text-gray-700 font-medium truncate">{emp.full_name} <span className="text-gray-400 text-xs font-normal">({emp.code})</span></span>
+                        </label>
                       ))}
-                    </select>
-                    <p className="text-[10px] text-gray-400 mt-1 italic">Bỏ trống để thông báo tới toàn thể công ty.</p>
+                    </div>
                   </div>
                 </div>
               </div>

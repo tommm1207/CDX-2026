@@ -191,7 +191,7 @@ export const Dashboard = ({ user, onNavigate, addToast, pendingApprovals = 0 }: 
           </h1>
           <p className="text-gray-500 font-medium text-sm">Chúc bạn một ngày làm việc hiệu quả tại CDX.</p>
         </div>
-          <div className="flex items-center gap-2 bg-primary px-4 py-2 rounded-xl shadow-lg shadow-primary/20">
+          <div className="inline-flex items-center gap-2 bg-primary px-4 py-2 rounded-xl shadow-lg shadow-primary/20 self-start">
             <div className="text-left">
               <p className="text-[9px] font-bold text-white/70 uppercase tracking-widest leading-none mb-1">Vai trò</p>
               <p className="text-sm font-black text-white leading-none uppercase">{user.role}</p>

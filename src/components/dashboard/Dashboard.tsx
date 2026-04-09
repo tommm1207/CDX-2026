@@ -440,13 +440,16 @@ const RadialMenu = ({ onNavigate }: { onNavigate: (page: string, params?: any) =
           {isOpen && (
             <>
               {items.map((item, index) => {
-                // Wide 120-degree arc for maximum separation
-                const startAngle = Math.PI * 0.92; // ~165 degrees
-                const endAngle = Math.PI * 1.58;   // ~285 degrees
+                // Wide arc for the sunburst effect
+                const startAngle = Math.PI * 0.92; 
+                const endAngle = Math.PI * 1.58;   
                 const angle = startAngle + (endAngle - startAngle) * (index / (items.length - 1)); 
                 
-                const iconRadius = 140; // Brought closer to center
-                const labelRadius = 195; // Brought much closer to the icon
+                // Rotated labels (Tia mặt trời) matching the sketch
+                const rotationDegrees = (angle - Math.PI) * (180 / Math.PI);
+                
+                const iconRadius = 145; 
+                const labelRadius = 225; // Adjusted for rotation
                 
                 const ix = Math.round(iconRadius * Math.cos(angle));
                 const iy = Math.round(iconRadius * Math.sin(angle));
@@ -456,7 +459,7 @@ const RadialMenu = ({ onNavigate }: { onNavigate: (page: string, params?: any) =
 
                 return (
                   <div key={item.id}>
-                    {/* Minimalist Dark Label - Better connection & legibility */}
+                    {/* Rotated Radial Label - Sketch Accurate */}
                     <motion.div
                       initial={{ opacity: 0, scale: 0.5, x: 0, y: 0 }}
                       animate={{ opacity: 1, scale: 1, x: lx, y: ly }}
@@ -464,7 +467,10 @@ const RadialMenu = ({ onNavigate }: { onNavigate: (page: string, params?: any) =
                       transition={{ type: 'spring', stiffness: 200, damping: 25, delay: index * 0.05 }}
                       className="absolute inset-x-0 bottom-0 flex items-center justify-center pointer-events-none"
                     >
-                      <div className="bg-black/70 backdrop-blur-sm text-white font-bold text-[9px] uppercase tracking-wide px-2 py-1 rounded-lg shadow-xl border border-white/10">
+                      <div 
+                        className="text-white font-black text-[9px] uppercase tracking-wider drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)] whitespace-nowrap"
+                        style={{ transform: `rotate(${rotationDegrees}deg)` }}
+                      >
                         {item.label}
                       </div>
                     </motion.div>

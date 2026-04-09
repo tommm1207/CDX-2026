@@ -13,12 +13,19 @@ export const Reminders = ({ user, onBack, addToast, initialAction }: {
   user: Employee, 
   onBack: () => void, 
   addToast?: (message: string, type?: ToastType) => void,
-  initialAction?: string 
+  initialAction?: string,
+  setHideBottomNav?: (hide: boolean) => void 
 }) => {
   const [reminders, setReminders] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [showSetReminder, setShowSetReminder] = useState(false);
   const [showAddNew, setShowAddNew] = useState(initialAction === 'add');
+
+  useEffect(() => {
+    if (setHideBottomNav) {
+      setHideBottomNav(showSetReminder || showAddNew);
+    }
+  }, [showSetReminder, showAddNew, setHideBottomNav]);
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);

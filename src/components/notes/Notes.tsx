@@ -22,11 +22,23 @@ export const WEATHER_OPTIONS = [
   { value: 'pleasant', label: '🌤️ Trời trong xanh, nắng dịu' },
 ];
 
-export const Notes = ({ user, onBack, addToast, initialAction }: { user: Employee, onBack: () => void, addToast?: (msg: string, type?: ToastType) => void, initialAction?: string }) => {
+export const Notes = ({ user, onBack, addToast, initialAction, setHideBottomNav }: { 
+  user: Employee, 
+  onBack: () => void, 
+  addToast?: (msg: string, type?: ToastType) => void, 
+  initialAction?: string,
+  setHideBottomNav?: (hide: boolean) => void 
+}) => {
   const [notes, setNotes] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [showAddNew, setShowAddNew] = useState(initialAction === 'add');
   const [showQuickNote, setShowQuickNote] = useState(false);
+
+  useEffect(() => {
+    if (setHideBottomNav) {
+      setHideBottomNav(showAddNew || showQuickNote);
+    }
+  }, [showAddNew, showQuickNote, setHideBottomNav]);
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [warehouses, setWarehouses] = useState<any[]>([]);
   const [editingId, setEditingId] = useState<string | null>(null);

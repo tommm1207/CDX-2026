@@ -44,6 +44,7 @@ interface AppRouterProps {
   goBack: () => void;
   addToast: (message: string, type?: any) => void;
   fetchPendingCount: () => void;
+  setHideBottomNav: (hide: boolean) => void;
 }
 
 export const AppRouter = ({
@@ -54,7 +55,8 @@ export const AppRouter = ({
   navigateTo,
   goBack,
   addToast,
-  fetchPendingCount
+  fetchPendingCount,
+  setHideBottomNav
 }: AppRouterProps) => {
   switch (currentPage) {
     case 'dashboard': return <Dashboard user={user} onNavigate={navigateTo} addToast={addToast} pendingApprovals={pendingCount} />;
@@ -63,10 +65,10 @@ export const AppRouter = ({
     case 'costs': return <Costs user={user} onBack={goBack} addToast={addToast} initialAction={pageParams?.action} />;
     case 'warehouses': return <Warehouses user={user} onBack={goBack} addToast={addToast} />;
     case 'materials': return <MaterialCatalog user={user} onBack={goBack} onNavigate={navigateTo} addToast={addToast} />;
-    case 'stock-in': return <StockIn user={user} onBack={goBack} addToast={addToast} initialStatus={pageParams?.status} initialAction={pageParams?.action} />;
+    case 'stock-in': return <StockIn user={user} onBack={goBack} addToast={addToast} initialStatus={pageParams?.status} initialAction={pageParams?.action} setHideBottomNav={setHideBottomNav} />;
     case 'pending-approvals': return <PendingApprovals user={user} onBack={goBack} onNavigate={navigateTo} onRefreshCount={fetchPendingCount} addToast={addToast} initialCount={pendingCount} />;
-    case 'stock-out': return <StockOut user={user} onBack={goBack} addToast={addToast} initialAction={pageParams?.action} />;
-    case 'transfer': return <Transfer user={user} onBack={goBack} addToast={addToast} initialAction={pageParams?.action} />;
+    case 'stock-out': return <StockOut user={user} onBack={goBack} addToast={addToast} initialAction={pageParams?.action} setHideBottomNav={setHideBottomNav} />;
+    case 'transfer': return <Transfer user={user} onBack={goBack} addToast={addToast} initialAction={pageParams?.action} setHideBottomNav={setHideBottomNav} />;
     case 'cost-report': return <CostReport user={user} onBack={goBack} addToast={addToast} />;
     case 'cost-filter': return <CostFilter user={user} onBack={goBack} addToast={addToast} />;
     case 'advances': return <Advances user={user} onBack={goBack} addToast={addToast} initialAction={pageParams?.action} />;
@@ -76,12 +78,12 @@ export const AppRouter = ({
       return <SalarySettings user={user} onBack={goBack} addToast={addToast} />;
     case 'notes': return <Notes user={user} onBack={goBack} addToast={addToast} initialAction={pageParams?.action} />;
     case 'notifications': return <Notifications user={user} onBack={goBack} onNavigate={navigateTo} addToast={addToast} />;
-    case 'reminders': return <Reminders user={user} onBack={goBack} addToast={addToast} initialAction={pageParams?.action} />;
+    case 'reminders': return <Reminders user={user} onBack={goBack} addToast={addToast} initialAction={pageParams?.action} setHideBottomNav={setHideBottomNav} />;
     case 'partners': return <PlaceholderPage title="Khách hàng & nhà cung cấp" onBack={goBack} />;
     case 'inventory-report': return <InventoryReport user={user} onBack={goBack} addToast={addToast} />;
     
     // Production
-    case 'production-list': return <ProductionOrders user={user} onBack={goBack} addToast={addToast} onOpenDetail={(id) => navigateTo('production-detail', { id })} />;
+    case 'production-list': return <ProductionOrders user={user} onBack={goBack} addToast={addToast} onOpenDetail={(id) => navigateTo('production-detail', { id })} setHideBottomNav={setHideBottomNav} />;
     case 'production-detail': return <ProductionOrderDetail user={user} orderId={pageParams?.id} onBack={goBack} addToast={addToast} />;
     case 'production-bom': return <BOMConfig user={user} onBack={goBack} addToast={addToast} />;
 

@@ -25,6 +25,7 @@ interface MainLayoutProps {
   onLogout: () => void;
   onRefresh: () => void;
   children: React.ReactNode;
+  hideBottomNav?: boolean;
 }
 
 const LOGO_URL = "/logo.png";
@@ -38,7 +39,8 @@ export const MainLayout = ({
   onNavigate,
   onLogout,
   onRefresh,
-  children
+  children,
+  hideBottomNav = false
 }: MainLayoutProps) => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(window.innerWidth >= 1024);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
@@ -217,7 +219,7 @@ export const MainLayout = ({
           </footer>
         </main>
       </div>
-      <BottomNav currentPage={currentPage} onNavigate={onNavigate} user={user} pendingCount={pendingCount} />
+      <BottomNav currentPage={currentPage} onNavigate={onNavigate} user={user} pendingCount={pendingCount} isHidden={hideBottomNav} />
       <GlobalSearch isOpen={isSearchOpen} onClose={() => setIsSearchOpen(false)} onNavigate={onNavigate} />
     </div>
   );

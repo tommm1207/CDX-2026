@@ -20,12 +20,19 @@ export const Transfer = ({ user, onBack, addToast, initialAction }: {
   user: Employee, 
   onBack?: () => void,
   addToast?: (message: string, type?: ToastType) => void,
-  initialAction?: string
+  initialAction?: string,
+  setHideBottomNav?: (hide: boolean) => void
 }) => {
   const [slips, setSlips] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(initialAction === 'add');
   const [showDetailModal, setShowDetailModal] = useState(false);
+
+  useEffect(() => {
+    if (setHideBottomNav) {
+      setHideBottomNav(showModal || showDetailModal);
+    }
+  }, [showModal, showDetailModal, setHideBottomNav]);
   const [selectedSlip, setSelectedSlip] = useState<any>(null);
   const [submitting, setSubmitting] = useState(false);
   const [isEditing, setIsEditing] = useState(false);

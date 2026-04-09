@@ -49,6 +49,7 @@ export default function App() {
   const [pendingCount, setPendingCount] = useState(0);
   const [refreshKey, setRefreshKey] = useState(0);
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
+  const [hideBottomNav, setHideBottomNav] = useState(false);
 
   const addToast = useCallback((message: string, type: ToastType = 'info', title?: string, duration: number = 4000) => {
     const id = Math.random().toString(36).substr(2, 9);
@@ -103,52 +104,62 @@ export default function App() {
 
     const checkReminders = setInterval(async () => {
       const now = new Date().toISOString();
-      // Lấy các lịch nhắc trong vòng 24h qua và đến giờ
       const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
-      const { data } = await supabase
-        .from('reminders')
-        .select('*, sender:users!created_by(full_name)') // Lấy thông tin người gửi
-        .neq('status', 'Đã xóa')
-        .lte('reminder_time', now)
-        .gte('reminder_time', twentyFourHoursAgo);
+      
+      try {
+        // Attempt a clean fetch first, fall back to basic fetch if created_by is missing
+        let { data, error } = await supabase
+          .from('reminders')
+          .select('*, sender:users!created_by(full_name)')
+          .neq('status', 'Đã xóa')
+          .lte('reminder_time', now)
+          .gte('reminder_time', twentyFourHoursAgo);
 
-      if (data && data.length > 0) {
-        let hasNew = false;
-        const notifiedRaw = localStorage.getItem('notified_reminders') || '[]';
-        const notifiedMap = new Set(JSON.parse(notifiedRaw));
-
-        data.forEach((rem) => {
-          const payload = parseReminderContent(rem.content);
-          const isParticipant = payload.assignees.length === 0 || payload.assignees.includes(user.id);
-          
-          if (!isParticipant) return;
-
-          if (!notifiedMap.has(rem.id)) {
-            const senderName = (rem as any).sender?.full_name || 'Hệ thống';
-            const scopeText = payload.assignees.length === 0 ? 'Toàn bộ' : 'Cá nhân';
-            const displayTitle = `🔔 ${rem.title} (Từ: ${senderName})`;
-            const displayMessage = `${payload.text}\n[Gửi: ${scopeText}]`;
-
-            // Push Notification
-            if (rem.browser_notification && Notification.permission === "granted") {
-              try {
-                new Notification(displayTitle, { body: payload.text, icon: '/logo.png' });
-              } catch (e) {}
-            }
-
-            // In-app Notification (Toast)
-            addToast(displayMessage, 'notification', displayTitle, 10000); // 10s
-
-            notifiedMap.add(rem.id);
-            hasNew = true;
-          }
-        });
-
-        if (hasNew) {
-          localStorage.setItem('notified_reminders', JSON.stringify([...notifiedMap]));
-          if (currentPage === 'reminders') setRefreshKey(prev => prev + 1);
+        if (error && error.message.includes('created_by')) {
+          const { data: fallbackData } = await supabase
+            .from('reminders')
+            .select('*')
+            .neq('status', 'Đã xóa')
+            .lte('reminder_time', now)
+            .gte('reminder_time', twentyFourHoursAgo);
+          data = fallbackData;
         }
-      }
+
+        if (data && data.length > 0) {
+          let hasNew = false;
+          const notifiedRaw = localStorage.getItem('notified_reminders') || '[]';
+          const notifiedMap = new Set(JSON.parse(notifiedRaw));
+
+          data.forEach((rem) => {
+            const payload = parseReminderContent(rem.content);
+            const isParticipant = payload.assignees.length === 0 || payload.assignees.includes(user.id);
+            
+            if (!isParticipant) return;
+
+            if (!notifiedMap.has(rem.id)) {
+              const senderName = (rem as any).sender?.full_name || 'Hệ thống';
+              const scopeText = payload.assignees.length === 0 ? 'Toàn bộ' : 'Cá nhân';
+              const displayTitle = `🔔 ${rem.title} (Từ: ${senderName})`;
+              const displayMessage = `${payload.text}\n[Gửi: ${scopeText}]`;
+
+              if (rem.browser_notification && Notification.permission === "granted") {
+                try {
+                  new Notification(displayTitle, { body: payload.text, icon: '/logo.png' });
+                } catch (e) {}
+              }
+
+              addToast(displayMessage, 'notification', displayTitle, 10000);
+              notifiedMap.add(rem.id);
+              hasNew = true;
+            }
+          });
+
+          if (hasNew) {
+            localStorage.setItem('notified_reminders', JSON.stringify([...notifiedMap]));
+            if (currentPage === 'reminders') setRefreshKey(prev => prev + 1);
+          }
+        }
+      } catch (err) {}
     }, REMINDER_CHECK_INTERVAL);
 
     return () => clearInterval(checkReminders);
@@ -159,10 +170,13 @@ export default function App() {
       setNavigationHistory(prev => [...prev, currentPage]);
       setCurrentPage(page);
       setPageParams(params);
+      // Reset navigation visibility on page change
+      setHideBottomNav(false);
     }
   }, [currentPage, pageParams]);
 
   const goBack = useCallback(() => {
+    setHideBottomNav(false);
     if (navigationHistory.length > 0) {
       const prevPage = navigationHistory[navigationHistory.length - 1];
       setNavigationHistory(prev => prev.slice(0, -1));
@@ -181,7 +195,7 @@ export default function App() {
           return ['stock-in', 'stock-out', 'transfer', 'attendance', 'cost-report', 'production-list', 'production-detail'].includes(item.id);
         }
         if (user.role === 'Admin') return item.id !== 'database-setup';
-        return true; // Admin App sees everything
+        return true; 
       }).map(item => item.id === 'pending-approvals' ? { ...item, badge: pendingCount } : item)
     })).filter(group => group.items.length > 0);
   }, [user, pendingCount]);
@@ -214,6 +228,7 @@ export default function App() {
         onNavigate={navigateTo}
         onLogout={handleLogout}
         onRefresh={() => { fetchPendingCount(); setRefreshKey(prev => prev + 1); }}
+        hideBottomNav={hideBottomNav}
       >
         <AppRouter 
           currentPage={currentPage}
@@ -224,6 +239,7 @@ export default function App() {
           goBack={goBack}
           addToast={addToast}
           fetchPendingCount={fetchPendingCount}
+          setHideBottomNav={setHideBottomNav}
         />
       </MainLayout>
       <ToastContainer toasts={toasts} removeToast={removeToast} />

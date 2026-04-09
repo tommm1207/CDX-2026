@@ -167,6 +167,7 @@ CREATE TABLE IF NOT EXISTS reminders (
   reminder_time TIMESTAMPTZ NOT NULL,
   browser_notification BOOLEAN DEFAULT true,
   status TEXT DEFAULT 'pending',
+  created_by UUID REFERENCES users(id),
   created_at TIMESTAMPTZ DEFAULT now()
 );
 

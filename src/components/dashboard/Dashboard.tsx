@@ -440,9 +440,9 @@ const RadialMenu = ({ onNavigate }: { onNavigate: (page: string, params?: any) =
           {isOpen && (
             <>
               {items.map((item, index) => {
-                // Strictly controlled arc to stay within screen boundaries (approx 171 to 261 degrees)
-                const startAngle = Math.PI * 0.95; 
-                const endAngle = Math.PI * 1.45;   
+                // Perfect 90-degree quadrant (180° to 270°)
+                const startAngle = Math.PI * 1.0; 
+                const endAngle = Math.PI * 1.5;   
                 const angle = startAngle + (endAngle - startAngle) * (index / (items.length - 1)); 
                 
                 // Rotated labels (Tia mặt trời) with bounded rotation

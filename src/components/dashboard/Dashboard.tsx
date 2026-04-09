@@ -251,8 +251,8 @@ export const Dashboard = ({ user, onNavigate, addToast, pendingApprovals = 0 }: 
         </div>
       </div>
 
-      {/* Quick Actions — 1 row compact on mobile, full cards on desktop */}
-      <div className="grid grid-cols-4 gap-2 md:gap-6 md:grid-cols-4">
+      {/* Quick Actions — Single row for all primary features */}
+      <div className="grid grid-cols-5 gap-2 md:gap-6">
         {menuActions.map((action) => (
           (user.role === 'Admin' || user.role === 'Admin App' || ['stock-in', 'stock-out', 'transfer', 'cost-report'].includes(action.id)) && (
             <motion.div
@@ -440,9 +440,9 @@ const RadialMenu = ({ onNavigate }: { onNavigate: (page: string, params?: any) =
           {isOpen && (
             <>
               {items.map((item, index) => {
-                // Strictly controlled arc to stay within screen boundaries (approx 171 to 261 degrees)
-                const startAngle = Math.PI * 0.95; 
-                const endAngle = Math.PI * 1.45;   
+                // Perfect 90-degree quadrant (180° to 270°)
+                const startAngle = Math.PI * 1.0; 
+                const endAngle = Math.PI * 1.5;   
                 const angle = startAngle + (endAngle - startAngle) * (index / (items.length - 1)); 
                 
                 // Rotated labels (Tia mặt trời) with bounded rotation
@@ -459,20 +459,21 @@ const RadialMenu = ({ onNavigate }: { onNavigate: (page: string, params?: any) =
 
                 return (
                   <div key={item.id}>
-                    {/* Inner Label - Rotated & Slim */}
+                    {/* Inner Label - Clickable & Rotated */}
                     <motion.div
                       initial={{ opacity: 0, scale: 0.5, x: 0, y: 0 }}
                       animate={{ opacity: 1, scale: 1, x: lx, y: ly }}
                       exit={{ opacity: 0, scale: 0.5, x: 0, y: 0 }}
                       transition={{ type: 'spring', stiffness: 200, damping: 25, delay: index * 0.05 }}
-                      className="absolute inset-x-0 bottom-0 flex items-center justify-center pointer-events-none"
+                      className="absolute inset-x-0 bottom-0 flex items-center justify-center"
                     >
-                      <div 
-                        className="bg-white/95 backdrop-blur-md text-gray-800 font-bold text-[9px] uppercase tracking-wide px-2.5 py-1 rounded-lg shadow-sm border border-white/50 whitespace-nowrap"
+                      <button 
+                        onClick={() => { setIsOpen(false); item.action(); }}
+                        className="bg-white/95 backdrop-blur-md text-gray-800 font-bold text-[9px] uppercase tracking-wide px-2.5 py-1 rounded-lg shadow-sm border border-white/50 whitespace-nowrap hover:scale-105 hover:bg-white active:scale-95 transition-all pointer-events-auto"
                         style={{ transform: `rotate(${rotationDegrees}deg)` }}
                       >
                         {item.label}
-                      </div>
+                      </button>
                     </motion.div>
 
                     {/* Outer Icon Button */}

@@ -297,6 +297,7 @@ export const Transfer = ({ user, onBack, addToast, initialAction }: {
     }
   };
 
+  return (
     <div className="p-4 md:p-6 space-y-6 pb-44">
       <PageBreadcrumb title="Luân chuyển kho" onBack={onBack} />
       <div className="flex items-center justify-between gap-4">

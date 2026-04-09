@@ -5,6 +5,11 @@
   --color-primary-hover: #1E3D1A;
   --color-primary-dark: #1A3D15;
   --color-primary-light: #E8F1E5;
+  --font-sans: "Inter", sans-serif;
+}
+
+:root {
+  font-family: var(--font-sans);
 }
 
 @utility pb-safe {

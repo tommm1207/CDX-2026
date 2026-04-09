@@ -173,8 +173,22 @@ export const StockOut = ({ user, onBack, addToast, initialAction }: {
         formData.date,
         isEditing && selectedSlip ? selectedSlip.id : undefined
       );
-      if (Number(formData.quantity) > stockAtDate) {
-        throw new Error(`Không đủ tồn kho tại ngày ${formData.date}! Tồn hiện có: ${stockAtDate}, cần xuất: ${formData.quantity}.`);
+      const matName = materials.find(m => m.id === finalMaterialId)?.name || finalMaterialId;
+
+      if (stockAtDate === 0) {
+        throw new Error(`❌ Từ chối xuất kho
+- Mặt hàng: ${matName}
+- Tồn kho hiện tại: 0
+→ Mặt hàng này chưa có phiếu nhập kho hợp lệ (hoặc đã xuất hết).
+→ Không thể xuất kho khi chưa có hàng trong kho.`);
+      } else if (Number(formData.quantity) > stockAtDate) {
+        const thieu = Number(formData.quantity) - stockAtDate;
+        throw new Error(`❌ Từ chối xuất kho
+- Mặt hàng: ${matName}
+- Tồn kho hiện tại: ${stockAtDate}
+- Số lượng yêu cầu: ${formData.quantity}
+- Thiếu hụt: ${thieu}
+→ Vui lòng kiểm tra lại số lượng hoặc bổ sung phiếu nhập trước khi xuất.`);
       }
 
       const payload = {
@@ -205,7 +219,19 @@ export const StockOut = ({ user, onBack, addToast, initialAction }: {
       setIsEditing(false);
       setEditingId(null);
       setSelectedSlip(null);
-      if (addToast) addToast(isEditing ? 'Đã cập nhật phiếu xuất!' : 'Đã lưu phiếu xuất kho!', 'success');
+      if (addToast) {
+        if (isEditing) {
+          addToast('Đã cập nhật phiếu xuất!', 'success');
+        } else {
+          const matName = materials.find(m => m.id === finalMaterialId)?.name || finalMaterialId;
+          addToast(`⏳ Phiếu xuất kho đã được tạo — chờ duyệt
+- Mặt hàng: ${matName}
+- Số lượng xuất: ${formData.quantity}
+- Tồn kho hiện tại: ${stockAtDate}
+- Tồn kho sau khi duyệt và thực thi: ${stockAtDate - Number(formData.quantity)}
+→ Hệ thống sẽ ghi nhận và cập nhật tồn kho SAU KHI phiếu được duyệt.`, 'success');
+        }
+      }
     } catch (err: any) {
       if (addToast) addToast('Lỗi: ' + err.message, 'error');
       else alert('Lỗi: ' + err.message);
@@ -235,10 +261,11 @@ export const StockOut = ({ user, onBack, addToast, initialAction }: {
           );
           if (Number(slipToCheck.quantity) > stockAtDate) {
             const thieu = Number(slipToCheck.quantity) - stockAtDate;
-            if (addToast) addToast(
-              `❌ Từ chối duyệt — Không đủ tồn kho tại ngày ${slipToCheck.date}. Tồn: ${stockAtDate} | Yêu cầu: ${slipToCheck.quantity} | Thiếu: ${thieu}`,
-              'error'
-            );
+            if (addToast) addToast(`❌ Từ chối duyệt phiếu xuất kho
+- Tồn kho hiện tại: ${stockAtDate}
+- Số lượng yêu cầu: ${slipToCheck.quantity}
+- Thiếu hụt: ${thieu}
+→ Vui lòng kiểm tra lại số lượng hoặc bổ sung phiếu nhập trước khi duyệt.`, 'error');
             return;
           }
         }

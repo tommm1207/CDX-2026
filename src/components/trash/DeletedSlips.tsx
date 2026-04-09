@@ -6,6 +6,7 @@ import { PageBreadcrumb } from '../shared/PageBreadcrumb';
 import { ConfirmModal } from '../shared/ConfirmModal';
 import { ToastType } from '../shared/Toast';
 import { formatDate, formatNumber } from '@/utils/format';
+import { getAvailableStock } from '@/utils/inventory';
 
 export const DeletedSlips = ({ onBack, addToast }: { 
   onBack: () => void,
@@ -53,15 +54,45 @@ export const DeletedSlips = ({ onBack, addToast }: {
   const confirmRestore = async () => {
     if (!selectedItem) return;
     try {
+      // 1. Fetch full details of the slip to be restored
+      const { data: slip } = await supabase
+        .from(selectedItem.table)
+        .select('*')
+        .eq('id', selectedItem.id)
+        .single();
+        
+      if (!slip) throw new Error('Không tìm thấy phiếu');
+
+      // 2. Validate stock if the slip is stock_out or transfer
+      if (selectedItem.table === 'stock_out' || selectedItem.table === 'transfers') {
+        const wh_id = selectedItem.table === 'stock_out' ? slip.warehouse_id : slip.from_warehouse_id;
+        
+        // Cần truyền date của phiếu vì getAvailableStock tính tồn kho đến một ngày cụ thể.
+        const stockAtDate = await getAvailableStock(slip.material_id, wh_id, slip.date);
+
+        if (Number(slip.quantity) > stockAtDate) {
+          const thieu = Number(slip.quantity) - stockAtDate;
+          throw new Error(`❌ Từ chối khôi phục
+- Mặt hàng: mã ${slip.material_id}
+- Tồn kho hiện tại: ${stockAtDate}
+- Số lượng yêu cầu khôi phục: ${slip.quantity}
+- Thiếu hụt: ${thieu}
+→ Vui lòng kiểm tra lại số lượng hoặc bổ sung phiếu nhập trước khi khôi phục.`);
+        }
+      }
+
+      // 3. Restore slip to 'Chờ duyệt'
       const { error } = await supabase.from(selectedItem.table).update({ status: 'Chờ duyệt' }).eq('id', selectedItem.id);
       if (error) throw error;
-      if (addToast) addToast('Đã khôi phục phiếu thành công!', 'success');
+      
+      if (addToast) addToast('Đã khôi phục chứng từ thành công! Vui lòng làm mới trang.', 'success');
       else alert('Đã khôi phục phiếu thành công!');
+      
       fetchDeletedSlips();
       setShowRestoreModal(false);
       setSelectedItem(null);
     } catch (err: any) {
-      if (addToast) addToast('Lỗi: ' + err.message, 'error');
+      if (addToast) addToast('❌ Từ chối khôi phục — ' + err.message, 'error');
       else alert('Lỗi: ' + err.message);
     }
   };

@@ -287,7 +287,13 @@ export const StockIn = ({ user, onBack, initialStatus, initialAction, addToast }
         const stockFull = await getAvailableStock(selectedSlip.material_id, selectedSlip.warehouse_id, '9999-12-31');
         if (stockFull < selectedSlip.quantity) {
           const thieu = selectedSlip.quantity - stockFull;
-          throw new Error(`Không thể xóa! ${thieu} đơn vị đã được xuất hoặc chuyển đi — xóa phiếu này sẽ gây âm kho.`);
+          throw new Error(`❌ Từ chối xóa phiếu nhập ${selectedSlip.import_code}
+- Mặt hàng: ${selectedSlip.materials?.name || selectedSlip.material_id}
+- Tồn kho hiện tại: ${stockFull + selectedSlip.quantity}
+- Số lượng phiếu nhập cần xóa: ${selectedSlip.quantity}
+- Tồn/Hụt dự tính sau xóa: ${stockFull}
+→ Phiếu nhập này đã có ${thieu} đơn vị được xuất hoặc chuyển đi.
+→ Không thể xóa vì sẽ làm tồn kho âm — không phản ánh thực tế.`);
         }
       }
 

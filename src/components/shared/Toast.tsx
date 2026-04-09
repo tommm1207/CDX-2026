@@ -37,7 +37,7 @@ export const ToastContainer = ({ toasts, removeToast }: ToastContainerProps) => 
             {toast.type === 'warning' && <AlertCircle className="text-amber-500 flex-shrink-0" size={20} />}
             {toast.type === 'info' && <Info className="text-blue-500 flex-shrink-0" size={20} />}
             
-            <p className="text-sm font-medium flex-1 leading-tight">{toast.message}</p>
+            <p className="text-sm font-medium flex-1 leading-tight whitespace-pre-wrap">{toast.message}</p>
             
             <button 
               onClick={() => removeToast(toast.id)}

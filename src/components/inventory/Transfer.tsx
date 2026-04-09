@@ -158,8 +158,22 @@ export const Transfer = ({ user, onBack, addToast, initialAction }: {
 
       // Final stock check
       const stockAtDate = await getAvailableStock(finalMaterialId, finalFromWhId, formData.date, editingId || undefined);
-      if (formData.quantity > stockAtDate) {
-        throw new Error(`Số lượng chuyển (${formData.quantity}) vượt quá tồn kho hiện tại (${stockAtDate}) tại ngày ${formData.date}`);
+      const matName = materials.find(m => m.id === finalMaterialId)?.name || finalMaterialId;
+
+      if (stockAtDate === 0) {
+        throw new Error(`❌ Từ chối luân chuyển
+- Mặt hàng: ${matName}
+- Tồn kho hiện tại: 0
+→ Mặt hàng này chưa có phiếu nhập kho hợp lệ (hoặc đã xuất hết).
+→ Không thể luân chuyển khi chưa có hàng trong kho nguồn.`);
+      } else if (formData.quantity > stockAtDate) {
+        const thieu = formData.quantity - stockAtDate;
+        throw new Error(`❌ Từ chối luân chuyển
+- Mặt hàng: ${matName}
+- Tồn kho hiện tại: ${stockAtDate}
+- Số lượng yêu cầu chuyển: ${formData.quantity}
+- Thiếu hụt: ${thieu}
+→ Vui lòng kiểm tra lại số lượng hoặc bổ sung phiếu nhập vào kho nguồn trước khi chuyển.`);
       }
 
       const payload = {
@@ -190,7 +204,19 @@ export const Transfer = ({ user, onBack, addToast, initialAction }: {
       setEditingId(null);
       setAvailableStock(null);
       setSelectedSlip(null);
-      if (addToast) addToast(isEditing ? 'Cập nhật thành công!' : 'Lập phiếu luân chuyển thành công!', 'success');
+      if (addToast) {
+        if (isEditing) {
+          addToast('Cập nhật thành công!', 'success');
+        } else {
+          const matName = materials.find(m => m.id === finalMaterialId)?.name || finalMaterialId;
+          addToast(`⏳ Phiếu luân chuyển đã được tạo — chờ duyệt
+- Mặt hàng: ${matName}
+- Số lượng chuyển: ${formData.quantity}
+- Tồn kho hiện tại: ${stockAtDate}
+- Tồn kho sau khi duyệt và thực thi: ${stockAtDate - Number(formData.quantity)}
+→ Hệ thống sẽ ghi nhận và cập nhật tồn kho SAU KHI phiếu được duyệt.`, 'success');
+        }
+      }
     } catch (err: any) {
       if (addToast) addToast('Lỗi: ' + err.message, 'error');
       else alert('Lỗi: ' + err.message);
@@ -238,7 +264,13 @@ export const Transfer = ({ user, onBack, addToast, initialAction }: {
         );
         if (stockFull < selectedSlip.quantity) {
           const thieu = selectedSlip.quantity - stockFull;
-          throw new Error(`Không thể xóa! ${thieu} đơn vị đã được xuất tiếp từ kho đích — xóa phiếu này sẽ gây âm kho.`);
+          throw new Error(`❌ Từ chối xóa phiếu luân chuyển ${selectedSlip.transfer_code}
+- Mặt hàng: ${selectedSlip.materials?.name || selectedSlip.material_id}
+- Tồn kho hiện tại khoản đích: ${stockFull}
+- Số lượng cần xóa (rút về): ${selectedSlip.quantity}
+- Tồn kho sau xóa (dự tính): ${stockFull - selectedSlip.quantity}
+→ Từ kho đích này, đã có ${thieu} đơn vị được xuất/chuyển đi tiếp.
+→ Không thể xóa vì sẽ làm tồn kho đích bị âm — không phản ánh thực tế.`);
         }
       }
 
@@ -276,10 +308,12 @@ export const Transfer = ({ user, onBack, addToast, initialAction }: {
           );
           if (Number(slipToCheck.quantity) > stockAtDate) {
             const thieu = Number(slipToCheck.quantity) - stockAtDate;
-            if (addToast) addToast(
-              `❌ Từ chối duyệt — Không đủ tồn kho tại kho nguồn ngày ${slipToCheck.date}. Tồn: ${stockAtDate} | Yêu cầu: ${slipToCheck.quantity} | Thiếu: ${thieu}`,
-              'error'
-            );
+            if (addToast) addToast(`❌ Từ chối duyệt phiếu luân chuyển
+- Mặt hàng: mã ${slipToCheck.material_id}
+- Tồn kho nguồn hiện tại: ${stockAtDate}
+- Số lượng yêu cầu chuyển: ${slipToCheck.quantity}
+- Thiếu hụt: ${thieu}
+→ Vui lòng kiểm tra lại số lượng hoặc bổ sung phiếu nhập kho nguồn trước khi duyệt.`, 'error');
             return;
           }
         }

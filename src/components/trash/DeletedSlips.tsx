@@ -72,7 +72,12 @@ export const DeletedSlips = ({ onBack, addToast }: {
 
         if (Number(slip.quantity) > stockAtDate) {
           const thieu = Number(slip.quantity) - stockAtDate;
-          throw new Error(`Kho không đủ tồn kho để khôi phục! Tồn tại ngày ${slip.date}: ${stockAtDate} | Yêu cầu khôi phục: ${slip.quantity} | Thiếu: ${thieu}`);
+          throw new Error(`❌ Từ chối khôi phục
+- Mặt hàng: mã ${slip.material_id}
+- Tồn kho hiện tại: ${stockAtDate}
+- Số lượng yêu cầu khôi phục: ${slip.quantity}
+- Thiếu hụt: ${thieu}
+→ Vui lòng kiểm tra lại số lượng hoặc bổ sung phiếu nhập trước khi khôi phục.`);
         }
       }
 
@@ -80,7 +85,7 @@ export const DeletedSlips = ({ onBack, addToast }: {
       const { error } = await supabase.from(selectedItem.table).update({ status: 'Chờ duyệt' }).eq('id', selectedItem.id);
       if (error) throw error;
       
-      if (addToast) addToast('Đã khôi phục phiếu thành công! Phiếu đang ở trạng thái Chờ duyệt.', 'success');
+      if (addToast) addToast('Đã khôi phục chứng từ thành công! Vui lòng làm mới trang.', 'success');
       else alert('Đã khôi phục phiếu thành công!');
       
       fetchDeletedSlips();

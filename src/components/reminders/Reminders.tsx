@@ -2,9 +2,10 @@ import { useState, useEffect } from 'react';
 import { Bell, Plus, Search, X, Edit, Trash2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { supabase } from '@/lib/supabase';
-import { Employee } from '@/types';
+import { ObjectType, Employee } from '@/types';
 import { PageBreadcrumb } from '../shared/PageBreadcrumb';
 import { ToastType } from '../shared/Toast';
+import { parseReminderContent, serializeReminderContent } from '@/utils/reminderUtils';
 
 export const Reminders = ({ user, onBack, addToast, initialAction }: { 
   user: Employee, 
@@ -40,7 +41,8 @@ export const Reminders = ({ user, onBack, addToast, initialAction }: {
     title: '',
     content: '',
     reminder_time: getDefaultTime(),
-    browser_notification: true
+    browser_notification: true,
+    assignee_id: ''
   });
 
   useEffect(() => {
@@ -64,7 +66,9 @@ export const Reminders = ({ user, onBack, addToast, initialAction }: {
   const handleSave = async () => {
     try {
       const payload = {
-        ...formData,
+        title: formData.title,
+        content: serializeReminderContent(formData.content, formData.assignee_id ? [formData.assignee_id] : []),
+        browser_notification: formData.browser_notification,
         reminder_time: new Date(formData.reminder_time).toISOString(),
       };
 
@@ -98,11 +102,15 @@ export const Reminders = ({ user, onBack, addToast, initialAction }: {
     const d = new Date(rem.reminder_time);
     const tzOffset = d.getTimezoneOffset() * 60000;
     const localStr = new Date(d.getTime() - tzOffset).toISOString().slice(0, 16);
+    
+    const parsed = parseReminderContent(rem.content);
+    
     setFormData({
       title: rem.title || '',
-      content: rem.content || '',
+      content: parsed.text || '',
       reminder_time: localStr,
-      browser_notification: rem.browser_notification ?? true
+      browser_notification: rem.browser_notification ?? true,
+      assignee_id: parsed.assignees[0] || ''
     });
     setEditingId(rem.id);
     setShowSetReminder(true);
@@ -150,7 +158,7 @@ export const Reminders = ({ user, onBack, addToast, initialAction }: {
           <button
             onClick={() => {
               setEditingId(null);
-              setFormData({ title: '', content: '', reminder_time: getDefaultTime(), browser_notification: true });
+              setFormData({ title: '', content: '', reminder_time: getDefaultTime(), browser_notification: true, assignee_id: '' });
               setShowSetReminder(true);
             }}
             className="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-xl text-sm font-bold hover:bg-primary-dark transition-all shadow-lg shadow-primary/20"
@@ -160,7 +168,7 @@ export const Reminders = ({ user, onBack, addToast, initialAction }: {
           <button
             onClick={() => {
               setEditingId(null);
-              setFormData({ title: '', content: '', reminder_time: getDefaultTime(), browser_notification: true });
+              setFormData({ title: '', content: '', reminder_time: getDefaultTime(), browser_notification: true, assignee_id: '' });
               setShowAddNew(true);
             }}
             className="flex items-center gap-2 px-4 py-2 bg-white text-gray-700 border border-gray-200 rounded-xl text-sm font-bold hover:bg-gray-50 transition-all shadow-sm"
@@ -250,7 +258,7 @@ export const Reminders = ({ user, onBack, addToast, initialAction }: {
                     </span>
                   </td>
                   <td className="px-4 py-3 text-sm text-gray-600">{new Date(rem.reminder_time).toLocaleString('vi-VN')}</td>
-                  <td className="px-4 py-3 text-sm text-gray-600 max-w-xs truncate">{rem.content}</td>
+                  <td className="px-4 py-3 text-sm text-gray-600 max-w-xs truncate">{parseReminderContent(rem.content).text}</td>
                   <td className="px-4 py-3 text-sm font-medium text-gray-700">{rem.title}</td>
                   <td className="px-4 py-3">
                     <div className="flex items-center justify-center gap-2">
@@ -314,6 +322,19 @@ export const Reminders = ({ user, onBack, addToast, initialAction }: {
                     onChange={e => setFormData({ ...formData, content: e.target.value })}
                     className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm focus:ring-2 focus:ring-primary/20 outline-none mt-1 min-h-[100px]"
                   />
+                </div>
+                <div>
+                  <label className="text-[10px] font-bold text-gray-400 uppercase">Gửi đến (Nhân sự) <span className="text-gray-400 font-normal italic">- Bỏ trống để gửi toàn công ty</span></label>
+                  <select
+                    value={formData.assignee_id}
+                    onChange={e => setFormData({ ...formData, assignee_id: e.target.value })}
+                    className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm focus:ring-2 focus:ring-primary/20 outline-none mt-1"
+                  >
+                    <option value="">-- Tất cả nhân viên --</option>
+                    {employees.map(emp => (
+                      <option key={emp.id} value={emp.id}>{emp.full_name} ({emp.code})</option>
+                    ))}
+                  </select>
                 </div>
                 <div>
                   <label className="text-[10px] font-bold text-gray-400 uppercase">Thời gian nhắc <span className="text-red-500">*</span></label>
@@ -412,6 +433,20 @@ export const Reminders = ({ user, onBack, addToast, initialAction }: {
                   <div>
                     <label className="text-[10px] font-bold text-gray-400 uppercase">Tiêu đề</label>
                     <input type="text" value={formData.title} onChange={e => setFormData({ ...formData, title: e.target.value })} className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm focus:ring-2 focus:ring-primary/20 outline-none mt-1" />
+                  </div>
+                  <div>
+                    <label className="text-[10px] font-bold text-gray-400 uppercase">Gửi đến (Nhân sự)</label>
+                    <select
+                      value={formData.assignee_id}
+                      onChange={e => setFormData({ ...formData, assignee_id: e.target.value })}
+                      className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm focus:ring-2 focus:ring-primary/20 outline-none mt-1"
+                    >
+                      <option value="">-- Tất cả nhân viên --</option>
+                      {employees.map(emp => (
+                        <option key={emp.id} value={emp.id}>{emp.full_name} ({emp.code})</option>
+                      ))}
+                    </select>
+                    <p className="text-[10px] text-gray-400 mt-1 italic">Bỏ trống để thông báo tới toàn thể công ty.</p>
                   </div>
                 </div>
               </div>

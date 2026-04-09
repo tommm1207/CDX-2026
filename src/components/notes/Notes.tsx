@@ -80,9 +80,15 @@ export const Notes = ({ user, onBack, addToast, initialAction }: { user: Employe
     }
 
     try {
+      // Auto-compute related_object from selected personnel
+      const computedRelatedObject = formData.related_personnel.length > 0
+        ? employees.filter(e => formData.related_personnel.includes(e.id)).map(e => e.full_name).join(', ')
+        : formData.related_object; // fallback
+
       if (editingId) {
         const { error } = await supabase.from('notes').update({
           ...formData,
+          related_object: computedRelatedObject,
           created_by: user.id
         }).eq('id', editingId);
         if (error) throw error;
@@ -90,6 +96,7 @@ export const Notes = ({ user, onBack, addToast, initialAction }: { user: Employe
       } else {
         const { error } = await supabase.from('notes').insert([{
           ...formData,
+          related_object: computedRelatedObject,
           created_by: user.id
         }]);
         if (error) throw error;
@@ -378,23 +385,10 @@ export const Notes = ({ user, onBack, addToast, initialAction }: { user: Employe
                   </div>
                 </div>
                 <div>
-                  <label className="text-[10px] font-bold text-gray-400 uppercase">Nhân sự liên quan</label>
-                  <select
-                    value={formData.related_object}
-                    onChange={e => setFormData({ ...formData, related_object: e.target.value })}
-                    className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm focus:ring-2 focus:ring-primary/20 outline-none mt-1"
-                  >
-                    <option value="">-- Chọn nhân sự --</option>
+                  <label className="text-[10px] font-bold text-gray-400 uppercase">Nhân sự liên quan <span className="text-gray-400 font-normal italic">- Chọn nhiều</span></label>
+                  <div className="mt-1 border border-gray-200 rounded-xl max-h-40 overflow-y-auto bg-white/50">
                     {employees.map(emp => (
-                      <option key={emp.id} value={emp.full_name}>{emp.full_name}</option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <label className="text-[10px] font-bold text-gray-400 uppercase">Nhân sự liên quan</label>
-                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 mt-2 max-h-40 overflow-y-auto p-2 border border-gray-100 rounded-xl">
-                    {employees.map(emp => (
-                      <label key={emp.id} className="flex items-center gap-2 cursor-pointer hover:bg-gray-50 p-1 rounded transition-colors">
+                      <label key={emp.id} className="flex items-center gap-3 px-4 py-2.5 hover:bg-gray-50 border-b border-gray-100 last:border-0 cursor-pointer transition-colors">
                         <input
                           type="checkbox"
                           checked={formData.related_personnel.includes(emp.id)}
@@ -404,9 +398,9 @@ export const Notes = ({ user, onBack, addToast, initialAction }: { user: Employe
                               : formData.related_personnel.filter(id => id !== emp.id);
                             setFormData({ ...formData, related_personnel: newPersonnel });
                           }}
-                          className="rounded border-gray-300 text-primary focus:ring-primary"
+                          className="w-4 h-4 rounded border-gray-300 text-primary focus:ring-primary flex-shrink-0"
                         />
-                        <span className="text-xs text-gray-600 truncate">{emp.full_name}</span>
+                        <span className="text-sm text-gray-700 font-medium truncate">{emp.full_name} <span className="text-gray-400 text-xs font-normal">({emp.code})</span></span>
                       </label>
                     ))}
                   </div>
@@ -459,17 +453,25 @@ export const Notes = ({ user, onBack, addToast, initialAction }: { user: Employe
               <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-6 max-h-[70vh] overflow-y-auto">
                 <div className="space-y-4">
                   <div>
-                    <label className="text-[10px] font-bold text-gray-400 uppercase">Nhân sự liên quan</label>
-                    <select 
-                      value={formData.related_object} 
-                      onChange={e => setFormData({ ...formData, related_object: e.target.value })} 
-                      className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm focus:ring-2 focus:ring-primary/20 outline-none mt-1"
-                    >
-                      <option value="">-- Chọn nhân sự --</option>
+                    <label className="text-[10px] font-bold text-gray-400 uppercase">Nhân sự liên quan <span className="text-gray-400 font-normal italic">- Chọn nhiều</span></label>
+                    <div className="mt-1 border border-gray-200 rounded-xl max-h-48 overflow-y-auto bg-white/50">
                       {employees.map(emp => (
-                        <option key={emp.id} value={emp.full_name}>{emp.full_name}</option>
+                        <label key={emp.id} className="flex items-center gap-3 px-4 py-2 hover:bg-gray-50 border-b border-gray-100 last:border-0 cursor-pointer transition-colors">
+                          <input
+                            type="checkbox"
+                            checked={formData.related_personnel.includes(emp.id)}
+                            onChange={e => {
+                              const newPersonnel = e.target.checked
+                                ? [...formData.related_personnel, emp.id]
+                                : formData.related_personnel.filter(id => id !== emp.id);
+                              setFormData({ ...formData, related_personnel: newPersonnel });
+                            }}
+                            className="w-4 h-4 rounded border-gray-300 text-primary focus:ring-primary flex-shrink-0"
+                          />
+                          <span className="text-sm text-gray-700 font-medium truncate">{emp.full_name} <span className="text-gray-400 text-xs font-normal">({emp.code})</span></span>
+                        </label>
                       ))}
-                    </select>
+                    </div>
                   </div>
                   <div>
                     <label className="text-[10px] font-bold text-gray-400 uppercase">Mã ghi chú</label>

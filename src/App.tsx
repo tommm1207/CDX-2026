@@ -107,23 +107,14 @@ export default function App() {
       const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
       
       try {
-        // Attempt a clean fetch first, fall back to basic fetch if created_by is missing
-        let { data, error } = await supabase
+        const { data, error } = await supabase
           .from('reminders')
           .select('*, sender:users!created_by(full_name)')
           .neq('status', 'Đã xóa')
           .lte('reminder_time', now)
           .gte('reminder_time', twentyFourHoursAgo);
 
-        if (error && error.message.includes('created_by')) {
-          const { data: fallbackData } = await supabase
-            .from('reminders')
-            .select('*')
-            .neq('status', 'Đã xóa')
-            .lte('reminder_time', now)
-            .gte('reminder_time', twentyFourHoursAgo);
-          data = fallbackData;
-        }
+        if (error) throw error;
 
         if (data && data.length > 0) {
           let hasNew = false;
@@ -138,13 +129,15 @@ export default function App() {
 
             if (!notifiedMap.has(rem.id)) {
               const senderName = (rem as any).sender?.full_name || 'Hệ thống';
-              const scopeText = payload.assignees.length === 0 ? 'Toàn bộ' : 'Cá nhân';
-              const displayTitle = `🔔 ${rem.title} (Từ: ${senderName})`;
-              const displayMessage = `${payload.text}\n[Gửi: ${scopeText}]`;
+              const displayTitle = `CDX Management`;
+              const displayMessage = `👤 Từ: ${senderName}\n📢 Thông báo: ${rem.title}\n📝 Nội dung: ${payload.text}`;
 
               if (rem.browser_notification && Notification.permission === "granted") {
                 try {
-                  new Notification(displayTitle, { body: payload.text, icon: '/logo.png' });
+                  new Notification(displayTitle, { 
+                    body: `Từ: ${senderName}\nThông báo: ${rem.title}`, 
+                    icon: '/logo.png' 
+                  });
                 } catch (e) {}
               }
 

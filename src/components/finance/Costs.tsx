@@ -230,6 +230,10 @@ export const Costs = ({ user, onBack, addToast, initialAction }: {
   };
 
   const handleEdit = (item: any) => {
+    if (item.notes?.includes('Tự động tạo từ hệ thống')) {
+      if (addToast) addToast("Bút toán tự động từ hệ thống không được phép thay đổi.", "error");
+      return;
+    }
     setFormData({
       date: item.date,
       transaction_type: item.transaction_type || 'Chi',
@@ -250,8 +254,12 @@ export const Costs = ({ user, onBack, addToast, initialAction }: {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [itemToDelete, setItemToDelete] = useState<string | null>(null);
 
-  const handleDeleteClick = (id: string) => {
-    setItemToDelete(id);
+  const handleDeleteClick = (item: any) => {
+    if (item.notes?.includes('Tự động tạo từ hệ thống')) {
+      if (addToast) addToast("Bút toán hệ thống không được phép xóa tay. Vui lòng thao tác trên chứng từ gốc.", "error");
+      return;
+    }
+    setItemToDelete(item.id);
     setShowDeleteModal(true);
   };
 
@@ -546,7 +554,7 @@ export const Costs = ({ user, onBack, addToast, initialAction }: {
               </div>
               <div className="p-4 border-t border-gray-100 bg-gray-50 space-y-2">
                 <div className={`grid gap-2 ${selectedCost.status !== 'Đã duyệt' && selectedCost.status !== 'Từ chối' ? 'grid-cols-2' : 'grid-cols-1'}`}>
-                  <Button fullWidth variant="outline" icon={Trash2} onClick={() => { setShowDetailModal(false); handleDeleteClick(selectedCost.id); }} className="text-red-600 border-red-200 hover:bg-red-50">Thùng rác</Button>
+                  <Button fullWidth variant="outline" icon={Trash2} onClick={() => { setShowDetailModal(false); handleDeleteClick(selectedCost); }} className="text-red-600 border-red-200 hover:bg-red-50">Thùng rác</Button>
                   {selectedCost.status !== 'Đã duyệt' && selectedCost.status !== 'Từ chối' && selectedCost.status !== 'Đã hoàn thành' && (
                     <Button fullWidth variant="outline" icon={Edit} onClick={() => handleEdit(selectedCost)} className="text-gray-700 hover:bg-gray-50">Sửa</Button>
                   )}

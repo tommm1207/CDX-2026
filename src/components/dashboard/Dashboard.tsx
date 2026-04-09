@@ -191,22 +191,12 @@ export const Dashboard = ({ user, onNavigate, addToast, pendingApprovals = 0 }: 
           </h1>
           <p className="text-gray-500 font-medium text-sm">Chúc bạn một ngày làm việc hiệu quả tại CDX.</p>
         </div>
-          <button 
-            onClick={() => onNavigate('user-manual')}
-            className="flex items-center gap-2 bg-primary p-2 rounded-xl shadow-lg shadow-primary/20 hover:bg-primary-hover transition-all"
-          >
-            <div className="w-9 h-9 bg-white/20 rounded-lg flex items-center justify-center text-white">
-              <FileText size={18} />
+          <div className="flex items-center gap-2 bg-primary px-4 py-2 rounded-xl shadow-lg shadow-primary/20">
+            <div className="text-left">
+              <p className="text-[9px] font-bold text-white/70 uppercase tracking-widest leading-none mb-1">Vai trò</p>
+              <p className="text-sm font-black text-white leading-none uppercase">{user.role}</p>
             </div>
-            <div className="pr-3 border-r border-white/20 text-left">
-              <p className="text-[9px] font-bold text-white/70 uppercase tracking-widest leading-none mb-0.5">Tài liệu</p>
-              <p className="text-xs font-black text-white leading-none">Hướng dẫn app</p>
-            </div>
-            <div className="pl-1 pr-1 text-left">
-              <p className="text-[9px] font-bold text-white/70 uppercase tracking-widest leading-none mb-0.5">Vai trò</p>
-              <p className="text-xs font-black text-white leading-none uppercase">{user.role}</p>
-            </div>
-          </button>
+          </div>
       </div>
 
       {/* Quick Actions — 1 row compact on mobile, full cards on desktop */}

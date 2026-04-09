@@ -23,7 +23,6 @@ import { BOMConfig } from '@/components/production/BOMConfig';
 import { ProductionOrders } from '@/components/production/ProductionOrders';
 import { ProductionOrderDetail } from '@/components/production/ProductionOrderDetail';
 import { Trash } from '@/components/trash/Trash';
-import { UserManual } from '@/components/shared/UserManual';
 import { DeletedWarehouses } from '@/components/trash/DeletedWarehouses';
 import { DeletedSlips } from '@/components/trash/DeletedSlips';
 import { DeletedEmployees } from '@/components/trash/DeletedEmployees';
@@ -87,7 +86,6 @@ export const AppRouter = ({
     case 'production-bom': return <BOMConfig user={user} onBack={goBack} addToast={addToast} />;
 
     case 'trash': return <Trash onNavigate={navigateTo} onBack={goBack} />;
-    case 'user-manual': return <UserManual user={user} onBack={goBack} />;
     case 'deleted-warehouses': return <DeletedWarehouses onBack={goBack} addToast={addToast} />;
     case 'deleted-slips': return <DeletedSlips onBack={goBack} addToast={addToast} />;
     case 'deleted-employees': return <DeletedEmployees onBack={goBack} addToast={addToast} />;

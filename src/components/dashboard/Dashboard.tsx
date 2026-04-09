@@ -251,8 +251,8 @@ export const Dashboard = ({ user, onNavigate, addToast, pendingApprovals = 0 }: 
         </div>
       </div>
 
-      {/* Quick Actions — 1 row compact on mobile, full cards on desktop */}
-      <div className="grid grid-cols-4 gap-2 md:gap-6 md:grid-cols-4">
+      {/* Quick Actions — Single row for all primary features */}
+      <div className="grid grid-cols-5 gap-2 md:gap-6">
         {menuActions.map((action) => (
           (user.role === 'Admin' || user.role === 'Admin App' || ['stock-in', 'stock-out', 'transfer', 'cost-report'].includes(action.id)) && (
             <motion.div

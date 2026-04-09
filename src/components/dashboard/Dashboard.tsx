@@ -413,8 +413,8 @@ const RadialMenu = ({ onNavigate }: { onNavigate: (page: string, params?: any) =
   const items = [
     { id: 'stock-in', label: 'Nhập kho', icon: ArrowDownCircle, color: 'bg-blue-500', action: () => onNavigate('stock-in', { action: 'add' }) },
     { id: 'stock-out', label: 'Xuất kho', icon: ArrowUpCircle, color: 'bg-red-600', action: () => onNavigate('stock-out', { action: 'add' }) },
-    { id: 'production-list', label: 'Sản xuất', icon: Layers, color: 'bg-indigo-600', action: () => onNavigate('production-list', { action: 'add' }) },
     { id: 'transfer', label: 'Luân chuyển', icon: ArrowLeftRight, color: 'bg-orange-500', action: () => onNavigate('transfer', { action: 'add' }) },
+    { id: 'production-list', label: 'Sản xuất', icon: Layers, color: 'bg-indigo-600', action: () => onNavigate('production-list', { action: 'add' }) },
     { id: 'costs', label: 'Chi phí', icon: Wallet, color: 'bg-primary', action: () => onNavigate('costs', { action: 'add' }) },
     { id: 'notes', label: 'Ghi chú', icon: FileText, color: 'bg-amber-500', action: () => onNavigate('notes', { action: 'add' }) },
     { id: 'reminders', label: 'Lời nhắc', icon: Bell, color: 'bg-primary', action: () => onNavigate('reminders', { action: 'add' }) },
@@ -459,7 +459,7 @@ const RadialMenu = ({ onNavigate }: { onNavigate: (page: string, params?: any) =
                       className={`flex items-center justify-center w-12 h-12 rounded-full shadow-xl ${item.color} text-white hover:scale-110 hover:brightness-110 active:scale-95 transition-all outline-none pointer-events-auto group relative`}
                       title={item.label}
                     >
-                      <span className="absolute right-full mr-3 whitespace-nowrap bg-black/80 text-white text-xs font-bold px-2 py-1 rounded-md opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+                      <span className="absolute right-full mr-4 whitespace-nowrap bg-white/90 backdrop-blur-md text-gray-800 text-[10px] font-black uppercase tracking-wider px-3 py-1.5 rounded-xl opacity-100 shadow-lg border border-white/50 pointer-events-none">
                         {item.label}
                       </span>
                       <item.icon size={20} />

@@ -445,11 +445,11 @@ const RadialMenu = ({ onNavigate }: { onNavigate: (page: string, params?: any) =
                 const endAngle = Math.PI * 1.58;   
                 const angle = startAngle + (endAngle - startAngle) * (index / (items.length - 1)); 
                 
-                // Rotated labels (Tia mặt trời) matching the sketch
+                // Rotated labels (Tia mặt trời)
                 const rotationDegrees = (angle - Math.PI) * (180 / Math.PI);
                 
-                const iconRadius = 145; 
-                const labelRadius = 225; // Adjusted for rotation
+                const iconRadius = 235; // Icons on the outer arc
+                const labelRadius = 145; // Labels on the inner arc
                 
                 const ix = Math.round(iconRadius * Math.cos(angle));
                 const iy = Math.round(iconRadius * Math.sin(angle));
@@ -459,7 +459,7 @@ const RadialMenu = ({ onNavigate }: { onNavigate: (page: string, params?: any) =
 
                 return (
                   <div key={item.id}>
-                    {/* Rotated Radial Label - Sketch Accurate */}
+                    {/* Inner Label - Rotated & Slim */}
                     <motion.div
                       initial={{ opacity: 0, scale: 0.5, x: 0, y: 0 }}
                       animate={{ opacity: 1, scale: 1, x: lx, y: ly }}
@@ -468,14 +468,14 @@ const RadialMenu = ({ onNavigate }: { onNavigate: (page: string, params?: any) =
                       className="absolute inset-x-0 bottom-0 flex items-center justify-center pointer-events-none"
                     >
                       <div 
-                        className="text-white font-black text-[9px] uppercase tracking-wider drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)] whitespace-nowrap"
+                        className="bg-white/95 backdrop-blur-md text-gray-800 font-bold text-[9px] uppercase tracking-wide px-2.5 py-1 rounded-lg shadow-sm border border-white/50 whitespace-nowrap"
                         style={{ transform: `rotate(${rotationDegrees}deg)` }}
                       >
                         {item.label}
                       </div>
                     </motion.div>
 
-                    {/* Icon Button */}
+                    {/* Outer Icon Button */}
                     <motion.div
                       initial={{ opacity: 0, scale: 0, x: 0, y: 0 }}
                       animate={{ opacity: 1, scale: 1, x: ix, y: iy }}

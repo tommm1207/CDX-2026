@@ -274,7 +274,7 @@ export const Notes = ({ user, onBack, addToast, initialAction }: { user: Employe
           </h3>
         </div>
         <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse">
+          <table className="w-full text-left border-collapse whitespace-nowrap">
             <thead>
               <tr className="bg-gray-50/50">
                 <th className="px-4 py-3 text-[10px] font-bold text-gray-400 uppercase">Đối tượng liên quan</th>

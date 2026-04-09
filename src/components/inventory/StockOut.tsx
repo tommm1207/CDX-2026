@@ -216,6 +216,34 @@ export const StockOut = ({ user, onBack, addToast, initialAction }: {
 
   const handleApprove = async (id: string, status: string) => {
     try {
+      // Kiểm tra tồn kho trước khi duyệt xuất kho
+      if (status === 'Đã duyệt') {
+        const { data: slipToCheck } = await supabase
+          .from('stock_out')
+          .select('material_id, warehouse_id, quantity, date')
+          .eq('id', id)
+          .maybeSingle();
+
+        if (slipToCheck) {
+          // Loại trừ chính phiếu này khỏi tongXuat (nó đang Chờ duyệt, đã được tính)
+          // để kiểm tra tồn thực tế tích lũy đến ngày phiếu.
+          const stockAtDate = await getAvailableStock(
+            slipToCheck.material_id,
+            slipToCheck.warehouse_id,
+            slipToCheck.date,
+            id  // excludeId — bỏ phiếu hiện tại ra khỏi tính toán
+          );
+          if (Number(slipToCheck.quantity) > stockAtDate) {
+            const thieu = Number(slipToCheck.quantity) - stockAtDate;
+            if (addToast) addToast(
+              `❌ Từ chối duyệt — Không đủ tồn kho tại ngày ${slipToCheck.date}. Tồn: ${stockAtDate} | Yêu cầu: ${slipToCheck.quantity} | Thiếu: ${thieu}`,
+              'error'
+            );
+            return;
+          }
+        }
+      }
+
       const { error } = await supabase.from('stock_out').update({ status }).eq('id', id);
       if (error) throw error;
       
@@ -369,7 +397,7 @@ export const StockOut = ({ user, onBack, addToast, initialAction }: {
 
       <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse min-w-[700px]">
+          <table className="w-full text-left border-collapse min-w-[700px] whitespace-nowrap">
             <thead>
               <tr className="bg-red-600 text-white">
                 <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider">Ngày</th>

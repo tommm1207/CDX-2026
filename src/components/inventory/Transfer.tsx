@@ -1,5 +1,5 @@
 import { useState, useEffect, FormEvent } from 'react';
-import { Search, Plus, ArrowLeftRight, Edit, Trash2, ChevronDown, X, PackagePlus, ArrowDownCircle } from 'lucide-react';
+import { Search, Plus, ArrowLeftRight, Edit, Trash2, ChevronDown, X, PackagePlus, ArrowDownCircle, Check } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { supabase } from '@/lib/supabase';
 import { Employee } from '@/types';
@@ -228,6 +228,20 @@ export const Transfer = ({ user, onBack, addToast, initialAction }: {
 
   const confirmDelete = async () => {
     try {
+      if (selectedSlip.status === 'Đã duyệt') {
+        // Kiểm tra kho đích ('9999-12-31') — xóa phiếu chuyển sẽ hoàn trả vật tư về kho nguồn
+        // cần kho đích còn đủ tồn kho (có thể xuất tiếp sau đó không bị âm).
+        const stockFull = await getAvailableStock(
+          selectedSlip.material_id,
+          selectedSlip.to_warehouse_id,
+          '9999-12-31'
+        );
+        if (stockFull < selectedSlip.quantity) {
+          const thieu = selectedSlip.quantity - stockFull;
+          throw new Error(`Không thể xóa! ${thieu} đơn vị đã được xuất tiếp từ kho đích — xóa phiếu này sẽ gây âm kho.`);
+        }
+      }
+
       const { error } = await supabase.from('transfers').update({ status: 'Đã xóa' }).eq('id', selectedSlip.id);
       if (error) throw error;
       if (addToast) addToast('Đã chuyển phiếu vào thùng rác', 'success');
@@ -240,6 +254,46 @@ export const Transfer = ({ user, onBack, addToast, initialAction }: {
         : err.message;
       if (addToast) addToast('Lỗi: ' + msg, 'error');
       else alert('Lỗi: ' + msg);
+    }
+  };
+
+  const handleApprove = async (id: string, status: string) => {
+    try {
+      // Kiểm tra tồn kho kho nguồn trước khi duyệt luân chuyển
+      if (status === 'Đã duyệt') {
+        const { data: slipToCheck } = await supabase
+          .from('transfers')
+          .select('material_id, from_warehouse_id, quantity, date')
+          .eq('id', id)
+          .maybeSingle();
+
+        if (slipToCheck) {
+          // Loại trừ chính phiếu này khỏi giảmTruChuyểnDi (nó đang Chờ duyệt, chưa được tính)
+          const stockAtDate = await getAvailableStock(
+            slipToCheck.material_id,
+            slipToCheck.from_warehouse_id,
+            slipToCheck.date
+          );
+          if (Number(slipToCheck.quantity) > stockAtDate) {
+            const thieu = Number(slipToCheck.quantity) - stockAtDate;
+            if (addToast) addToast(
+              `❌ Từ chối duyệt — Không đủ tồn kho tại kho nguồn ngày ${slipToCheck.date}. Tồn: ${stockAtDate} | Yêu cầu: ${slipToCheck.quantity} | Thiếu: ${thieu}`,
+              'error'
+            );
+            return;
+          }
+        }
+      }
+
+      const { error } = await supabase.from('transfers').update({ status }).eq('id', id);
+      if (error) throw error;
+
+      fetchSlips();
+      setShowDetailModal(false);
+      if (addToast) addToast('Cập nhật trạng thái thành công!', 'success');
+    } catch (err: any) {
+      if (addToast) addToast('Lỗi: ' + err.message, 'error');
+      else alert('Lỗi: ' + err.message);
     }
   };
 
@@ -296,7 +350,7 @@ export const Transfer = ({ user, onBack, addToast, initialAction }: {
 
       <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse min-w-[700px]">
+          <table className="w-full text-left border-collapse min-w-[700px] whitespace-nowrap">
             <thead>
               <tr className="bg-orange-500 text-white">
                 <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider">Ngày</th>
@@ -406,6 +460,12 @@ export const Transfer = ({ user, onBack, addToast, initialAction }: {
                 ))}
               </div>
               <div className="p-4 border-t border-gray-100 bg-gray-50 space-y-2">
+                {selectedSlip.status !== 'Đã xóa' && (user.role === 'Admin' || user.role === 'Admin App') && selectedSlip.status === 'Chờ duyệt' && (
+                  <div className="grid grid-cols-2 gap-2">
+                    <Button fullWidth variant="danger" icon={X} onClick={() => handleApprove(selectedSlip.id, 'Từ chối')}>Từ chối</Button>
+                    <Button fullWidth variant="success" icon={Check} onClick={() => handleApprove(selectedSlip.id, 'Đã duyệt')}>Duyệt</Button>
+                  </div>
+                )}
                 {selectedSlip.status !== 'Đã xóa' && (
                   <div className="grid grid-cols-2 gap-2">
                     <Button fullWidth variant="outline" icon={Trash2} onClick={handleDelete} className="text-red-600 border-red-200 hover:bg-red-50">Thùng rác</Button>

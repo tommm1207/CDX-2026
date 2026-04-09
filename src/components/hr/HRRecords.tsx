@@ -241,7 +241,7 @@ export const HRRecords = ({ user, onBack, addToast }: {
           )}
         </AnimatePresence>
         <div className="overflow-x-auto custom-scrollbar pb-2">
-          <table className="w-full text-left border-separate border-spacing-0">
+          <table className="w-full text-left border-separate border-spacing-0 whitespace-nowrap">
             <thead>
               <tr className="bg-primary text-white text-[11px] uppercase tracking-wider whitespace-nowrap">
                 <th className="p-3 first:rounded-tl-lg sticky left-0 bg-primary z-10">Mã NV</th>

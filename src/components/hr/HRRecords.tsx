@@ -6,6 +6,7 @@ import { Employee } from '@/types';
 import { PageBreadcrumb } from '../shared/PageBreadcrumb';
 import { ToastType } from '../shared/Toast';
 import { FAB } from '../shared/FAB';
+import { Button } from '../shared/Button';
 
 export const HRRecords = ({ user, onBack, addToast }: { 
   user: Employee, 
@@ -198,14 +199,12 @@ export const HRRecords = ({ user, onBack, addToast }: {
         <h2 className="text-lg font-bold text-gray-800 flex items-center gap-2">
           <Users size={20} className="text-primary" /> Hồ sơ Nhân sự
         </h2>
-        <button
+        <Button
+          size="icon"
+          variant={showFilter ? 'primary' : 'outline'}
           onClick={() => setShowFilter(f => !f)}
-          className={`p-2 rounded-xl border transition-colors ${
-            showFilter ? 'bg-primary text-white border-primary' : 'bg-white text-gray-500 border-gray-200 hover:border-primary/40'
-          }`}
-        >
-          <Search size={16} />
-        </button>
+          icon={Search}
+        />
       </div>
 
       <div className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 space-y-4">
@@ -304,18 +303,22 @@ export const HRRecords = ({ user, onBack, addToast }: {
                   </td>
                   <td className="p-3" onClick={(e) => e.stopPropagation()}>
                     <div className="flex gap-2">
-                      <button
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        className="text-blue-600 hover:bg-blue-50"
                         onClick={(e) => { e.stopPropagation(); handleEdit(emp); }}
-                        className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                      >
-                        <Edit size={14} />
-                      </button>
-                      <button
+                        icon={Edit}
+                        iconSize={14}
+                      />
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        className="text-red-600 hover:bg-red-50"
                         onClick={(e) => { e.stopPropagation(); handleDeleteClick(emp.id); }}
-                        className="p-1.5 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                      >
-                        <Trash2 size={14} />
-                      </button>
+                        icon={Trash2}
+                        iconSize={14}
+                      />
                     </div>
                   </td>
                 </tr>
@@ -344,8 +347,20 @@ export const HRRecords = ({ user, onBack, addToast }: {
               <h3 className="text-xl font-bold text-gray-800 mb-2">Xác nhận xóa?</h3>
               <p className="text-sm text-gray-500 mb-6 font-medium">Bạn có chắc chắn muốn chuyển nhân sự <strong>{employees.find(e => e.id === itemToDelete)?.code || itemToDelete?.slice(0, 8)}</strong> vào thùng rác?<br/>Hành động này có thể hoàn tác trong mục Thùng rác.</p>
               <div className="flex gap-3">
-                <button onClick={() => setShowDeleteModal(false)} className="flex-1 px-4 py-2 rounded-xl border border-gray-200 text-sm font-bold text-gray-500 hover:bg-gray-50 transition-colors">Hủy bỏ</button>
-                <button onClick={confirmDelete} className="flex-1 px-4 py-2 rounded-xl bg-red-600 text-white text-sm font-bold hover:bg-red-700 transition-colors shadow-lg shadow-red-500/20">Di chuyển</button>
+                <Button 
+                  fullWidth 
+                  variant="outline" 
+                  onClick={() => setShowDeleteModal(false)}
+                >
+                  Hủy bỏ
+                </Button>
+                <Button 
+                  fullWidth 
+                  variant="danger" 
+                  onClick={confirmDelete}
+                >
+                  Di chuyển
+                </Button>
               </div>
             </motion.div>
           </div>
@@ -568,14 +583,21 @@ export const HRRecords = ({ user, onBack, addToast }: {
                   </div>
 
                   <div className="p-6 bg-gray-50 flex justify-end gap-3 flex-shrink-0">
-                    <button type="button" onClick={() => setShowModal(false)} className="px-6 py-2 rounded-xl text-sm font-bold text-gray-500 hover:bg-gray-200 transition-colors">Hủy bỏ</button>
-                    <button
+                    <Button 
+                      variant="ghost" 
+                      onClick={() => setShowModal(false)}
+                    >
+                      Hủy bỏ
+                    </Button>
+                    <Button
                       type="submit"
                       disabled={submitting}
-                      className="px-6 py-2 rounded-xl text-sm font-bold bg-primary text-white hover:bg-primary-hover transition-colors disabled:opacity-50"
+                      variant="primary"
+                      isLoading={submitting}
+                      className="min-w-[120px]"
                     >
-                      {submitting ? 'Đang lưu...' : 'Lưu dữ liệu'}
-                    </button>
+                      Lưu dữ liệu
+                    </Button>
                   </div>
                 </form>
               </div>

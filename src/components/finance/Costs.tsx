@@ -333,14 +333,12 @@ export const Costs = ({ user, onBack, addToast, initialAction }: {
           <p className="text-xs text-gray-500 mt-1">Theo dõi các khoản thu chi và lợi nhuận</p>
         </div>
         <div className="flex items-center gap-2">
-          <button
+          <Button
+            size="icon"
+            variant={showFilter ? 'primary' : 'outline'}
             onClick={() => setShowFilter(f => !f)}
-            className={`p-2 rounded-lg border transition-colors ${
-              showFilter ? 'bg-primary text-white border-primary' : 'bg-white text-gray-500 border-gray-200 hover:border-primary/40'
-            }`}
-          >
-            <Search size={18} />
-          </button>
+            icon={Search}
+          />
           <ExcelButton onClick={exportToExcel} />
         </div>
       </div>

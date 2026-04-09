@@ -346,14 +346,12 @@ export const Transfer = ({ user, onBack, addToast, initialAction }: {
           <p className="text-xs text-gray-500 mt-1">Luân chuyển vật tư giữa các kho</p>
         </div>
         <div className="flex items-center gap-2">
-          <button
+          <Button
+            size="icon"
+            variant={showFilter ? 'primary' : 'outline'}
             onClick={() => setShowFilter(f => !f)}
-            className={`p-2.5 rounded-xl border transition-colors ${
-              showFilter ? 'bg-primary text-white border-primary' : 'bg-white text-gray-500 border-gray-200 hover:border-primary/40'
-            }`}
-          >
-            <Search size={16} />
-          </button>
+            icon={Search}
+          />
         </div>
       </div>
 
@@ -369,16 +367,14 @@ export const Transfer = ({ user, onBack, addToast, initialAction }: {
               <label className="text-[10px] font-bold text-gray-400 uppercase block mb-2">Lọc theo trạng thái</label>
               <div className="flex items-center gap-2 overflow-x-auto pb-2 md:pb-0 no-scrollbar">
                 {['Tất cả', 'Chờ duyệt', 'Đã duyệt', 'Từ chối'].map((status) => (
-                  <button
+                  <Button
                     key={status}
+                    size="sm"
+                    variant={statusFilter === status ? 'primary' : 'outline'}
                     onClick={() => setStatusFilter(status)}
-                    className={`px-4 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all ${statusFilter === status
-                        ? 'bg-primary text-white shadow-lg shadow-primary/20'
-                        : 'bg-white text-gray-500 hover:bg-gray-50 border border-gray-100'
-                      }`}
                   >
                     {status}
-                  </button>
+                  </Button>
                 ))}
               </div>
             </div>
@@ -648,7 +644,8 @@ export const Transfer = ({ user, onBack, addToast, initialAction }: {
                     <Button variant="outline" onClick={() => setShowModal(false)}>Hủy</Button>
                     <Button 
                       type="submit" 
-                      className="bg-orange-500 hover:bg-orange-600 text-white min-w-[120px]"
+                      variant="orange"
+                      className="min-w-[120px]"
                       isLoading={submitting}
                       disabled={availableStock !== null && Number(formData.quantity) > availableStock} 
                       title={availableStock !== null && Number(formData.quantity) > availableStock ? `Không đủ tồn kho (tồn: ${availableStock})` : undefined}

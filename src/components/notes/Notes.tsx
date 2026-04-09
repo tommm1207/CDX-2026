@@ -7,6 +7,7 @@ import { PageBreadcrumb } from '../shared/PageBreadcrumb';
 import { isActiveWarehouse } from '@/utils/inventory';
 import { ToastType } from '../shared/Toast';
 import { FAB } from '../shared/FAB';
+import { Button } from '../shared/Button';
 
 export const WEATHER_OPTIONS = [
   { value: 'sunny', label: '☀️ Nắng nóng gay gắt' },
@@ -169,14 +170,12 @@ export const Notes = ({ user, onBack, addToast, initialAction }: { user: Employe
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <PageBreadcrumb title="Nhật ký & Ghi chú" onBack={onBack} />
         <div className="flex items-center gap-2">
-          <button
+          <Button
+            size="icon"
+            variant={showFilter ? 'primary' : 'outline'}
             onClick={() => setShowFilter(f => !f)}
-            className={`p-2.5 rounded-xl border transition-colors ${
-              showFilter ? 'bg-primary text-white border-primary' : 'bg-white text-gray-500 border-gray-200 hover:border-primary/40'
-            }`}
-          >
-            <Search size={16} />
-          </button>
+            icon={Search}
+          />
         </div>
       </div>
 
@@ -287,8 +286,22 @@ export const Notes = ({ user, onBack, addToast, initialAction }: { user: Employe
                   <td className="px-4 py-3 text-sm text-gray-600">{note.location || '0.000000, 0.000000'}</td>
                   <td className="px-4 py-3">
                     <div className="flex items-center justify-center gap-2">
-                      <button onClick={(e) => { e.stopPropagation(); handleEdit(note); }} className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition-all"><Edit size={14} /></button>
-                      <button onClick={(e) => { e.stopPropagation(); confirmDelete(note.id); }} className="p-1.5 text-red-600 hover:bg-red-50 rounded-lg transition-all"><Trash2 size={14} /></button>
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        className="text-blue-600 hover:bg-blue-50"
+                        onClick={(e) => { e.stopPropagation(); handleEdit(note); }}
+                        icon={Edit}
+                        iconSize={14}
+                      />
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        className="text-red-600 hover:bg-red-50"
+                        onClick={(e) => { e.stopPropagation(); confirmDelete(note.id); }}
+                        icon={Trash2}
+                        iconSize={14}
+                      />
                     </div>
                   </td>
                 </tr>
@@ -486,10 +499,19 @@ export const Notes = ({ user, onBack, addToast, initialAction }: { user: Employe
                 </div>
               </div>
               <div className="p-6 bg-gray-50 flex justify-end gap-3 flex-shrink-0">
-                <button onClick={() => { setShowAddNew(false); setEditingId(null); }} className="px-6 py-2.5 text-gray-500 font-bold text-sm hover:bg-gray-100 rounded-xl transition-all">Hủy bỏ</button>
-                <button onClick={handleSave} className="px-8 py-2.5 bg-primary text-white rounded-xl font-bold text-sm hover:bg-primary-dark transition-all shadow-lg shadow-primary/20">
+                <Button 
+                  variant="ghost"
+                  onClick={() => { setShowAddNew(false); setEditingId(null); }}
+                >
+                  Hủy bỏ
+                </Button>
+                <Button
+                  variant="primary"
+                  onClick={handleSave}
+                  icon={Save}
+                >
                   {editingId ? 'Cập nhật dữ liệu' : 'Lưu dữ liệu'}
-                </button>
+                </Button>
               </div>
             </motion.div>
           </div>
@@ -508,8 +530,20 @@ export const Notes = ({ user, onBack, addToast, initialAction }: { user: Employe
                 <h3 className="text-xl font-bold text-gray-900">Chuyển vào thùng rác?</h3>
                 <p className="text-gray-500 text-sm">Bạn có chắc chắn muốn chuyển ghi chú này vào thùng rác?</p>
                 <div className="flex gap-3 pt-4">
-                  <button onClick={() => setDeletingId(null)} className="flex-1 px-4 py-3 bg-gray-100 text-gray-700 rounded-xl font-bold hover:bg-gray-200 transition-colors">Hủy</button>
-                  <button onClick={executeDelete} className="flex-1 px-4 py-3 bg-red-500 text-white rounded-xl font-bold hover:bg-red-600 transition-colors shadow-lg shadow-red-500/30">Di chuyển</button>
+                  <Button 
+                    fullWidth
+                    variant="outline"
+                    onClick={() => setDeletingId(null)}
+                  >
+                    Hủy
+                  </Button>
+                  <Button 
+                    fullWidth
+                    variant="danger"
+                    onClick={executeDelete}
+                  >
+                    Di chuyển
+                  </Button>
                 </div>
               </div>
             </motion.div>

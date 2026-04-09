@@ -327,13 +327,12 @@ export const StockIn = ({ user, onBack, initialStatus, initialAction, addToast }
           <ArrowDownCircle className="text-primary" /> Nhập kho
         </h2>
         <div className="flex items-center gap-2">
-          <button
+          <Button
+            size="icon"
+            variant={showFilter ? 'primary' : 'outline'}
             onClick={() => setShowFilter(f => !f)}
-            className={`p-2.5 rounded-xl border transition-colors ${showFilter ? 'bg-primary text-white border-primary' : 'bg-white text-gray-500 border-gray-200 hover:border-primary/40'
-              }`}
-          >
-            <Search size={16} />
-          </button>
+            icon={Search}
+          />
         </div>
       </div>
 
@@ -349,16 +348,14 @@ export const StockIn = ({ user, onBack, initialStatus, initialAction, addToast }
               <label className="text-[10px] font-bold text-gray-400 uppercase block mb-2">Lọc theo trạng thái</label>
               <div className="flex items-center gap-2 overflow-x-auto pb-2 md:pb-0 no-scrollbar">
                 {['Tất cả', 'Chờ duyệt', 'Đã duyệt', 'Từ chối'].map((status) => (
-                  <button
+                  <Button
                     key={status}
+                    size="sm"
+                    variant={statusFilter === status ? 'primary' : 'outline'}
                     onClick={() => setStatusFilter(status)}
-                    className={`px-4 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all ${statusFilter === status
-                      ? 'bg-primary text-white shadow-lg shadow-primary/20'
-                      : 'bg-white text-gray-500 hover:bg-gray-50 border border-gray-100'
-                      }`}
                   >
                     {status}
-                  </button>
+                  </Button>
                 ))}
               </div>
             </div>
@@ -659,7 +656,8 @@ export const StockIn = ({ user, onBack, initialStatus, initialAction, addToast }
                     <Button variant="outline" onClick={() => setShowModal(false)}>Hủy</Button>
                     <Button
                       type="submit"
-                      className="bg-blue-500 hover:bg-blue-600 text-white min-w-[120px]"
+                      variant="blue"
+                      className="min-w-[120px]"
                       isLoading={submitting}
                     >
                       Lưu phiếu nhập

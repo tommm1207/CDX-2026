@@ -7,6 +7,8 @@ import { PageBreadcrumb } from '../shared/PageBreadcrumb';
 import { ToastType } from '../shared/Toast';
 import { formatNumber } from '@/utils/format';
 import { getAllowedWarehouses } from '@/utils/helpers';
+import { FAB } from '../shared/FAB';
+import { Button } from '../shared/Button';
 
 export const ProductionOrders = ({ user, onBack, addToast, onOpenDetail }: {
   user: Employee,
@@ -76,20 +78,12 @@ export const ProductionOrders = ({ user, onBack, addToast, onOpenDetail }: {
           <p className="text-xs text-gray-500 mt-1">Theo dõi tiến độ sản xuất và điều phối vật tư</p>
         </div>
         <div className="flex items-center gap-2">
-          <button
+          <Button
+            size="icon"
+            variant={showFilter ? 'primary' : 'outline'}
             onClick={() => setShowFilter(f => !f)}
-            className={`p-2.5 rounded-xl border transition-colors ${
-              showFilter ? 'bg-primary text-white border-primary' : 'bg-white text-gray-500 border-gray-200 hover:border-primary/40'
-            }`}
-          >
-            <Search size={16} />
-          </button>
-          <button
-            onClick={() => onOpenDetail()}
-            className="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-xl text-sm font-bold hover:bg-primary/90 transition-colors shadow-lg shadow-primary/20"
-          >
-            <Plus size={18} /> Tạo lệnh mới
-          </button>
+            icon={Search}
+          />
         </div>
       </div>
 
@@ -158,12 +152,13 @@ export const ProductionOrders = ({ user, onBack, addToast, onOpenDetail }: {
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex justify-center">
-                        <button
+                        <Button
+                          size="icon"
+                          variant="ghost"
                           onClick={(e) => { e.stopPropagation(); onOpenDetail(order.id); }}
-                          className="p-1.5 text-primary hover:bg-primary/10 rounded-lg transition-colors"
-                        >
-                          <Eye size={16} />
-                        </button>
+                          icon={Eye}
+                          className="text-primary hover:bg-primary/10"
+                        />
                       </div>
                     </td>
                   </tr>
@@ -173,6 +168,11 @@ export const ProductionOrders = ({ user, onBack, addToast, onOpenDetail }: {
           </table>
         </div>
       </div>
+      <FAB
+        onClick={() => onOpenDetail()}
+        label="Tạo lệnh mới"
+        color="bg-indigo-600"
+      />
     </div>
   );
 };

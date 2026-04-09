@@ -210,8 +210,9 @@ export const Dashboard = ({ user, onNavigate, addToast, pendingApprovals = 0 }: 
 
   const menuActions = [
     { id: 'stock-in', label: 'Nhập kho', icon: ArrowDownCircle, color: 'bg-blue-500', description: 'Tạo phiếu nhập vật tư mới' },
-    { id: 'stock-out', label: 'Xuất kho', icon: ArrowUpCircle, color: 'bg-orange-500', description: 'Tạo phiếu xuất kho vật tư' },
-    { id: 'transfer', label: 'Luân chuyển kho', icon: ArrowLeftRight, color: 'bg-green-600', description: 'Chuyển vật tư giữa các kho' },
+    { id: 'stock-out', label: 'Xuất kho', icon: ArrowUpCircle, color: 'bg-red-600', description: 'Tạo phiếu xuất kho vật tư' },
+    { id: 'transfer', label: 'Luân chuyển kho', icon: ArrowLeftRight, color: 'bg-orange-500', description: 'Chuyển vật tư giữa các kho' },
+    { id: 'production-list', label: 'Lệnh sản xuất', icon: Layers, color: 'bg-indigo-600', description: 'Điều phối sản xuất và vật tư' },
     { id: 'cost-report', label: 'Báo cáo chi phí', icon: FileText, color: 'bg-primary', description: 'Ghi chép chi tiêu dự án' },
   ];
 
@@ -411,11 +412,12 @@ const RadialMenu = ({ onNavigate }: { onNavigate: (page: string, params?: any) =
   const [isOpen, setIsOpen] = useState(false);
   const items = [
     { id: 'stock-in', label: 'Nhập kho', icon: ArrowDownCircle, color: 'bg-blue-500', action: () => onNavigate('stock-in', { action: 'add' }) },
-    { id: 'stock-out', label: 'Xuất kho', icon: ArrowUpCircle, color: 'bg-red-500', action: () => onNavigate('stock-out', { action: 'add' }) },
+    { id: 'stock-out', label: 'Xuất kho', icon: ArrowUpCircle, color: 'bg-red-600', action: () => onNavigate('stock-out', { action: 'add' }) },
+    { id: 'production-list', label: 'Sản xuất', icon: Layers, color: 'bg-indigo-600', action: () => onNavigate('production-list', { action: 'add' }) },
     { id: 'transfer', label: 'Luân chuyển', icon: ArrowLeftRight, color: 'bg-orange-500', action: () => onNavigate('transfer', { action: 'add' }) },
     { id: 'costs', label: 'Chi phí', icon: Wallet, color: 'bg-primary', action: () => onNavigate('costs', { action: 'add' }) },
-    { id: 'notes', label: 'Ghi chú', icon: FileText, color: 'bg-indigo-500', action: () => onNavigate('notes', { action: 'add' }) },
-    { id: 'reminders', label: 'Lời nhắc', icon: Bell, color: 'bg-emerald-500', action: () => onNavigate('reminders', { action: 'add' }) },
+    { id: 'notes', label: 'Ghi chú', icon: FileText, color: 'bg-amber-500', action: () => onNavigate('notes', { action: 'add' }) },
+    { id: 'reminders', label: 'Lời nhắc', icon: Bell, color: 'bg-primary', action: () => onNavigate('reminders', { action: 'add' }) },
   ];
 
   return (

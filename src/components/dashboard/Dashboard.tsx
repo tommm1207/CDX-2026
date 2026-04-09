@@ -440,13 +440,13 @@ const RadialMenu = ({ onNavigate }: { onNavigate: (page: string, params?: any) =
           {isOpen && (
             <>
               {items.map((item, index) => {
-                // Expanded angle range for more breathing room
-                const startAngle = Math.PI * 0.95; 
-                const endAngle = Math.PI * 1.55;   
+                // Wide 120-degree arc for maximum separation
+                const startAngle = Math.PI * 0.92; // ~165 degrees
+                const endAngle = Math.PI * 1.58;   // ~285 degrees
                 const angle = startAngle + (endAngle - startAngle) * (index / (items.length - 1)); 
                 
-                const iconRadius = 180; // Increased to spread out icons
-                const labelRadius = 260; // Increased to spread out labels
+                const iconRadius = 140; // Brought closer to center
+                const labelRadius = 195; // Brought much closer to the icon
                 
                 const ix = Math.round(iconRadius * Math.cos(angle));
                 const iy = Math.round(iconRadius * Math.sin(angle));
@@ -456,7 +456,7 @@ const RadialMenu = ({ onNavigate }: { onNavigate: (page: string, params?: any) =
 
                 return (
                   <div key={item.id}>
-                    {/* Floating Label - Frameless style */}
+                    {/* Minimalist Dark Label - Better connection & legibility */}
                     <motion.div
                       initial={{ opacity: 0, scale: 0.5, x: 0, y: 0 }}
                       animate={{ opacity: 1, scale: 1, x: lx, y: ly }}
@@ -464,9 +464,9 @@ const RadialMenu = ({ onNavigate }: { onNavigate: (page: string, params?: any) =
                       transition={{ type: 'spring', stiffness: 200, damping: 25, delay: index * 0.05 }}
                       className="absolute inset-x-0 bottom-0 flex items-center justify-center pointer-events-none"
                     >
-                      <span className="text-white font-black text-[10px] uppercase tracking-widest drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">
+                      <div className="bg-black/70 backdrop-blur-sm text-white font-bold text-[9px] uppercase tracking-wide px-2 py-1 rounded-lg shadow-xl border border-white/10">
                         {item.label}
-                      </span>
+                      </div>
                     </motion.div>
 
                     {/* Icon Button */}

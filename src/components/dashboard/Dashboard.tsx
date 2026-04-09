@@ -22,6 +22,7 @@ import {
 import { supabase } from '@/lib/supabase';
 import { Employee } from '@/types';
 import { formatCurrency, formatNumber } from '@/utils/format';
+import { parseReminderContent } from '@/utils/reminderUtils';
 import { AttendanceTable } from '../hr/AttendanceTable';
 import { NumericInput } from '../shared/NumericInput';
 import { ToastType } from '../shared/Toast';
@@ -41,9 +42,42 @@ export const Dashboard = ({ user, onNavigate, addToast, pendingApprovals = 0 }: 
   const [showEditModal, setShowEditModal] = useState(false);
   const [editingAtt, setEditingAtt] = useState<any>(null);
   const [editFormData, setEditFormData] = useState({ status: 'present', overtime: 0 });
+  const [reminderCount, setReminderCount] = useState(0);
 
   const selectedMonth = new Date().getMonth() + 1;
   const selectedYear = new Date().getFullYear();
+
+  useEffect(() => {
+    const fetchReminderCount = async () => {
+      try {
+        const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+        const { data } = await supabase
+          .from('reminders')
+          .select('*')
+          .neq('status', 'Đã xóa')
+          .gte('created_at', twentyFourHoursAgo);
+
+        if (data) {
+          const clearedRaw = localStorage.getItem('cleared_reminders') || '[]';
+          const clearedMap = new Set(JSON.parse(clearedRaw));
+          
+          let count = 0;
+          for (const rem of data) {
+            if (clearedMap.has(rem.id)) continue;
+            if (new Date(rem.reminder_time).getTime() > Date.now()) continue;
+            const payload = parseReminderContent(rem.content);
+            if (payload.assignees.length > 0 && !payload.assignees.includes(user.id)) continue;
+            count++;
+          }
+          setReminderCount(count);
+        }
+      } catch (err) {}
+    };
+    
+    fetchReminderCount();
+    const interval = setInterval(fetchReminderCount, 15000);
+    return () => clearInterval(interval);
+  }, [user.id]);
 
   useEffect(() => {
     const fetchAttendanceData = async () => {
@@ -181,32 +215,39 @@ export const Dashboard = ({ user, onNavigate, addToast, pendingApprovals = 0 }: 
     { id: 'cost-report', label: 'Báo cáo chi phí', icon: FileText, color: 'bg-primary', description: 'Ghi chép chi tiêu dự án' },
   ];
 
+  const totalNotifs = reminderCount + ((user.role === 'Admin' || user.role === 'Admin App') ? pendingApprovals : 0);
+
   return (
     <div className="p-3 md:p-8 space-y-4 md:space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
       {/* Welcome Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
+      <div className="flex flex-col gap-4">
         <div className="space-y-0.5">
           <h1 className="text-2xl md:text-3xl font-black text-gray-900 tracking-tight flex items-center gap-3">
             Chào {user.full_name.split(' ').pop()}! 👋
           </h1>
           <p className="text-gray-500 font-medium text-sm">Chúc bạn một ngày làm việc hiệu quả tại CDX.</p>
         </div>
+
+        <div className="flex items-center justify-between gap-3">
+          <div className="inline-flex items-center gap-2 bg-primary px-4 py-2.5 rounded-xl shadow-lg shadow-primary/20 h-[46px]">
+            <div className="text-left">
+              <p className="text-[9px] font-bold text-white/70 uppercase tracking-widest leading-none mb-1">Vai trò</p>
+              <p className="text-sm font-black text-white leading-none uppercase">{user.role}</p>
+            </div>
+          </div>
+
           <button 
-            onClick={() => onNavigate('user-manual')}
-            className="flex items-center gap-2 bg-primary p-2 rounded-xl shadow-lg shadow-primary/20 hover:bg-primary-hover transition-all"
+            onClick={() => onNavigate('notifications')}
+            className="group relative flex items-center justify-center bg-white hover:bg-gray-50 text-gray-700 w-[46px] h-[46px] rounded-xl transition-all shadow-sm border border-gray-100"
           >
-            <div className="w-9 h-9 bg-white/20 rounded-lg flex items-center justify-center text-white">
-              <FileText size={18} />
-            </div>
-            <div className="pr-3 border-r border-white/20 text-left">
-              <p className="text-[9px] font-bold text-white/70 uppercase tracking-widest leading-none mb-0.5">Tài liệu</p>
-              <p className="text-xs font-black text-white leading-none">Hướng dẫn app</p>
-            </div>
-            <div className="pl-1 pr-1 text-left">
-              <p className="text-[9px] font-bold text-white/70 uppercase tracking-widest leading-none mb-0.5">Vai trò</p>
-              <p className="text-xs font-black text-white leading-none uppercase">{user.role}</p>
-            </div>
+            <Bell size={22} className={totalNotifs > 0 ? "text-amber-500 group-hover:scale-110 transition-transform" : "text-gray-400"} />
+            {totalNotifs > 0 && (
+              <span className="absolute -top-1.5 -right-1.5 bg-red-500 text-white text-[10px] font-black w-5 h-5 flex items-center justify-center rounded-full shadow-md animate-slow-fade">
+                {totalNotifs}
+              </span>
+            )}
           </button>
+        </div>
       </div>
 
       {/* Quick Actions — 1 row compact on mobile, full cards on desktop */}

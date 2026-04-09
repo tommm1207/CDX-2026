@@ -4,6 +4,7 @@ import { supabase } from '@/lib/supabase';
 import { Employee } from '@/types';
 import { REMINDER_CHECK_INTERVAL } from '@/constants/options';
 import { getMenuGroups } from '@/constants/menu';
+import { parseReminderContent } from '@/utils/reminderUtils';
 
 // Shared Components
 import { ToastContainer, ToastMessage, ToastType } from '@/components/shared/Toast';
@@ -49,12 +50,12 @@ export default function App() {
   const [refreshKey, setRefreshKey] = useState(0);
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
 
-  const addToast = useCallback((message: string, type: ToastType = 'info') => {
+  const addToast = useCallback((message: string, type: ToastType = 'info', title?: string, duration: number = 4000) => {
     const id = Math.random().toString(36).substr(2, 9);
-    setToasts(prev => [...prev, { id, message, type }]);
+    setToasts(prev => [...prev, { id, message, type, title }]);
     setTimeout(() => {
       removeToast(id);
-    }, 4000);
+    }, duration);
   }, []);
 
   const removeToast = useCallback((id: string) => {
@@ -102,20 +103,51 @@ export default function App() {
 
     const checkReminders = setInterval(async () => {
       const now = new Date().toISOString();
+      // Lấy các lịch nhắc trong vòng 24h qua và đến giờ
+      const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
       const { data } = await supabase
         .from('reminders')
         .select('*')
-        .eq('status', 'pending')
-        .lte('reminder_time', now);
+        .neq('status', 'Đã xóa') // Lấy tất cả trừ mẫu đã xoá
+        .lte('reminder_time', now)
+        .gte('reminder_time', twentyFourHoursAgo);
 
       if (data && data.length > 0) {
-        data.forEach(async (rem) => {
-          if (rem.browser_notification && Notification.permission === "granted") {
-            new Notification(rem.title, { body: rem.content });
+        let hasNew = false;
+        
+        // Quản lý trạng thái đã cảnh báo của trình duyệt tại Client RAM/Storage thay vì DB
+        const notifiedRaw = localStorage.getItem('notified_reminders') || '[]';
+        const notifiedMap = new Set(JSON.parse(notifiedRaw));
+
+        data.forEach((rem) => {
+          const payload = parseReminderContent(rem.content);
+          
+          // Lọc nếu lịch nhắc riêng tư không có tên user hiện tại
+          if (payload.assignees.length > 0 && !payload.assignees.includes(user.id)) return;
+
+          if (!notifiedMap.has(rem.id)) {
+            // Push Notification (System/OS level)
+            if (rem.browser_notification && Notification.permission === "granted") {
+              try {
+                new Notification(rem.title, { body: payload.text, icon: '/logo.png' });
+              } catch (e) {
+                // Ignore Safari/iOS error if they dont support old Notification API format
+              }
+            }
+
+            // In-app Notification Popup (Toast)
+            // Hiển thị bóng bong báo nhắc nhở 8 giây (8000ms) trước khi tự mất
+            addToast(payload.text, 'notification', rem.title, 8000);
+
+            notifiedMap.add(rem.id);
+            hasNew = true;
           }
-          await supabase.from('reminders').update({ status: 'reminded' }).eq('id', rem.id);
         });
-        if (currentPage === 'reminders') setRefreshKey(prev => prev + 1);
+
+        if (hasNew) {
+          localStorage.setItem('notified_reminders', JSON.stringify([...notifiedMap]));
+          if (currentPage === 'reminders') setRefreshKey(prev => prev + 1);
+        }
       }
     }, REMINDER_CHECK_INTERVAL);
 

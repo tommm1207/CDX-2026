@@ -231,6 +231,10 @@ export const Transfer = ({ user, onBack, addToast, initialAction }: {
   };
 
   const handleEdit = () => {
+    if (selectedSlip.status === 'Đã duyệt') {
+      if (addToast) addToast("Không thể sửa! Phiếu này đã được duyệt, vui lòng sử dụng tính năng Xoá và lập phiếu mới", "error");
+      return;
+    }
     setFormData({
       date: selectedSlip.date,
       from_warehouse_id: selectedSlip.from_warehouse_id,

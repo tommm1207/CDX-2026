@@ -5,6 +5,7 @@ import { supabase } from '@/lib/supabase';
 import { Employee } from '@/types';
 import { PageBreadcrumb } from '../shared/PageBreadcrumb';
 import { ToastType } from '../shared/Toast';
+import { parseReminderContent } from '@/utils/reminderUtils';
 
 export const Notifications = ({ user, onBack, onNavigate, addToast }: { 
   user: Employee, 
@@ -25,7 +26,8 @@ export const Notifications = ({ user, onBack, onNavigate, addToast }: {
         supabase
           .from('reminders')
           .select('*')
-          .eq('status', 'reminded')
+          .neq('status', 'Đã xóa') // Lấy cả những cái chưa bị xóa (bao gồm cả pending và reminded)
+          .gte('created_at', twentyFourHoursAgo)
           .order('reminder_time', { ascending: false }),
         supabase
           .from('stock_in')
@@ -51,7 +53,27 @@ export const Notifications = ({ user, onBack, onNavigate, addToast }: {
       ]);
 
       if (remindersRes.error) throw remindersRes.error;
-      setNotifications(remindersRes.data || []);
+      
+      const clearedRaw = localStorage.getItem('cleared_reminders') || '[]';
+      const clearedMap = new Set(JSON.parse(clearedRaw));
+      
+      const activeReminders = (remindersRes.data || []).filter(rem => {
+        // Bỏ qua nếu user đã Xóa
+        if (clearedMap.has(rem.id)) return false;
+        
+        // Bỏ qua nếu chưa tới giờ
+        if (new Date(rem.reminder_time).getTime() > Date.now()) return false;
+        
+        // Lọc theo người được phân công 
+        const payload = parseReminderContent(rem.content);
+        if (payload.assignees.length > 0 && !payload.assignees.includes(user.id)) return false;
+        
+        // Gắn lại text sạch để hiển thị
+        rem.content = payload.text;
+        return true;
+      });
+
+      setNotifications(activeReminders);
 
       // Combine and sort activities
       const activities = [
@@ -77,26 +99,30 @@ export const Notifications = ({ user, onBack, onNavigate, addToast }: {
 
   const handleClear = async (id: string) => {
     try {
-      const { error } = await supabase.from('reminders').update({ status: 'cleared' }).eq('id', id);
-      if (error) throw error;
+      const clearedRaw = localStorage.getItem('cleared_reminders') || '[]';
+      const clearedList = JSON.parse(clearedRaw);
+      if (!clearedList.includes(id)) {
+        clearedList.push(id);
+        localStorage.setItem('cleared_reminders', JSON.stringify(clearedList));
+      }
       fetchNotifications();
-      if (addToast) addToast('Đã xóa nhắc nhở', 'success');
+      if (addToast) addToast('Đã đánh dấu xử lý nhắc nhở', 'success');
     } catch (err: any) {
       if (addToast) addToast('Lỗi: ' + err.message, 'error');
     }
   };
 
   const handleClearAll = async () => {
-    if (!confirm('Bạn có muốn xóa tất cả nhắc nhở?')) return;
+    if (!confirm('Bạn có muốn xóa hiển thị tất cả nhắc nhở trên thiết bị này?')) return;
     try {
-      const { error } = await supabase
-        .from('reminders')
-        .update({ status: 'cleared' })
-        .eq('status', 'reminded');
-      
-      if (error) throw error;
+      const clearedRaw = localStorage.getItem('cleared_reminders') || '[]';
+      const clearedList = JSON.parse(clearedRaw);
+      notifications.forEach(n => {
+        if (!clearedList.includes(n.id)) clearedList.push(n.id);
+      });
+      localStorage.setItem('cleared_reminders', JSON.stringify(clearedList));
       fetchNotifications();
-      if (addToast) addToast('Đã xóa tất cả nhắc nhở', 'success');
+      if (addToast) addToast('Đã xóa tất cả nhắc nhở khỏi danh sách', 'success');
     } catch (err: any) {
       if (addToast) addToast('Lỗi: ' + err.message, 'error');
     }

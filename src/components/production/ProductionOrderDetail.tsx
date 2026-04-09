@@ -169,7 +169,7 @@ export const ProductionOrderDetail = ({ user, orderId, onBack, addToast }: {
     if (order.status !== 'Mới') return;
     if (!window.confirm('Xác nhận duyệt lệnh sản xuất này? Hệ thống sẽ tự động tạo phiếu xuất kho nguyên liệu và nhập kho thành phẩm.')) return;
 
-    // Check stock for all items
+    // Preliminary UI Check stock for all items
     for (const item of bomItems) {
       const needed = calculateTotal(item.quantity_per_unit);
       if ((item.available || 0) < needed) {
@@ -183,6 +183,15 @@ export const ProductionOrderDetail = ({ user, orderId, onBack, addToast }: {
     try {
       const today = new Date().toISOString().split('T')[0];
       const bom = boms.find(b => b.id === order.bom_id);
+      
+      // Real-time Stock Check to avoid race condition
+      for (const it of bomItems) {
+        const qty = calculateTotal(it.quantity_per_unit);
+        const realTimeAvailable = await getAvailableStock(it.material_item_id, order.warehouse_id!, today);
+        if (realTimeAvailable < qty) {
+          throw new Error(`Kho không đủ vật tư: ${it.material?.name}. Hiện có: ${realTimeAvailable}, Yêu cầu: ${qty}. Vui lòng nhập thêm kho!`);
+        }
+      }
       
       // 1. Create Stock Out for each material sequentially
       for (const it of bomItems) {

@@ -440,14 +440,13 @@ const RadialMenu = ({ onNavigate }: { onNavigate: (page: string, params?: any) =
           {isOpen && (
             <>
               {items.map((item, index) => {
-                // Expand the angle range slightly for more breathing room (approx 110 degrees)
-                const startAngle = Math.PI * 0.95; // ~171 degrees
-                const endAngle = Math.PI * 1.55;   // ~279 degrees
+                // Expanded angle range for more breathing room
+                const startAngle = Math.PI * 0.95; 
+                const endAngle = Math.PI * 1.55;   
                 const angle = startAngle + (endAngle - startAngle) * (index / (items.length - 1)); 
                 
-                const iconRadius = 150; 
-                // Staggered labels: some closer, some further to prevent overlap
-                const labelRadius = index % 2 === 0 ? 230 : 275; 
+                const iconRadius = 180; // Increased to spread out icons
+                const labelRadius = 260; // Increased to spread out labels
                 
                 const ix = Math.round(iconRadius * Math.cos(angle));
                 const iy = Math.round(iconRadius * Math.sin(angle));
@@ -456,8 +455,8 @@ const RadialMenu = ({ onNavigate }: { onNavigate: (page: string, params?: any) =
                 const ly = Math.round(labelRadius * Math.sin(angle));
 
                 return (
-                  <React.Fragment key={item.id}>
-                    {/* Label - Staggered Radial Ray */}
+                  <div key={item.id}>
+                    {/* Floating Label - Frameless style */}
                     <motion.div
                       initial={{ opacity: 0, scale: 0.5, x: 0, y: 0 }}
                       animate={{ opacity: 1, scale: 1, x: lx, y: ly }}
@@ -465,9 +464,9 @@ const RadialMenu = ({ onNavigate }: { onNavigate: (page: string, params?: any) =
                       transition={{ type: 'spring', stiffness: 200, damping: 25, delay: index * 0.05 }}
                       className="absolute inset-x-0 bottom-0 flex items-center justify-center pointer-events-none"
                     >
-                      <div className="bg-white/95 backdrop-blur-md text-gray-800 text-[9px] font-black uppercase tracking-wider px-2 py-1.5 rounded-xl shadow-xl border border-white/50">
+                      <span className="text-white font-black text-[10px] uppercase tracking-widest drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">
                         {item.label}
-                      </div>
+                      </span>
                     </motion.div>
 
                     {/* Icon Button */}
@@ -485,7 +484,7 @@ const RadialMenu = ({ onNavigate }: { onNavigate: (page: string, params?: any) =
                         <item.icon size={20} />
                       </button>
                     </motion.div>
-                  </React.Fragment>
+                  </div>
                 );
               })}
             </>

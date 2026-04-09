@@ -440,9 +440,14 @@ const RadialMenu = ({ onNavigate }: { onNavigate: (page: string, params?: any) =
           {isOpen && (
             <>
               {items.map((item, index) => {
-                const angle = Math.PI + (Math.PI / 2) * (index / (items.length - 1)); 
-                const iconRadius = 160; 
-                const labelRadius = 245; // Further out for "Ray" effect
+                // Expand the angle range slightly for more breathing room (approx 110 degrees)
+                const startAngle = Math.PI * 0.95; // ~171 degrees
+                const endAngle = Math.PI * 1.55;   // ~279 degrees
+                const angle = startAngle + (endAngle - startAngle) * (index / (items.length - 1)); 
+                
+                const iconRadius = 150; 
+                // Staggered labels: some closer, some further to prevent overlap
+                const labelRadius = index % 2 === 0 ? 230 : 275; 
                 
                 const ix = Math.round(iconRadius * Math.cos(angle));
                 const iy = Math.round(iconRadius * Math.sin(angle));
@@ -452,7 +457,7 @@ const RadialMenu = ({ onNavigate }: { onNavigate: (page: string, params?: any) =
 
                 return (
                   <React.Fragment key={item.id}>
-                    {/* Label - Radial Ray style */}
+                    {/* Label - Staggered Radial Ray */}
                     <motion.div
                       initial={{ opacity: 0, scale: 0.5, x: 0, y: 0 }}
                       animate={{ opacity: 1, scale: 1, x: lx, y: ly }}
@@ -460,7 +465,7 @@ const RadialMenu = ({ onNavigate }: { onNavigate: (page: string, params?: any) =
                       transition={{ type: 'spring', stiffness: 200, damping: 25, delay: index * 0.05 }}
                       className="absolute inset-x-0 bottom-0 flex items-center justify-center pointer-events-none"
                     >
-                      <div className="bg-white/95 backdrop-blur-md text-gray-800 text-[9px] font-black uppercase tracking-wider px-2.5 py-1.5 rounded-xl shadow-xl border border-white/50">
+                      <div className="bg-white/95 backdrop-blur-md text-gray-800 text-[9px] font-black uppercase tracking-wider px-2 py-1.5 rounded-xl shadow-xl border border-white/50">
                         {item.label}
                       </div>
                     </motion.div>

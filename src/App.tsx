@@ -50,12 +50,12 @@ export default function App() {
   const [refreshKey, setRefreshKey] = useState(0);
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
 
-  const addToast = useCallback((message: string, type: ToastType = 'info') => {
+  const addToast = useCallback((message: string, type: ToastType = 'info', title?: string, duration: number = 4000) => {
     const id = Math.random().toString(36).substr(2, 9);
-    setToasts(prev => [...prev, { id, message, type }]);
+    setToasts(prev => [...prev, { id, message, type, title }]);
     setTimeout(() => {
       removeToast(id);
-    }, 4000);
+    }, duration);
   }, []);
 
   const removeToast = useCallback((id: string) => {
@@ -126,9 +126,19 @@ export default function App() {
           if (payload.assignees.length > 0 && !payload.assignees.includes(user.id)) return;
 
           if (!notifiedMap.has(rem.id)) {
+            // Push Notification (System/OS level)
             if (rem.browser_notification && Notification.permission === "granted") {
-              new Notification(rem.title, { body: payload.text });
+              try {
+                new Notification(rem.title, { body: payload.text, icon: '/logo.png' });
+              } catch (e) {
+                // Ignore Safari/iOS error if they dont support old Notification API format
+              }
             }
+
+            // In-app Notification Popup (Toast)
+            // Hiển thị bóng bong báo nhắc nhở 8 giây (8000ms) trước khi tự mất
+            addToast(payload.text, 'notification', rem.title, 8000);
+
             notifiedMap.add(rem.id);
             hasNew = true;
           }

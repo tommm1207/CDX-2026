@@ -24,3 +24,12 @@
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
   background: #D1D5DB;
 }
+
+@keyframes slow-fade {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.1; }
+}
+
+.animate-slow-fade {
+  animation: slow-fade 3s infinite ease-in-out;
+}

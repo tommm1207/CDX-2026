@@ -220,32 +220,33 @@ export const Dashboard = ({ user, onNavigate, addToast, pendingApprovals = 0 }: 
   return (
     <div className="p-3 md:p-8 space-y-4 md:space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
       {/* Welcome Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
+      <div className="flex flex-col gap-4">
         <div className="space-y-0.5">
           <h1 className="text-2xl md:text-3xl font-black text-gray-900 tracking-tight flex items-center gap-3">
             Chào {user.full_name.split(' ').pop()}! 👋
           </h1>
           <p className="text-gray-500 font-medium text-sm">Chúc bạn một ngày làm việc hiệu quả tại CDX.</p>
         </div>
-        <div className="flex items-center gap-2 self-start md:self-auto">
-          <button 
-            onClick={() => onNavigate('notifications')}
-            className="relative flex items-center justify-center bg-gray-100 hover:bg-gray-200 text-gray-700 w-11 h-11 rounded-xl transition-all mr-1 md:mr-2"
-          >
-            <Bell size={20} className={totalNotifs > 0 ? "text-amber-500" : ""} />
-            {totalNotifs > 0 && (
-              <span className="absolute -top-1.5 -right-1.5 bg-red-500 text-white text-[10px] font-black w-5 h-5 flex items-center justify-center rounded-full shadow-md animate-pulse">
-                {totalNotifs}
-              </span>
-            )}
-          </button>
-          
-          <div className="inline-flex items-center gap-2 bg-primary px-4 py-2 rounded-xl shadow-lg shadow-primary/20">
+
+        <div className="flex items-center justify-between gap-3">
+          <div className="inline-flex items-center gap-2 bg-primary px-4 py-2.5 rounded-xl shadow-lg shadow-primary/20 h-[46px]">
             <div className="text-left">
               <p className="text-[9px] font-bold text-white/70 uppercase tracking-widest leading-none mb-1">Vai trò</p>
               <p className="text-sm font-black text-white leading-none uppercase">{user.role}</p>
             </div>
           </div>
+
+          <button 
+            onClick={() => onNavigate('notifications')}
+            className="group relative flex items-center justify-center bg-white hover:bg-gray-50 text-gray-700 w-[46px] h-[46px] rounded-xl transition-all shadow-sm border border-gray-100"
+          >
+            <Bell size={22} className={totalNotifs > 0 ? "text-amber-500 group-hover:scale-110 transition-transform" : "text-gray-400"} />
+            {totalNotifs > 0 && (
+              <span className="absolute -top-1.5 -right-1.5 bg-red-500 text-white text-[10px] font-black w-5 h-5 flex items-center justify-center rounded-full shadow-md animate-slow-fade">
+                {totalNotifs}
+              </span>
+            )}
+          </button>
         </div>
       </div>
 

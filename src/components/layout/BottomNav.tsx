@@ -51,6 +51,6 @@ export const BottomNav = ({ currentPage, onNavigate, user, pendingCount, isHidde
           )}
         </button>
       ))}
-    </div>
+    </motion.div>
   );
 };

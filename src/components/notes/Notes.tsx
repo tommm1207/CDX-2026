@@ -54,6 +54,7 @@ export const Notes = ({ user, onBack, addToast, initialAction, setHideBottomNav 
   });
 
   const [formData, setFormData] = useState({
+    title: '',
     content: '',
     date: new Date().toISOString().split('T')[0],
     weather: '',
@@ -99,20 +100,25 @@ export const Notes = ({ user, onBack, addToast, initialAction, setHideBottomNav 
         ? employees.filter(e => formData.related_personnel.includes(e.id)).map(e => e.full_name).join(', ')
         : "Tất cả nhân viên"; // fallback
 
+      const payload = {
+        title: formData.title,
+        content: formData.content,
+        date: formData.date,
+        weather: formData.weather,
+        related_object: computedRelatedObject,
+        object_code: formData.object_code,
+        note_code: formData.note_code,
+        location: formData.location,
+        related_personnel: formData.related_personnel,
+        created_by: user.id
+      };
+
       if (editingId) {
-        const { error } = await supabase.from('notes').update({
-          ...formData,
-          related_object: computedRelatedObject,
-          created_by: user.id
-        }).eq('id', editingId);
+        const { error } = await supabase.from('notes').update(payload).eq('id', editingId);
         if (error) throw error;
         if (addToast) addToast('Cập nhật ghi chú thành công!', 'success');
       } else {
-        const { error } = await supabase.from('notes').insert([{
-          ...formData,
-          related_object: computedRelatedObject,
-          created_by: user.id
-        }]);
+        const { error } = await supabase.from('notes').insert([payload]);
         if (error) throw error;
         if (addToast) addToast('Lưu ghi chú thành công!', 'success');
       }
@@ -121,6 +127,7 @@ export const Notes = ({ user, onBack, addToast, initialAction, setHideBottomNav 
       setShowAddNew(false);
       setEditingId(null);
       setFormData({
+        title: '',
         content: '',
         date: new Date().toISOString().split('T')[0],
         weather: '',
@@ -138,6 +145,7 @@ export const Notes = ({ user, onBack, addToast, initialAction, setHideBottomNav 
 
   const handleEdit = (note: any) => {
     setFormData({
+      title: note.title || '',
       content: note.content || '',
       date: note.date || new Date().toISOString().split('T')[0],
       weather: note.weather || '',
@@ -173,7 +181,13 @@ export const Notes = ({ user, onBack, addToast, initialAction, setHideBottomNav 
     if (filters.fromDate && n.date < filters.fromDate) return false;
     if (filters.toDate && n.date > filters.toDate) return false;
     if (filters.employee && n.created_by !== filters.employee) return false;
-    if (filters.search && !n.content.toLowerCase().includes(filters.search.toLowerCase())) return false;
+    
+    if (filters.search) {
+      const searchLower = filters.search.toLowerCase();
+      const titleMatch = (n.title || "").toLowerCase().includes(searchLower);
+      const contentMatch = (n.content || "").toLowerCase().includes(searchLower);
+      if (!(titleMatch || contentMatch)) return false;
+    }
     return true;
   });
 
@@ -271,18 +285,18 @@ export const Notes = ({ user, onBack, addToast, initialAction, setHideBottomNav 
           <table className="w-full text-left border-collapse whitespace-nowrap">
             <thead>
               <tr className="bg-gray-50/50">
+                <th className="px-4 py-3 text-[10px] font-bold text-gray-400 uppercase">Tiêu đề / Nội dung</th>
                 <th className="px-4 py-3 text-[10px] font-bold text-gray-400 uppercase">Đối tượng liên quan</th>
                 <th className="px-4 py-3 text-[10px] font-bold text-gray-400 uppercase">Mã đối tượng</th>
                 <th className="px-4 py-3 text-[10px] font-bold text-gray-400 uppercase">Mã ghi chú</th>
-                <th className="px-4 py-3 text-[10px] font-bold text-gray-400 uppercase">Vị trí / Tọa độ</th>
                 <th className="px-4 py-3 text-[10px] font-bold text-gray-400 uppercase text-center">Thao tác</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-50">
               {loading ? (
-                <tr><td colSpan={5} className="px-4 py-8 text-center text-gray-400 italic">Đang tải dữ liệu...</td></tr>
+                <tr><td colSpan={6} className="px-4 py-8 text-center text-gray-400 italic">Đang tải dữ liệu...</td></tr>
               ) : filteredNotes.length === 0 ? (
-                <tr><td colSpan={5} className="px-4 py-8 text-center text-gray-400 italic">Không có ghi chú nào</td></tr>
+                <tr><td colSpan={6} className="px-4 py-8 text-center text-gray-400 italic">Không có ghi chú nào</td></tr>
               ) : filteredNotes.map((note) => (
                 <tr 
                   key={note.id} 
@@ -290,12 +304,14 @@ export const Notes = ({ user, onBack, addToast, initialAction, setHideBottomNav 
                   onClick={() => handleEdit(note)}
                 >
                   <td className="px-4 py-3">
-                    <p className="text-sm font-medium text-gray-700">{note.related_object || 'N/A'}</p>
-                    <p className="text-[10px] text-gray-400">{note.content}</p>
+                    <div className="flex flex-col">
+                      <span className="text-sm font-black text-gray-900 leading-tight">{note.title || 'Không có tiêu đề'}</span>
+                      <span className="text-xs text-gray-500 truncate max-w-[300px]">{note.content}</span>
+                    </div>
                   </td>
+                  <td className="px-4 py-3 text-sm text-gray-700">{note.related_object || 'N/A'}</td>
                   <td className="px-4 py-3 text-sm text-gray-600 font-mono">{note.object_code || 'N/A'}</td>
                   <td className="px-4 py-3 text-sm text-gray-600 font-mono">{note.note_code || 'N/A'}</td>
-                  <td className="px-4 py-3 text-sm text-gray-600">{note.location || '0.000000, 0.000000'}</td>
                   <td className="px-4 py-3">
                     <div className="flex items-center justify-center gap-2">
                       <Button
@@ -354,6 +370,16 @@ export const Notes = ({ user, onBack, addToast, initialAction, setHideBottomNav 
                 </button>
               </div>
               <div className="p-6 space-y-4 max-h-[70vh] overflow-y-auto">
+                <div>
+                  <label className="text-[10px] font-bold text-gray-400 uppercase">Tiêu đề</label>
+                  <input
+                    type="text"
+                    value={formData.title}
+                    onChange={e => setFormData({ ...formData, title: e.target.value })}
+                    className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm focus:ring-2 focus:ring-primary/20 outline-none mt-1"
+                    placeholder="VD: Nhật ký công trình sáng..."
+                  />
+                </div>
                 <div>
                   <label className="text-[10px] font-bold text-gray-400 uppercase">Nội dung <span className="text-red-500">*</span></label>
                   <textarea
@@ -453,6 +479,16 @@ export const Notes = ({ user, onBack, addToast, initialAction, setHideBottomNav 
               </div>
               <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-6 max-h-[70vh] overflow-y-auto">
                 <div className="space-y-4">
+                  <div>
+                    <label className="text-[10px] font-bold text-gray-400 uppercase">Tiêu đề</label>
+                    <input
+                      type="text"
+                      value={formData.title}
+                      onChange={e => setFormData({ ...formData, title: e.target.value })}
+                      className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm focus:ring-2 focus:ring-primary/20 outline-none mt-1"
+                      placeholder="VD: Nhật ký công trình sáng..."
+                    />
+                  </div>
                   <div>
                     <label className="text-[10px] font-bold text-gray-400 uppercase">Nhân sự liên quan <span className="text-gray-400 font-normal italic">- Chọn nhiều</span></label>
                     <div className="mt-1 border border-gray-200 rounded-xl max-h-48 overflow-y-auto bg-white/50">

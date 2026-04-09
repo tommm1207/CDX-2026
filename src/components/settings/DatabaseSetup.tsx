@@ -174,6 +174,7 @@ CREATE TABLE IF NOT EXISTS reminders (
 -- 12. Notes table
 CREATE TABLE IF NOT EXISTS notes (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  title TEXT,
   content TEXT NOT NULL,
   date DATE NOT NULL DEFAULT CURRENT_DATE,
   weather TEXT,

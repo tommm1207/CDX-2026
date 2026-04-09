@@ -160,11 +160,12 @@ export const Reminders = ({ user, onBack, addToast, initialAction }: {
   const filteredReminders = reminders.filter(r => {
     if (filters.fromDate && r.reminder_time < filters.fromDate) return false;
     if (filters.toDate && r.reminder_time > filters.toDate) return false;
-    if (filters.search && (
-      r.title.toLowerCase().includes(filters.search.toLowerCase()) ||
-      (r.sender?.full_name || '').toLowerCase().includes(filters.search.toLowerCase())
-    )) return true;
-    if (filters.search) return false;
+    
+    const searchLower = filters.search.toLowerCase();
+    const titleMatch = (r.title || "").toLowerCase().includes(searchLower);
+    const senderMatch = (r.sender?.full_name || "").toLowerCase().includes(searchLower);
+
+    if (filters.search && !(titleMatch || senderMatch)) return false;
     return true;
   });
 

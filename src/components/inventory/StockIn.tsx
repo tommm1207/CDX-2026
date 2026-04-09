@@ -16,17 +16,24 @@ import { isUUID, getAllowedWarehouses } from '@/utils/helpers';
 import { getAvailableStock } from '@/utils/inventory';
 import { Button } from '../shared/Button';
 
-export const StockIn = ({ user, onBack, initialStatus, initialAction, addToast }: {
+export const StockIn = ({ user, onBack, initialStatus, initialAction, addToast, setHideBottomNav }: {
   user: Employee,
   onBack?: () => void,
   initialStatus?: string,
   initialAction?: string,
-  addToast?: (message: string, type?: ToastType) => void
+  addToast?: (message: string, type?: ToastType) => void,
+  setHideBottomNav?: (hide: boolean) => void
 }) => {
   const [slips, setSlips] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(initialAction === 'add');
   const [showDetailModal, setShowDetailModal] = useState(false);
+
+  useEffect(() => {
+    if (setHideBottomNav) {
+      setHideBottomNav(showModal || showDetailModal);
+    }
+  }, [showModal, showDetailModal, setHideBottomNav]);
   const [selectedSlip, setSelectedSlip] = useState<any>(null);
   const [submitting, setSubmitting] = useState(false);
   const [showFilter, setShowFilter] = useState(false);

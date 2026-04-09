@@ -1,7 +1,14 @@
 import { Home, ClipboardCheck, CalendarCheck, UserCircle, ArrowDownCircle, ArrowUpCircle, ArrowLeftRight, FileText } from 'lucide-react';
+import { motion } from 'motion/react';
 import { Employee } from '@/types';
 
-export const BottomNav = ({ currentPage, onNavigate, user, pendingCount }: { currentPage: string, onNavigate: (page: string) => void, user: Employee, pendingCount: number }) => {
+export const BottomNav = ({ currentPage, onNavigate, user, pendingCount, isHidden = false }: { 
+  currentPage: string, 
+  onNavigate: (page: string) => void, 
+  user: Employee, 
+  pendingCount: number,
+  isHidden?: boolean 
+}) => {
   const navItems = (user.role === 'Admin' || user.role === 'Admin App')
     ? [
       { id: 'dashboard', label: 'Trang chủ', icon: Home },
@@ -18,7 +25,16 @@ export const BottomNav = ({ currentPage, onNavigate, user, pendingCount }: { cur
     ];
 
   return (
-    <div className="lg:hidden fixed bottom-5 left-1/2 -translate-x-1/2 w-[92%] max-w-md bg-white/90 backdrop-blur-md border border-gray-100 flex items-center justify-around py-2 px-2 z-[60] shadow-[0_8px_25px_rgba(0,0,0,0.1)] rounded-full">
+    <motion.div 
+      initial={{ y: 0, opacity: 1 }}
+      animate={{ 
+        y: isHidden ? 120 : 0, 
+        opacity: isHidden ? 0 : 1,
+        pointerEvents: isHidden ? 'none' : 'auto'
+      }}
+      transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+      className="lg:hidden fixed bottom-5 left-1/2 -translate-x-1/2 w-[92%] max-w-md bg-white/90 backdrop-blur-md border border-gray-100 flex items-center justify-around py-2 px-2 z-[60] shadow-[0_8px_25px_rgba(0,0,0,0.1)] rounded-full"
+    >
       {navItems.map((item) => (
         <button
           key={item.id}
@@ -35,6 +51,6 @@ export const BottomNav = ({ currentPage, onNavigate, user, pendingCount }: { cur
           )}
         </button>
       ))}
-    </div>
+    </motion.div>
   );
 };

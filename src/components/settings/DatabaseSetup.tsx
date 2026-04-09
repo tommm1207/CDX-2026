@@ -167,12 +167,14 @@ CREATE TABLE IF NOT EXISTS reminders (
   reminder_time TIMESTAMPTZ NOT NULL,
   browser_notification BOOLEAN DEFAULT true,
   status TEXT DEFAULT 'pending',
+  created_by UUID REFERENCES users(id),
   created_at TIMESTAMPTZ DEFAULT now()
 );
 
 -- 12. Notes table
 CREATE TABLE IF NOT EXISTS notes (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  title TEXT,
   content TEXT NOT NULL,
   date DATE NOT NULL DEFAULT CURRENT_DATE,
   weather TEXT,

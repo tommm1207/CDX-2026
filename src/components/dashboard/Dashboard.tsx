@@ -411,11 +411,11 @@ export const Dashboard = ({ user, onNavigate, addToast, pendingApprovals = 0 }: 
 const RadialMenu = ({ onNavigate }: { onNavigate: (page: string, params?: any) => void }) => {
   const [isOpen, setIsOpen] = useState(false);
   const items = [
-    { id: 'stock-in', label: 'Nhập kho', icon: ArrowDownCircle, color: 'bg-blue-500', action: () => onNavigate('stock-in', { action: 'add' }) },
+    { id: 'stock-in', label: 'Nhập kho', icon: ArrowDownCircle, color: 'bg-blue-600', action: () => onNavigate('stock-in', { action: 'add' }) },
     { id: 'stock-out', label: 'Xuất kho', icon: ArrowUpCircle, color: 'bg-red-600', action: () => onNavigate('stock-out', { action: 'add' }) },
     { id: 'transfer', label: 'Luân chuyển', icon: ArrowLeftRight, color: 'bg-orange-500', action: () => onNavigate('transfer', { action: 'add' }) },
-    { id: 'production-list', label: 'Sản xuất', icon: Layers, color: 'bg-indigo-600', action: () => onNavigate('production-list', { action: 'add' }) },
-    { id: 'costs', label: 'Chi phí', icon: Wallet, color: 'bg-primary', action: () => onNavigate('costs', { action: 'add' }) },
+    { id: 'production-list', label: 'Sản xuất', icon: Layers, color: 'bg-indigo-600', action: () => onNavigate('production-list') },
+    { id: 'costs', label: 'Chi phí', icon: Wallet, color: 'bg-emerald-600', action: () => onNavigate('costs', { action: 'add' }) },
     { id: 'notes', label: 'Ghi chú', icon: FileText, color: 'bg-amber-500', action: () => onNavigate('notes', { action: 'add' }) },
     { id: 'reminders', label: 'Lời nhắc', icon: Bell, color: 'bg-primary', action: () => onNavigate('reminders', { action: 'add' }) },
   ];

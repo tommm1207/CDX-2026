@@ -15,14 +15,21 @@ import { isUUID, getAllowedWarehouses } from '@/utils/helpers';
 import { isActiveWarehouse } from '@/utils/inventory';
 import { Button } from '../shared/Button';
 
-export const Costs = ({ user, onBack, addToast, initialAction }: { 
+export const Costs = ({ user, onBack, addToast, initialAction, setHideBottomNav }: { 
   user: Employee, 
   onBack?: () => void,
   addToast?: (message: string, type?: ToastType) => void,
-  initialAction?: string
+  initialAction?: string,
+  setHideBottomNav?: (hide: boolean) => void
 }) => {
   const [showModal, setShowModal] = useState(initialAction === 'add');
   const [showDetailModal, setShowDetailModal] = useState(false);
+
+  useEffect(() => {
+    if (setHideBottomNav) {
+      setHideBottomNav(showModal || showDetailModal);
+    }
+  }, [showModal, showDetailModal, setHideBottomNav]);
   const [selectedCost, setSelectedCost] = useState<any>(null);
   const [costs, setCosts] = useState<any[]>([]);
   const [materials, setMaterials] = useState<any[]>([]);

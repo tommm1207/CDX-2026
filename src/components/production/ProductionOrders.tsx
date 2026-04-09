@@ -10,16 +10,23 @@ import { getAllowedWarehouses } from '@/utils/helpers';
 import { FAB } from '../shared/FAB';
 import { Button } from '../shared/Button';
 
-export const ProductionOrders = ({ user, onBack, addToast, onOpenDetail }: {
+export const ProductionOrders = ({ user, onBack, addToast, onOpenDetail, setHideBottomNav }: {
   user: Employee,
   onBack?: () => void,
   addToast?: (message: string, type?: ToastType) => void,
-  onOpenDetail: (id?: string) => void
+  onOpenDetail: (id?: string) => void,
+  setHideBottomNav?: (hide: boolean) => void
 }) => {
   const [orders, setOrders] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [showFilter, setShowFilter] = useState(false);
+
+  useEffect(() => {
+    if (setHideBottomNav) {
+      setHideBottomNav(showFilter);
+    }
+  }, [showFilter, setHideBottomNav]);
 
   useEffect(() => {
     fetchOrders();

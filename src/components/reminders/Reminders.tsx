@@ -9,16 +9,23 @@ import { parseReminderContent, serializeReminderContent } from '@/utils/reminder
 import { FAB } from '../shared/FAB';
 import { Button } from '../shared/Button';
 
-export const Reminders = ({ user, onBack, addToast, initialAction }: { 
+export const Reminders = ({ user, onBack, addToast, initialAction, setHideBottomNav }: { 
   user: Employee, 
   onBack: () => void, 
   addToast?: (message: string, type?: ToastType) => void,
-  initialAction?: string 
+  initialAction?: string,
+  setHideBottomNav?: (hide: boolean) => void 
 }) => {
   const [reminders, setReminders] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [showSetReminder, setShowSetReminder] = useState(false);
   const [showAddNew, setShowAddNew] = useState(initialAction === 'add');
+
+  useEffect(() => {
+    if (setHideBottomNav) {
+      setHideBottomNav(showSetReminder || showAddNew);
+    }
+  }, [showSetReminder, showAddNew, setHideBottomNav]);
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
@@ -153,11 +160,12 @@ export const Reminders = ({ user, onBack, addToast, initialAction }: {
   const filteredReminders = reminders.filter(r => {
     if (filters.fromDate && r.reminder_time < filters.fromDate) return false;
     if (filters.toDate && r.reminder_time > filters.toDate) return false;
-    if (filters.search && (
-      r.title.toLowerCase().includes(filters.search.toLowerCase()) ||
-      (r.sender?.full_name || '').toLowerCase().includes(filters.search.toLowerCase())
-    )) return true;
-    if (filters.search) return false;
+    
+    const searchLower = filters.search.toLowerCase();
+    const titleMatch = (r.title || "").toLowerCase().includes(searchLower);
+    const senderMatch = (r.sender?.full_name || "").toLowerCase().includes(searchLower);
+
+    if (filters.search && !(titleMatch || senderMatch)) return false;
     return true;
   });
 

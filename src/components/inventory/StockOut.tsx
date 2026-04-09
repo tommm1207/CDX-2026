@@ -729,6 +729,7 @@ export const StockOut = ({ user, onBack, addToast, initialAction }: {
           setShowModal(true);
         }}
         label="Lập phiếu xuất"
+        color="bg-red-600"
       />
     </div>
   );

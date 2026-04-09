@@ -1,11 +1,12 @@
 import { useState, useEffect } from 'react';
-import { Bell, Plus, Search, X, Edit, Trash2 } from 'lucide-react';
+import { Bell, Plus, Search, X, Edit, Trash2, Users, User, Share2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { supabase } from '@/lib/supabase';
 import { ObjectType, Employee } from '@/types';
 import { PageBreadcrumb } from '../shared/PageBreadcrumb';
 import { ToastType } from '../shared/Toast';
 import { parseReminderContent, serializeReminderContent } from '@/utils/reminderUtils';
+import { FAB } from '../shared/FAB';
 
 export const Reminders = ({ user, onBack, addToast, initialAction }: { 
   user: Employee, 
@@ -26,8 +27,8 @@ export const Reminders = ({ user, onBack, addToast, initialAction }: {
     const d = new Date();
     d.setHours(d.getHours() + 1);
     d.setMinutes(0);
-    const tzOffset = d.getTimezoneOffset() * 60000;
-    return new Date(d.getTime() - tzOffset).toISOString().slice(0, 16);
+    // Robust local ISO string conversion
+    return new Date(d.getTime() - (d.getTimezoneOffset() * 60000)).toISOString().slice(0, 16);
   };
 
   const [filters, setFilters] = useState({
@@ -48,7 +49,8 @@ export const Reminders = ({ user, onBack, addToast, initialAction }: {
     content: '',
     reminder_time: getDefaultTime(),
     browser_notification: true,
-    assignees: []
+    assignees: [],
+    show_assignees: false
   });
 
   useEffect(() => {
@@ -57,7 +59,10 @@ export const Reminders = ({ user, onBack, addToast, initialAction }: {
 
   const fetchData = async () => {
     setLoading(true);
-    const { data: remData } = await supabase.from('reminders').select('*').order('reminder_time', { ascending: false });
+    const { data: remData } = await supabase
+      .from('reminders')
+      .select('*, sender:users!created_by(full_name)')
+      .order('reminder_time', { ascending: false });
     if (remData) setReminders(remData);
 
     let empQuery = supabase.from('users').select('*').neq('status', 'Nghỉ việc');
@@ -73,9 +78,10 @@ export const Reminders = ({ user, onBack, addToast, initialAction }: {
     try {
       const payload = {
         title: formData.title,
-        content: serializeReminderContent(formData.content, formData.assignees),
+        content: serializeReminderContent(formData.content, formData.assignees, formData.show_assignees),
         browser_notification: formData.browser_notification,
         reminder_time: new Date(formData.reminder_time).toISOString(),
+        created_by: user.id
       };
 
       if (editingId) {
@@ -95,7 +101,9 @@ export const Reminders = ({ user, onBack, addToast, initialAction }: {
         title: '',
         content: '',
         reminder_time: getDefaultTime(),
-        browser_notification: true
+        browser_notification: true,
+        assignees: [],
+        show_assignees: false
       });
       fetchData();
     } catch (err: any) {
@@ -106,8 +114,7 @@ export const Reminders = ({ user, onBack, addToast, initialAction }: {
 
   const handleEdit = (rem: any) => {
     const d = new Date(rem.reminder_time);
-    const tzOffset = d.getTimezoneOffset() * 60000;
-    const localStr = new Date(d.getTime() - tzOffset).toISOString().slice(0, 16);
+    const localStr = new Date(d.getTime() - (d.getTimezoneOffset() * 60000)).toISOString().slice(0, 16);
     
     const parsed = parseReminderContent(rem.content);
     
@@ -116,7 +123,8 @@ export const Reminders = ({ user, onBack, addToast, initialAction }: {
       content: parsed.text || '',
       reminder_time: localStr,
       browser_notification: rem.browser_notification ?? true,
-      assignees: parsed.assignees || []
+      assignees: parsed.assignees || [],
+      show_assignees: parsed.show_assignees ?? false
     });
     setEditingId(rem.id);
     setShowSetReminder(true);
@@ -144,7 +152,11 @@ export const Reminders = ({ user, onBack, addToast, initialAction }: {
   const filteredReminders = reminders.filter(r => {
     if (filters.fromDate && r.reminder_time < filters.fromDate) return false;
     if (filters.toDate && r.reminder_time > filters.toDate) return false;
-    if (filters.search && !r.title.toLowerCase().includes(filters.search.toLowerCase())) return false;
+    if (filters.search && (
+      r.title.toLowerCase().includes(filters.search.toLowerCase()) ||
+      (r.sender?.full_name || '').toLowerCase().includes(filters.search.toLowerCase())
+    )) return true;
+    if (filters.search) return false;
     return true;
   });
 
@@ -160,26 +172,6 @@ export const Reminders = ({ user, onBack, addToast, initialAction }: {
             }`}
           >
             <Search size={16} />
-          </button>
-          <button
-            onClick={() => {
-              setEditingId(null);
-              setFormData({ title: '', content: '', reminder_time: getDefaultTime(), browser_notification: true, assignees: [] });
-              setShowSetReminder(true);
-            }}
-            className="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-xl text-sm font-bold hover:bg-primary-dark transition-all shadow-lg shadow-primary/20"
-          >
-            <Bell size={18} /> Đặt lịch nhắc
-          </button>
-          <button
-            onClick={() => {
-              setEditingId(null);
-              setFormData({ title: '', content: '', reminder_time: getDefaultTime(), browser_notification: true, assignees: [] });
-              setShowAddNew(true);
-            }}
-            className="flex items-center gap-2 px-4 py-2 bg-white text-gray-700 border border-gray-200 rounded-xl text-sm font-bold hover:bg-gray-50 transition-all shadow-sm"
-          >
-            <Plus size={18} /> Thêm mới
           </button>
         </div>
       </div>
@@ -239,11 +231,11 @@ export const Reminders = ({ user, onBack, addToast, initialAction }: {
           <table className="w-full text-left border-collapse whitespace-nowrap">
             <thead>
               <tr className="bg-gray-50/50">
-                <th className="px-4 py-3 text-[10px] font-bold text-gray-400 uppercase">Đã nhắc (Trạng thái)</th>
-                <th className="px-4 py-3 text-[10px] font-bold text-gray-400 uppercase">Mã nhắc nhở</th>
+                <th className="px-4 py-3 text-[10px] font-bold text-gray-400 uppercase">Trạng thái</th>
+                <th className="px-4 py-3 text-[10px] font-bold text-gray-400 uppercase">Người gửi</th>
                 <th className="px-4 py-3 text-[10px] font-bold text-gray-400 uppercase">Thời gian nhắc</th>
-                <th className="px-4 py-3 text-[10px] font-bold text-gray-400 uppercase">Nội dung</th>
-                <th className="px-4 py-3 text-[10px] font-bold text-gray-400 uppercase">Tiêu đề</th>
+                <th className="px-4 py-3 text-[10px] font-bold text-gray-400 uppercase">Đối tượng</th>
+                <th className="px-4 py-3 text-[10px] font-bold text-gray-400 uppercase">Nội dung / Tiêu đề</th>
                 <th className="px-4 py-3 text-[10px] font-bold text-gray-400 uppercase text-center">Thao tác</th>
               </tr>
             </thead>
@@ -263,9 +255,48 @@ export const Reminders = ({ user, onBack, addToast, initialAction }: {
                       {rem.status === 'reminded' ? 'Đã nhắc' : 'Chờ nhắc'}
                     </span>
                   </td>
-                  <td className="px-4 py-3 text-sm text-gray-600">{new Date(rem.reminder_time).toLocaleString('vi-VN')}</td>
-                  <td className="px-4 py-3 text-sm text-gray-600 max-w-xs truncate">{parseReminderContent(rem.content).text}</td>
-                  <td className="px-4 py-3 text-sm font-medium text-gray-700">{rem.title}</td>
+                  <td className="px-4 py-3">
+                    <div className="flex items-center gap-2">
+                      <div className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center text-primary text-[10px] font-bold uppercase">
+                        {(rem.sender?.full_name || '??')[0]}
+                      </div>
+                      <span className="text-xs font-semibold text-gray-700">{rem.sender?.full_name || 'Hệ thống'}</span>
+                    </div>
+                  </td>
+                  <td className="px-4 py-3 text-sm font-bold text-primary">
+                    {new Date(rem.reminder_time).toLocaleString('vi-VN', { 
+                      day: '2-digit', month: '2-digit', year: 'numeric',
+                      hour: '2-digit', minute: '2-digit'
+                    })}
+                  </td>
+                  <td className="px-4 py-3">
+                    {(() => {
+                      const payload = parseReminderContent(rem.content);
+                      const isGlobal = !payload.assignees || payload.assignees.length === 0;
+                      return (
+                        <div className="flex items-center gap-1.5">
+                          {isGlobal ? (
+                            <span className="inline-flex items-center gap-1 px-2 py-1 bg-blue-50 text-blue-600 rounded-md text-[10px] font-bold uppercase">
+                              <Users size={10} /> Toàn bộ
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center gap-1 px-2 py-1 bg-purple-50 text-purple-600 rounded-md text-[10px] font-bold uppercase">
+                              <User size={10} /> Cá nhân ({payload.assignees.length})
+                            </span>
+                          )}
+                          {payload.show_assignees && (
+                            <Share2 size={12} className="text-gray-400" title="Được phép xem danh sách người nhận" />
+                          )}
+                        </div>
+                      );
+                    })()}
+                  </td>
+                  <td className="px-4 py-3">
+                    <div className="flex flex-col">
+                      <span className="text-sm font-black text-gray-900 leading-tight">{rem.title}</span>
+                      <span className="text-xs text-gray-500 truncate max-w-[200px]">{parseReminderContent(rem.content).text}</span>
+                    </div>
+                  </td>
                   <td className="px-4 py-3">
                     <div className="flex items-center justify-center gap-2">
                       <button onClick={(e) => { e.stopPropagation(); handleEdit(rem); }} className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition-all"><Edit size={14} /></button>
@@ -368,6 +399,20 @@ export const Reminders = ({ user, onBack, addToast, initialAction }: {
                     className="w-5 h-5 rounded border-gray-300 text-primary focus:ring-primary"
                   />
                   <label htmlFor="notify" className="text-sm text-gray-700 font-medium cursor-pointer">Nhắc qua thông báo trình duyệt</label>
+                </div>
+                
+                <div className="flex items-center gap-3 p-3 bg-blue-50 rounded-xl border border-blue-100">
+                  <input
+                    type="checkbox"
+                    id="show_assignees"
+                    checked={formData.show_assignees}
+                    onChange={e => setFormData({ ...formData, show_assignees: e.target.checked })}
+                    className="w-5 h-5 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                  />
+                  <div className="flex flex-col">
+                    <label htmlFor="show_assignees" className="text-sm text-gray-700 font-bold cursor-pointer transition-colors">Hiển thị danh sách người cùng nhận</label>
+                    <p className="text-[10px] text-gray-500">Mọi người sẽ biết ai khác cũng nhận được báo cáo này</p>
+                  </div>
                 </div>
               </div>
               <div className="p-6 bg-gray-50 flex gap-3 flex-shrink-0">
@@ -500,6 +545,16 @@ export const Reminders = ({ user, onBack, addToast, initialAction }: {
           </div>
         )}
       </AnimatePresence>
+
+      <FAB 
+        onClick={() => {
+          setEditingId(null);
+          setFormData({ title: '', content: '', reminder_time: getDefaultTime(), browser_notification: true, assignees: [], show_assignees: false });
+          setShowSetReminder(true);
+        }}
+        label="Đặt lịch nhắc mới"
+        color="bg-primary"
+      />
     </div>
   );
 };

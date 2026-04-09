@@ -1,6 +1,7 @@
 export interface ReminderContentPayload {
   text: string;
   assignees: string[]; // empty means global
+  show_assignees?: boolean; // visibility option
 }
 
 export const parseReminderContent = (contentRaw: string): ReminderContentPayload => {
@@ -9,7 +10,11 @@ export const parseReminderContent = (contentRaw: string): ReminderContentPayload
   try {
     if (contentRaw.trim().startsWith('{"__v":1')) {
       const parsed = JSON.parse(contentRaw);
-      return { text: parsed.text || '', assignees: parsed.assignees || [] };
+      return { 
+        text: parsed.text || '', 
+        assignees: parsed.assignees || [],
+        show_assignees: parsed.show_assignees ?? false
+      };
     }
   } catch (e) {
     // Ignore error, treat as raw text
@@ -17,7 +22,6 @@ export const parseReminderContent = (contentRaw: string): ReminderContentPayload
   return { text: contentRaw, assignees: [] };
 };
 
-export const serializeReminderContent = (text: string, assignees: string[]): string => {
-  if (!assignees || assignees.length === 0) return text; // Standard text for global
-  return JSON.stringify({ __v: 1, text, assignees });
+export const serializeReminderContent = (text: string, assignees: string[], show_assignees: boolean = false): string => {
+  return JSON.stringify({ __v: 1, text, assignees, show_assignees });
 };

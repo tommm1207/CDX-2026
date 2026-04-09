@@ -766,6 +766,7 @@ export const Costs = ({ user, onBack, addToast, initialAction }: {
       <FAB
         onClick={() => { setIsEditing(false); setFormData(initialFormState); setShowModal(true); }}
         label="Nhập giao dịch"
+        color="bg-primary"
       />
     </div>
   );

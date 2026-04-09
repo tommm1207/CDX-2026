@@ -693,6 +693,7 @@ export const Transfer = ({ user, onBack, addToast, initialAction }: {
           setShowModal(true);
         }}
         label="Lập phiếu luân chuyển"
+        color="bg-orange-500"
       />
     </div>
   );

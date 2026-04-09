@@ -6,6 +6,7 @@ import { Employee } from '@/types';
 import { PageBreadcrumb } from '../shared/PageBreadcrumb';
 import { isActiveWarehouse } from '@/utils/inventory';
 import { ToastType } from '../shared/Toast';
+import { FAB } from '../shared/FAB';
 
 export const WEATHER_OPTIONS = [
   { value: 'sunny', label: '☀️ Nắng nóng gay gắt' },
@@ -175,31 +176,6 @@ export const Notes = ({ user, onBack, addToast, initialAction }: { user: Employe
             }`}
           >
             <Search size={16} />
-          </button>
-          <button
-            onClick={() => setShowQuickNote(true)}
-            className="flex items-center gap-2 px-4 py-2 bg-amber-500 text-white rounded-xl text-sm font-bold hover:bg-amber-600 transition-all shadow-lg shadow-amber-500/20"
-          >
-            <FileText size={18} /> Ghi chú nhanh
-          </button>
-          <button
-            onClick={() => {
-              setEditingId(null);
-              setFormData({
-                content: '',
-                date: new Date().toISOString().split('T')[0],
-                weather: '',
-                related_object: '',
-                object_code: '',
-                note_code: '',
-                location: '',
-                related_personnel: []
-              });
-              setShowAddNew(true);
-            }}
-            className="flex items-center gap-2 px-4 py-2 bg-white text-gray-700 border border-gray-200 rounded-xl text-sm font-bold hover:bg-gray-50 transition-all shadow-sm"
-          >
-            <Plus size={18} /> Thêm mới
           </button>
         </div>
       </div>
@@ -540,6 +516,24 @@ export const Notes = ({ user, onBack, addToast, initialAction }: { user: Employe
           </div>
         )}
       </AnimatePresence>
+      <FAB 
+        onClick={() => {
+          setEditingId(null);
+          setFormData({
+            content: '',
+            date: new Date().toISOString().split('T')[0],
+            weather: '',
+            related_object: '',
+            object_code: '',
+            note_code: '',
+            location: '',
+            related_personnel: []
+          });
+          setShowAddNew(true);
+        }}
+        label="Thêm ghi chú mới"
+        color="bg-amber-500"
+      />
     </div>
   );
 };

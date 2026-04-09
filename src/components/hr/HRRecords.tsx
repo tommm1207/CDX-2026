@@ -592,6 +592,7 @@ export const HRRecords = ({ user, onBack, addToast }: {
           setShowModal(true);
         }}
         label="Thêm nhân sự"
+        color="bg-primary"
       />
     </div>
   );

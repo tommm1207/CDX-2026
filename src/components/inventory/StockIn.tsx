@@ -703,6 +703,7 @@ export const StockIn = ({ user, onBack, initialStatus, initialAction, addToast }
           setShowModal(true);
         }}
         label="Lập phiếu nhập"
+        color="bg-blue-500"
       />
     </div>
   );

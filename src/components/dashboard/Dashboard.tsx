@@ -238,7 +238,7 @@ export const Dashboard = ({ user, onNavigate, addToast, pendingApprovals = 0 }: 
 
           <button 
             onClick={() => onNavigate('notifications')}
-            className="group relative flex items-center justify-center bg-white hover:bg-gray-50 text-gray-700 w-[46px] h-[46px] rounded-xl transition-all shadow-sm border border-gray-100"
+            className="group relative flex items-center justify-center bg-white hover:bg-gray-50 text-gray-700 w-[46px] h-[46px] rounded-xl transition-all shadow-sm border border-gray-100 mr-2 md:mr-0"
           >
             <Bell size={22} className={totalNotifs > 0 ? "text-amber-500 group-hover:scale-110 transition-transform" : "text-gray-400"} />
             {totalNotifs > 0 && (

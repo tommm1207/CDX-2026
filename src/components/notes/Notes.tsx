@@ -83,7 +83,7 @@ export const Notes = ({ user, onBack, addToast, initialAction }: { user: Employe
       // Auto-compute related_object from selected personnel
       const computedRelatedObject = formData.related_personnel.length > 0
         ? employees.filter(e => formData.related_personnel.includes(e.id)).map(e => e.full_name).join(', ')
-        : formData.related_object; // fallback
+        : "Tất cả nhân viên"; // fallback
 
       if (editingId) {
         const { error } = await supabase.from('notes').update({

@@ -22,6 +22,7 @@ import {
 import { supabase } from '@/lib/supabase';
 import { Employee } from '@/types';
 import { formatCurrency, formatNumber } from '@/utils/format';
+import { parseReminderContent } from '@/utils/reminderUtils';
 import { AttendanceTable } from '../hr/AttendanceTable';
 import { NumericInput } from '../shared/NumericInput';
 import { ToastType } from '../shared/Toast';
@@ -41,9 +42,42 @@ export const Dashboard = ({ user, onNavigate, addToast, pendingApprovals = 0 }: 
   const [showEditModal, setShowEditModal] = useState(false);
   const [editingAtt, setEditingAtt] = useState<any>(null);
   const [editFormData, setEditFormData] = useState({ status: 'present', overtime: 0 });
+  const [reminderCount, setReminderCount] = useState(0);
 
   const selectedMonth = new Date().getMonth() + 1;
   const selectedYear = new Date().getFullYear();
+
+  useEffect(() => {
+    const fetchReminderCount = async () => {
+      try {
+        const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+        const { data } = await supabase
+          .from('reminders')
+          .select('*')
+          .neq('status', 'Đã xóa')
+          .gte('created_at', twentyFourHoursAgo);
+
+        if (data) {
+          const clearedRaw = localStorage.getItem('cleared_reminders') || '[]';
+          const clearedMap = new Set(JSON.parse(clearedRaw));
+          
+          let count = 0;
+          for (const rem of data) {
+            if (clearedMap.has(rem.id)) continue;
+            if (new Date(rem.reminder_time).getTime() > Date.now()) continue;
+            const payload = parseReminderContent(rem.content);
+            if (payload.assignees.length > 0 && !payload.assignees.includes(user.id)) continue;
+            count++;
+          }
+          setReminderCount(count);
+        }
+      } catch (err) {}
+    };
+    
+    fetchReminderCount();
+    const interval = setInterval(fetchReminderCount, 15000);
+    return () => clearInterval(interval);
+  }, [user.id]);
 
   useEffect(() => {
     const fetchAttendanceData = async () => {
@@ -181,6 +215,8 @@ export const Dashboard = ({ user, onNavigate, addToast, pendingApprovals = 0 }: 
     { id: 'cost-report', label: 'Báo cáo chi phí', icon: FileText, color: 'bg-primary', description: 'Ghi chép chi tiêu dự án' },
   ];
 
+  const totalNotifs = reminderCount + ((user.role === 'Admin' || user.role === 'Admin App') ? pendingApprovals : 0);
+
   return (
     <div className="p-3 md:p-8 space-y-4 md:space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
       {/* Welcome Header */}
@@ -191,12 +227,26 @@ export const Dashboard = ({ user, onNavigate, addToast, pendingApprovals = 0 }: 
           </h1>
           <p className="text-gray-500 font-medium text-sm">Chúc bạn một ngày làm việc hiệu quả tại CDX.</p>
         </div>
-          <div className="inline-flex items-center gap-2 bg-primary px-4 py-2 rounded-xl shadow-lg shadow-primary/20 self-start">
+        <div className="flex items-center gap-2 self-start md:self-auto">
+          <button 
+            onClick={() => onNavigate('notifications')}
+            className="relative flex items-center justify-center bg-gray-100 hover:bg-gray-200 text-gray-700 w-11 h-11 rounded-xl transition-all mr-1 md:mr-2"
+          >
+            <Bell size={20} className={totalNotifs > 0 ? "text-amber-500" : ""} />
+            {totalNotifs > 0 && (
+              <span className="absolute -top-1.5 -right-1.5 bg-red-500 text-white text-[10px] font-black w-5 h-5 flex items-center justify-center rounded-full shadow-md animate-pulse">
+                {totalNotifs}
+              </span>
+            )}
+          </button>
+          
+          <div className="inline-flex items-center gap-2 bg-primary px-4 py-2 rounded-xl shadow-lg shadow-primary/20">
             <div className="text-left">
               <p className="text-[9px] font-bold text-white/70 uppercase tracking-widest leading-none mb-1">Vai trò</p>
               <p className="text-sm font-black text-white leading-none uppercase">{user.role}</p>
             </div>
           </div>
+        </div>
       </div>
 
       {/* Quick Actions — 1 row compact on mobile, full cards on desktop */}

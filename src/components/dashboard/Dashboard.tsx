@@ -435,20 +435,20 @@ const RadialMenu = ({ onNavigate }: { onNavigate: (page: string, params?: any) =
         )}
       </AnimatePresence>
 
-      <div className="fixed bottom-[90px] right-6 z-[90]">
+      <div className="fixed bottom-[90px] right-10 z-[90]">
         <AnimatePresence>
           {isOpen && (
             <>
               {items.map((item, index) => {
-                // Wide arc for the sunburst effect
-                const startAngle = Math.PI * 0.92; 
-                const endAngle = Math.PI * 1.58;   
+                // Strictly controlled arc to stay within screen boundaries (approx 171 to 261 degrees)
+                const startAngle = Math.PI * 0.95; 
+                const endAngle = Math.PI * 1.45;   
                 const angle = startAngle + (endAngle - startAngle) * (index / (items.length - 1)); 
                 
-                // Rotated labels (Tia mặt trời)
+                // Rotated labels (Tia mặt trời) with bounded rotation
                 const rotationDegrees = (angle - Math.PI) * (180 / Math.PI);
                 
-                const iconRadius = 235; // Icons on the outer arc
+                const iconRadius = 240; // Icons on the outer arc
                 const labelRadius = 145; // Labels on the inner arc
                 
                 const ix = Math.round(iconRadius * Math.cos(angle));

@@ -146,7 +146,18 @@ export const InventoryReport = ({ user, onBack, addToast }: {
       });
 
       const ws = xlsx.utils.json_to_sheet(exportData);
-      
+
+      const colWidths = Object.keys(exportData[0] || {}).map(key => {
+        let max = key.length;
+        exportData.forEach(row => {
+          const val = (row as any)[key];
+          const len = val ? val.toString().length : 0;
+          if (len > max) max = len;
+        });
+        return { wch: Math.min(max + 2, 50) };
+      });
+      ws['!cols'] = colWidths;
+
       const whName = selectedWarehouse ? warehouses.find(w => w.id === selectedWarehouse)?.name : 'TatCaKho';
       const cleanWhName = whName?.replace(/[^a-zA-Z0-9_\u0080-\uFFFF]/g, '') || 'TatCaKho';
       const dateStr = new Date().toISOString().split('T')[0].replace(/-/g, '');
@@ -155,7 +166,7 @@ export const InventoryReport = ({ user, onBack, addToast }: {
       const wb = xlsx.utils.book_new();
       xlsx.utils.book_append_sheet(wb, ws, 'Tồn Kho');
       xlsx.writeFile(wb, fileName);
-      
+
       if (addToast) addToast('Xuất Excel thành công!', 'success');
     } catch (err: any) {
       console.error('Export Excel error:', err);
@@ -179,9 +190,8 @@ export const InventoryReport = ({ user, onBack, addToast }: {
         <div className="flex items-center gap-2 flex-shrink-0">
           <button
             onClick={() => setShowFilter(f => !f)}
-            className={`p-2.5 rounded-xl border transition-colors ${
-              showFilter ? 'bg-primary text-white border-primary' : 'bg-white text-gray-500 border-gray-200 hover:border-primary/40'
-            }`}
+            className={`p-2.5 rounded-xl border transition-colors ${showFilter ? 'bg-primary text-white border-primary' : 'bg-white text-gray-500 border-gray-200 hover:border-primary/40'
+              }`}
           >
             <Search size={16} />
           </button>
@@ -251,7 +261,7 @@ export const InventoryReport = ({ user, onBack, addToast }: {
       {/* Bảng tồn kho — giống bảng Tonkho app cũ */}
       <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse min-w-[900px]">
+          <table className="w-full text-left border-collapse min-w-[900px] whitespace-nowrap">
             <thead>
               <tr className="bg-primary text-white">
                 <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider">Vật tư</th>

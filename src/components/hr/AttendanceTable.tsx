@@ -52,7 +52,7 @@ export const AttendanceTable = ({
   return (
     <div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
       <div className="overflow-x-auto custom-scrollbar">
-        <table className="w-full text-left border-collapse min-w-[1200px]">
+        <table className="w-full text-left border-collapse min-w-[1200px] whitespace-nowrap">
           <thead>
             <tr className="bg-primary text-white">
               <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider sticky left-0 z-[30] bg-primary border-r border-white/10 w-48">Nhân viên</th>

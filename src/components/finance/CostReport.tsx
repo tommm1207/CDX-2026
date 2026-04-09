@@ -384,7 +384,7 @@ export const CostReport = ({ user, onBack, addToast }: {
       <div className="flex flex-col lg:flex-row gap-6">
         <div className={`flex-1 bg-white rounded-2xl shadow-sm border border-gray-100 hidden lg:block`}>
           <div className="overflow-x-auto custom-scrollbar pb-2">
-            <table className="w-full text-left border-collapse min-w-[500px]">
+            <table className="w-full text-left border-collapse min-w-[500px] whitespace-nowrap">
               <thead>
                 <tr className="bg-gray-50 border-b border-gray-100">
                   <th className="px-4 py-3 text-[10px] font-bold text-gray-400 uppercase tracking-wider">Mã / Ngày</th>
@@ -470,7 +470,7 @@ export const CostReport = ({ user, onBack, addToast }: {
               </div>
 
               <div className="overflow-x-auto custom-scrollbar pb-2">
-                <table className="w-full text-left border-collapse min-w-[400px]">
+                <table className="w-full text-left border-collapse min-w-[400px] whitespace-nowrap">
                   <thead>
                     <tr className="bg-white border-b border-gray-100">
                       <th className="px-4 py-2 text-[10px] font-bold text-gray-400 uppercase tracking-wider">Ngày chi</th>
@@ -638,7 +638,7 @@ export const CostReport = ({ user, onBack, addToast }: {
                   </div>
 
                   <div className="bg-gray-50 rounded-2xl border border-gray-100 overflow-hidden">
-                    <table className="w-full text-left border-collapse">
+                    <table className="w-full text-left border-collapse whitespace-nowrap">
                       <thead>
                         <tr className="bg-gray-100/50">
                           <th className="px-4 py-2 text-[10px] font-bold text-gray-400 uppercase">TT</th>

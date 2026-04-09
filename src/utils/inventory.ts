@@ -332,8 +332,11 @@ export const getTonKhoTable = async (
       tonCuoi: row.tonDau + row.tongNhap - row.tongXuat + row.chuyenDen - row.chuyenDi,
     }));
 
-    // Lọc theo kho nếu có
-    if (warehouseId) result = result.filter(r => r.warehouse_id === warehouseId);
+    // Lọc theo kho nếu có (hỗ trợ cả string và string[])
+    if (warehouseId) {
+      const ids = Array.isArray(warehouseId) ? warehouseId : [warehouseId];
+      result = result.filter(r => ids.includes(r.warehouse_id));
+    }
 
     // Bỏ qua rows hoàn toàn zero
     return result.filter(r =>

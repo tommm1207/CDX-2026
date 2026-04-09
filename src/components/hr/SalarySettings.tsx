@@ -88,7 +88,7 @@ export const SalarySettings = ({ user, onBack, addToast }: {
       </div>
 
       <div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
-        <table className="w-full text-left border-collapse">
+        <table className="w-full text-left border-collapse whitespace-nowrap">
           <thead>
             <tr className="bg-primary text-white">
               <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider">Nhân viên</th>

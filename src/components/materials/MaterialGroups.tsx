@@ -342,7 +342,7 @@ export const MaterialGroups = ({ user, onBack, addToast }: {
 
       <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse">
+          <table className="w-full text-left border-collapse whitespace-nowrap">
             <thead>
               <tr className="bg-primary text-white">
                 <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider border-r border-white/10 w-32">Mã nhóm</th>
@@ -552,7 +552,7 @@ export const MaterialGroups = ({ user, onBack, addToast }: {
                   </div>
 
                   <div className="border border-gray-100 rounded-xl overflow-hidden shadow-sm">
-                    <table className="w-full text-left border-collapse">
+                    <table className="w-full text-left border-collapse whitespace-nowrap">
                       <thead>
                         <tr className="bg-primary text-white text-[10px] uppercase font-bold tracking-wider">
                           <th className="px-4 py-2 border-r border-white/10">Mã vật tư</th>

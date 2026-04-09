@@ -138,7 +138,7 @@ async function runAutoBackup() {
   console.log("----------------------------------------------------------------");
   console.log(`[BACKUP] >>> AUTOMATIC BACKUP TRIGGERED AT: ${new Date().toLocaleString('vi-VN')}`);
   console.log("----------------------------------------------------------------");
-  
+
   const { data: configs } = await supabase
     .from('system_configs')
     .select('value')
@@ -185,7 +185,7 @@ async function runAutoBackup() {
     try {
       const workbook = new ExcelJS.Workbook();
       workbook.creator = 'CDX Auto System';
-      
+
       const summarySheet = workbook.addWorksheet('TỔNG QUAN', { views: [{ showGridLines: false }] });
       summarySheet.getCell('A1').value = 'HỆ THỐNG QUẢN LÝ KHO & NHÂN SỰ CDX 2026';
       summarySheet.getCell('A1').font = { size: 18, bold: true, color: { argb: 'FF008060' } };
@@ -305,16 +305,16 @@ async function sendEmail({ smtpConfig, to, subject, fileName, fileData, tableLis
                 </tr>
               </thead>
               <tbody>
-                ${tableList && tableList.length > 0 
-                  ? tableList.map((item: string) => `
+                ${tableList && tableList.length > 0
+        ? tableList.map((item: string) => `
                     <tr>
                       <td style="padding: 10px; border: 1px solid #eee;">${item}</td>
                       <td style="padding: 10px; border: 1px solid #eee; text-align: center;">${tableStats && tableStats[item] !== undefined ? tableStats[item] : 'N/A'}</td>
                       <td style="padding: 10px; border: 1px solid #eee; text-align: center; color: green;">✔ Sẵn sàng</td>
                     </tr>
                   `).join('')
-                  : '<tr><td colspan="3" style="padding: 10px; text-align: center;">Dữ liệu tổng hợp</td></tr>'
-                }
+        : '<tr><td colspan="3" style="padding: 10px; text-align: center;">Dữ liệu tổng hợp</td></tr>'
+      }
               </tbody>
             </table>
           </div>
@@ -370,7 +370,7 @@ app.use(bodyParser.urlencoded({ limit: '50mb', extended: true }));
  */
 async function initBackupScheduler() {
   console.log("[BACKUP] Initializing Backup Scheduler...");
-  
+
   const { data: configs } = await supabase
     .from('system_configs')
     .select('value')
@@ -381,7 +381,7 @@ async function initBackupScheduler() {
     // However, the auto-cron serverless function handles multiple users by iterating.
     // For local dev, let's just pick the first one or logic that covers all.
     // A better approach is multiple jobs or a single minute-by-minute job.
-    
+
     // To keep it simple and consistent with serverless, we'll run a job every minute that checks all configs.
     cron.schedule("* * * * *", runAutoBackup);
     console.log("[BACKUP] Global scheduler started (checks all user configs every minute).");
@@ -394,7 +394,7 @@ initBackupScheduler();
 app.get("/api/get-backup-config", checkApiKey, checkSupabaseConfig, async (req, res) => {
   const { userId } = req.query;
   if (!userId) return res.status(400).json({ error: "Missing userId" });
-  
+
   const config = await getBackupConfig(userId as string);
   res.json(config || {});
 });
@@ -415,9 +415,9 @@ app.get("/api/cron-status", checkApiKey, checkSupabaseConfig, async (req, res) =
 app.post("/api/save-backup-config", checkApiKey, checkSupabaseConfig, async (req, res) => {
   const { userId, email, smtpConfig, schedule, enabled } = req.body;
   if (!userId) return res.status(400).json({ error: "Missing userId" });
-  
+
   const config = { email, smtpConfig, schedule, enabled };
-  
+
   const saved = await saveBackupConfig(userId, config);
   if (!saved) return res.status(500).json({ error: "Failed to save config to database" });
 
@@ -427,7 +427,7 @@ app.post("/api/save-backup-config", checkApiKey, checkSupabaseConfig, async (req
 
 app.post("/api/send-backup", backupLimiter, checkApiKey, checkSupabaseConfig, async (req, res) => {
   const { email, fileName, fileData, tableList, tableStats } = req.body;
-  
+
   const smtpConfig = {
     host: process.env.SMTP_HOST || req.body.smtpConfig?.host,
     port: process.env.SMTP_PORT || req.body.smtpConfig?.port,
@@ -485,18 +485,18 @@ if (!isProd) {
   if (fs.existsSync(distPath)) {
     app.use(express.static(distPath));
   }
-  
+
   app.get("*", (req, res) => {
     // Only serve index.html for non-API routes
     if (!req.path.startsWith('/api/')) {
-       const indexPath = path.join(__dirname, "dist", "index.html");
-       if (fs.existsSync(indexPath)) {
-         res.sendFile(indexPath);
-       } else {
-         res.status(404).send("Front-end build not found. Please run 'npm run build'.");
-       }
+      const indexPath = path.join(__dirname, "dist", "index.html");
+      if (fs.existsSync(indexPath)) {
+        res.sendFile(indexPath);
+      } else {
+        res.status(404).send("Front-end build not found. Please run 'npm run build'.");
+      }
     } else {
-       res.status(404).json({ error: "API Route not found" });
+      res.status(404).json({ error: "API Route not found" });
     }
   });
 }

@@ -289,14 +289,15 @@ export const Notes = ({ user, onBack, addToast, initialAction, setHideBottomNav 
                 <th className="px-4 py-3 text-[10px] font-bold text-gray-400 uppercase">Đối tượng liên quan</th>
                 <th className="px-4 py-3 text-[10px] font-bold text-gray-400 uppercase">Thời tiết</th>
                 <th className="px-4 py-3 text-[10px] font-bold text-gray-400 uppercase">Ngày tạo</th>
+                <th className="px-4 py-3 text-[10px] font-bold text-gray-400 uppercase">Vị trí / Tọa độ</th>
                 <th className="px-4 py-3 text-[10px] font-bold text-gray-400 uppercase text-center">Thao tác</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-50">
               {loading ? (
-                <tr><td colSpan={5} className="px-4 py-8 text-center text-gray-400 italic">Đang tải dữ liệu...</td></tr>
+                <tr><td colSpan={6} className="px-4 py-8 text-center text-gray-400 italic">Đang tải dữ liệu...</td></tr>
               ) : filteredNotes.length === 0 ? (
-                <tr><td colSpan={5} className="px-4 py-8 text-center text-gray-400 italic">Không có ghi chú nào</td></tr>
+                <tr><td colSpan={6} className="px-4 py-8 text-center text-gray-400 italic">Không có ghi chú nào</td></tr>
               ) : filteredNotes.map((note) => (
                 <tr 
                   key={note.id} 
@@ -315,6 +316,9 @@ export const Notes = ({ user, onBack, addToast, initialAction, setHideBottomNav 
                   </td>
                   <td className="px-4 py-3 text-sm text-gray-600">
                     {new Date(note.date).toLocaleDateString('vi-VN')}
+                  </td>
+                  <td className="px-4 py-3 text-sm text-gray-600 font-mono">
+                    {note.location || 'N/A'}
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex items-center justify-center gap-2">

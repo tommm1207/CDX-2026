@@ -9,7 +9,7 @@ import { parseReminderContent, serializeReminderContent } from '@/utils/reminder
 import { FAB } from '../shared/FAB';
 import { Button } from '../shared/Button';
 
-export const Reminders = ({ user, onBack, addToast, initialAction }: { 
+export const Reminders = ({ user, onBack, addToast, initialAction, setHideBottomNav }: { 
   user: Employee, 
   onBack: () => void, 
   addToast?: (message: string, type?: ToastType) => void,

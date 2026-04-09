@@ -287,16 +287,16 @@ export const Notes = ({ user, onBack, addToast, initialAction, setHideBottomNav 
               <tr className="bg-gray-50/50">
                 <th className="px-4 py-3 text-[10px] font-bold text-gray-400 uppercase">Tiêu đề / Nội dung</th>
                 <th className="px-4 py-3 text-[10px] font-bold text-gray-400 uppercase">Đối tượng liên quan</th>
-                <th className="px-4 py-3 text-[10px] font-bold text-gray-400 uppercase">Mã đối tượng</th>
-                <th className="px-4 py-3 text-[10px] font-bold text-gray-400 uppercase">Mã ghi chú</th>
+                <th className="px-4 py-3 text-[10px] font-bold text-gray-400 uppercase">Thời tiết</th>
+                <th className="px-4 py-3 text-[10px] font-bold text-gray-400 uppercase">Ngày tạo</th>
                 <th className="px-4 py-3 text-[10px] font-bold text-gray-400 uppercase text-center">Thao tác</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-50">
               {loading ? (
-                <tr><td colSpan={6} className="px-4 py-8 text-center text-gray-400 italic">Đang tải dữ liệu...</td></tr>
+                <tr><td colSpan={5} className="px-4 py-8 text-center text-gray-400 italic">Đang tải dữ liệu...</td></tr>
               ) : filteredNotes.length === 0 ? (
-                <tr><td colSpan={6} className="px-4 py-8 text-center text-gray-400 italic">Không có ghi chú nào</td></tr>
+                <tr><td colSpan={5} className="px-4 py-8 text-center text-gray-400 italic">Không có ghi chú nào</td></tr>
               ) : filteredNotes.map((note) => (
                 <tr 
                   key={note.id} 
@@ -310,8 +310,12 @@ export const Notes = ({ user, onBack, addToast, initialAction, setHideBottomNav 
                     </div>
                   </td>
                   <td className="px-4 py-3 text-sm text-gray-700">{note.related_object || 'N/A'}</td>
-                  <td className="px-4 py-3 text-sm text-gray-600 font-mono">{note.object_code || 'N/A'}</td>
-                  <td className="px-4 py-3 text-sm text-gray-600 font-mono">{note.note_code || 'N/A'}</td>
+                  <td className="px-4 py-3 text-sm text-gray-700">
+                    {WEATHER_OPTIONS.find(w => w.value === note.weather)?.label || '—'}
+                  </td>
+                  <td className="px-4 py-3 text-sm text-gray-600">
+                    {new Date(note.date).toLocaleDateString('vi-VN')}
+                  </td>
                   <td className="px-4 py-3">
                     <div className="flex items-center justify-center gap-2">
                       <Button
@@ -511,10 +515,6 @@ export const Notes = ({ user, onBack, addToast, initialAction, setHideBottomNav 
                     </div>
                   </div>
                   <div>
-                    <label className="text-[10px] font-bold text-gray-400 uppercase">Mã ghi chú</label>
-                    <input type="text" value={formData.note_code} onChange={e => setFormData({ ...formData, note_code: e.target.value })} className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm focus:ring-2 focus:ring-primary/20 outline-none mt-1" />
-                  </div>
-                  <div>
                     <label className="text-[10px] font-bold text-gray-400 uppercase">Ngày tạo</label>
                     <input type="date" value={formData.date} onChange={e => setFormData({ ...formData, date: e.target.value })} className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm focus:ring-2 focus:ring-primary/20 outline-none mt-1" />
                   </div>
@@ -531,10 +531,6 @@ export const Notes = ({ user, onBack, addToast, initialAction, setHideBottomNav 
                   </div>
                 </div>
                 <div className="space-y-4">
-                  <div>
-                    <label className="text-[10px] font-bold text-gray-400 uppercase">Mã đối tượng</label>
-                    <input type="text" value={formData.object_code} onChange={e => setFormData({ ...formData, object_code: e.target.value })} className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm focus:ring-2 focus:ring-primary/20 outline-none mt-1" />
-                  </div>
                   <div>
                     <label className="text-[10px] font-bold text-gray-400 uppercase">Vị trí / Tọa độ</label>
                     <input type="text" value={formData.location} onChange={e => setFormData({ ...formData, location: e.target.value })} className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm focus:ring-2 focus:ring-primary/20 outline-none mt-1" placeholder="0.000000, 0.000000" />

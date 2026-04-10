@@ -7,7 +7,9 @@ import { PageBreadcrumb } from '../shared/PageBreadcrumb';
 import { isActiveWarehouse } from '@/utils/inventory';
 import { ToastType } from '../shared/Toast';
 import { FAB } from '../shared/FAB';
+import { FAB } from '../shared/FAB';
 import { Button } from '../shared/Button';
+import { ConfirmModal } from '../shared/ConfirmModal';
 
 export const WEATHER_OPTIONS = [
   { value: 'sunny', label: '☀️ Nắng nóng gay gắt' },
@@ -43,7 +45,9 @@ export const Notes = ({ user, onBack, addToast, initialAction, setHideBottomNav 
   const [warehouses, setWarehouses] = useState<any[]>([]);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
   const [showFilter, setShowFilter] = useState(false);
+  const [showDeleteAllConfirm, setShowDeleteAllConfirm] = useState(false);
 
   const [filters, setFilters] = useState({
     fromDate: '',
@@ -177,6 +181,26 @@ export const Notes = ({ user, onBack, addToast, initialAction, setHideBottomNav 
     }
   };
 
+  const executeDeleteAll = async () => {
+    try {
+      const idsToDelete = filteredNotes.filter(n => n.status !== 'Đã xóa').map(n => n.id);
+      if (idsToDelete.length === 0) {
+        if (addToast) addToast('Không có dữ liệu để xóa', 'info');
+        setShowDeleteAllConfirm(false);
+        return;
+      }
+      
+      const { error } = await supabase.from('notes').update({ status: 'Đã xóa' }).in('id', idsToDelete);
+      if (error) throw error;
+      
+      if (addToast) addToast(`Đã chuyển ${idsToDelete.length} ghi chú vào thùng rác`, 'success');
+      setShowDeleteAllConfirm(false);
+      fetchData();
+    } catch (error: any) {
+      if (addToast) addToast('Lỗi khi xóa: ' + error.message, 'error');
+    }
+  };
+
   const filteredNotes = notes.filter(n => {
     if (filters.fromDate && n.date < filters.fromDate) return false;
     if (filters.toDate && n.date > filters.toDate) return false;
@@ -196,6 +220,15 @@ export const Notes = ({ user, onBack, addToast, initialAction, setHideBottomNav 
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <PageBreadcrumb title="Nhật ký & Ghi chú" onBack={onBack} />
         <div className="flex items-center gap-2">
+          {filteredNotes.length > 0 && (
+            <Button
+              size="icon"
+              variant="danger"
+              icon={Trash2}
+              onClick={() => setShowDeleteAllConfirm(true)}
+              title="Xóa tất cả danh sách hiện tại"
+            />
+          )}
           <Button
             size="icon"
             variant={showFilter ? 'primary' : 'outline'}
@@ -598,6 +631,15 @@ export const Notes = ({ user, onBack, addToast, initialAction, setHideBottomNav 
           </div>
         )}
       </AnimatePresence>
+
+      <ConfirmModal
+        isOpen={showDeleteAllConfirm}
+        title="Xác nhận xóa danh sách"
+        content={`Bạn có chắc chắn muốn chuyển tất cả ${filteredNotes.length} ghi chú hiện tại vào thùng rác không?`}
+        onConfirm={executeDeleteAll}
+        onCancel={() => setShowDeleteAllConfirm(false)}
+      />
+
       <FAB 
         onClick={() => {
           setEditingId(null);

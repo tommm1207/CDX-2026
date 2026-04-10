@@ -179,17 +179,17 @@ export const Reminders = ({ user, onBack, addToast, initialAction, setHideBottom
 
   const executeDeleteAll = async () => {
     try {
-      const idsToDelete = filteredReminders.filter(r => r.status !== 'Đã xóa').map(r => r.id);
+      const idsToDelete = filteredReminders.map(r => r.id);
       if (idsToDelete.length === 0) {
         if (addToast) addToast('Không có dữ liệu để xóa', 'info');
         setShowDeleteAllConfirm(false);
         return;
       }
       
-      const { error } = await supabase.from('reminders').update({ status: 'Đã xóa' }).in('id', idsToDelete);
+      const { error } = await supabase.from('reminders').delete().in('id', idsToDelete);
       if (error) throw error;
       
-      if (addToast) addToast(`Đã chuyển ${idsToDelete.length} lịch nhắc vào thùng rác`, 'success');
+      if (addToast) addToast(`Đã xóa vĩnh viễn ${idsToDelete.length} lịch nhắc`, 'success');
       setShowDeleteAllConfirm(false);
       fetchData();
     } catch (err: any) {

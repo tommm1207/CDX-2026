@@ -182,17 +182,17 @@ export const Notes = ({ user, onBack, addToast, initialAction, setHideBottomNav 
 
   const executeDeleteAll = async () => {
     try {
-      const idsToDelete = filteredNotes.filter(n => n.status !== 'Đã xóa').map(n => n.id);
+      const idsToDelete = filteredNotes.map(n => n.id);
       if (idsToDelete.length === 0) {
         if (addToast) addToast('Không có dữ liệu để xóa', 'info');
         setShowDeleteAllConfirm(false);
         return;
       }
       
-      const { error } = await supabase.from('notes').update({ status: 'Đã xóa' }).in('id', idsToDelete);
+      const { error } = await supabase.from('notes').delete().in('id', idsToDelete);
       if (error) throw error;
       
-      if (addToast) addToast(`Đã chuyển ${idsToDelete.length} ghi chú vào thùng rác`, 'success');
+      if (addToast) addToast(`Đã xóa vĩnh viễn ${idsToDelete.length} ghi chú`, 'success');
       setShowDeleteAllConfirm(false);
       fetchData();
     } catch (error: any) {

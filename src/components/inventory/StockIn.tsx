@@ -354,7 +354,7 @@ export const StockIn = ({ user, onBack, initialStatus, initialAction, addToast, 
             className="overflow-hidden"
           >
             <div className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 mb-4 space-y-4">
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
                 <div className="space-y-1">
                   <label className="text-[10px] font-bold text-gray-400 uppercase">Từ ngày</label>
                   <input type="date" value={filterStartDate} onChange={e => setFilterStartDate(e.target.value)} className="w-full px-3 py-2 rounded-lg border border-gray-200 text-xs outline-none focus:ring-2 focus:ring-primary/20" />

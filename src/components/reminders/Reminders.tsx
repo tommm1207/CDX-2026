@@ -72,7 +72,7 @@ export const Reminders = ({ user, onBack, addToast, initialAction, setHideBottom
     const { data: remData } = await supabase
       .from('reminders')
       .select('*, sender:users!created_by(full_name)')
-      .neq('status', 'Đã xóa')
+      .or('status.is.null,status.neq.Đã xóa')
       .order('reminder_time', { ascending: false });
     if (remData) setReminders(remData);
 
@@ -212,7 +212,7 @@ export const Reminders = ({ user, onBack, addToast, initialAction, setHideBottom
 
   return (
     <div className="p-4 md:p-6 space-y-6">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div className="flex items-center justify-between gap-2">
         <PageBreadcrumb title="Thiết lập Lịch nhắc" onBack={onBack} />
         <div className="flex items-center gap-2">
           {filteredReminders.length > 0 && (

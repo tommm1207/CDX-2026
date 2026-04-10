@@ -269,15 +269,6 @@ export const Backup = ({ user, onBack, addToast }: { user?: any, onBack: () => v
           </div>
         )}
 
-        <div className="flex items-center gap-4 border-b border-gray-50 pb-6">
-          <div className="p-4 bg-primary/10 rounded-2xl text-primary">
-            <Settings size={28} />
-          </div>
-          <div>
-            <h2 className="text-2xl font-black text-gray-800 uppercase">Sao lưu dữ liệu</h2>
-            <p className="text-xs text-gray-400">Lưu trữ dữ liệu an toàn định kỳ</p>
-          </div>
-        </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           <div className="space-y-6">

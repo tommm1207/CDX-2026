@@ -77,7 +77,7 @@ export const Notes = ({ user, onBack, addToast, initialAction, setHideBottomNav 
     const { data: notesData } = await supabase
       .from('notes')
       .select('*, users(full_name)')
-      .neq('status', 'Đã xóa')
+      .or('status.is.null,status.neq.Đã xóa')
       .order('created_at', { ascending: false });
     if (notesData) setNotes(notesData);
 
@@ -220,7 +220,7 @@ export const Notes = ({ user, onBack, addToast, initialAction, setHideBottomNav 
 
   return (
     <div className="p-4 md:p-6 space-y-6">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div className="flex items-center justify-between gap-2">
         <PageBreadcrumb title="Nhật ký & Ghi chú" onBack={onBack} />
         <div className="flex items-center gap-2">
           {filteredNotes.length > 0 && (

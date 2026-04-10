@@ -211,7 +211,7 @@ export const MainLayout = ({
           )}
         </AnimatePresence>
 
-        <main key={refreshKey} className="flex-1 overflow-y-auto relative bg-[#F8F9FA] pb-44 lg:pb-0">
+        <main key={refreshKey} className="flex-1 overflow-y-auto overflow-x-hidden relative bg-[#F8F9FA] pb-44 lg:pb-0">
           {children}
 
           <footer className="p-4 text-center text-[10px] text-gray-400 border-t border-gray-100 mt-auto">

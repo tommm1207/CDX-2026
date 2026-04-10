@@ -632,9 +632,9 @@ export const Notes = ({ user, onBack, addToast, initialAction, setHideBottomNav 
       </AnimatePresence>
 
       <ConfirmModal
-        isOpen={showDeleteAllConfirm}
+        show={showDeleteAllConfirm}
         title="Xác nhận xóa danh sách"
-        content={`Bạn có chắc chắn muốn chuyển tất cả ${filteredNotes.length} ghi chú hiện tại vào thùng rác không?`}
+        message={`Bạn có chắc chắn muốn chuyển tất cả ${filteredNotes.length} ghi chú hiện tại vào thùng rác không?`}
         onConfirm={executeDeleteAll}
         onCancel={() => setShowDeleteAllConfirm(false)}
       />

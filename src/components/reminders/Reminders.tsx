@@ -646,9 +646,9 @@ export const Reminders = ({ user, onBack, addToast, initialAction, setHideBottom
       </AnimatePresence>
 
       <ConfirmModal
-        isOpen={showDeleteAllConfirm}
+        show={showDeleteAllConfirm}
         title="Xác nhận xóa danh sách"
-        content={`Bạn có chắc chắn muốn chuyển tất cả ${filteredReminders.length} lịch nhắc trong danh sách hiện tại vào thùng rác không?`}
+        message={`Bạn có chắc chắn muốn chuyển tất cả ${filteredReminders.length} lịch nhắc trong danh sách hiện tại vào thùng rác không?`}
         onConfirm={executeDeleteAll}
         onCancel={() => setShowDeleteAllConfirm(false)}
       />

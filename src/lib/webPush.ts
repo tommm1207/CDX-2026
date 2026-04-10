@@ -49,7 +49,7 @@ export async function subscribeToPush(userId: string): Promise<void> {
       endpoint: subscription.endpoint,
       subscription_json: JSON.stringify(subscription),
       updated_at: new Date().toISOString()
-    }, { onConflict: 'user_id' });
+    }, { onConflict: 'endpoint' });
 
     console.log('[CDX Push] Push subscription saved successfully');
   } catch (err) {

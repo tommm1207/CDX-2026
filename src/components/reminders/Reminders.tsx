@@ -359,7 +359,7 @@ export const Reminders = ({ user, onBack, addToast, initialAction, setHideBottom
               initial={{ opacity: 0, scale: 0.95, y: 20 }} 
               animate={{ opacity: 1, scale: 1, y: 0 }} 
               exit={{ opacity: 0, scale: 0.95, y: 20 }} 
-              className="bg-white rounded-[2rem] md:rounded-[2.5rem] shadow-2xl w-full max-w-lg overflow-hidden relative z-10 m-4 flex flex-col max-h-[calc(100vh-40px)]"
+              className="bg-white rounded-[2rem] md:rounded-[2.5rem] shadow-2xl w-[calc(100%-32px)] md:w-full max-w-lg overflow-hidden relative z-10 m-4 flex flex-col max-h-[calc(100vh-40px)]"
               onClick={(e) => e.stopPropagation()}
             >
               <div className="p-6 text-white flex items-center justify-between bg-primary rounded-t-[2rem] md:rounded-t-[2.5rem] flex-shrink-0">
@@ -379,7 +379,7 @@ export const Reminders = ({ user, onBack, addToast, initialAction, setHideBottom
                   <X size={20} />
                 </button>
               </div>
-              <div className="p-6 space-y-4 overflow-y-auto flex-1 custom-scrollbar">
+              <div className="p-6 space-y-4 overflow-y-auto overflow-x-hidden flex-1 custom-scrollbar">
                 <div>
                   <label className="text-[10px] font-bold text-gray-400 uppercase">Tiêu đề <span className="text-red-500">*</span></label>
                   <input

@@ -73,7 +73,7 @@ serve(async (req) => {
 
       const pushPayload = JSON.stringify({
         title: rem.title || "Nhắc nhở",
-        body: `${rem.content ? JSON.parse(rem.content).text || "" : ""}\nThông báo từ ${senderName}`,
+        body: `${textContent}\n\nThông báo từ ${senderName}`,
         tag: `reminder-${rem.id}`,
         reminderId: rem.id
       });

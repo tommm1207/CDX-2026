@@ -52,15 +52,27 @@ serve(async (req) => {
       reminderId: reminder_id
     });
 
-    const results = await Promise.allSettled(
-      subscriptions.map(async (sub) => {
-        const pushSub = JSON.parse(sub.subscription_json);
-        return webpush.sendNotification(pushSub, payload);
-      })
-    );
+    let totalSent = 0;
+    const details: any[] = [];
 
-    const sent = results.filter(r => r.status === "fulfilled").length;
-    return new Response(JSON.stringify({ sent, total: subscriptions.length }), {
+    for (const sub of subscriptions) {
+      const pushSub = JSON.parse(sub.subscription_json);
+      try {
+        const res = await webpush.sendNotification(pushSub, payload, {
+          headers: { 'Urgency': 'high' }
+        });
+        totalSent++;
+        details.push({ endpoint: pushSub.endpoint.substring(0, 30) + '...', status: res.statusCode || 201 });
+        await new Promise(resolve => setTimeout(resolve, 2000)); // 2s gap between devices
+      } catch (e: any) {
+        details.push({ endpoint: pushSub.endpoint.substring(0, 30) + '...', error: e.statusCode || e.message });
+        if (e.statusCode === 410 || e.statusCode === 404) {
+          await supabase.from("push_subscriptions").delete().eq("id", sub.id);
+        }
+      }
+    }
+
+    return new Response(JSON.stringify({ sent: totalSent, total: subscriptions.length, details }), {
       headers: { "Content-Type": "application/json" },
     });
   } catch (err) {

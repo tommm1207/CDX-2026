@@ -2,12 +2,13 @@ import { useState, useEffect } from 'react';
 import { Bell, Plus, Search, X, Edit, Trash2, Users, User, Share2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { supabase } from '@/lib/supabase';
-import { ObjectType, Employee } from '@/types';
+import { Employee } from '@/types';
 import { PageBreadcrumb } from '../shared/PageBreadcrumb';
 import { ToastType } from '../shared/Toast';
 import { parseReminderContent, serializeReminderContent } from '@/utils/reminderUtils';
 import { FAB } from '../shared/FAB';
 import { Button } from '../shared/Button';
+import { ConfirmModal } from '../shared/ConfirmModal';
 
 export const Reminders = ({ user, onBack, addToast, initialAction, setHideBottomNav }: { 
   user: Employee, 
@@ -30,6 +31,7 @@ export const Reminders = ({ user, onBack, addToast, initialAction, setHideBottom
   const [editingId, setEditingId] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [showFilter, setShowFilter] = useState(false);
+  const [showDeleteAllConfirm, setShowDeleteAllConfirm] = useState(false);
 
   const getDefaultTime = () => {
     const d = new Date();
@@ -175,6 +177,26 @@ export const Reminders = ({ user, onBack, addToast, initialAction, setHideBottom
     }
   };
 
+  const executeDeleteAll = async () => {
+    try {
+      const idsToDelete = filteredReminders.map(r => r.id);
+      if (idsToDelete.length === 0) {
+        if (addToast) addToast('Không có dữ liệu để xóa', 'info');
+        setShowDeleteAllConfirm(false);
+        return;
+      }
+      
+      const { error } = await supabase.from('reminders').delete().in('id', idsToDelete);
+      if (error) throw error;
+      
+      if (addToast) addToast(`Đã xóa vĩnh viễn ${idsToDelete.length} lịch nhắc`, 'success');
+      setShowDeleteAllConfirm(false);
+      fetchData();
+    } catch (err: any) {
+      if (addToast) addToast('Lỗi: ' + err.message, 'error');
+    }
+  };
+
   const filteredReminders = reminders.filter(r => {
     if (filters.fromDate && r.reminder_time < filters.fromDate) return false;
     if (filters.toDate && r.reminder_time > filters.toDate) return false;
@@ -192,6 +214,15 @@ export const Reminders = ({ user, onBack, addToast, initialAction, setHideBottom
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <PageBreadcrumb title="Thiết lập Lịch nhắc" onBack={onBack} />
         <div className="flex items-center gap-2">
+          {filteredReminders.length > 0 && (
+            <Button
+              size="icon"
+              variant="danger"
+              icon={Trash2}
+              onClick={() => setShowDeleteAllConfirm(true)}
+              title="Xóa tất cả danh sách hiện tại"
+            />
+          )}
           <Button
             size="icon"
             variant={showFilter ? 'primary' : 'outline'}
@@ -613,6 +644,14 @@ export const Reminders = ({ user, onBack, addToast, initialAction, setHideBottom
           </div>
         )}
       </AnimatePresence>
+
+      <ConfirmModal
+        show={showDeleteAllConfirm}
+        title="Xác nhận xóa danh sách"
+        message={`Bạn có chắc chắn muốn chuyển tất cả ${filteredReminders.length} lịch nhắc trong danh sách hiện tại vào thùng rác không?`}
+        onConfirm={executeDeleteAll}
+        onCancel={() => setShowDeleteAllConfirm(false)}
+      />
 
       <FAB 
         onClick={() => {

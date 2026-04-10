@@ -47,7 +47,7 @@ serve(async (req) => {
 
     const payload = JSON.stringify({
       title: title,
-      body: `${msgBody}\nFrom: ${sender_name}`,
+      body: `${msgBody}\nThông báo từ ${sender_name}`,
       tag: `reminder-${reminder_id}`,
       reminderId: reminder_id
     });

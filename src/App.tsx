@@ -147,12 +147,12 @@ export default function App() {
             if (!notifiedMap.has(rem.id)) {
               const senderName = (rem as any).sender?.full_name || 'Hệ thống';
               const displayTitle = rem.title;
-              const displayMessage = `${payload.text}\n\n**From: ${senderName}**`;
+              const displayMessage = `${payload.text}\n\n**Thông báo từ ${senderName}**`;
 
               if (rem.browser_notification && Notification.permission === "granted") {
                 try {
                   new Notification(rem.title, { 
-                    body: `${payload.text}\nFrom: ${senderName}`, 
+                    body: `${payload.text}\nThông báo từ ${senderName}`, 
                     icon: '/logo.png' 
                   });
                 } catch (e) {}

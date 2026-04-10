@@ -105,10 +105,10 @@ export default function App() {
           await subscribeToPush(user.id);
           addToast('✅ Đã đăng ký thông báo đẩy cho thiết bị này', 'success');
         } else {
-          addToast('⚠️ Chưa cho phép thông báo – Push sẽ không hoạt động', 'warning');
+          addToast('⚠️ Chưa cho phép thông báo – Thông báo đẩy sẽ không hoạt động', 'warning');
         }
       } catch (err: any) {
-        addToast('Lỗi đăng ký Push: ' + err.message, 'error');
+        addToast('Lỗi đăng ký Thông báo đẩy: ' + err.message, 'error');
       }
     };
     initPush();

@@ -35,6 +35,13 @@ export const CostReport = ({ user, onBack, addToast }: {
   const [costTypes, setCostTypes] = useState<any[]>([]);
   const [units, setUnits] = useState<any[]>([]);
 
+  const [showFilter, setShowFilter] = useState(false);
+  const [filters, setFilters] = useState({
+    fromDate: '',
+    toDate: '',
+    search: ''
+  });
+
   const [masterForm, setMasterForm] = useState({
     date: new Date().toISOString().split('T')[0],
     employee_id: user.id,
@@ -331,7 +338,25 @@ export const CostReport = ({ user, onBack, addToast }: {
     return acc;
   }, {});
 
-  const groupedData = Object.values(groupedDataObj).sort((a: any, b: any) => new Date(b.date).getTime() - new Date(a.date).getTime());
+  const groupedData = Object.values(groupedDataObj)
+    .filter((group: any) => {
+      if (filters.fromDate && group.date < filters.fromDate) return false;
+      if (filters.toDate && group.date > filters.toDate) return false;
+      if (filters.search) {
+        const query = filters.search.toLowerCase();
+        return (
+          (group.cost_code || '').toLowerCase().includes(query) ||
+          (group.employee_name || '').toLowerCase().includes(query) ||
+          group.items.some((item: any) => 
+            (item.content || '').toLowerCase().includes(query) ||
+            (item.cost_type || '').toLowerCase().includes(query) ||
+            (item.notes || '').toLowerCase().includes(query)
+          )
+        );
+      }
+      return true;
+    })
+    .sort((a: any, b: any) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
   const handleExportExcel = () => {
     if (costs.length === 0) {
@@ -376,8 +401,49 @@ export const CostReport = ({ user, onBack, addToast }: {
     <div className="p-4 md:p-6 space-y-6 pb-44">
       <div className="flex items-center justify-between gap-2">
         <PageBreadcrumb title="Báo cáo chi phí" onBack={onBack} />
-        <ExcelButton onClick={handleExportExcel} />
+        <div className="flex items-center gap-2">
+          {groupedData.length > 0 && (
+            <Button
+              size="icon"
+              variant={showFilter ? 'primary' : 'outline'}
+              onClick={() => setShowFilter(f => !f)}
+              icon={Search}
+            />
+          )}
+          <ExcelButton onClick={handleExportExcel} />
+        </div>
       </div>
+
+      <AnimatePresence>
+        {showFilter && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
+            className="overflow-hidden"
+          >
+            <div className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 space-y-4">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div>
+                  <label className="text-[10px] font-bold text-gray-400 uppercase">Từ ngày</label>
+                  <input type="date" value={filters.fromDate} onChange={e => setFilters({ ...filters, fromDate: e.target.value })} className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm focus:ring-2 focus:ring-primary/20 outline-none mt-1" />
+                </div>
+                <div>
+                  <label className="text-[10px] font-bold text-gray-400 uppercase">Đến ngày</label>
+                  <input type="date" value={filters.toDate} onChange={e => setFilters({ ...filters, toDate: e.target.value })} className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm focus:ring-2 focus:ring-primary/20 outline-none mt-1" />
+                </div>
+                <div>
+                  <label className="text-[10px] font-bold text-gray-400 uppercase">Tìm kiếm nhanh</label>
+                  <div className="relative mt-1">
+                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
+                     <input type="text" placeholder="Tra ID, Nội dung, Loại chi phí..." value={filters.search} onChange={e => setFilters({ ...filters, search: e.target.value })} className="w-full pl-10 pr-4 py-2 rounded-xl border border-gray-200 text-sm focus:ring-2 focus:ring-primary/20 outline-none" />
+                  </div>
+                </div>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       <FAB onClick={handleAddReport} />
 

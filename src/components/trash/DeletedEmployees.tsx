@@ -80,7 +80,7 @@ export const DeletedEmployees = ({ onBack, addToast }: { onBack: () => void, add
     <div className="p-4 md:p-6 space-y-6 pb-44">
       <PageBreadcrumb title="Nhân sự đã xóa" onBack={onBack} />
 
-      <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+      <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden overflow-x-auto">
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse min-w-[600px] whitespace-nowrap">
             <thead>
@@ -102,7 +102,6 @@ export const DeletedEmployees = ({ onBack, addToast }: { onBack: () => void, add
                   <tr 
                     key={item.id} 
                     className="hover:bg-gray-50/50 transition-colors cursor-pointer group"
-                    onClick={() => handleRestoreClick(item.id, item.full_name)}
                   >
                     <td className="px-4 py-3 text-xs text-gray-600 font-mono font-bold text-primary">{item.code || item.id.slice(0, 8)}</td>
                     <td className="px-4 py-3 text-xs text-gray-800 font-bold">{item.full_name}</td>
@@ -113,7 +112,6 @@ export const DeletedEmployees = ({ onBack, addToast }: { onBack: () => void, add
                     <td className="px-4 py-3 text-right">
                       <div className="flex justify-end gap-2">
                         <button
-                          onClick={(e) => { e.stopPropagation(); handleRestoreClick(item.id, item.full_name); }}
                           className="p-2 bg-green-50 text-green-600 rounded-lg hover:bg-green-100 transition-colors"
                           title="Khôi phục"
                         >

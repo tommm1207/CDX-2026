@@ -88,7 +88,7 @@ export const DeletedCosts = ({ onBack, addToast }: { onBack: () => void, addToas
     <div className="p-4 md:p-6 space-y-6 pb-44">
       <PageBreadcrumb title="Chi phí đã xóa" onBack={onBack} />
 
-      <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+      <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden overflow-x-auto">
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse min-w-[800px] whitespace-nowrap">
             <thead>
@@ -111,7 +111,6 @@ export const DeletedCosts = ({ onBack, addToast }: { onBack: () => void, addToas
                   <tr 
                     key={item.id} 
                     className="hover:bg-gray-50/50 transition-colors cursor-pointer group"
-                    onClick={() => handleRestoreClick(item.id, item.cost_code || item.cost_type)}
                   >
                     <td className="px-4 py-3 text-xs text-gray-600">{new Date(item.date).toLocaleDateString('vi-VN')}</td>
                     <td className="px-4 py-3">
@@ -128,7 +127,6 @@ export const DeletedCosts = ({ onBack, addToast }: { onBack: () => void, addToas
                     <td className="px-4 py-3 text-right">
                       <div className="flex justify-end gap-2">
                         <button
-                          onClick={(e) => { e.stopPropagation(); handleRestoreClick(item.id, item.cost_code || item.cost_type); }}
                           className="p-2 bg-green-50 text-green-600 rounded-lg hover:bg-green-100 transition-colors"
                           title="Khôi phục"
                         >

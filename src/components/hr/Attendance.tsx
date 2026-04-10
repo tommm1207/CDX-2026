@@ -267,7 +267,7 @@ export const Attendance = ({ user, onBack, addToast }: {
 
   return (
     <div className="p-4 md:p-6 space-y-6 pb-44">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div className="flex items-center justify-between gap-2">
         <PageBreadcrumb title="Chấm công" onBack={onBack} />
         <div className="flex items-center gap-2">
           <MonthYearPicker

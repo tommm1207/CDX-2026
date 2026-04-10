@@ -191,7 +191,7 @@ export const Notifications = ({ user, onBack, onNavigate, addToast }: {
 
       {/* SECTION 2: Reminders (System Notifications) */}
       <div className="space-y-4">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div className="flex items-center justify-between gap-2">
           <div className="space-y-1">
             <h2 className="text-xl font-bold text-gray-800 flex items-center gap-2 uppercase tracking-tight">
               <Bell className="text-primary" size={20} /> Nhắc nhở đã kích hoạt

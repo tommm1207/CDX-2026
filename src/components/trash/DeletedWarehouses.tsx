@@ -90,7 +90,7 @@ export const DeletedWarehouses = ({ onBack, addToast }: {
     <div className="p-4 md:p-6 space-y-6 pb-44">
       <PageBreadcrumb title="Kho đã xóa" onBack={onBack} />
 
-      <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+      <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden overflow-x-auto">
         <table className="w-full text-left border-collapse whitespace-nowrap">
           <thead>
             <tr className="bg-gray-50">
@@ -111,7 +111,6 @@ export const DeletedWarehouses = ({ onBack, addToast }: {
                 <tr 
                   key={item.id} 
                   className="hover:bg-gray-50/50 transition-colors cursor-pointer group"
-                  onClick={() => handleRestoreClick(item.id, item.name)}
                 >
                   <td className="px-4 py-3 text-xs text-gray-600 font-mono">{item.code || item.id.slice(0, 8)}</td>
                   <td className="px-4 py-3 text-xs text-gray-800 font-bold">{item.name}</td>
@@ -120,7 +119,6 @@ export const DeletedWarehouses = ({ onBack, addToast }: {
                   <td className="px-4 py-3 text-right">
                     <div className="flex justify-end gap-2">
                       <button
-                        onClick={(e) => { e.stopPropagation(); handleRestoreClick(item.id, item.name); }}
                         className="p-2 bg-green-50 text-green-600 rounded-lg hover:bg-green-100 transition-colors"
                         title="Khôi phục"
                       >

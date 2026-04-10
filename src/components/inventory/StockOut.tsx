@@ -411,7 +411,7 @@ export const StockOut = ({ user, onBack, addToast, initialAction, setHideBottomN
             className="overflow-hidden"
           >
             <div className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 mb-4 space-y-4">
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
                 <div className="space-y-1">
                   <label className="text-[10px] font-bold text-gray-400 uppercase">Từ ngày</label>
                   <input type="date" value={filterStartDate} onChange={e => setFilterStartDate(e.target.value)} className="w-full px-3 py-2 rounded-lg border border-gray-200 text-xs outline-none focus:ring-2 focus:ring-primary/20" />
@@ -495,7 +495,9 @@ export const StockOut = ({ user, onBack, addToast, initialAction, setHideBottomN
                     <td className="px-4 py-3 text-xs text-gray-800 font-bold">
                       {item.materials?.name}
                     </td>
-                    <td className="px-4 py-3 text-xs text-red-600 text-center font-bold">-{item.quantity}</td>
+                    <td className="px-4 py-3 text-xs text-red-600 text-center font-bold">
+                      -{formatNumber(item.quantity)} <span className="text-[10px] text-gray-400 font-normal">{item.materials?.unit || ''}</span>
+                    </td>
                     <td className="px-4 py-3 text-xs">
                       <div className="flex items-center justify-between">
                         <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${item.status === 'Đã duyệt' ? 'bg-green-100 text-green-600' :
@@ -563,7 +565,7 @@ export const StockOut = ({ user, onBack, addToast, initialAction, setHideBottomN
                   { label: 'Ngày xuất', value: formatDate(selectedSlip.date) },
                   { label: 'Vật tư', value: selectedSlip.materials?.name },
                   { label: 'Kho xuất', value: selectedSlip.warehouses?.name },
-                  { label: 'Số lượng', value: `-${formatNumber(selectedSlip.quantity)}`, highlight: true },
+                  { label: 'Số lượng', value: `-${formatNumber(selectedSlip.quantity)} ${selectedSlip.materials?.unit || ''}`, highlight: true },
                   { label: 'Đơn giá bán', value: formatCurrency(selectedSlip.unit_price || 0) },
                   { label: 'Thành tiền', value: formatCurrency(selectedSlip.total_amount || 0) },
                   { label: 'Trạng thái', value: selectedSlip.status || 'Chờ duyệt' },

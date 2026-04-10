@@ -126,7 +126,7 @@ export const DeletedSlips = ({ onBack, addToast }: {
     <div className="p-4 md:p-6 space-y-6 pb-44">
       <PageBreadcrumb title="Phiếu đã xóa" onBack={onBack} />
 
-      <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+      <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden overflow-x-auto">
         <table className="w-full text-left border-collapse whitespace-nowrap">
           <thead>
             <tr className="bg-gray-50">
@@ -148,7 +148,6 @@ export const DeletedSlips = ({ onBack, addToast }: {
                 <tr 
                   key={`${item.table}-${item.id}`} 
                   className="hover:bg-gray-50/50 transition-colors cursor-pointer group"
-                  onClick={() => handleRestoreClick(item.id, item.table, item.materials?.name || 'Phiếu')}
                 >
                   <td className="px-4 py-3">
                     <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${item.type === 'Nhập kho' ? 'bg-blue-100 text-blue-600' :
@@ -166,7 +165,6 @@ export const DeletedSlips = ({ onBack, addToast }: {
                   <td className="px-4 py-3 text-right">
                     <div className="flex justify-end gap-2">
                       <button
-                        onClick={(e) => { e.stopPropagation(); handleRestoreClick(item.id, item.table, item.materials?.name || 'Phiếu'); }}
                         className="p-2 bg-green-50 text-green-600 rounded-lg hover:bg-green-100 transition-colors"
                         title="Khôi phục"
                       >

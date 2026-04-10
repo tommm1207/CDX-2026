@@ -63,7 +63,7 @@ serve(async (req) => {
         });
         totalSent++;
         details.push({ endpoint: pushSub.endpoint.substring(0, 30) + '...', status: res.statusCode || 201 });
-        await new Promise(resolve => setTimeout(resolve, 10000)); // 10s gap to prevent APNs drop
+        await new Promise(resolve => setTimeout(resolve, 2000)); // 2s gap between devices
       } catch (e: any) {
         details.push({ endpoint: pushSub.endpoint.substring(0, 30) + '...', error: e.statusCode || e.message });
         if (e.statusCode === 410 || e.statusCode === 404) {

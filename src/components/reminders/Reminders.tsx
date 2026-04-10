@@ -72,6 +72,7 @@ export const Reminders = ({ user, onBack, addToast, initialAction, setHideBottom
     const { data: remData } = await supabase
       .from('reminders')
       .select('*, sender:users!created_by(full_name)')
+      .neq('status', 'Đã xóa')
       .order('reminder_time', { ascending: false });
     if (remData) setReminders(remData);
 

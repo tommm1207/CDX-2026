@@ -222,14 +222,8 @@ export const MaterialCatalog = ({ user, onBack, onNavigate, addToast }: {
 
   return (
     <div className="p-4 md:p-6 space-y-6 pb-44">
-      <PageBreadcrumb title="Danh mục Vật tư" onBack={onBack} />
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-xl font-bold text-gray-800 flex items-center gap-2">
-            <Package className="text-primary" /> Danh mục Vật tư ({filteredMaterials.length})
-          </h2>
-          <p className="text-xs text-gray-500 mt-1">Quản lý toàn bộ danh sách vật tư, thiết bị trong hệ thống</p>
-        </div>
+      <div className="flex items-center justify-between gap-2">
+        <PageBreadcrumb title="Danh mục Vật tư" onBack={onBack} />
         <button
           onClick={() => setShowFilter(f => !f)}
           className={`p-2.5 rounded-xl border transition-colors ${
@@ -294,7 +288,6 @@ export const MaterialCatalog = ({ user, onBack, onNavigate, addToast }: {
           <table className="w-full text-left border-collapse whitespace-nowrap">
             <thead>
               <tr className="bg-primary text-white">
-                <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider border-r border-white/10 w-32">Mã vật tư</th>
                 <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider border-r border-white/10">Tên vật tư</th>
                 <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider border-r border-white/10">Nhóm</th>
                 <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider border-r border-white/10">Quy cách</th>
@@ -314,7 +307,6 @@ export const MaterialCatalog = ({ user, onBack, onNavigate, addToast }: {
                     className="hover:bg-gray-50 transition-colors group cursor-pointer"
                     onClick={() => { setSelectedMaterial(item); setShowDetailModal(true); }}
                   >
-                    <td className="px-4 py-3 text-xs font-bold text-gray-700">{item.code || item.id.slice(0, 8)}</td>
                     <td className="px-4 py-3 text-xs text-gray-600 font-medium">
                       <div className="flex items-center gap-2">
                         {item.image_url && (

@@ -47,6 +47,7 @@ export const Costs = ({ user, onBack, addToast, initialAction, setHideBottomNav 
   const [filterEmployeeId, setFilterEmployeeId] = useState('');
   const [filterWarehouseId, setFilterWarehouseId] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
+  const [statusFilter, setStatusFilter] = useState('Tất cả');
   const [showFilter, setShowFilter] = useState(false);
 
   const [employees, setEmployees] = useState<any[]>([]);
@@ -67,6 +68,9 @@ export const Costs = ({ user, onBack, addToast, initialAction, setHideBottomNav 
 
   useEffect(() => {
     fetchCosts();
+  }, [statusFilter]);
+
+  useEffect(() => {
     fetchMaterials();
     fetchWarehouses();
     fetchCostTypes();
@@ -84,8 +88,13 @@ export const Costs = ({ user, onBack, addToast, initialAction, setHideBottomNav 
     try {
       let query = supabase
         .from('costs')
-        .select('*, users(full_name), warehouses(name), materials(name)')
-        .or('status.is.null,status.neq.Đã xóa');
+        .select('*, users(full_name), warehouses(name, code), materials(name, code)');
+
+      if (statusFilter === 'Tất cả') {
+        query = query.neq('status', 'Đã xóa');
+      } else {
+        query = query.eq('status', statusFilter);
+      }
 
       const allowedWhIds = getAllowedWarehouses(user.data_view_permission);
       if (allowedWhIds) {
@@ -96,7 +105,7 @@ export const Costs = ({ user, onBack, addToast, initialAction, setHideBottomNav 
 
       if (error) {
         console.error('Error fetching costs:', error);
-        const { data: fallbackData, error: fallbackError } = await supabase.from('costs').select('*').or('status.is.null,status.neq.Đã xóa').order('date', { ascending: false });
+        const { data: fallbackData, error: fallbackError } = await supabase.from('costs').select('*').neq('status', 'Đã xóa').order('date', { ascending: false });
         if (fallbackError) throw fallbackError;
         setCosts(fallbackData || []);
       } else {
@@ -331,14 +340,8 @@ export const Costs = ({ user, onBack, addToast, initialAction, setHideBottomNav 
 
   return (
     <div className="p-4 md:p-6 space-y-6 pb-44">
-      <PageBreadcrumb title="Quản lý Chi phí" onBack={onBack} />
       <div className="flex items-center justify-between gap-2">
-        <div>
-          <h2 className="text-xl font-bold text-gray-800 flex items-center gap-2">
-            <Wallet className="text-primary" /> Tiền vào - Tiền ra
-          </h2>
-          <p className="text-xs text-gray-500 mt-1">Theo dõi các khoản thu chi và lợi nhuận</p>
-        </div>
+        <PageBreadcrumb title="Quản lý Chi phí" onBack={onBack} />
         <div className="flex items-center gap-2">
           <Button
             size="icon"
@@ -428,6 +431,21 @@ export const Costs = ({ user, onBack, addToast, initialAction, setHideBottomNav 
                 </div>
               </div>
             </div>
+            <div className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 mt-4">
+              <label className="text-[10px] font-bold text-gray-400 uppercase block mb-2">Lọc theo trạng thái</label>
+              <div className="flex items-center gap-2 overflow-x-auto pb-2 no-scrollbar">
+                {['Tất cả', 'Chờ duyệt', 'Đã duyệt', 'Từ chối', 'Đã xóa'].map((status) => (
+                  <Button
+                    key={status}
+                    size="sm"
+                    variant={statusFilter === status ? 'primary' : 'outline'}
+                    onClick={() => setStatusFilter(status)}
+                  >
+                    {status === 'Đã xóa' ? 'Thùng rác' : status}
+                  </Button>
+                ))}
+              </div>
+            </div>
           </motion.div>
         )}
       </AnimatePresence>
@@ -437,7 +455,7 @@ export const Costs = ({ user, onBack, addToast, initialAction, setHideBottomNav 
           <table className="w-full text-left border-collapse whitespace-nowrap">
             <thead>
               <tr className="bg-primary text-white">
-                <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider border-r border-white/10">Mã / Ngày</th>
+                <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider border-r border-white/10">Ngày</th>
                 <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider border-r border-white/10">Loại GD</th>
                 <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider border-r border-white/10">Tên kho</th>
                 <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider border-r border-white/10">Hạng mục</th>
@@ -462,7 +480,6 @@ export const Costs = ({ user, onBack, addToast, initialAction, setHideBottomNav 
                     className="hover:bg-gray-50 transition-colors cursor-pointer group"
                   >
                     <td className="px-4 py-3">
-                      <div className="text-xs font-bold text-primary">{item.cost_code}</div>
                       <div className="text-[10px] text-gray-500">{new Date(item.date).toLocaleDateString('vi-VN')}</div>
                     </td>
                     <td className="px-4 py-3 text-xs font-bold">

@@ -176,17 +176,8 @@ export const InventoryReport = ({ user, onBack, addToast }: {
 
   return (
     <div className="p-4 md:p-6 space-y-6 pb-44">
-      <PageBreadcrumb title="Kiểm tra tồn kho" onBack={onBack} />
-
       <div className="flex items-center justify-between gap-2">
-        <div>
-          <h2 className="text-xl font-bold text-gray-800 flex items-center gap-2">
-            <BarChart3 className="text-primary" /> Kiểm tra tồn kho
-          </h2>
-          <p className="text-xs text-gray-500 mt-1">
-            Tồn đầu kỳ + Nhập - Xuất + Chuyển đến - Chuyển đi = Tồn cuối kỳ
-          </p>
-        </div>
+        <PageBreadcrumb title="Kiểm tra tồn kho" onBack={onBack} />
         <div className="flex items-center gap-2 flex-shrink-0">
           <button
             onClick={() => setShowFilter(f => !f)}

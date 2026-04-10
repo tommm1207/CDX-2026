@@ -134,15 +134,8 @@ export const PendingApprovals = ({ user, onBack, onNavigate, onRefreshCount, add
 
   return (
     <div className="p-4 md:p-6 space-y-4 pb-44">
-      <PageBreadcrumb title="Phê duyệt phiếu" onBack={onBack} />
-
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-xl font-bold text-gray-800 flex items-center gap-2">
-            <ClipboardCheck className="text-amber-500" /> Danh sách chờ duyệt
-          </h2>
-          <p className="text-xs text-gray-500 mt-1">Nhấn vào phiếu để xem chi tiết</p>
-        </div>
+      <div className="flex items-center justify-between gap-2">
+        <PageBreadcrumb title="Phê duyệt phiếu" onBack={onBack} />
         <Button
           variant="ghost"
           icon={RefreshCw}

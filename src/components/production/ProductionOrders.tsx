@@ -75,15 +75,8 @@ export const ProductionOrders = ({ user, onBack, addToast, onOpenDetail, setHide
 
   return (
     <div className="p-4 md:p-6 space-y-6 pb-44">
-      <PageBreadcrumb title="Lệnh sản xuất" onBack={onBack} />
-      
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <h2 className="text-xl font-bold text-gray-800 flex items-center gap-2">
-            <ClipboardList className="text-primary" /> Lệnh sản xuất cọc
-          </h2>
-          <p className="text-xs text-gray-500 mt-1">Theo dõi tiến độ sản xuất và điều phối vật tư</p>
-        </div>
+      <div className="flex items-center justify-between gap-2">
+        <PageBreadcrumb title="Lệnh sản xuất" onBack={onBack} />
         <div className="flex items-center gap-2">
           <Button
             size="icon"

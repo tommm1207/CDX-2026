@@ -125,14 +125,6 @@ export const DeletedSlips = ({ onBack, addToast }: {
   return (
     <div className="p-4 md:p-6 space-y-6 pb-44">
       <PageBreadcrumb title="Phiếu đã xóa" onBack={onBack} />
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-xl font-bold text-gray-800 flex items-center gap-2">
-            <Archive className="text-blue-500" /> Phiếu nhập xuất đã xóa
-          </h2>
-          <p className="text-xs text-gray-500 mt-1">Danh sách các phiếu đã đưa vào thùng rác</p>
-        </div>
-      </div>
 
       <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
         <table className="w-full text-left border-collapse whitespace-nowrap">

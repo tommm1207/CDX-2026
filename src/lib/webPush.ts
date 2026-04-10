@@ -42,18 +42,39 @@ export async function subscribeToPush(userId: string): Promise<void> {
       });
     }
 
-    // Save subscription to Supabase
+    // Save subscription to Supabase without relying on potentially conflicting unique constraints
     const { supabase } = await import('./supabase');
-    await supabase.from('push_subscriptions').upsert({
-      user_id: userId,
-      endpoint: subscription.endpoint,
-      subscription_json: JSON.stringify(subscription),
-      updated_at: new Date().toISOString()
-    }, { onConflict: 'endpoint' });
+    const { data: existing, error: checkErr } = await supabase
+      .from('push_subscriptions')
+      .select('id')
+      .eq('endpoint', subscription.endpoint)
+      .maybeSingle();
+
+    if (checkErr) throw checkErr;
+
+    if (existing) {
+      const { error: upErr } = await supabase.from('push_subscriptions').update({
+        user_id: userId,
+        subscription_json: JSON.stringify(subscription),
+        updated_at: new Date().toISOString()
+      }).eq('id', existing.id);
+      
+      if (upErr) throw upErr;
+    } else {
+      const { error: insErr } = await supabase.from('push_subscriptions').insert({
+        user_id: userId,
+        endpoint: subscription.endpoint,
+        subscription_json: JSON.stringify(subscription),
+        updated_at: new Date().toISOString()
+      });
+      
+      if (insErr) throw insErr;
+    }
 
     console.log('[CDX Push] Push subscription saved successfully');
-  } catch (err) {
+  } catch (err: any) {
     console.error('[CDX Push] Failed to subscribe to push:', err);
+    throw err; // Propagate error so App.tsx can show a red toast
   }
 }
 

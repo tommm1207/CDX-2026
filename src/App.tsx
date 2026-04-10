@@ -83,13 +83,32 @@ export default function App() {
   useEffect(() => {
     if (!user) return;
     const initPush = async () => {
-      const sw = await registerServiceWorker();
-      if (!sw) return;
-      if (Notification.permission === 'granted') {
-        await subscribeToPush(user.id);
-      } else if (Notification.permission === 'default') {
-        const perm = await Notification.requestPermission();
-        if (perm === 'granted') await subscribeToPush(user.id);
+      try {
+        if (!('serviceWorker' in navigator)) {
+          addToast('Trình duyệt không hỗ trợ Service Worker', 'error');
+          return;
+        }
+        if (!('PushManager' in window)) {
+          addToast('Trình duyệt không hỗ trợ Web Push', 'error');
+          return;
+        }
+        const sw = await registerServiceWorker();
+        if (!sw) {
+          addToast('Không thể đăng ký Service Worker', 'error');
+          return;
+        }
+        let perm = Notification.permission;
+        if (perm === 'default') {
+          perm = await Notification.requestPermission();
+        }
+        if (perm === 'granted') {
+          await subscribeToPush(user.id);
+          addToast('✅ Đã đăng ký thông báo đẩy cho thiết bị này', 'success');
+        } else {
+          addToast('⚠️ Chưa cho phép thông báo – Push sẽ không hoạt động', 'warning');
+        }
+      } catch (err: any) {
+        addToast('Lỗi đăng ký Push: ' + err.message, 'error');
       }
     };
     initPush();

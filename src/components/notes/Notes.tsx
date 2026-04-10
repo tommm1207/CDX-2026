@@ -357,7 +357,7 @@ export const Notes = ({ user, onBack, addToast, initialAction, setHideBottomNav 
               initial={{ opacity: 0, scale: 0.95, y: 20 }} 
               animate={{ opacity: 1, scale: 1, y: 0 }} 
               exit={{ opacity: 0, scale: 0.95, y: 20 }} 
-              className="bg-white rounded-[2rem] md:rounded-[2.5rem] shadow-2xl w-full max-w-lg overflow-hidden relative z-10 m-4"
+              className="bg-white rounded-[2rem] md:rounded-[2.5rem] shadow-2xl w-full max-w-lg overflow-hidden relative z-10 m-4 flex flex-col max-h-[calc(100vh-40px)]"
               onClick={(e) => e.stopPropagation()}
             >
               <div className="p-6 text-white flex items-center justify-between bg-amber-500 rounded-t-[2rem] md:rounded-t-[2.5rem]">
@@ -377,7 +377,7 @@ export const Notes = ({ user, onBack, addToast, initialAction, setHideBottomNav 
                   <X size={20} />
                 </button>
               </div>
-              <div className="p-6 space-y-4 max-h-[70vh] overflow-y-auto">
+              <div className="p-6 space-y-4 overflow-y-auto flex-1 custom-scrollbar">
                 <div>
                   <label className="text-[10px] font-bold text-gray-400 uppercase">Tiêu đề</label>
                   <input

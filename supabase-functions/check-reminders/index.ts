@@ -81,7 +81,9 @@ serve(async (req) => {
       const results = await Promise.allSettled(
         subs.map(async (sub) => {
           const pushSub = JSON.parse(sub.subscription_json);
-          return webpush.sendNotification(pushSub, pushPayload);
+          return webpush.sendNotification(pushSub, pushPayload, {
+            headers: { 'Urgency': 'high' }
+          });
         })
       );
 

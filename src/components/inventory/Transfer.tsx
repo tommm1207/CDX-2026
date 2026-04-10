@@ -531,7 +531,7 @@ export const Transfer = ({ user, onBack, addToast, initialAction, setHideBottomN
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.9, y: 20 }}
               transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-              className="bg-white rounded-[2rem] md:rounded-[2.5rem] shadow-2xl w-full max-w-2xl max-h-[90dvh] flex flex-col overflow-hidden m-4"
+              className="bg-white rounded-[2rem] md:rounded-[2.5rem] shadow-2xl w-[calc(100%-32px)] md:w-full max-w-2xl max-h-[calc(100vh-40px)] flex flex-col overflow-hidden m-4"
               onClick={(e) => e.stopPropagation()}
             >
               <div className="bg-orange-500 p-6 text-white flex items-center justify-between rounded-t-[2rem] md:rounded-t-[2.5rem] flex-shrink-0 relative">
@@ -553,7 +553,7 @@ export const Transfer = ({ user, onBack, addToast, initialAction, setHideBottomN
                 </button>
               </div>
 
-              <div className="flex-1 overflow-y-auto p-6 custom-scrollbar">
+              <div className="flex-1 overflow-y-auto overflow-x-hidden p-6 custom-scrollbar">
                 <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-6 pb-12">
                   <div className="space-y-4">
                     <div className="space-y-1">

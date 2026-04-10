@@ -134,8 +134,8 @@ export default function App() {
 
               if (rem.browser_notification && Notification.permission === "granted") {
                 try {
-                  new Notification("CDX App", { 
-                    body: `${rem.title}\n${payload.text}\nFrom: ${senderName}`, 
+                  new Notification(rem.title, { 
+                    body: `${payload.text}\nFrom: ${senderName}`, 
                     icon: '/logo.png' 
                   });
                 } catch (e) {}

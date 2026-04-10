@@ -11,6 +11,7 @@ export const DeletedCosts = ({ onBack, addToast }: { onBack: () => void, addToas
   const [loading, setLoading] = useState(true);
   const [showRestoreModal, setShowRestoreModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [showActionModal, setShowActionModal] = useState(false);
   const [selectedItem, setSelectedItem] = useState<{id: string, name?: string} | null>(null);
 
   useEffect(() => {
@@ -44,6 +45,11 @@ export const DeletedCosts = ({ onBack, addToast }: { onBack: () => void, addToas
   const handleRestoreClick = (id: string, name: string) => {
     setSelectedItem({ id, name });
     setShowRestoreModal(true);
+  };
+
+  const handleRowClick = (id: string, name: string) => {
+    setSelectedItem({ id, name });
+    setShowActionModal(true);
   };
 
   const confirmRestore = async () => {
@@ -111,6 +117,7 @@ export const DeletedCosts = ({ onBack, addToast }: { onBack: () => void, addToas
                   <tr 
                     key={item.id} 
                     className="hover:bg-gray-50/50 transition-colors cursor-pointer group"
+                    onClick={() => handleRowClick(item.id, item.cost_code || item.materials?.name || item.content || 'Chi phí')}
                   >
                     <td className="px-4 py-3 text-xs text-gray-600">{new Date(item.date).toLocaleDateString('vi-VN')}</td>
                     <td className="px-4 py-3">
@@ -127,6 +134,7 @@ export const DeletedCosts = ({ onBack, addToast }: { onBack: () => void, addToas
                     <td className="px-4 py-3 text-right">
                       <div className="flex justify-end gap-2">
                         <button
+                          onClick={(e) => { e.stopPropagation(); handleRestoreClick(item.id, item.cost_code || item.materials?.name || item.content || 'Chi phí'); }}
                           className="p-2 bg-green-50 text-green-600 rounded-lg hover:bg-green-100 transition-colors"
                           title="Khôi phục"
                         >
@@ -151,6 +159,26 @@ export const DeletedCosts = ({ onBack, addToast }: { onBack: () => void, addToas
       
       {/* Delete/Restore Modals */}
       <AnimatePresence>
+        {showActionModal && selectedItem && (
+          <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-gray-900/50 backdrop-blur-sm" onClick={() => setShowActionModal(false)}>
+            <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} className="bg-white rounded-3xl shadow-xl w-full max-w-sm overflow-hidden p-6 text-center" onClick={e => e.stopPropagation()}>
+              <h3 className="text-xl font-bold text-gray-900 mb-2">Tùy chọn thao tác</h3>
+              <p className="text-sm text-gray-500 mb-6">Bạn muốn làm gì với chứng từ chi phí <span className="font-bold text-gray-800">{selectedItem.name}</span>?</p>
+              <div className="flex flex-col gap-3">
+                <button onClick={() => { setShowActionModal(false); setShowRestoreModal(true); }} className="w-full py-3.5 px-4 rounded-xl font-bold text-green-700 bg-green-50 hover:bg-green-100 transition-colors flex items-center justify-center gap-2">
+                  <RefreshCw size={18} /> Khôi phục dữ liệu
+                </button>
+                <button onClick={() => { setShowActionModal(false); setShowDeleteModal(true); }} className="w-full py-3.5 px-4 rounded-xl font-bold text-red-700 bg-red-50 hover:bg-red-100 transition-colors flex items-center justify-center gap-2">
+                  <Trash2 size={18} /> Xóa vĩnh viễn
+                </button>
+                <button onClick={() => setShowActionModal(false)} className="w-full py-3.5 px-4 rounded-xl font-bold text-gray-600 bg-gray-100 hover:bg-gray-200 transition-colors mt-2">
+                  Hủy bỏ
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+
         {showRestoreModal && selectedItem && (
           <div 
             className="fixed inset-0 z-50 flex items-center justify-center px-4 bg-gray-900/50 backdrop-blur-sm"

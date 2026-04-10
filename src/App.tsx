@@ -129,13 +129,13 @@ export default function App() {
 
             if (!notifiedMap.has(rem.id)) {
               const senderName = (rem as any).sender?.full_name || 'Hệ thống';
-              const displayTitle = `CDX App`;
-              const displayMessage = `📌 Tiêu đề: ${rem.title}\n📝 Nội dung: ${payload.text}\n\nFrom: ${senderName}`;
+              const displayTitle = rem.title || 'Thông báo mới';
+              const displayMessage = `${payload.text}\nFrom: ${senderName}`;
 
               if (rem.browser_notification && Notification.permission === "granted") {
                 try {
                   new Notification(displayTitle, { 
-                    body: `Tiêu đề: ${rem.title}\nNội dung: ${payload.text}\nFrom: ${senderName}`, 
+                    body: displayMessage, 
                     icon: '/logo.png' 
                   });
                 } catch (e) {}

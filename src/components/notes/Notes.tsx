@@ -44,7 +44,7 @@ export const Notes = ({ user, onBack, addToast, initialAction, setHideBottomNav 
   const [warehouses, setWarehouses] = useState<any[]>([]);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
-  const [deletingId, setDeletingId] = useState<string | null>(null);
+
   const [showFilter, setShowFilter] = useState(false);
   const [showDeleteAllConfirm, setShowDeleteAllConfirm] = useState(false);
 

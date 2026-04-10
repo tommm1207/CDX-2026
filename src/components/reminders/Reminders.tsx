@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Bell, Plus, Search, X, Edit, Trash2, Users, User, Share2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { supabase } from '@/lib/supabase';
-import { ObjectType, Employee } from '@/types';
+import { Employee } from '@/types';
 import { PageBreadcrumb } from '../shared/PageBreadcrumb';
 import { ToastType } from '../shared/Toast';
 import { parseReminderContent, serializeReminderContent } from '@/utils/reminderUtils';

@@ -7,7 +7,6 @@ import { PageBreadcrumb } from '../shared/PageBreadcrumb';
 import { isActiveWarehouse } from '@/utils/inventory';
 import { ToastType } from '../shared/Toast';
 import { FAB } from '../shared/FAB';
-import { FAB } from '../shared/FAB';
 import { Button } from '../shared/Button';
 import { ConfirmModal } from '../shared/ConfirmModal';
 

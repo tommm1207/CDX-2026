@@ -66,9 +66,7 @@ serve(async (req) => {
         await new Promise(resolve => setTimeout(resolve, 2000)); // 2s gap between devices
       } catch (e: any) {
         details.push({ endpoint: pushSub.endpoint.substring(0, 30) + '...', error: e.statusCode || e.message });
-        if (e.statusCode === 410 || e.statusCode === 404) {
-          await supabase.from("push_subscriptions").delete().eq("id", sub.id);
-        }
+        // NOT deleting on 410/404 - Apple beta iOS sometimes returns false 410s
       }
     }
 

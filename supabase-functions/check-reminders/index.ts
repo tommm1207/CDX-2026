@@ -85,6 +85,7 @@ serve(async (req) => {
             headers: { 'Urgency': 'high' }
           });
           totalSent++;
+          await new Promise(resolve => setTimeout(resolve, 200)); // Prevent APNs drop
         } catch (e: any) {
           if (e.statusCode === 410 || e.statusCode === 404) {
             await supabase.from("push_subscriptions").delete().eq("id", sub.id);

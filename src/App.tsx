@@ -5,6 +5,7 @@ import { Employee } from '@/types';
 import { REMINDER_CHECK_INTERVAL } from '@/constants/options';
 import { getMenuGroups } from '@/constants/menu';
 import { parseReminderContent } from '@/utils/reminderUtils';
+import { registerServiceWorker, subscribeToPush } from '@/lib/webPush';
 
 // Shared Components
 import { ToastContainer, ToastMessage, ToastType } from '@/components/shared/Toast';
@@ -78,6 +79,22 @@ export default function App() {
     }
   }, [user]);
 
+  // Register Service Worker & Subscribe to Web Push when user logs in
+  useEffect(() => {
+    if (!user) return;
+    const initPush = async () => {
+      const sw = await registerServiceWorker();
+      if (!sw) return;
+      if (Notification.permission === 'granted') {
+        await subscribeToPush(user.id);
+      } else if (Notification.permission === 'default') {
+        const perm = await Notification.requestPermission();
+        if (perm === 'granted') await subscribeToPush(user.id);
+      }
+    };
+    initPush();
+  }, [user?.id]);
+
   // Real-time pending count updates
   useEffect(() => {
     if (!user) return;
@@ -130,12 +147,12 @@ export default function App() {
             if (!notifiedMap.has(rem.id)) {
               const senderName = (rem as any).sender?.full_name || 'Hệ thống';
               const displayTitle = rem.title;
-              const displayMessage = `${payload.text}\n\n**From: ${senderName}**`;
+              const displayMessage = `${payload.text}\n\n**Thông báo từ ${senderName}**`;
 
               if (rem.browser_notification && Notification.permission === "granted") {
                 try {
                   new Notification(rem.title, { 
-                    body: `${payload.text}\nFrom: ${senderName}`, 
+                    body: `${payload.text}\nThông báo từ ${senderName}`, 
                     icon: '/logo.png' 
                   });
                 } catch (e) {}

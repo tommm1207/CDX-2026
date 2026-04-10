@@ -81,9 +81,16 @@ serve(async (req) => {
       const results = await Promise.allSettled(
         subs.map(async (sub) => {
           const pushSub = JSON.parse(sub.subscription_json);
-          return webpush.sendNotification(pushSub, pushPayload, {
-            headers: { 'Urgency': 'high' }
-          });
+          try {
+            return await webpush.sendNotification(pushSub, pushPayload, {
+              headers: { 'Urgency': 'high' }
+            });
+          } catch (e: any) {
+            if (e.statusCode === 410 || e.statusCode === 404) {
+              await supabase.from("push_subscriptions").delete().eq("id", sub.id);
+            }
+            throw e;
+          }
         })
       );
 

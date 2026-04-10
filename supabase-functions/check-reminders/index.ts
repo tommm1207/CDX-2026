@@ -78,23 +78,19 @@ serve(async (req) => {
         reminderId: rem.id
       });
 
-      const results = await Promise.allSettled(
-        subs.map(async (sub) => {
-          const pushSub = JSON.parse(sub.subscription_json);
-          try {
-            return await webpush.sendNotification(pushSub, pushPayload, {
-              headers: { 'Urgency': 'high' }
-            });
-          } catch (e: any) {
-            if (e.statusCode === 410 || e.statusCode === 404) {
-              await supabase.from("push_subscriptions").delete().eq("id", sub.id);
-            }
-            throw e;
+      for (const sub of subs) {
+        const pushSub = JSON.parse(sub.subscription_json);
+        try {
+          await webpush.sendNotification(pushSub, pushPayload, {
+            headers: { 'Urgency': 'high' }
+          });
+          totalSent++;
+        } catch (e: any) {
+          if (e.statusCode === 410 || e.statusCode === 404) {
+            await supabase.from("push_subscriptions").delete().eq("id", sub.id);
           }
-        })
-      );
-
-      totalSent += results.filter(r => r.status === "fulfilled").length;
+        }
+      }
 
       // Mark reminder as reminded
       await supabase

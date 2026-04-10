@@ -97,8 +97,26 @@ export const Reminders = ({ user, onBack, addToast, initialAction, setHideBottom
         if (error) throw error;
         if (addToast) addToast('Đã cập nhật lịch nhắc thành công', 'success');
       } else {
-        const { error } = await supabase.from('reminders').insert([{ ...payload, status: 'pending' }]);
+        const { data: inserted, error } = await supabase
+          .from('reminders')
+          .insert([{ ...payload, status: 'pending' }])
+          .select()
+          .single();
         if (error) throw error;
+
+        // Dispatch Web Push Notification via Edge Function
+        const parsedContent = payload.content; // already serialized
+        const textContent = formData.content;
+        supabase.functions.invoke('send-push', {
+          body: {
+            reminder_id: inserted?.id,
+            title: formData.title,
+            body: textContent,
+            sender_name: user.full_name,
+            assignees: formData.assignees.length > 0 ? formData.assignees : null
+          }
+        }).catch(e => console.warn('[CDX Push] Edge function error:', e));
+
         if (addToast) addToast('Đã thêm mới lịch nhắc thành công', 'success');
       }
 

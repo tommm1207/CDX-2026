@@ -5,6 +5,7 @@ import { Employee } from '@/types';
 import { REMINDER_CHECK_INTERVAL } from '@/constants/options';
 import { getMenuGroups } from '@/constants/menu';
 import { parseReminderContent } from '@/utils/reminderUtils';
+import { registerServiceWorker, subscribeToPush } from '@/lib/webPush';
 
 // Shared Components
 import { ToastContainer, ToastMessage, ToastType } from '@/components/shared/Toast';
@@ -77,6 +78,22 @@ export default function App() {
       console.error('Error fetching pending count:', err);
     }
   }, [user]);
+
+  // Register Service Worker & Subscribe to Web Push when user logs in
+  useEffect(() => {
+    if (!user) return;
+    const initPush = async () => {
+      const sw = await registerServiceWorker();
+      if (!sw) return;
+      if (Notification.permission === 'granted') {
+        await subscribeToPush(user.id);
+      } else if (Notification.permission === 'default') {
+        const perm = await Notification.requestPermission();
+        if (perm === 'granted') await subscribeToPush(user.id);
+      }
+    };
+    initPush();
+  }, [user?.id]);
 
   // Real-time pending count updates
   useEffect(() => {

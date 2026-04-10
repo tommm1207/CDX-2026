@@ -50,7 +50,9 @@ export const ToastContainer = ({ toasts, removeToast }: ToastContainerProps) => 
             
             <div className="flex-1 flex flex-col pt-0.5">
               {toast.title && <p className="text-sm font-black text-gray-900 mb-0.5 leading-tight">{toast.title}</p>}
-              <p className={`text-[13px] font-medium leading-relaxed whitespace-pre-wrap ${toast.type === 'notification' ? 'text-gray-600 line-clamp-3' : ''}`}>{toast.message}</p>
+              <p className={`text-[13px] font-medium leading-relaxed whitespace-pre-wrap ${toast.type === 'notification' ? 'text-gray-600 line-clamp-3' : ''}`}>
+                {toast.message.split('**').map((part, i) => i % 2 === 1 ? <strong key={i} className="font-black text-gray-900">{part}</strong> : part)}
+              </p>
             </div>
             
             <button 

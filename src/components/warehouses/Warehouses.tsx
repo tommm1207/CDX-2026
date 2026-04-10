@@ -178,14 +178,8 @@ export const Warehouses = ({ user, onBack, addToast }: {
 
   return (
     <div className="p-4 md:p-6 space-y-6 pb-44">
-      <PageBreadcrumb title="Danh sách Kho" onBack={onBack} />
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-xl font-bold text-gray-800 flex items-center gap-2">
-            <Warehouse className="text-primary" /> Danh sách Kho
-          </h2>
-          <p className="text-xs text-gray-500 mt-1">Quản lý hệ thống bãi đúc và kho bãi công trình</p>
-        </div>
+      <div className="flex items-center justify-between gap-2">
+        <PageBreadcrumb title="Danh sách Kho" onBack={onBack} />
         <button
           onClick={() => setShowFilter(f => !f)}
           className={`p-2.5 rounded-xl border transition-colors ${
@@ -248,7 +242,6 @@ export const Warehouses = ({ user, onBack, addToast }: {
           <table className="w-full text-left border-collapse whitespace-nowrap">
             <thead>
               <tr className="bg-primary text-white">
-                <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider border-r border-white/10">Mã kho (ID)</th>
                 <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider border-r border-white/10">Tên kho</th>
                 <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider border-r border-white/10">Địa chỉ</th>
                 <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider border-r border-white/10">Nhân viên phụ trách</th>
@@ -270,7 +263,6 @@ export const Warehouses = ({ user, onBack, addToast }: {
                     className="hover:bg-gray-50 transition-colors group cursor-pointer"
                     onClick={() => handleEdit(item)}
                   >
-                    <td className="px-4 py-3 text-xs font-bold text-gray-700">{item.code || item.id.slice(0, 8)}</td>
                     <td className="px-4 py-3 text-xs text-gray-600">{item.name}</td>
                     <td className="px-4 py-3 text-xs text-gray-600">{item.address}</td>
                     <td className="px-4 py-3 text-xs text-gray-600">{item.users?.full_name || item.manager_id}</td>

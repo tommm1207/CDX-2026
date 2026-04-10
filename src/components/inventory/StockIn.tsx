@@ -38,6 +38,10 @@ export const StockIn = ({ user, onBack, initialStatus, initialAction, addToast, 
   const [submitting, setSubmitting] = useState(false);
   const [showFilter, setShowFilter] = useState(false);
   const [statusFilter, setStatusFilter] = useState(initialStatus || 'Tất cả');
+  const [filterStartDate, setFilterStartDate] = useState('');
+  const [filterEndDate, setFilterEndDate] = useState('');
+  const [filterWarehouseId, setFilterWarehouseId] = useState('');
+  const [searchTerm, setSearchTerm] = useState('');
   const [materialHistory, setMaterialHistory] = useState<any[]>([]);
   const [loadingHistory, setLoadingHistory] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
@@ -69,7 +73,9 @@ export const StockIn = ({ user, onBack, initialStatus, initialAction, addToast, 
     try {
       let query = supabase.from('stock_in').select('*, warehouses(name, code), materials(name, code, unit)').order('created_at', { ascending: false });
 
-      if (statusFilter !== 'Tất cả') {
+      if (statusFilter === 'Tất cả') {
+        query = query.neq('status', 'Đã xóa');
+      } else {
         query = query.eq('status', statusFilter);
       }
 
@@ -327,12 +333,8 @@ export const StockIn = ({ user, onBack, initialStatus, initialAction, addToast, 
 
   return (
     <div className="p-4 md:p-6 space-y-6 pb-44">
-      <PageBreadcrumb title="Nhập kho" onBack={onBack} />
-
-      <div className="flex items-center justify-between gap-4">
-        <h2 className="text-xl font-bold text-gray-800 flex items-center gap-2">
-          <ArrowDownCircle className="text-primary" /> Nhập kho
-        </h2>
+      <div className="flex items-center justify-between gap-2">
+        <PageBreadcrumb title="Nhập kho" onBack={onBack} />
         <div className="flex items-center gap-2">
           <Button
             size="icon"
@@ -351,25 +353,64 @@ export const StockIn = ({ user, onBack, initialStatus, initialAction, addToast, 
             exit={{ opacity: 0, height: 0 }}
             className="overflow-hidden"
           >
-            <div className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 mb-4">
-              <label className="text-[10px] font-bold text-gray-400 uppercase block mb-2">Lọc theo trạng thái</label>
-              <div className="flex items-center gap-2 overflow-x-auto pb-2 md:pb-0 no-scrollbar">
-                {['Tất cả', 'Chờ duyệt', 'Đã duyệt', 'Từ chối'].map((status) => (
-                  <Button
-                    key={status}
-                    size="sm"
-                    variant={statusFilter === status ? 'primary' : 'outline'}
-                    onClick={() => setStatusFilter(status)}
-                  >
-                    {status}
-                  </Button>
-                ))}
+            <div className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 mb-4 space-y-4">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                <div className="space-y-1">
+                  <label className="text-[10px] font-bold text-gray-400 uppercase">Từ ngày</label>
+                  <input type="date" value={filterStartDate} onChange={e => setFilterStartDate(e.target.value)} className="w-full px-3 py-2 rounded-lg border border-gray-200 text-xs outline-none focus:ring-2 focus:ring-primary/20" />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-[10px] font-bold text-gray-400 uppercase">Đến ngày</label>
+                  <input type="date" value={filterEndDate} onChange={e => setFilterEndDate(e.target.value)} className="w-full px-3 py-2 rounded-lg border border-gray-200 text-xs outline-none focus:ring-2 focus:ring-primary/20" />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-[10px] font-bold text-gray-400 uppercase">Kho</label>
+                  <select value={filterWarehouseId} onChange={e => setFilterWarehouseId(e.target.value)} className="w-full px-3 py-2 rounded-lg border border-gray-200 text-xs outline-none focus:ring-2 focus:ring-primary/20">
+                    <option value="">Tất cả kho</option>
+                    {warehouses.map(w => <option key={w.id} value={w.id}>{w.name}</option>)}
+                  </select>
+                </div>
+                <div className="space-y-1">
+                  <label className="text-[10px] font-bold text-gray-400 uppercase">Tìm kiếm</label>
+                  <input type="text" placeholder="Vật tư, mã phiếu, ghi chú..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="w-full px-3 py-2 rounded-lg border border-gray-200 text-xs outline-none focus:ring-2 focus:ring-primary/20" />
+                </div>
+              </div>
+              <div>
+                <label className="text-[10px] font-bold text-gray-400 uppercase block mb-2">Trạng thái</label>
+                <div className="flex items-center gap-2 overflow-x-auto pb-2 md:pb-0 no-scrollbar">
+                  {['Tất cả', 'Chờ duyệt', 'Đã duyệt', 'Từ chối', 'Đã xóa'].map((status) => (
+                    <Button
+                      key={status}
+                      size="sm"
+                      variant={statusFilter === status ? 'primary' : 'outline'}
+                      onClick={() => setStatusFilter(status)}
+                    >
+                      {status === 'Đã xóa' ? 'Thùng rác' : status}
+                    </Button>
+                  ))}
+                </div>
               </div>
             </div>
           </motion.div>
         )}
       </AnimatePresence>
 
+      {(() => {
+        const filteredSlips = slips.filter(item => {
+          let match = true;
+          if (filterStartDate && item.date < filterStartDate) match = false;
+          if (filterEndDate && item.date > filterEndDate) match = false;
+          if (filterWarehouseId && item.warehouse_id !== filterWarehouseId) match = false;
+          if (searchTerm) {
+            const s = searchTerm.toLowerCase();
+            const nameMatch = (item.materials?.name || '').toLowerCase().includes(s);
+            const codeMatch = (item.import_code || '').toLowerCase().includes(s);
+            const noteMatch = (item.notes || '').toLowerCase().includes(s);
+            if (!nameMatch && !codeMatch && !noteMatch) match = false;
+          }
+          return match;
+        });
+        return (
       <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse whitespace-nowrap">
@@ -378,17 +419,18 @@ export const StockIn = ({ user, onBack, initialStatus, initialAction, addToast, 
                 <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider border-r border-white/10">Ngày</th>
                 <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider border-r border-white/10">Vật tư</th>
                 <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider border-r border-white/10">Kho</th>
-                <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider border-r border-white/10">Thành tiền</th>
-                <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider">Trạng thái</th>
+                <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider border-r border-white/10 text-center">SL</th>
+                <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider border-r border-white/10 text-right">Thành tiền</th>
+                <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-center">Trạng thái</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
               {loading ? (
-                <tr><td colSpan={5} className="px-4 py-8 text-center text-gray-400 italic">Đang tải...</td></tr>
-              ) : slips.length === 0 ? (
-                <tr><td colSpan={5} className="px-4 py-8 text-center text-gray-400 italic">Chưa có phiếu nhập nào</td></tr>
+                <tr><td colSpan={6} className="px-4 py-8 text-center text-gray-400 italic">Đang tải...</td></tr>
+              ) : filteredSlips.length === 0 ? (
+                <tr><td colSpan={6} className="px-4 py-8 text-center text-gray-400 italic">Chưa có phiếu nhập nào</td></tr>
               ) : (
-                slips.map((item) => (
+                filteredSlips.map((item) => (
                   <tr
                     key={item.id}
                     onClick={() => handleRowClick(item)}
@@ -396,14 +438,15 @@ export const StockIn = ({ user, onBack, initialStatus, initialAction, addToast, 
                   >
                     <td className="px-4 py-3 text-xs text-gray-600">{formatDate(item.date)}</td>
                     <td className="px-4 py-3 text-xs text-gray-800 font-bold">
-                      <p>{item.materials?.name}</p>
-                      <p className="text-[10px] text-gray-400 font-normal">#{item.materials?.code}</p>
+                      {item.materials?.name}
                     </td>
                     <td className="px-4 py-3 text-xs text-gray-600">
-                      <p>{item.warehouses?.name}</p>
-                      <p className="text-[10px] text-gray-400">#{item.warehouses?.code}</p>
+                      {item.warehouses?.name}
                     </td>
-                    <td className="px-4 py-3 text-xs text-primary font-bold">{formatCurrency(item.total_amount || 0)}</td>
+                    <td className="px-4 py-3 text-xs text-gray-700 font-medium text-center">
+                      {formatNumber(item.quantity)} <span className="text-[10px] text-gray-400">{item.unit || item.materials?.unit}</span>
+                    </td>
+                    <td className="px-4 py-3 text-xs text-primary font-bold text-right">{formatCurrency(item.total_amount || 0)}</td>
                     <td className="px-4 py-3 text-xs">
                       <div className="flex items-center justify-between">
                         <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${item.status === 'Đã duyệt' ? 'bg-green-100 text-green-600' :
@@ -422,6 +465,8 @@ export const StockIn = ({ user, onBack, initialStatus, initialAction, addToast, 
           </table>
         </div>
       </div>
+        );
+      })()}
 
       {/* Detail Panel — slide-up mobile, side panel desktop */}
       <AnimatePresence>
@@ -474,20 +519,18 @@ export const StockIn = ({ user, onBack, initialStatus, initialAction, addToast, 
 
               <div className="flex-1 overflow-y-auto p-5 space-y-4">
                 {[
-                  { label: 'Vật tư', value: selectedSlip.materials?.name, sub: `Mã: ${selectedSlip.materials?.code || '—'}` },
-                  { label: 'Kho nhập', value: selectedSlip.warehouses?.name, sub: `Mã: ${selectedSlip.warehouses?.code || '—'}` },
                   { label: 'Ngày nhập', value: formatDate(selectedSlip.date) },
+                  { label: 'Vật tư', value: selectedSlip.materials?.name },
+                  { label: 'Kho nhập', value: selectedSlip.warehouses?.name },
                   { label: 'Số lượng', value: `${formatNumber(selectedSlip.quantity)} ${selectedSlip.unit || selectedSlip.materials?.unit || ''}` },
                   { label: 'Đơn giá', value: formatCurrency(selectedSlip.unit_price || 0) },
                   { label: 'Thành tiền', value: formatCurrency(selectedSlip.total_amount || 0), highlight: true },
+                  { label: 'Trạng thái', value: selectedSlip.status || 'Chờ duyệt' },
                   { label: 'Diễn giải', value: selectedSlip.notes || '—' },
-                ].map(({ label, value, sub, highlight }) => (
+                ].map(({ label, value, highlight }) => (
                   <div key={label} className="flex justify-between items-start border-b border-gray-50 pb-3 gap-4">
-                    <span className="text-[10px] text-gray-400 font-bold uppercase shrink-0">{label}</span>
-                    <div className="text-right">
-                      <p className={`text-sm font-medium ${highlight ? 'text-primary font-bold' : 'text-gray-800'}`}>{value || '—'}</p>
-                      {sub && <p className="text-[10px] text-gray-400">{sub}</p>}
-                    </div>
+                    <span className="text-[11px] text-gray-500 font-medium shrink-0">{label}</span>
+                    <p className={`text-sm text-right ${highlight ? 'text-primary font-bold' : 'text-gray-900'}`}>{value || '—'}</p>
                   </div>
                 ))}
 

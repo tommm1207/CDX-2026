@@ -1,4 +1,6 @@
-import { Plus } from 'lucide-react';
+import React, { useState } from 'react';
+import { Plus, X } from 'lucide-react';
+import { motion, AnimatePresence } from 'motion/react';
 import { Employee } from '@/types';
 import { getDayOfWeekStr, convertSolarToLunar } from '@/utils/lunar';
 
@@ -10,7 +12,7 @@ interface AttendanceTableProps {
   user: Employee;
   selectedMonth: number;
   selectedYear: number;
-  onToggleAttendance?: (empId: string, day: number) => void;
+  onToggleAttendance?: (empId: string, day: number, action?: 'present' | 'half-day' | 'remove') => void;
   onOpenEditModal?: (empId: string, day: number) => void;
 }
 
@@ -25,6 +27,8 @@ export const AttendanceTable = ({
   onToggleAttendance,
   onOpenEditModal
 }: AttendanceTableProps) => {
+
+  const [confirmPopup, setConfirmPopup] = useState<{ empId: string; day: number; x: number; y: number } | null>(null);
 
   const getStatus = (empId: string, day: number) => {
     const dateStr = `${selectedYear}-${String(selectedMonth).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
@@ -49,7 +53,21 @@ export const AttendanceTable = ({
     }
   };
 
+  const handleCellClick = (empId: string, day: number, e: React.MouseEvent) => {
+    if (user.role === 'User') return;
+    const rect = (e.target as HTMLElement).getBoundingClientRect();
+    setConfirmPopup({ empId, day, x: rect.left + rect.width / 2, y: rect.top });
+  };
+
+  const handleConfirm = (action: 'present' | 'half-day' | 'remove') => {
+    if (confirmPopup && onToggleAttendance) {
+      onToggleAttendance(confirmPopup.empId, confirmPopup.day, action);
+    }
+    setConfirmPopup(null);
+  };
+
   return (
+    <>
     <div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
       <div className="overflow-x-auto custom-scrollbar">
         <table className="w-full text-left border-collapse min-w-[1200px] whitespace-nowrap">
@@ -98,7 +116,7 @@ export const AttendanceTable = ({
                       return (
                         <td key={d} className="p-0.5 border-r border-gray-50 relative group/cell">
                           <button
-                            onClick={() => onToggleAttendance?.(emp.id, d)}
+                            onClick={(e) => handleCellClick(emp.id, d, e)}
                             onContextMenu={(e) => { e.preventDefault(); onOpenEditModal?.(emp.id, d); }}
                             disabled={user.role === 'User'}
                             className={`w-full aspect-square flex flex-col items-center justify-center rounded-lg text-[10px] font-black transition-all ${getStatusColor(att?.status)} ${user.role === 'User' ? 'cursor-default' : 'cursor-pointer hover:brightness-95 active:scale-95'}`}
@@ -126,5 +144,54 @@ export const AttendanceTable = ({
         </table>
       </div>
     </div>
+
+    {/* Confirmation Popup */}
+    <AnimatePresence>
+      {confirmPopup && (
+        <>
+          <div className="fixed inset-0 z-[200]" onClick={() => setConfirmPopup(null)} />
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.9 }}
+            transition={{ duration: 0.15 }}
+            className="fixed z-[201] bg-white rounded-2xl shadow-2xl border border-gray-200 p-3 w-[180px]"
+            style={{
+              left: Math.min(confirmPopup.x - 90, window.innerWidth - 200),
+              top: Math.max(confirmPopup.y - 130, 10),
+            }}
+          >
+            <p className="text-[10px] text-gray-400 font-bold uppercase text-center mb-2">Chấm công ngày {confirmPopup.day}</p>
+            <div className="space-y-1.5">
+              <button
+                onClick={() => handleConfirm('present')}
+                className="w-full py-2.5 rounded-xl bg-green-500 text-white text-xs font-bold hover:bg-green-600 active:scale-95 transition-all"
+              >
+                ✓ 1 công
+              </button>
+              <button
+                onClick={() => handleConfirm('half-day')}
+                className="w-full py-2.5 rounded-xl bg-amber-500 text-white text-xs font-bold hover:bg-amber-600 active:scale-95 transition-all"
+              >
+                ½ công
+              </button>
+              <button
+                onClick={() => handleConfirm('remove')}
+                className="w-full py-2.5 rounded-xl bg-gray-100 text-gray-600 text-xs font-bold hover:bg-gray-200 active:scale-95 transition-all"
+              >
+                Xóa chấm công
+              </button>
+            </div>
+            <button
+              onClick={() => setConfirmPopup(null)}
+              className="absolute -top-2 -right-2 w-6 h-6 bg-white border border-gray-200 rounded-full flex items-center justify-center shadow-sm hover:bg-gray-50"
+            >
+              <X size={12} className="text-gray-400" />
+            </button>
+          </motion.div>
+        </>
+      )}
+    </AnimatePresence>
+    </>
   );
 };

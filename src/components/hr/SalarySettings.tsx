@@ -81,11 +81,6 @@ export const SalarySettings = ({ user, onBack, addToast }: {
   return (
     <div className="p-4 md:p-6 space-y-6 pb-44">
       <PageBreadcrumb title="Cài đặt lương" onBack={onBack} />
-      <div className="flex items-center justify-between">
-        <h2 className="text-xl font-bold text-gray-800 flex items-center gap-2">
-          <Settings2 className="text-primary" /> Cài đặt lương
-        </h2>
-      </div>
 
       <div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
         <table className="w-full text-left border-collapse whitespace-nowrap">

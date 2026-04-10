@@ -45,6 +45,10 @@ export const Transfer = ({ user, onBack, addToast, initialAction, setHideBottomN
   const { warehouses, materials, groups, refreshAll, fetchWarehouses } = useInventoryData(user.data_view_permission);
   const [showFilter, setShowFilter] = useState(false);
   const [statusFilter, setStatusFilter] = useState('Tất cả');
+  const [filterStartDate, setFilterStartDate] = useState('');
+  const [filterEndDate, setFilterEndDate] = useState('');
+  const [filterWarehouseId, setFilterWarehouseId] = useState('');
+  const [searchTerm, setSearchTerm] = useState('');
 
 
   const initialFormState = {
@@ -94,7 +98,9 @@ export const Transfer = ({ user, onBack, addToast, initialAction, setHideBottomN
     try {
       let query = supabase.from('transfers').select('*, from_wh:warehouses!from_warehouse_id(name, code), to_wh:warehouses!to_warehouse_id(name, code), materials(name, code, unit)');
       
-      if (statusFilter !== 'Tất cả') {
+      if (statusFilter === 'Tất cả') {
+        query = query.neq('status', 'Đã xóa');
+      } else {
         query = query.eq('status', statusFilter);
       }
 
@@ -344,14 +350,8 @@ export const Transfer = ({ user, onBack, addToast, initialAction, setHideBottomN
 
   return (
     <div className="p-4 md:p-6 space-y-6 pb-44">
-      <PageBreadcrumb title="Luân chuyển kho" onBack={onBack} />
-      <div className="flex items-center justify-between gap-4">
-        <div>
-          <h2 className="text-xl font-bold text-gray-800 flex items-center gap-2">
-            <ArrowLeftRight className="text-orange-500" /> Luân chuyển kho
-          </h2>
-          <p className="text-xs text-gray-500 mt-1">Luân chuyển vật tư giữa các kho</p>
-        </div>
+      <div className="flex items-center justify-between gap-2">
+        <PageBreadcrumb title="Luân chuyển kho" onBack={onBack} />
         <div className="flex items-center gap-2">
           <Button
             size="icon"
@@ -370,25 +370,64 @@ export const Transfer = ({ user, onBack, addToast, initialAction, setHideBottomN
             exit={{ opacity: 0, height: 0 }}
             className="overflow-hidden"
           >
-            <div className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 mb-4">
-              <label className="text-[10px] font-bold text-gray-400 uppercase block mb-2">Lọc theo trạng thái</label>
-              <div className="flex items-center gap-2 overflow-x-auto pb-2 md:pb-0 no-scrollbar">
-                {['Tất cả', 'Chờ duyệt', 'Đã duyệt', 'Từ chối'].map((status) => (
-                  <Button
-                    key={status}
-                    size="sm"
-                    variant={statusFilter === status ? 'primary' : 'outline'}
-                    onClick={() => setStatusFilter(status)}
-                  >
-                    {status}
-                  </Button>
-                ))}
+            <div className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 mb-4 space-y-4">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                <div className="space-y-1">
+                  <label className="text-[10px] font-bold text-gray-400 uppercase">Từ ngày</label>
+                  <input type="date" value={filterStartDate} onChange={e => setFilterStartDate(e.target.value)} className="w-full px-3 py-2 rounded-lg border border-gray-200 text-xs outline-none focus:ring-2 focus:ring-primary/20" />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-[10px] font-bold text-gray-400 uppercase">Đến ngày</label>
+                  <input type="date" value={filterEndDate} onChange={e => setFilterEndDate(e.target.value)} className="w-full px-3 py-2 rounded-lg border border-gray-200 text-xs outline-none focus:ring-2 focus:ring-primary/20" />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-[10px] font-bold text-gray-400 uppercase">Kho</label>
+                  <select value={filterWarehouseId} onChange={e => setFilterWarehouseId(e.target.value)} className="w-full px-3 py-2 rounded-lg border border-gray-200 text-xs outline-none focus:ring-2 focus:ring-primary/20">
+                    <option value="">Tất cả kho</option>
+                    {warehouses.map(w => <option key={w.id} value={w.id}>{w.name}</option>)}
+                  </select>
+                </div>
+                <div className="space-y-1">
+                  <label className="text-[10px] font-bold text-gray-400 uppercase">Tìm kiếm</label>
+                  <input type="text" placeholder="Vật tư, mã phiếu, ghi chú..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="w-full px-3 py-2 rounded-lg border border-gray-200 text-xs outline-none focus:ring-2 focus:ring-primary/20" />
+                </div>
+              </div>
+              <div>
+                <label className="text-[10px] font-bold text-gray-400 uppercase block mb-2">Trạng thái</label>
+                <div className="flex items-center gap-2 overflow-x-auto pb-2 md:pb-0 no-scrollbar">
+                  {['Tất cả', 'Chờ duyệt', 'Đã duyệt', 'Từ chối', 'Đã xóa'].map((status) => (
+                    <Button
+                      key={status}
+                      size="sm"
+                      variant={statusFilter === status ? 'primary' : 'outline'}
+                      onClick={() => setStatusFilter(status)}
+                    >
+                      {status === 'Đã xóa' ? 'Thùng rác' : status}
+                    </Button>
+                  ))}
+                </div>
               </div>
             </div>
           </motion.div>
         )}
       </AnimatePresence>
 
+      {(() => {
+        const filteredSlips = slips.filter(item => {
+          let match = true;
+          if (filterStartDate && item.date < filterStartDate) match = false;
+          if (filterEndDate && item.date > filterEndDate) match = false;
+          if (filterWarehouseId && item.from_warehouse_id !== filterWarehouseId && item.to_warehouse_id !== filterWarehouseId) match = false;
+          if (searchTerm) {
+            const s = searchTerm.toLowerCase();
+            const nameMatch = (item.materials?.name || '').toLowerCase().includes(s);
+            const codeMatch = (item.transfer_code || '').toLowerCase().includes(s);
+            const noteMatch = (item.notes || '').toLowerCase().includes(s);
+            if (!nameMatch && !codeMatch && !noteMatch) match = false;
+          }
+          return match;
+        });
+        return (
       <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse min-w-[700px] whitespace-nowrap">
@@ -405,23 +444,20 @@ export const Transfer = ({ user, onBack, addToast, initialAction, setHideBottomN
             <tbody className="divide-y divide-gray-100">
               {loading ? (
                 <tr><td colSpan={6} className="px-4 py-8 text-center text-gray-400 italic">Đang tải...</td></tr>
-              ) : slips.length === 0 ? (
+              ) : filteredSlips.length === 0 ? (
                 <tr><td colSpan={6} className="px-4 py-8 text-center text-gray-400 italic">Chưa có phiếu chuyển nào</td></tr>
               ) : (
-                slips.map((item) => (
+                filteredSlips.map((item) => (
                   <tr key={item.id} onClick={() => handleRowClick(item)} className="hover:bg-gray-50 transition-colors cursor-pointer">
                     <td className="px-4 py-3 text-xs text-gray-600">{formatDate(item.date)}</td>
                     <td className="px-4 py-3 text-xs text-gray-600">
-                      <p>{item.from_wh?.name}</p>
-                      <p className="text-[10px] text-gray-400">#{item.from_wh?.code}</p>
+                      {item.from_wh?.name}
                     </td>
                     <td className="px-4 py-3 text-xs text-gray-600">
-                      <p>{item.to_wh?.name}</p>
-                      <p className="text-[10px] text-gray-400">#{item.to_wh?.code}</p>
+                      {item.to_wh?.name}
                     </td>
                     <td className="px-4 py-3 text-xs text-gray-600 font-medium">
-                      <p>{item.materials?.name}</p>
-                      <p className="text-[10px] text-gray-400">#{item.materials?.code}</p>
+                      {item.materials?.name}
                     </td>
                     <td className="px-4 py-3 text-xs text-orange-600 text-center font-bold">{item.quantity}</td>
                     <td className="px-4 py-3 text-xs">
@@ -438,6 +474,8 @@ export const Transfer = ({ user, onBack, addToast, initialAction, setHideBottomN
           </table>
         </div>
       </div>
+        );
+      })()}
 
       {/* Detail Panel — slide-up mobile, side panel desktop */}
       <AnimatePresence>
@@ -484,19 +522,16 @@ export const Transfer = ({ user, onBack, addToast, initialAction, setHideBottomN
               <div className="flex-1 overflow-y-auto p-5 space-y-4">
                 {[
                   { label: 'Ngày chuyển', value: formatDate(selectedSlip.date) },
+                  { label: 'Vật tư', value: selectedSlip.materials?.name },
                   { label: 'Từ kho', value: selectedSlip.from_wh?.name },
                   { label: 'Đến kho', value: selectedSlip.to_wh?.name },
-                  { label: 'Vật tư', value: selectedSlip.materials?.name, sub: `Mã: ${selectedSlip.materials?.code || '—'}` },
                   { label: 'Số lượng', value: `${formatNumber(selectedSlip.quantity)} ${selectedSlip.materials?.unit || ''}`, highlight: true },
-                  { label: 'Ghi chú', value: selectedSlip.notes || '—' },
                   { label: 'Trạng thái', value: selectedSlip.status || 'Chờ duyệt' },
-                ].map(({ label, value, sub, highlight }) => (
+                  { label: 'Diễn giải', value: selectedSlip.notes || '—' },
+                ].map(({ label, value, highlight }) => (
                   <div key={label} className="flex justify-between items-start border-b border-gray-50 pb-3 gap-4">
-                    <span className="text-[10px] text-gray-400 font-bold uppercase shrink-0">{label}</span>
-                    <div className="text-right">
-                      <p className={`text-sm font-medium ${highlight ? 'text-orange-600 font-bold' : 'text-gray-800'}`}>{value || '—'}</p>
-                      {sub && <p className="text-[10px] text-gray-400">{sub}</p>}
-                    </div>
+                    <span className="text-[11px] text-gray-500 font-medium shrink-0">{label}</span>
+                    <p className={`text-sm text-right ${highlight ? 'text-orange-600 font-bold' : 'text-gray-900'}`}>{value || '—'}</p>
                   </div>
                 ))}
               </div>

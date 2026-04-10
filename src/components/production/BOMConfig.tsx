@@ -177,14 +177,6 @@ export const BOMConfig = ({ user, onBack, addToast }: {
   return (
     <div className="p-4 md:p-6 space-y-6 pb-44">
       <PageBreadcrumb title="Định mức sản xuất" onBack={onBack} />
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-xl font-bold text-gray-800 flex items-center gap-2">
-            <Settings className="text-primary" /> Định mức sản xuất (BOM)
-          </h2>
-          <p className="text-xs text-gray-500 mt-1">Cấu hình nguyên vật liệu tiêu hao cho mỗi loại thành phẩm</p>
-        </div>
-      </div>
 
       <FAB onClick={() => {
         setFormData({ product_item_id: '', name: '', notes: '', items: [] });

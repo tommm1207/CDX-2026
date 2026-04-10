@@ -290,14 +290,8 @@ export const MaterialGroups = ({ user, onBack, addToast }: {
 
   return (
     <div className="p-4 md:p-6 space-y-6 pb-44">
-      <PageBreadcrumb title="Nhóm vật tư" onBack={onBack} />
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-xl font-bold text-gray-800 flex items-center gap-2">
-            <Layers className="text-primary" /> Nhóm vật tư
-          </h2>
-          <p className="text-xs text-gray-500 mt-1">Quản lý phân loại danh mục vật tư hệ thống</p>
-        </div>
+      <div className="flex items-center justify-between gap-2">
+        <PageBreadcrumb title="Nhóm vật tư" onBack={onBack} />
         <button
           onClick={() => setShowFilter(f => !f)}
           className={`p-2.5 rounded-xl border transition-colors ${

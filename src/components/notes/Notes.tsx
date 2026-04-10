@@ -74,7 +74,11 @@ export const Notes = ({ user, onBack, addToast, initialAction, setHideBottomNav 
 
   const fetchData = async () => {
     setLoading(true);
-    const { data: notesData } = await supabase.from('notes').select('*, users(full_name)').order('created_at', { ascending: false });
+    const { data: notesData } = await supabase
+      .from('notes')
+      .select('*, users(full_name)')
+      .neq('status', 'Đã xóa')
+      .order('created_at', { ascending: false });
     if (notesData) setNotes(notesData);
 
     let empQuery = supabase.from('users').select('*').neq('status', 'Nghỉ việc');

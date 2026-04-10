@@ -58,37 +58,35 @@ export const Attendance = ({ user, onBack, addToast }: {
     return attendance.find(a => a.employee_id === empId && a.date === dateStr);
   };
 
-  const toggleAttendance = async (empId: string, day: number) => {
+  const toggleAttendance = async (empId: string, day: number, action?: 'present' | 'half-day' | 'remove') => {
     if (user.role === 'User') return;
     const dateStr = `${selectedYear}-${String(selectedMonth).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
     const current = getStatus(empId, day);
 
-    if (current) {
-      let nextStatus = 'present';
-      let hours = 8;
-
-      if (current.status === 'present') {
-        nextStatus = 'half-day';
-        hours = 4;
-      } else if (current.status === 'half-day') {
-        nextStatus = 'absent';
-        hours = 0;
-      } else {
+    if (action === 'remove') {
+      if (current) {
         await supabase.from('attendance').delete().eq('id', current.id);
-        fetchData();
-        return;
+        if (addToast) addToast(`Đã xóa chấm công ngày ${day}/${selectedMonth}`, 'info');
       }
+      fetchData();
+      return;
+    }
 
-      await supabase.from('attendance').update({ status: nextStatus, hours_worked: hours, overtime_hours: current.overtime_hours || 0 }).eq('id', current.id);
+    const status = action || 'present';
+    const hours = status === 'present' ? 8 : 4;
+
+    if (current) {
+      await supabase.from('attendance').update({ status, hours_worked: hours, overtime_hours: current.overtime_hours || 0 }).eq('id', current.id);
     } else {
       await supabase.from('attendance').insert([{
         employee_id: empId,
         date: dateStr,
-        status: 'present',
-        hours_worked: 8,
+        status,
+        hours_worked: hours,
         overtime_hours: 0
       }]);
     }
+    if (addToast) addToast(`Đã chấm ${status === 'present' ? '1 công' : '½ công'} ngày ${day}/${selectedMonth}`, 'success');
     fetchData();
   };
 
@@ -269,14 +267,8 @@ export const Attendance = ({ user, onBack, addToast }: {
 
   return (
     <div className="p-4 md:p-6 space-y-6 pb-44">
-      <PageBreadcrumb title="Chấm công" onBack={onBack} />
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <h2 className="text-xl font-bold text-gray-800 flex items-center gap-2">
-            <CalendarCheck className="text-primary" /> Chấm công nhân viên
-          </h2>
-          <p className="text-xs text-gray-500 mt-1">Quản lý chuyên cần và giờ làm việc</p>
-        </div>
+        <PageBreadcrumb title="Chấm công" onBack={onBack} />
         <div className="flex items-center gap-2">
           <MonthYearPicker
             selectedMonth={selectedMonth}

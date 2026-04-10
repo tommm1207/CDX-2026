@@ -154,14 +154,8 @@ export const MonthlySalary = ({ user, onBack, addToast }: {
 
   return (
     <div className="p-4 md:p-6 space-y-6 pb-44">
-      <PageBreadcrumb title="Tổng hợp lương" onBack={onBack} />
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <h2 className="text-xl font-bold text-gray-800 flex items-center gap-2">
-            <Wallet className="text-primary" /> Tổng hợp lương tháng
-          </h2>
-          <p className="text-xs text-gray-500 mt-1">Bảng lương chi tiết dựa trên công và các khoản phụ phí</p>
-        </div>
+        <PageBreadcrumb title="Tổng hợp lương" onBack={onBack} />
         <div className="flex items-center gap-2">
           <MonthYearPicker
             selectedMonth={selectedMonth}

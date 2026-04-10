@@ -79,14 +79,6 @@ export const DeletedEmployees = ({ onBack, addToast }: { onBack: () => void, add
   return (
     <div className="p-4 md:p-6 space-y-6 pb-44">
       <PageBreadcrumb title="Nhân sự đã xóa" onBack={onBack} />
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-xl font-bold text-gray-800 flex items-center gap-2">
-            <UserCircle className="text-rose-500" /> Danh sách nhân sự đã xóa
-          </h2>
-          <p className="text-xs text-gray-500 mt-1">Hồ sơ trong thùng rác có thể được khôi phục hoặc xóa vĩnh viễn</p>
-        </div>
-      </div>
 
       <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
         <div className="overflow-x-auto">

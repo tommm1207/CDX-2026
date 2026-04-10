@@ -18,8 +18,8 @@ export const Reminders = ({ user, onBack, addToast, initialAction, setHideBottom
 }) => {
   const [reminders, setReminders] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [showSetReminder, setShowSetReminder] = useState(false);
-  const [showAddNew, setShowAddNew] = useState(initialAction === 'add');
+  const [showSetReminder, setShowSetReminder] = useState(initialAction === 'add');
+  const [showAddNew, setShowAddNew] = useState(false);
 
   useEffect(() => {
     if (setHideBottomNav) {

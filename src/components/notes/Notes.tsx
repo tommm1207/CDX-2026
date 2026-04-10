@@ -31,8 +31,8 @@ export const Notes = ({ user, onBack, addToast, initialAction, setHideBottomNav 
 }) => {
   const [notes, setNotes] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [showAddNew, setShowAddNew] = useState(initialAction === 'add');
-  const [showQuickNote, setShowQuickNote] = useState(false);
+  const [showAddNew, setShowAddNew] = useState(false);
+  const [showQuickNote, setShowQuickNote] = useState(initialAction === 'add');
 
   useEffect(() => {
     if (setHideBottomNav) {

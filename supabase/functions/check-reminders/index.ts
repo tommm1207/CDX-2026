@@ -49,14 +49,25 @@ serve(async (req) => {
     let totalSent = 0;
 
     for (const rem of reminders) {
-      // Parse assignees from serialized content field
+      // Parse content to get text and assignees
+      let textContent = "";
       let assignees: string[] = [];
+      
       try {
         if (rem.content) {
-          const parsed = JSON.parse(rem.content);
-          assignees = parsed.assignees || [];
+          if (rem.content.trim().startsWith('{"__v":1')) {
+            const parsed = JSON.parse(rem.content);
+            textContent = parsed.text || "";
+            assignees = parsed.assignees || [];
+          } else {
+            // Fallback for raw text content
+            textContent = rem.content;
+            assignees = [];
+          }
         }
       } catch (e) {
+        console.error(`Error parsing content for reminder ${rem.id}:`, e);
+        textContent = rem.content || "";
         assignees = [];
       }
 
@@ -67,7 +78,12 @@ serve(async (req) => {
       if (assignees.length > 0) {
         query = query.in("user_id", assignees);
       }
-      const { data: subs } = await query;
+      const { data: subs, error: subErr } = await query;
+      
+      if (subErr) {
+        console.error("Error fetching push subscriptions:", subErr);
+        continue;
+      }
 
       if (!subs || subs.length === 0) continue;
 
@@ -79,8 +95,8 @@ serve(async (req) => {
       });
 
       for (const sub of subs) {
-        const pushSub = JSON.parse(sub.subscription_json);
         try {
+          const pushSub = JSON.parse(sub.subscription_json);
           await webpush.sendNotification(pushSub, pushPayload, {
             headers: { 'Urgency': 'high' }
           });
@@ -88,6 +104,7 @@ serve(async (req) => {
           await new Promise(resolve => setTimeout(resolve, 2000)); // 2s gap between devices
         } catch (e: any) {
           // NOT deleting on 410/404 - Apple beta iOS returns false 410s for valid subscriptions
+          console.warn(`Push failed for sub ${sub.id}:`, e.message);
         }
       }
 
@@ -103,7 +120,11 @@ serve(async (req) => {
       { headers: { "Content-Type": "application/json" } }
     );
 
-  } catch (err) {
-    return new Response(JSON.stringify({ error: err.message }), { status: 500 });
+  } catch (err: any) {
+    console.error("Function error:", err);
+    return new Response(JSON.stringify({ error: err.message }), { 
+      status: 500,
+      headers: { "Content-Type": "application/json" }
+    });
   }
 });

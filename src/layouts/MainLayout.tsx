@@ -61,16 +61,23 @@ export const MainLayout = ({
               <h1 className="font-bold text-sm tracking-wide hidden sm:block">QUẢN LÝ KHO CDX</h1>
             </button>
 
-            {/* Menu Hint - Subtle Pulsating Dot over logo corner */}
+            {/* Menu Hint - Subtle Pulsating Dot & Text label */}
             <motion.div
               initial={{ opacity: 0, scale: 0 }}
               animate={{ opacity: 1, scale: 1 }}
-              className="absolute -top-1 -right-1 z-20 pointer-events-none"
+              className="absolute -top-1 -right-6 z-20 pointer-events-none flex items-center gap-1"
             >
               <div className="relative flex items-center justify-center">
                  <div className="absolute inset-0 bg-amber-400 rounded-full animate-ping opacity-75" />
-                 <div className="relative w-2.5 h-2.5 bg-amber-400 rounded-full border-2 border-primary shadow-sm" />
+                 <div className="relative w-2 h-2 bg-amber-400 rounded-full border border-primary shadow-sm" />
               </div>
+              <motion.span
+                animate={{ opacity: [0.6, 1, 0.6] }}
+                transition={{ duration: 2.5, repeat: Infinity, ease: "easeInOut" }}
+                className="text-[6px] font-black text-amber-400 uppercase tracking-tight"
+              >
+                menu
+              </motion.span>
             </motion.div>
           </div>
 

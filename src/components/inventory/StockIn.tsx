@@ -838,61 +838,60 @@ export const StockIn = ({
                       />
                     </div>
 
-                    <div className="flex items-end gap-2 relative z-[120]">
-                      <div className="flex-1">
-                        <CreatableSelect
-                          label="Tên vật tư nhập *"
-                          value={formData.material_id}
-                          options={materials}
-                          onChange={(val) => {
-                            const mat = materials.find((m) => m.id === val);
-                            setFormData({
-                              ...formData,
-                              material_id: val,
-                              unit: mat?.unit || formData.unit,
-                            });
-                          }}
-                          onCreate={() => {
-                            if (addToast)
-                              addToast(
-                                'Vui lòng chọn vật tư có trong Danh mục. Hoặc click nút + bên cạnh để tạo mới.',
-                                'info',
-                              );
-                            else
-                              alert(
-                                'Vui lòng chọn vật tư có trong Danh mục. Hoặc click nút + bên cạnh để tạo mới.',
-                              );
-                          }}
-                          placeholder="Chọn vật tư..."
-                          required
-                        />
+                    <div className="relative z-[120]">
+                      <div className="flex items-center justify-between mb-1">
+                        <label className="text-[10px] font-bold text-gray-400 uppercase">
+                          Tên vật tư nhập *
+                        </label>
+                        <button
+                          type="button"
+                          onClick={() => setShowAddMaterial(true)}
+                          className="text-[10px] font-bold text-blue-600 flex items-center gap-1 hover:underline"
+                          title="Thêm vật tư nhanh"
+                        >
+                          <PackagePlus size={12} /> Thêm mới
+                        </button>
                       </div>
-                      <button
-                        type="button"
-                        onClick={() => setShowAddMaterial(true)}
-                        className="h-[42px] px-3 bg-blue-50 text-blue-600 rounded-xl hover:bg-blue-100 transition-colors flex items-center justify-center shrink-0 border border-blue-100"
-                        title="Thêm vật tư nhanh"
-                      >
-                        <PackagePlus size={20} />
-                      </button>
+                      <CreatableSelect
+                        value={formData.material_id}
+                        options={materials}
+                        onChange={(val) => {
+                          const mat = materials.find((m) => m.id === val);
+                          setFormData({
+                            ...formData,
+                            material_id: val,
+                            unit: mat?.unit || formData.unit,
+                          });
+                        }}
+                        onCreate={() => {
+                          if (addToast)
+                            addToast(
+                              'Vui lòng chọn vật tư có trong Danh mục. Hoặc click nút Thêm mới ở trên để tạo.',
+                              'info',
+                            );
+                          else
+                            alert(
+                              'Vui lòng chọn vật tư có trong Danh mục. Hoặc click nút Thêm mới ở trên để tạo.',
+                            );
+                        }}
+                        placeholder="Chọn vật tư..."
+                        required
+                      />
                     </div>
 
-                    <NumericInput
-                      label="Số lượng nhập *"
-                      required
-                      value={formData.quantity}
-                      onChange={(val) => setFormData({ ...formData, quantity: val })}
-                      showControls
-                    />
-
-                    <div className="space-y-1">
+                    <div className="space-y-1 relative z-[110]">
                       <label className="text-[10px] font-bold text-gray-400 uppercase">
-                        Thành tiền
+                        Diễn giải
                       </label>
-                      <div className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm text-center bg-gray-50 outline-none font-bold text-blue-600">
-                        {formatCurrency(formData.quantity * formData.unit_price)}
-                      </div>
+                      <textarea
+                        rows={2}
+                        value={formData.notes}
+                        onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+                        className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-blue-500/20 resize-none"
+                      />
                     </div>
+
+                    {/* Moved Quantity and Total Amount to the right column */}
                   </div>
 
                   <div className="space-y-4">
@@ -906,36 +905,43 @@ export const StockIn = ({
                       required
                     />
 
-                    <div className="space-y-1">
-                      <label className="text-[10px] font-bold text-gray-400 uppercase">
-                        Đơn vị tính
-                      </label>
-                      <input
-                        type="text"
-                        value={formData.unit}
-                        onChange={(e) => setFormData({ ...formData, unit: e.target.value })}
-                        className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-blue-500/20"
+                    <NumericInput
+                      label="Số lượng nhập *"
+                      required
+                      value={formData.quantity}
+                      onChange={(val) => setFormData({ ...formData, quantity: val })}
+                      showControls
+                    />
+
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-bold text-gray-400 uppercase">
+                          Đơn vị tính
+                        </label>
+                        <input
+                          type="text"
+                          value={formData.unit}
+                          onChange={(e) => setFormData({ ...formData, unit: e.target.value })}
+                          className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-blue-500/20"
+                        />
+                      </div>
+
+                      <NumericInput
+                        label="Đơn giá"
+                        value={formData.unit_price}
+                        onChange={(val) => setFormData({ ...formData, unit_price: val })}
+                        showControls={false}
+                        step={1000}
                       />
                     </div>
 
-                    <NumericInput
-                      label="Đơn giá"
-                      value={formData.unit_price}
-                      onChange={(val) => setFormData({ ...formData, unit_price: val })}
-                      showControls
-                      step={1000}
-                    />
-
                     <div className="space-y-1">
                       <label className="text-[10px] font-bold text-gray-400 uppercase">
-                        Diễn giải
+                        Thành tiền
                       </label>
-                      <textarea
-                        rows={2}
-                        value={formData.notes}
-                        onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-                        className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-blue-500/20 resize-none"
-                      />
+                      <div className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm text-center bg-gray-50 outline-none font-bold text-blue-600">
+                        {formatCurrency(formData.quantity * formData.unit_price)}
+                      </div>
                     </div>
                   </div>
 

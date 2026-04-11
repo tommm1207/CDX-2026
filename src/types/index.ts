@@ -15,10 +15,9 @@ export interface Employee {
   position?: string;
   has_salary?: boolean;
   role: UserRole; // Phân quyền
-  data_view_permission?: string; // TODO: Chưa implement — dự định dùng để giới hạn nhân viên chỉ xem dữ liệu của kho/bộ phận cụ thể
-  avatar_url?: string;
+  data_view_permission?: string;
   resign_date?: string;
-  initial_budget?: number; // TODO: Chưa implement — dự định dùng làm ngân sách ban đầu cho từng nhân viên/dự án
+  initial_budget?: number;
   status: 'Đang làm việc' | 'Hoạt động' | 'Nghỉ việc';
   created_at?: string;
 }

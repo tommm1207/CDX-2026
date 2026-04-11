@@ -17,18 +17,22 @@ import { supabase } from '@/lib/supabase';
 import { PageBreadcrumb } from '../shared/PageBreadcrumb';
 
 export const BACKUP_TABLES = [
-  { id: 'users', label: 'Bảng Nhân sự' },
-  { id: 'attendance', label: 'Bảng Chấm công' },
-  { id: 'advances', label: 'Tạm ứng & Phụ cấp' },
+  { id: 'users', label: 'Danh sách Nhân sự' },
+  { id: 'attendance', label: 'Dữ liệu Chấm công (Lương)' },
+  { id: 'advances', label: 'Dữ liệu Tạm ứng (Lương)' },
+  { id: 'allowances', label: 'Dữ liệu Phụ cấp (Lương)' },
+  { id: 'salary_settings', label: 'Cấu hình Lương (Hợp đồng)' },
   { id: 'stock_in', label: 'Báo cáo Nhập kho' },
   { id: 'stock_out', label: 'Báo cáo Xuất kho' },
   { id: 'transfers', label: 'Báo cáo Chuyển kho' },
+  { id: 'production_orders', label: 'Lệnh sản xuất' },
+  { id: 'bom_configs', label: 'Định mức sản xuất (BOM)' },
   { id: 'warehouses', label: 'Danh sách Kho' },
   { id: 'materials', label: 'Danh mục Vật tư' },
   { id: 'material_groups', label: 'Nhóm vật tư' },
   { id: 'costs', label: 'Báo cáo Chi phí' },
-  { id: 'notes', label: 'Nhật ký & Ghi chú' },
-  { id: 'reminders', label: 'Lịch nhắc' },
+  { id: 'notes', label: 'Ghi chú & Nhật ký' },
+  { id: 'reminders', label: 'Lịch nhắc việc' },
   { id: 'partners', label: 'Khách hàng & NCC' },
 ];
 

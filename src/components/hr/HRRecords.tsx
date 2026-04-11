@@ -42,7 +42,6 @@ export const HRRecords = ({
     has_salary: false,
     role: 'User' as 'User' | 'Admin' | 'Admin App',
     data_view_permission: '',
-    avatar_url: '',
     resign_date: '',
     initial_budget: 0,
     status: 'Đang làm việc',
@@ -110,7 +109,6 @@ export const HRRecords = ({
       department: emp.department || '',
       position: emp.position || '',
       data_view_permission: emp.data_view_permission || '',
-      avatar_url: emp.avatar_url || '',
     });
     setIsEditing(true);
     setShowModal(true);
@@ -178,7 +176,6 @@ export const HRRecords = ({
         department: formData.department || null,
         position: formData.position || null,
         data_view_permission: formData.data_view_permission || null,
-        avatar_url: formData.avatar_url || null,
       };
 
       if (isEditing) {
@@ -643,17 +640,6 @@ export const HRRecords = ({
                         <p className="text-[10px] text-gray-400 italic mt-1">
                           * Tính năng phân quyền theo kho đang được phát triển
                         </p>
-                      </div>
-                      <div className="space-y-1">
-                        <label className="text-[10px] font-bold text-gray-400 uppercase">
-                          Ảnh cá nhân (URL)
-                        </label>
-                        <input
-                          type="text"
-                          value={formData.avatar_url}
-                          onChange={(e) => setFormData({ ...formData, avatar_url: e.target.value })}
-                          className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20"
-                        />
                       </div>
                       <div className="space-y-1">
                         <label className="text-[10px] font-bold text-gray-400 uppercase">

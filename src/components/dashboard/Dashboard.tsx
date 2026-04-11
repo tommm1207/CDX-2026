@@ -109,7 +109,7 @@ export const Dashboard = ({ user, onNavigate, addToast, pendingApprovals = 0 }: 
       description: 'Kiểm tra số lượng tồn kho',
     },
     {
-      id: 'material-catalog',
+      id: 'materials',
       label: 'Danh mục vật tư',
       icon: Package,
       color: 'bg-cyan-600',
@@ -124,7 +124,7 @@ export const Dashboard = ({ user, onNavigate, addToast, pendingApprovals = 0 }: 
       description: 'Theo dõi chuyên cần hàng ngày',
     },
     {
-      id: 'monthly-salary',
+      id: 'payroll',
       label: 'Bảng lương',
       icon: Wallet,
       color: 'bg-emerald-600',
@@ -138,6 +138,20 @@ export const Dashboard = ({ user, onNavigate, addToast, pendingApprovals = 0 }: 
       color: 'bg-amber-600',
       description: 'Duyệt phiếu chờ xử lý',
       adminOnly: true,
+    },
+    {
+      id: 'reminders',
+      label: 'Lời nhắc',
+      icon: Bell,
+      color: 'bg-primary',
+      description: 'Xem thông báo và nhắc nhở',
+    },
+    {
+      id: 'notes',
+      label: 'Ghi chú',
+      icon: FileText,
+      color: 'bg-orange-600',
+      description: 'Ghi chép nhật ký công việc',
     },
   ];
 
@@ -189,15 +203,15 @@ export const Dashboard = ({ user, onNavigate, addToast, pendingApprovals = 0 }: 
         </div>
       </div>
 
-      {/* Quick Actions — Icon Grid */}
-      <div className="grid grid-cols-4 md:grid-cols-5 gap-2 md:gap-6">
+      {/* Quick Actions — Fluid Flex Grid */}
+      <div className="flex flex-wrap gap-2 md:gap-6">
         {visibleActions.map((action) => (
           <motion.div
             key={action.id}
             whileHover={{ y: -3, scale: 1.03 }}
             whileTap={{ scale: 0.96 }}
             onClick={() => onNavigate(action.id)}
-            className="group bg-white md:p-6 rounded-xl md:rounded-[2rem] shadow-sm border border-gray-100 cursor-pointer hover:shadow-xl hover:shadow-gray-200/50 transition-all flex flex-col items-center justify-center py-2.5 px-1 md:items-start md:gap-4 relative overflow-hidden"
+            className="group flex-1 min-w-[75px] md:min-w-[240px] bg-white md:p-6 rounded-xl md:rounded-[2rem] shadow-sm border border-gray-100 cursor-pointer hover:shadow-xl hover:shadow-gray-200/50 transition-all flex flex-col items-center justify-center py-2.5 px-1 md:items-start md:gap-4 relative overflow-hidden"
           >
             <div className="absolute top-0 right-0 p-6 bg-gray-50 rounded-bl-full translate-x-4 -translate-y-4 group-hover:bg-primary/5 transition-colors hidden md:block" />
             <div

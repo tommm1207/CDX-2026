@@ -40,7 +40,6 @@ export const CreatableSelect = ({
         // eslint-disable-next-line react-hooks/set-state-in-effect
         setSearchTerm(selectedOption.name);
       } else if (value && !isUUID(value)) {
-         
         setSearchTerm(value);
       } else {
         setSearchTerm('');
@@ -89,9 +88,9 @@ export const CreatableSelect = ({
               if (e.target.value === '') onChange('');
             }}
             onFocus={() => !disabled && setIsOpen(true)}
-            className={`${selectClassName} pr-10 ${disabled ? 'bg-gray-100 cursor-not-allowed opacity-70' : ''}`}
+            className={`${selectClassName} pr-14 ${disabled ? 'bg-gray-100 cursor-not-allowed opacity-70' : ''}`}
           />
-          <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1">
+          <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-0.5 bg-white pl-1">
             {searchTerm && (
               <button
                 type="button"
@@ -100,7 +99,7 @@ export const CreatableSelect = ({
                   setSearchTerm('');
                   onChange('');
                 }}
-                className="p-1 hover:bg-gray-100 rounded-full text-gray-400"
+                className="p-1.5 hover:bg-gray-100 rounded-full text-gray-400 cursor-pointer z-10"
               >
                 <X size={12} />
               </button>

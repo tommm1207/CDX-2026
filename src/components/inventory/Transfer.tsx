@@ -905,32 +905,46 @@ export const Transfer = ({
                     />
                   </div>
                   <div className="space-y-4">
-                    <div className="flex items-end gap-2 relative z-[120]">
-                      <div className="flex-1">
-                        <CreatableSelect
-                          label="Vật tư luân chuyển *"
-                          value={formData.material_id}
-                          options={materials}
-                          onChange={(val) => setFormData({ ...formData, material_id: val })}
-                          onCreate={() => {
-                            if (addToast)
-                              addToast(
-                                'Vui lòng chọn vật tư có trong Danh mục. Hoặc click nút + bên cạnh để tạo mới.',
-                                'info',
-                              );
-                          }}
-                          placeholder="Chọn vật tư..."
-                          required
-                        />
+                    <div className="relative z-[120]">
+                      <div className="flex items-center justify-between mb-1">
+                        <label className="text-[10px] font-bold text-gray-400 uppercase">
+                          Vật tư luân chuyển *
+                        </label>
+                        <button
+                          type="button"
+                          onClick={() => setShowAddMaterial(true)}
+                          className="text-[10px] font-bold text-blue-600 flex items-center gap-1 hover:underline"
+                          title="Thêm vật tư nhanh"
+                        >
+                          <PackagePlus size={12} /> Thêm mới
+                        </button>
                       </div>
-                      <button
-                        type="button"
-                        onClick={() => setShowAddMaterial(true)}
-                        className="h-[42px] px-3 bg-blue-50 text-blue-600 rounded-xl hover:bg-blue-100 transition-colors flex items-center justify-center shrink-0 border border-blue-100"
-                        title="Thêm vật tư nhanh"
-                      >
-                        <PackagePlus size={20} />
-                      </button>
+                      <CreatableSelect
+                        value={formData.material_id}
+                        options={materials}
+                        onChange={(val) => setFormData({ ...formData, material_id: val })}
+                        onCreate={() => {
+                          if (addToast)
+                            addToast(
+                              'Vui lòng chọn vật tư có trong Danh mục. Hoặc click nút Thêm mới ở trên để tạo.',
+                              'info',
+                            );
+                        }}
+                        placeholder="Chọn vật tư..."
+                        required
+                      />
+                    </div>
+
+                    <div className="space-y-1 relative z-[110]">
+                      <label className="text-[10px] font-bold text-gray-400 uppercase">
+                        Ghi chú
+                      </label>
+                      <textarea
+                        rows={2}
+                        value={formData.notes}
+                        onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+                        className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-green-600/20 resize-none"
+                      />
                     </div>
                     <div>
                       <NumericInput
@@ -987,17 +1001,6 @@ export const Transfer = ({
                           </p>
                         </div>
                       )}
-                    </div>
-                    <div className="space-y-1">
-                      <label className="text-[10px] font-bold text-gray-400 uppercase">
-                        Ghi chú
-                      </label>
-                      <textarea
-                        rows={2}
-                        value={formData.notes}
-                        onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-                        className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-green-600/20 resize-none"
-                      />
                     </div>
                   </div>
                   <div className="md:col-span-2 flex justify-end gap-3 mt-4">

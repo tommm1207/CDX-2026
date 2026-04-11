@@ -238,7 +238,7 @@ export const Notes = ({
   return (
     <div className="p-4 md:p-6 space-y-6">
       <div className="flex items-center justify-between gap-2">
-        <PageBreadcrumb title="Nhật ký & Ghi chú" onBack={onBack} />
+        <PageBreadcrumb title="Ghi chú" onBack={onBack} />
         <div className="flex items-center gap-2">
           {filteredNotes.length > 0 && (
             <Button
@@ -343,7 +343,7 @@ export const Notes = ({
       <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
         <div className="p-4 border-b border-gray-50 flex items-center justify-between bg-primary/5">
           <h3 className="text-sm font-bold text-primary flex items-center gap-2 uppercase tracking-wider">
-            <FileText size={18} /> Bảng ghi chú tháng {new Date().getMonth() + 1}/
+            <FileText size={18} /> Ghi chú tháng {new Date().getMonth() + 1}/
             {new Date().getFullYear()}
           </h3>
         </div>
@@ -450,7 +450,7 @@ export const Notes = ({
       <AnimatePresence>
         {showQuickNote && (
           <div
-            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-md overflow-hidden"
+            className="fixed inset-0 z-[150] flex items-center justify-center p-4 bg-black/50 backdrop-blur-md overflow-hidden"
             onClick={() => setShowQuickNote(false)}
           >
             <motion.div
@@ -485,7 +485,7 @@ export const Notes = ({
                     value={formData.title}
                     onChange={(e) => setFormData({ ...formData, title: e.target.value })}
                     className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm focus:ring-2 focus:ring-primary/20 outline-none mt-1"
-                    placeholder="VD: Nhật ký công trình sáng..."
+                    placeholder="VD: Ghi chú công việc sáng..."
                   />
                 </div>
                 <div>
@@ -580,7 +580,7 @@ export const Notes = ({
       <AnimatePresence>
         {showAddNew && (
           <div
-            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-md overflow-hidden"
+            className="fixed inset-0 z-[150] flex items-center justify-center p-4 bg-black/50 backdrop-blur-md overflow-hidden"
             onClick={() => setShowAddNew(false)}
           >
             <motion.div
@@ -624,7 +624,7 @@ export const Notes = ({
                       value={formData.title}
                       onChange={(e) => setFormData({ ...formData, title: e.target.value })}
                       className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm focus:ring-2 focus:ring-primary/20 outline-none mt-1"
-                      placeholder="VD: Nhật ký công trình sáng..."
+                      placeholder="VD: Ghi chú công việc sáng..."
                     />
                   </div>
                   <div>

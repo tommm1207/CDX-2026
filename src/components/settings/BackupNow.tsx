@@ -53,14 +53,20 @@ export const BackupNow = ({
 
       // 2. Chuẩn bị dữ liệu tra cứu (Lookup Data)
       setStatus('Đang chuẩn bị dữ liệu tra cứu...');
-      const [{ data: users }, { data: warehouses }, { data: materials }, { data: groups }] =
-        await Promise.all([
-          supabase.from('users').select('id, full_name'),
-          supabase.from('warehouses').select('id, name'),
-          supabase.from('materials').select('id, name'),
-          supabase.from('material_groups').select('id, name'),
-        ]);
-      const lookupData = { users, warehouses, materials, groups };
+      const [
+        { data: users },
+        { data: warehouses },
+        { data: materials },
+        { data: groups },
+        { data: boms },
+      ] = await Promise.all([
+        supabase.from('users').select('id, full_name'),
+        supabase.from('warehouses').select('id, name'),
+        supabase.from('materials').select('id, name'),
+        supabase.from('material_groups').select('id, name'),
+        supabase.from('bom_configs').select('id, name'),
+      ]);
+      const lookupData = { users, warehouses, materials, groups, boms };
 
       // 3. Thêm dữ liệu các bảng
       const labels: string[] = [];

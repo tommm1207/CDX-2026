@@ -70,6 +70,11 @@ export const InventoryReport = ({
   const fetchReport = async () => {
     setLoading(true);
     try {
+      if (!startDate || !endDate) {
+        setReport([]);
+        return;
+      }
+
       const allowedWhIds = getAllowedWarehouses(user.data_view_permission);
       const whParam = selectedWarehouse || allowedWhIds || undefined;
       const rows = await getTonKhoTable(startDate, endDate, whParam);
@@ -103,6 +108,7 @@ export const InventoryReport = ({
       setReport(finalRows);
     } catch (err: any) {
       console.error('Error fetching report:', err);
+      setReport([]);
       if (addToast) addToast('Lỗi tải báo cáo: ' + err.message, 'error');
     } finally {
       setLoading(false);

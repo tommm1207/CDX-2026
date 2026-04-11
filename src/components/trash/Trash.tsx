@@ -52,13 +52,13 @@ export const Trash = ({
     <div className="p-4 md:p-6 space-y-6 pb-44">
       <PageBreadcrumb title="Thùng rác" onBack={onBack} />
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div className="flex flex-wrap gap-6">
         {trashItems.map((item) => (
           <motion.div
             key={item.id}
             whileHover={{ y: -4 }}
             onClick={() => onNavigate(item.id)}
-            className="bg-white p-8 rounded-2xl shadow-sm border border-gray-100 flex flex-col items-center justify-center gap-4 cursor-pointer group"
+            className="flex-1 min-w-[280px] bg-white p-8 rounded-2xl shadow-sm border border-gray-100 flex flex-col items-center justify-center gap-4 cursor-pointer group"
           >
             <div
               className={`p-6 rounded-2xl ${item.color} group-hover:scale-110 transition-transform`}

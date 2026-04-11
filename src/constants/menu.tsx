@@ -31,7 +31,7 @@ export const getMenuGroups = (pendingCount: number) => [
       { id: 'cost-report', label: 'Báo cáo chi phí', icon: FileText },
       { id: 'pending-approvals', label: 'Phiếu duyệt', icon: ClipboardCheck, badge: pendingCount },
       { id: 'cost-filter', label: 'Lọc chi phí', icon: Filter },
-    ]
+    ],
   },
   {
     title: 'QUẢN LÝ KHO',
@@ -43,14 +43,14 @@ export const getMenuGroups = (pendingCount: number) => [
       { id: 'warehouses', label: 'Danh sách kho', icon: Warehouse },
       { id: 'material-groups', label: 'Nhóm vật tư', icon: Layers },
       { id: 'materials', label: 'Danh mục vật tư', icon: Package },
-    ]
+    ],
   },
   {
     title: 'SẢN XUẤT',
     items: [
       { id: 'production-list', label: 'Lệnh sản xuất', icon: ClipboardList },
       { id: 'production-bom', label: 'Định mức sản xuất', icon: Settings },
-    ]
+    ],
   },
   {
     title: 'TIỀN LƯƠNG',
@@ -59,13 +59,11 @@ export const getMenuGroups = (pendingCount: number) => [
       { id: 'advances', label: 'Tạm ứng & phụ cấp', icon: Banknote },
       { id: 'payroll', label: 'Tổng hợp lương/tháng', icon: Wallet },
       { id: 'salary-settings', label: 'Cài đặt lương', icon: Settings2 },
-    ]
+    ],
   },
   {
     title: 'ĐỐI TÁC',
-    items: [
-      { id: 'partners', label: 'Khách hàng & nhà cung cấp', icon: Handshake },
-    ]
+    items: [{ id: 'partners', label: 'Khách hàng & nhà cung cấp', icon: Handshake }],
   },
   {
     title: 'HỆ THỐNG',
@@ -75,13 +73,13 @@ export const getMenuGroups = (pendingCount: number) => [
       { id: 'reminders', label: 'Thiết lập Lịch nhắc', icon: Bell },
       { id: 'database-setup', label: 'Cấu hình Database', icon: Settings2 },
       { id: 'trash', label: 'Thùng rác', icon: Trash2 },
-    ]
+    ],
   },
   {
     title: 'CÔNG CỤ SAO LƯU',
     items: [
       { id: 'backup-settings', label: 'Backup', icon: Settings },
       { id: 'backup-now', label: 'Sao lưu nhanh', icon: Download },
-    ]
-  }
+    ],
+  },
 ];

@@ -389,7 +389,9 @@ CREATE POLICY "Admins can manage production orders" ON production_orders FOR ALL
         <div className="p-6 border-b border-gray-50 flex items-center justify-between bg-gray-50/50">
           <div>
             <h3 className="text-lg font-bold text-gray-800">SQL Schema cho Supabase</h3>
-            <p className="text-xs text-gray-500 mt-1">Sử dụng mã SQL này trong Supabase SQL Editor để khởi tạo các bảng.</p>
+            <p className="text-xs text-gray-500 mt-1">
+              Sử dụng mã SQL này trong Supabase SQL Editor để khởi tạo các bảng.
+            </p>
           </div>
           <button
             onClick={copyToClipboard}
@@ -401,9 +403,7 @@ CREATE POLICY "Admins can manage production orders" ON production_orders FOR ALL
 
         <div className="p-6">
           <div className="bg-gray-900 rounded-2xl p-6 overflow-x-auto">
-            <pre className="text-green-400 text-xs font-mono leading-relaxed">
-              {sqlSchema}
-            </pre>
+            <pre className="text-green-400 text-xs font-mono leading-relaxed">{sqlSchema}</pre>
           </div>
 
           <div className="mt-8 p-6 bg-amber-50 rounded-2xl border border-amber-100 space-y-4">
@@ -414,10 +414,13 @@ CREATE POLICY "Admins can manage production orders" ON production_orders FOR ALL
               <div className="space-y-2">
                 <h4 className="text-sm font-bold text-amber-900">Lưu ý quan trọng về RLS</h4>
                 <p className="text-xs text-amber-800 leading-relaxed">
-                  Mặc định Supabase bật <b>Row Level Security (RLS)</b>. Nếu bạn không thêm các Policy để cho phép <b>INSERT/SELECT/UPDATE</b>, ứng dụng sẽ không thể nhập dữ liệu.
+                  Mặc định Supabase bật <b>Row Level Security (RLS)</b>. Nếu bạn không thêm các
+                  Policy để cho phép <b>INSERT/SELECT/UPDATE</b>, ứng dụng sẽ không thể nhập dữ
+                  liệu.
                 </p>
                 <p className="text-xs text-amber-800 leading-relaxed font-bold">
-                  Để thử nghiệm nhanh, bạn có thể tắt RLS cho từng bảng trong Supabase Dashboard (không khuyến khích cho sản xuất).
+                  Để thử nghiệm nhanh, bạn có thể tắt RLS cho từng bảng trong Supabase Dashboard
+                  (không khuyến khích cho sản xuất).
                 </p>
               </div>
             </div>

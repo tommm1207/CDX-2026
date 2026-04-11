@@ -21,10 +21,14 @@ interface ReportRow extends TonKhoRow {
   warehouseName: string;
 }
 
-export const InventoryReport = ({ user, onBack, addToast }: {
-  user: Employee,
-  onBack?: () => void,
-  addToast?: (message: string, type?: ToastType) => void
+export const InventoryReport = ({
+  user,
+  onBack,
+  addToast,
+}: {
+  user: Employee;
+  onBack?: () => void;
+  addToast?: (message: string, type?: ToastType) => void;
 }) => {
   const [report, setReport] = useState<ReportRow[]>([]);
   const [loading, setLoading] = useState(true);
@@ -49,7 +53,7 @@ export const InventoryReport = ({ user, onBack, addToast }: {
         let whs = whRes.data.filter(isActiveWarehouse);
         const allowedWhIds = getAllowedWarehouses(user.data_view_permission);
         if (allowedWhIds) {
-          whs = whs.filter(w => allowedWhIds.includes(w.id));
+          whs = whs.filter((w) => allowedWhIds.includes(w.id));
         }
         setWarehouses(whs);
       }
@@ -67,13 +71,13 @@ export const InventoryReport = ({ user, onBack, addToast }: {
     setLoading(true);
     try {
       const allowedWhIds = getAllowedWarehouses(user.data_view_permission);
-      const whParam = selectedWarehouse || (allowedWhIds || undefined);
+      const whParam = selectedWarehouse || allowedWhIds || undefined;
       const rows = await getTonKhoTable(startDate, endDate, whParam);
 
       const enriched: ReportRow[] = rows
-        .map(row => {
-          const mat = materials.find(m => m.id === row.material_id);
-          const wh = warehouses.find(w => w.id === row.warehouse_id);
+        .map((row) => {
+          const mat = materials.find((m) => m.id === row.material_id);
+          const wh = warehouses.find((w) => w.id === row.warehouse_id);
           return {
             ...row,
             materialName: mat?.name || 'N/A',
@@ -84,10 +88,16 @@ export const InventoryReport = ({ user, onBack, addToast }: {
           };
         })
         // Sắp xếp: theo tên vật tư, rồi tên kho
-        .sort((a, b) => a.materialName.localeCompare(b.materialName, 'vi') || a.warehouseName.localeCompare(b.warehouseName, 'vi'));
+        .sort(
+          (a, b) =>
+            a.materialName.localeCompare(b.materialName, 'vi') ||
+            a.warehouseName.localeCompare(b.warehouseName, 'vi'),
+        );
 
       const finalRows = hideEmpty
-        ? enriched.filter(r => r.materialName !== 'N/A' && r.warehouseName !== 'N/A' && r.tonCuoi > 0)
+        ? enriched.filter(
+            (r) => r.materialName !== 'N/A' && r.warehouseName !== 'N/A' && r.tonCuoi > 0,
+          )
         : enriched;
 
       setReport(finalRows);
@@ -109,7 +119,7 @@ export const InventoryReport = ({ user, onBack, addToast }: {
       chuyenDi: acc.chuyenDi + r.chuyenDi,
       tonCuoi: acc.tonCuoi + r.tonCuoi,
     }),
-    { tonDau: 0, tongNhap: 0, tongXuat: 0, chuyenDen: 0, chuyenDi: 0, tonCuoi: 0 }
+    { tonDau: 0, tongNhap: 0, tongXuat: 0, chuyenDen: 0, chuyenDi: 0, tonCuoi: 0 },
   );
 
   const handleExportExcel = () => {
@@ -122,34 +132,34 @@ export const InventoryReport = ({ user, onBack, addToast }: {
       const exportData = report.map((row) => ({
         'Mã vật tư': row.materialCode || '',
         'Tên vật tư': row.materialName || '',
-        'Nhóm': row.materialGroup || '',
-        'Kho': row.warehouseName || '',
+        Nhóm: row.materialGroup || '',
+        Kho: row.warehouseName || '',
         'Tồn đầu kỳ': row.tonDau,
-        'Nhập': row.tongNhap,
-        'Xuất': row.tongXuat,
+        Nhập: row.tongNhap,
+        Xuất: row.tongXuat,
         'Chuyển đến': row.chuyenDen,
         'Chuyển đi': row.chuyenDi,
-        'Tồn cuối kỳ': row.tonCuoi
+        'Tồn cuối kỳ': row.tonCuoi,
       }));
 
       exportData.push({
         'Mã vật tư': 'TỔNG CỘNG',
         'Tên vật tư': '',
-        'Nhóm': '',
-        'Kho': '',
+        Nhóm: '',
+        Kho: '',
         'Tồn đầu kỳ': totals.tonDau,
-        'Nhập': totals.tongNhap,
-        'Xuất': totals.tongXuat,
+        Nhập: totals.tongNhap,
+        Xuất: totals.tongXuat,
         'Chuyển đến': totals.chuyenDen,
         'Chuyển đi': totals.chuyenDi,
-        'Tồn cuối kỳ': totals.tonCuoi
+        'Tồn cuối kỳ': totals.tonCuoi,
       });
 
       const ws = xlsx.utils.json_to_sheet(exportData);
 
-      const colWidths = Object.keys(exportData[0] || {}).map(key => {
+      const colWidths = Object.keys(exportData[0] || {}).map((key) => {
         let max = key.length;
-        exportData.forEach(row => {
+        exportData.forEach((row) => {
           const val = (row as any)[key];
           const len = val ? val.toString().length : 0;
           if (len > max) max = len;
@@ -158,7 +168,9 @@ export const InventoryReport = ({ user, onBack, addToast }: {
       });
       ws['!cols'] = colWidths;
 
-      const whName = selectedWarehouse ? warehouses.find(w => w.id === selectedWarehouse)?.name : 'TatCaKho';
+      const whName = selectedWarehouse
+        ? warehouses.find((w) => w.id === selectedWarehouse)?.name
+        : 'TatCaKho';
       const cleanWhName = whName?.replace(/[^a-zA-Z0-9_\u0080-\uFFFF]/g, '') || 'TatCaKho';
       const dateStr = new Date().toISOString().split('T')[0].replace(/-/g, '');
       const fileName = `TonKho_${cleanWhName}_${dateStr}.xlsx`;
@@ -180,9 +192,12 @@ export const InventoryReport = ({ user, onBack, addToast }: {
         <PageBreadcrumb title="Kiểm tra tồn kho" onBack={onBack} />
         <div className="flex items-center gap-2 flex-shrink-0">
           <button
-            onClick={() => setShowFilter(f => !f)}
-            className={`p-2.5 rounded-xl border transition-colors ${showFilter ? 'bg-primary text-white border-primary' : 'bg-white text-gray-500 border-gray-200 hover:border-primary/40'
-              }`}
+            onClick={() => setShowFilter((f) => !f)}
+            className={`p-2.5 rounded-xl border transition-colors ${
+              showFilter
+                ? 'bg-primary text-white border-primary'
+                : 'bg-white text-gray-500 border-gray-200 hover:border-primary/40'
+            }`}
           >
             <Search size={16} />
           </button>
@@ -201,31 +216,41 @@ export const InventoryReport = ({ user, onBack, addToast }: {
           >
             <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 flex flex-col md:flex-row gap-4 mb-4">
               <div className="flex-1">
-                <label className="text-[10px] font-bold text-gray-400 uppercase mb-1 block">Từ ngày (đầu kỳ)</label>
+                <label className="text-[10px] font-bold text-gray-400 uppercase mb-1 block">
+                  Từ ngày (đầu kỳ)
+                </label>
                 <input
-                  type="date" value={startDate}
-                  onChange={e => setStartDate(e.target.value)}
+                  type="date"
+                  value={startDate}
+                  onChange={(e) => setStartDate(e.target.value)}
                   className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20"
                 />
               </div>
               <div className="flex-1">
-                <label className="text-[10px] font-bold text-gray-400 uppercase mb-1 block">Đến ngày (cuối kỳ)</label>
+                <label className="text-[10px] font-bold text-gray-400 uppercase mb-1 block">
+                  Đến ngày (cuối kỳ)
+                </label>
                 <input
-                  type="date" value={endDate}
-                  onChange={e => setEndDate(e.target.value)}
+                  type="date"
+                  value={endDate}
+                  onChange={(e) => setEndDate(e.target.value)}
                   className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20"
                 />
               </div>
               <div className="flex-1">
-                <label className="text-[10px] font-bold text-gray-400 uppercase mb-1 block">Kho hàng</label>
+                <label className="text-[10px] font-bold text-gray-400 uppercase mb-1 block">
+                  Kho hàng
+                </label>
                 <select
                   value={selectedWarehouse}
-                  onChange={e => setSelectedWarehouse(e.target.value)}
+                  onChange={(e) => setSelectedWarehouse(e.target.value)}
                   className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20"
                 >
                   <option value="">Tất cả các kho</option>
-                  {warehouses.map(wh => (
-                    <option key={wh.id} value={wh.id}>{wh.name}</option>
+                  {warehouses.map((wh) => (
+                    <option key={wh.id} value={wh.id}>
+                      {wh.name}
+                    </option>
                   ))}
                 </select>
               </div>
@@ -257,31 +282,78 @@ export const InventoryReport = ({ user, onBack, addToast }: {
               <tr className="bg-primary text-white">
                 <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider">Vật tư</th>
                 <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider">Kho</th>
-                <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-center" title="Đơn vị tính">Đ.V.T</th>
-                <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-right" title="Số lượng tồn kho ban đầu tính đến ngày Đầu Kỳ">Tồn đầu kỳ</th>
-                <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-right" title="Số lượng nhập vào kho trong khoảng thời gian chọn">Nhập trong kỳ</th>
-                <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-right" title="Số lượng xuất ra khỏi kho trong khoảng thời gian chọn">Xuất trong kỳ</th>
-                <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-right" title="Số lượng chuyển từ kho khác đến kho này">Chuyển kho đến</th>
-                <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-right" title="Số lượng chuyển từ kho này đi kho khác">Chuyển kho đi</th>
-                <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-right" title="Tồn đầu + Nhập - Xuất + Chuyển đến - Chuyển đi">Tồn cuối kỳ</th>
+                <th
+                  className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-center"
+                  title="Đơn vị tính"
+                >
+                  Đ.V.T
+                </th>
+                <th
+                  className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-right"
+                  title="Số lượng tồn kho ban đầu tính đến ngày Đầu Kỳ"
+                >
+                  Tồn đầu kỳ
+                </th>
+                <th
+                  className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-right"
+                  title="Số lượng nhập vào kho trong khoảng thời gian chọn"
+                >
+                  Nhập trong kỳ
+                </th>
+                <th
+                  className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-right"
+                  title="Số lượng xuất ra khỏi kho trong khoảng thời gian chọn"
+                >
+                  Xuất trong kỳ
+                </th>
+                <th
+                  className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-right"
+                  title="Số lượng chuyển từ kho khác đến kho này"
+                >
+                  Chuyển kho đến
+                </th>
+                <th
+                  className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-right"
+                  title="Số lượng chuyển từ kho này đi kho khác"
+                >
+                  Chuyển kho đi
+                </th>
+                <th
+                  className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-right"
+                  title="Tồn đầu + Nhập - Xuất + Chuyển đến - Chuyển đi"
+                >
+                  Tồn cuối kỳ
+                </th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
               {loading ? (
-                <tr><td colSpan={9} className="px-4 py-12 text-center text-gray-400 italic">Đang tải...</td></tr>
+                <tr>
+                  <td colSpan={9} className="px-4 py-12 text-center text-gray-400 italic">
+                    Đang tải...
+                  </td>
+                </tr>
               ) : report.length === 0 ? (
-                <tr><td colSpan={9} className="px-4 py-12 text-center text-gray-400 italic">Không có dữ liệu trong kỳ này</td></tr>
+                <tr>
+                  <td colSpan={9} className="px-4 py-12 text-center text-gray-400 italic">
+                    Không có dữ liệu trong kỳ này
+                  </td>
+                </tr>
               ) : (
                 <>
                   {report.map((row, idx) => (
                     <tr key={idx} className="hover:bg-gray-50/60 transition-colors">
                       <td className="px-4 py-3">
                         <p className="text-xs font-bold text-gray-800">{row.materialName}</p>
-                        {row.materialCode && <p className="text-[10px] text-gray-400 font-mono">#{row.materialCode}</p>}
+                        {row.materialCode && (
+                          <p className="text-[10px] text-gray-400 font-mono">#{row.materialCode}</p>
+                        )}
                       </td>
                       <td className="px-4 py-3 text-xs text-gray-600">{row.warehouseName}</td>
                       <td className="px-4 py-3 text-xs text-gray-500 text-center">{row.unit}</td>
-                      <td className="px-4 py-3 text-xs text-right font-medium text-gray-700">{formatNumber(row.tonDau)}</td>
+                      <td className="px-4 py-3 text-xs text-right font-medium text-gray-700">
+                        {formatNumber(row.tonDau)}
+                      </td>
                       <td className="px-4 py-3 text-xs text-right font-medium text-blue-600">
                         {row.tongNhap > 0 ? `+${formatNumber(row.tongNhap)}` : '—'}
                       </td>
@@ -295,7 +367,9 @@ export const InventoryReport = ({ user, onBack, addToast }: {
                         {row.chuyenDi > 0 ? `-${formatNumber(row.chuyenDi)}` : '—'}
                       </td>
                       <td className="px-4 py-3 text-right">
-                        <span className={`px-2 py-1 rounded-lg text-xs font-bold ${row.tonCuoi <= 0 ? 'bg-red-50 text-red-600' : row.tonCuoi <= 5 ? 'bg-amber-50 text-amber-600' : 'bg-green-50 text-green-600'}`}>
+                        <span
+                          className={`px-2 py-1 rounded-lg text-xs font-bold ${row.tonCuoi <= 0 ? 'bg-red-50 text-red-600' : row.tonCuoi <= 5 ? 'bg-amber-50 text-amber-600' : 'bg-green-50 text-green-600'}`}
+                        >
                           {formatNumber(row.tonCuoi)}
                         </span>
                       </td>
@@ -303,12 +377,24 @@ export const InventoryReport = ({ user, onBack, addToast }: {
                   ))}
                   {/* Dòng tổng */}
                   <tr className="bg-gray-50 border-t-2 border-gray-200 font-bold">
-                    <td className="px-4 py-3 text-xs font-bold text-gray-700" colSpan={3}>TỔNG CỘNG ({report.length} mặt hàng)</td>
-                    <td className="px-4 py-3 text-xs text-right text-gray-700">{formatNumber(totals.tonDau)}</td>
-                    <td className="px-4 py-3 text-xs text-right text-blue-600">+{formatNumber(totals.tongNhap)}</td>
-                    <td className="px-4 py-3 text-xs text-right text-orange-600">-{formatNumber(totals.tongXuat)}</td>
-                    <td className="px-4 py-3 text-xs text-right text-teal-600">+{formatNumber(totals.chuyenDen)}</td>
-                    <td className="px-4 py-3 text-xs text-right text-purple-600">-{formatNumber(totals.chuyenDi)}</td>
+                    <td className="px-4 py-3 text-xs font-bold text-gray-700" colSpan={3}>
+                      TỔNG CỘNG ({report.length} mặt hàng)
+                    </td>
+                    <td className="px-4 py-3 text-xs text-right text-gray-700">
+                      {formatNumber(totals.tonDau)}
+                    </td>
+                    <td className="px-4 py-3 text-xs text-right text-blue-600">
+                      +{formatNumber(totals.tongNhap)}
+                    </td>
+                    <td className="px-4 py-3 text-xs text-right text-orange-600">
+                      -{formatNumber(totals.tongXuat)}
+                    </td>
+                    <td className="px-4 py-3 text-xs text-right text-teal-600">
+                      +{formatNumber(totals.chuyenDen)}
+                    </td>
+                    <td className="px-4 py-3 text-xs text-right text-purple-600">
+                      -{formatNumber(totals.chuyenDi)}
+                    </td>
                     <td className="px-4 py-3 text-xs text-right">
                       <span className="px-2 py-1 rounded-lg bg-primary/10 text-primary font-bold">
                         {formatNumber(totals.tonCuoi)}

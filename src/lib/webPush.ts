@@ -1,7 +1,8 @@
 // src/lib/webPush.ts
 // Manages Service Worker registration and Push Subscription for CDX App
 
-export const VAPID_PUBLIC_KEY = 'BDODhnt-D7_5KejhSIrsLL3EdIdaaFiHQSd6wWqeOJ3sm7roQNRYfP636_DU6R8ey0xO5TTQ6Y_IMZeLxRNasic';
+export const VAPID_PUBLIC_KEY =
+  'BDODhnt-D7_5KejhSIrsLL3EdIdaaFiHQSd6wWqeOJ3sm7roQNRYfP636_DU6R8ey0xO5TTQ6Y_IMZeLxRNasic';
 
 function urlBase64ToUint8Array(base64String: string): Uint8Array {
   const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
@@ -30,10 +31,10 @@ export async function subscribeToPush(userId: string): Promise<void> {
 
   try {
     const reg = await navigator.serviceWorker.ready;
-    
+
     // Check if already subscribed
     let subscription = await reg.pushManager.getSubscription();
-    
+
     if (!subscription) {
       // Request new subscription
       subscription = await reg.pushManager.subscribe({
@@ -53,21 +54,24 @@ export async function subscribeToPush(userId: string): Promise<void> {
     if (checkErr) throw checkErr;
 
     if (existing) {
-      const { error: upErr } = await supabase.from('push_subscriptions').update({
-        user_id: userId,
-        subscription_json: JSON.stringify(subscription),
-        updated_at: new Date().toISOString()
-      }).eq('id', existing.id);
-      
+      const { error: upErr } = await supabase
+        .from('push_subscriptions')
+        .update({
+          user_id: userId,
+          subscription_json: JSON.stringify(subscription),
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', existing.id);
+
       if (upErr) throw upErr;
     } else {
       const { error: insErr } = await supabase.from('push_subscriptions').insert({
         user_id: userId,
         endpoint: subscription.endpoint,
         subscription_json: JSON.stringify(subscription),
-        updated_at: new Date().toISOString()
+        updated_at: new Date().toISOString(),
       });
-      
+
       if (insErr) throw insErr;
     }
 

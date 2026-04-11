@@ -1,7 +1,7 @@
 import { motion } from 'motion/react';
 import { ArrowLeft, ChevronRight } from 'lucide-react';
 
-export const PageBreadcrumb = ({ title, onBack }: { title: string, onBack?: () => void }) => {
+export const PageBreadcrumb = ({ title, onBack }: { title: string; onBack?: () => void }) => {
   if (!onBack) return null;
   return (
     <motion.div

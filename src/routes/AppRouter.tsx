@@ -58,62 +58,208 @@ export const AppRouter = ({
   goBack,
   addToast,
   fetchPendingCount,
-  setHideBottomNav
+  setHideBottomNav,
 }: AppRouterProps) => {
   switch (currentPage) {
-    case 'dashboard': return <Dashboard user={user} onNavigate={navigateTo} addToast={addToast} pendingApprovals={pendingCount} />;
-    case 'hr-records': return <HRRecords user={user} onBack={goBack} addToast={addToast} />;
-    case 'attendance': return <Attendance user={user} onBack={goBack} addToast={addToast} />;
-    case 'costs': return <Costs user={user} onBack={goBack} addToast={addToast} initialAction={pageParams?.action} />;
-    case 'warehouses': return <Warehouses user={user} onBack={goBack} addToast={addToast} />;
-    case 'materials': return <MaterialCatalog user={user} onBack={goBack} onNavigate={navigateTo} addToast={addToast} />;
-    case 'stock-in': return <StockIn user={user} onBack={goBack} addToast={addToast} initialStatus={pageParams?.status} initialAction={pageParams?.action} setHideBottomNav={setHideBottomNav} />;
-    case 'pending-approvals': return <PendingApprovals user={user} onBack={goBack} onNavigate={navigateTo} onRefreshCount={fetchPendingCount} addToast={addToast} initialCount={pendingCount} />;
-    case 'stock-out': return <StockOut user={user} onBack={goBack} addToast={addToast} initialAction={pageParams?.action} setHideBottomNav={setHideBottomNav} />;
-    case 'transfer': return <Transfer user={user} onBack={goBack} addToast={addToast} initialAction={pageParams?.action} setHideBottomNav={setHideBottomNav} />;
-    case 'cost-report': return <CostReport user={user} onBack={goBack} addToast={addToast} />;
-    case 'cost-filter': return <CostFilter user={user} onBack={goBack} addToast={addToast} />;
-    case 'advances': return <Advances user={user} onBack={goBack} addToast={addToast} initialAction={pageParams?.action} />;
-    case 'payroll': return <MonthlySalary user={user} onBack={goBack} addToast={addToast} />;
+    case 'dashboard':
+      return (
+        <Dashboard
+          user={user}
+          onNavigate={navigateTo}
+          addToast={addToast}
+          pendingApprovals={pendingCount}
+        />
+      );
+    case 'hr-records':
+      return <HRRecords user={user} onBack={goBack} addToast={addToast} />;
+    case 'attendance':
+      return <Attendance user={user} onBack={goBack} addToast={addToast} />;
+    case 'costs':
+      return (
+        <Costs user={user} onBack={goBack} addToast={addToast} initialAction={pageParams?.action} />
+      );
+    case 'warehouses':
+      return <Warehouses user={user} onBack={goBack} addToast={addToast} />;
+    case 'materials':
+      return (
+        <MaterialCatalog user={user} onBack={goBack} onNavigate={navigateTo} addToast={addToast} />
+      );
+    case 'stock-in':
+      return (
+        <StockIn
+          user={user}
+          onBack={goBack}
+          addToast={addToast}
+          initialStatus={pageParams?.status}
+          initialAction={pageParams?.action}
+          setHideBottomNav={setHideBottomNav}
+        />
+      );
+    case 'pending-approvals':
+      return (
+        <PendingApprovals
+          user={user}
+          onBack={goBack}
+          onNavigate={navigateTo}
+          onRefreshCount={fetchPendingCount}
+          addToast={addToast}
+          initialCount={pendingCount}
+        />
+      );
+    case 'stock-out':
+      return (
+        <StockOut
+          user={user}
+          onBack={goBack}
+          addToast={addToast}
+          initialAction={pageParams?.action}
+          setHideBottomNav={setHideBottomNav}
+        />
+      );
+    case 'transfer':
+      return (
+        <Transfer
+          user={user}
+          onBack={goBack}
+          addToast={addToast}
+          initialAction={pageParams?.action}
+          setHideBottomNav={setHideBottomNav}
+        />
+      );
+    case 'cost-report':
+      return <CostReport user={user} onBack={goBack} addToast={addToast} />;
+    case 'cost-filter':
+      return <CostFilter user={user} onBack={goBack} addToast={addToast} />;
+    case 'advances':
+      return (
+        <Advances
+          user={user}
+          onBack={goBack}
+          addToast={addToast}
+          initialAction={pageParams?.action}
+        />
+      );
+    case 'payroll':
+      return <MonthlySalary user={user} onBack={goBack} addToast={addToast} />;
     case 'salary-settings':
-      if (!['Admin', 'Admin App'].includes(user.role)) return <Dashboard user={user} onNavigate={navigateTo} addToast={addToast} pendingApprovals={pendingCount} />;
+      if (!['Admin', 'Admin App'].includes(user.role))
+        return (
+          <Dashboard
+            user={user}
+            onNavigate={navigateTo}
+            addToast={addToast}
+            pendingApprovals={pendingCount}
+          />
+        );
       return <SalarySettings user={user} onBack={goBack} addToast={addToast} />;
-    case 'notes': return <Notes user={user} onBack={goBack} addToast={addToast} initialAction={pageParams?.action} />;
-    case 'notifications': return <Notifications user={user} onBack={goBack} onNavigate={navigateTo} addToast={addToast} />;
-    case 'reminders': return <Reminders user={user} onBack={goBack} addToast={addToast} initialAction={pageParams?.action} setHideBottomNav={setHideBottomNav} />;
-    case 'partners': return <PlaceholderPage title="Khách hàng & nhà cung cấp" onBack={goBack} />;
-    case 'inventory-report': return <InventoryReport user={user} onBack={goBack} addToast={addToast} />;
-    
-    // Production
-    case 'production-list': return <ProductionOrders user={user} onBack={goBack} addToast={addToast} onOpenDetail={(id) => navigateTo('production-detail', { id })} setHideBottomNav={setHideBottomNav} />;
-    case 'production-detail': return <ProductionOrderDetail user={user} orderId={pageParams?.id} onBack={goBack} addToast={addToast} />;
-    case 'production-bom': return <BOMConfig user={user} onBack={goBack} addToast={addToast} />;
+    case 'notes':
+      return (
+        <Notes user={user} onBack={goBack} addToast={addToast} initialAction={pageParams?.action} />
+      );
+    case 'notifications':
+      return (
+        <Notifications user={user} onBack={goBack} onNavigate={navigateTo} addToast={addToast} />
+      );
+    case 'reminders':
+      return (
+        <Reminders
+          user={user}
+          onBack={goBack}
+          addToast={addToast}
+          initialAction={pageParams?.action}
+          setHideBottomNav={setHideBottomNav}
+        />
+      );
+    case 'partners':
+      return <PlaceholderPage title="Khách hàng & nhà cung cấp" onBack={goBack} />;
+    case 'inventory-report':
+      return <InventoryReport user={user} onBack={goBack} addToast={addToast} />;
 
-    case 'trash': return <Trash onNavigate={navigateTo} onBack={goBack} />;
-    case 'deleted-warehouses': return <DeletedWarehouses onBack={goBack} addToast={addToast} />;
-    case 'deleted-materials': return <DeletedMaterials onBack={goBack} addToast={addToast} />;
-    case 'deleted-slips': return <DeletedSlips onBack={goBack} addToast={addToast} />;
-    case 'deleted-employees': return <DeletedEmployees onBack={goBack} addToast={addToast} />;
-    case 'deleted-costs': return <DeletedCosts onBack={goBack} addToast={addToast} />;
-    case 'deleted-production-orders': return <DeletedProductionOrders onBack={goBack} addToast={addToast} />;
-    case 'material-groups': return <MaterialGroups user={user} onBack={goBack} addToast={addToast} />;
+    // Production
+    case 'production-list':
+      return (
+        <ProductionOrders
+          user={user}
+          onBack={goBack}
+          addToast={addToast}
+          onOpenDetail={(id) => navigateTo('production-detail', { id })}
+          setHideBottomNav={setHideBottomNav}
+        />
+      );
+    case 'production-detail':
+      return (
+        <ProductionOrderDetail
+          user={user}
+          orderId={pageParams?.id}
+          onBack={goBack}
+          addToast={addToast}
+        />
+      );
+    case 'production-bom':
+      return <BOMConfig user={user} onBack={goBack} addToast={addToast} />;
+
+    case 'trash':
+      return <Trash onNavigate={navigateTo} onBack={goBack} />;
+    case 'deleted-warehouses':
+      return <DeletedWarehouses onBack={goBack} addToast={addToast} />;
+    case 'deleted-materials':
+      return <DeletedMaterials onBack={goBack} addToast={addToast} />;
+    case 'deleted-slips':
+      return <DeletedSlips onBack={goBack} addToast={addToast} />;
+    case 'deleted-employees':
+      return <DeletedEmployees onBack={goBack} addToast={addToast} />;
+    case 'deleted-costs':
+      return <DeletedCosts onBack={goBack} addToast={addToast} />;
+    case 'deleted-production-orders':
+      return <DeletedProductionOrders onBack={goBack} addToast={addToast} />;
+    case 'material-groups':
+      return <MaterialGroups user={user} onBack={goBack} addToast={addToast} />;
     case 'backup-settings':
-      if (user.role !== 'Admin' && user.role !== 'Admin App') return <Dashboard user={user} onNavigate={navigateTo} addToast={addToast} pendingApprovals={pendingCount} />;
+      if (user.role !== 'Admin' && user.role !== 'Admin App')
+        return (
+          <Dashboard
+            user={user}
+            onNavigate={navigateTo}
+            addToast={addToast}
+            pendingApprovals={pendingCount}
+          />
+        );
       return <Backup user={user} onBack={goBack} addToast={addToast} />;
     case 'backup-now':
-      if (user.role !== 'Admin' && user.role !== 'Admin App') return <Dashboard user={user} onNavigate={navigateTo} addToast={addToast} pendingApprovals={pendingCount} />;
+      if (user.role !== 'Admin' && user.role !== 'Admin App')
+        return (
+          <Dashboard
+            user={user}
+            onNavigate={navigateTo}
+            addToast={addToast}
+            pendingApprovals={pendingCount}
+          />
+        );
       return <BackupNow onBack={goBack} addToast={addToast} />;
     case 'database-setup':
-      if (user.role !== 'Admin App') return <Dashboard user={user} onNavigate={navigateTo} addToast={addToast} pendingApprovals={pendingCount} />;
+      if (user.role !== 'Admin App')
+        return (
+          <Dashboard
+            user={user}
+            onNavigate={navigateTo}
+            addToast={addToast}
+            pendingApprovals={pendingCount}
+          />
+        );
       return <DatabaseSetup onBack={goBack} />;
-    default: return (
-      <div className="p-4 md:p-6 space-y-6">
-        <PageBreadcrumb title={currentPage} onBack={goBack} />
-        <div className="p-12 flex flex-col items-center justify-center text-gray-400 gap-4 bg-white rounded-2xl border border-dashed border-gray-200">
-          <div className="p-6 bg-gray-100 rounded-full"><Package size={48} /></div>
-          <p className="text-lg font-medium italic">Tính năng "{currentPage}" đang được phát triển...</p>
+    default:
+      return (
+        <div className="p-4 md:p-6 space-y-6">
+          <PageBreadcrumb title={currentPage} onBack={goBack} />
+          <div className="p-12 flex flex-col items-center justify-center text-gray-400 gap-4 bg-white rounded-2xl border border-dashed border-gray-200">
+            <div className="p-6 bg-gray-100 rounded-full">
+              <Package size={48} />
+            </div>
+            <p className="text-lg font-medium italic">
+              Tính năng "{currentPage}" đang được phát triển...
+            </p>
+          </div>
         </div>
-      </div>
-    );
+      );
   }
 };

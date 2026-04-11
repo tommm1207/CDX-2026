@@ -7,11 +7,16 @@ import { PageBreadcrumb } from '../shared/PageBreadcrumb';
 import { ToastType } from '../shared/Toast';
 import { parseReminderContent } from '@/utils/reminderUtils';
 
-export const Notifications = ({ user, onBack, onNavigate, addToast }: { 
-  user: Employee, 
-  onBack: () => void,
-  onNavigate?: (page: string, params?: any) => void,
-  addToast?: (message: string, type?: ToastType) => void
+export const Notifications = ({
+  user,
+  onBack,
+  onNavigate,
+  addToast,
+}: {
+  user: Employee;
+  onBack: () => void;
+  onNavigate?: (page: string, params?: any) => void;
+  addToast?: (message: string, type?: ToastType) => void;
 }) => {
   const [notifications, setNotifications] = useState<any[]>([]);
   const [pendingActivities, setPendingActivities] = useState<any[]>([]);
@@ -49,25 +54,25 @@ export const Notifications = ({ user, onBack, onNavigate, addToast }: {
           .eq('status', 'Chờ duyệt')
           .gte('created_at', twentyFourHoursAgo)
           .order('created_at', { ascending: false })
-          .limit(10)
+          .limit(10),
       ]);
 
       if (remindersRes.error) throw remindersRes.error;
-      
+
       const clearedRaw = localStorage.getItem('cleared_reminders') || '[]';
       const clearedMap = new Set(JSON.parse(clearedRaw));
-      
-      const activeReminders = (remindersRes.data || []).filter(rem => {
+
+      const activeReminders = (remindersRes.data || []).filter((rem) => {
         // Bỏ qua nếu user đã Xóa
         if (clearedMap.has(rem.id)) return false;
-        
+
         // Bỏ qua nếu chưa tới giờ
         if (new Date(rem.reminder_time).getTime() > Date.now()) return false;
-        
-        // Lọc theo người được phân công 
+
+        // Lọc theo người được phân công
         const payload = parseReminderContent(rem.content);
         if (payload.assignees.length > 0 && !payload.assignees.includes(user.id)) return false;
-        
+
         // Gắn lại text sạch để hiển thị
         rem.content = payload.text;
         return true;
@@ -77,12 +82,27 @@ export const Notifications = ({ user, onBack, onNavigate, addToast }: {
 
       // Combine and sort activities
       const activities = [
-        ...(siRes.data || []).map(item => ({ id: item.id, code: item.import_code, type: 'Nhập kho', created_at: item.created_at })),
-        ...(soRes.data || []).map(item => ({ id: item.id, code: item.export_code, type: 'Xuất kho', created_at: item.created_at })),
-        ...(costRes.data || []).map(item => ({ id: item.id, code: item.voucher_code, type: 'Chi phí', created_at: item.created_at }))
+        ...(siRes.data || []).map((item) => ({
+          id: item.id,
+          code: item.import_code,
+          type: 'Nhập kho',
+          created_at: item.created_at,
+        })),
+        ...(soRes.data || []).map((item) => ({
+          id: item.id,
+          code: item.export_code,
+          type: 'Xuất kho',
+          created_at: item.created_at,
+        })),
+        ...(costRes.data || []).map((item) => ({
+          id: item.id,
+          code: item.voucher_code,
+          type: 'Chi phí',
+          created_at: item.created_at,
+        })),
       ]
-      .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
-      .slice(0, 10);
+        .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+        .slice(0, 10);
 
       setPendingActivities(activities);
     } catch (err: any) {
@@ -117,7 +137,7 @@ export const Notifications = ({ user, onBack, onNavigate, addToast }: {
     try {
       const clearedRaw = localStorage.getItem('cleared_reminders') || '[]';
       const clearedList = JSON.parse(clearedRaw);
-      notifications.forEach(n => {
+      notifications.forEach((n) => {
         if (!clearedList.includes(n.id)) clearedList.push(n.id);
       });
       localStorage.setItem('cleared_reminders', JSON.stringify(clearedList));
@@ -131,15 +151,18 @@ export const Notifications = ({ user, onBack, onNavigate, addToast }: {
   return (
     <div className="p-4 md:p-6 space-y-8 pb-44">
       <PageBreadcrumb title="Trung tâm Thông báo" onBack={onBack} />
-      
+
       {/* SECTION 1: Recent Activities (Last 24h Pending) */}
       <div className="space-y-4">
         <div className="flex items-center justify-between">
           <div className="space-y-1">
             <h2 className="text-xl font-bold text-gray-800 flex items-center gap-2 uppercase tracking-tight">
-              <RefreshCw className={`text-blue-500 ${loading ? 'animate-spin' : ''}`} size={20} /> Hoạt động gần đây
+              <RefreshCw className={`text-blue-500 ${loading ? 'animate-spin' : ''}`} size={20} />{' '}
+              Hoạt động gần đây
             </h2>
-            <p className="text-[10px] text-gray-500 font-bold uppercase tracking-wider">Phiếu mới chờ duyệt trong 24h qua</p>
+            <p className="text-[10px] text-gray-500 font-bold uppercase tracking-wider">
+              Phiếu mới chờ duyệt trong 24h qua
+            </p>
           </div>
           <button
             onClick={fetchNotifications}
@@ -153,14 +176,16 @@ export const Notifications = ({ user, onBack, onNavigate, addToast }: {
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
           {loading ? (
-            <div className="col-span-full py-8 text-center text-gray-400 italic text-xs">Đang tải...</div>
+            <div className="col-span-full py-8 text-center text-gray-400 italic text-xs">
+              Đang tải...
+            </div>
           ) : pendingActivities.length === 0 ? (
             <div className="col-span-full py-8 bg-gray-50/50 rounded-2xl border border-dashed border-gray-200 text-center text-gray-400 text-xs">
               Không có hoạt động mới nào cần duyệt.
             </div>
           ) : (
             pendingActivities.map((act) => (
-              <div 
+              <div
                 key={`${act.type}-${act.id}`}
                 className="bg-blue-50/50 p-4 rounded-2xl border border-blue-100 flex items-center justify-between group hover:bg-blue-50 transition-colors"
               >
@@ -172,11 +197,22 @@ export const Notifications = ({ user, onBack, onNavigate, addToast }: {
                     <p className="text-xs font-bold text-gray-800 flex items-center gap-1">
                       Có phiếu <span className="text-blue-600 font-black">{act.type}</span> mới
                     </p>
-                    <p className="text-[10px] text-gray-400 font-bold uppercase tracking-tighter">Mã: {act.code} • {new Date(act.created_at).toLocaleTimeString('vi-VN')}</p>
+                    <p className="text-[10px] text-gray-400 font-bold uppercase tracking-tighter">
+                      Mã: {act.code} • {new Date(act.created_at).toLocaleTimeString('vi-VN')}
+                    </p>
                   </div>
                 </div>
-                <button 
-                  onClick={() => onNavigate && onNavigate(act.type === 'Nhập kho' ? 'stock-in' : (act.type === 'Xuất kho' ? 'stock-out' : 'cost-report'))}
+                <button
+                  onClick={() =>
+                    onNavigate &&
+                    onNavigate(
+                      act.type === 'Nhập kho'
+                        ? 'stock-in'
+                        : act.type === 'Xuất kho'
+                          ? 'stock-out'
+                          : 'cost-report',
+                    )
+                  }
                   className="px-3 py-1 bg-blue-600 text-white text-[10px] font-black rounded-lg shadow-lg shadow-blue-500/20 hover:bg-blue-700 transition-colors"
                 >
                   XỬ LÝ
@@ -196,9 +232,11 @@ export const Notifications = ({ user, onBack, onNavigate, addToast }: {
             <h2 className="text-xl font-bold text-gray-800 flex items-center gap-2 uppercase tracking-tight">
               <Bell className="text-primary" size={20} /> Nhắc nhở đã kích hoạt
             </h2>
-            <p className="text-[10px] text-gray-500 font-bold uppercase tracking-wider">Các lời nhắc từ hệ thống Scheduler</p>
+            <p className="text-[10px] text-gray-500 font-bold uppercase tracking-wider">
+              Các lời nhắc từ hệ thống Scheduler
+            </p>
           </div>
-          
+
           {notifications.length > 0 && (
             <button
               onClick={handleClearAll}
@@ -215,7 +253,9 @@ export const Notifications = ({ user, onBack, onNavigate, addToast }: {
               <div className="w-16 h-16 bg-gray-50 text-gray-300 rounded-full flex items-center justify-center mx-auto">
                 <Bell size={32} />
               </div>
-              <p className="text-gray-400 text-xs italic">Mọi thứ đã gọn gàng! Không có nhắc nhở nào mới.</p>
+              <p className="text-gray-400 text-xs italic">
+                Mọi thứ đã gọn gàng! Không có nhắc nhở nào mới.
+              </p>
             </div>
           ) : (
             <AnimatePresence>
@@ -231,7 +271,7 @@ export const Notifications = ({ user, onBack, onNavigate, addToast }: {
                   <div className="p-3 bg-primary/10 text-primary rounded-2xl flex-shrink-0 group-hover:rotate-12 transition-transform">
                     <Clock size={24} />
                   </div>
-                  
+
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center justify-between gap-2">
                       <h4 className="font-bold text-gray-800 truncate">{notif.title}</h4>
@@ -239,7 +279,9 @@ export const Notifications = ({ user, onBack, onNavigate, addToast }: {
                         {new Date(notif.reminder_time).toLocaleString('vi-VN')}
                       </span>
                     </div>
-                    <p className="text-sm text-gray-600 mt-2 line-clamp-2 leading-relaxed">{notif.content}</p>
+                    <p className="text-sm text-gray-600 mt-2 line-clamp-2 leading-relaxed">
+                      {notif.content}
+                    </p>
                   </div>
 
                   <div className="flex flex-col gap-2">

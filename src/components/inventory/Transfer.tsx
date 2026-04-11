@@ -1,5 +1,16 @@
 import { useState, useEffect, FormEvent } from 'react';
-import { Search, Plus, ArrowLeftRight, Edit, Trash2, ChevronDown, X, PackagePlus, ArrowDownCircle, Check } from 'lucide-react';
+import {
+  Search,
+  Plus,
+  ArrowLeftRight,
+  Edit,
+  Trash2,
+  ChevronDown,
+  X,
+  PackagePlus,
+  ArrowDownCircle,
+  Check,
+} from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { supabase } from '@/lib/supabase';
 import { Employee } from '@/types';
@@ -16,12 +27,18 @@ import { isUUID, generateCode, getAllowedWarehouses } from '@/utils/helpers';
 import { getAvailableStock, validateFutureImpact } from '@/utils/inventory';
 import { Button } from '../shared/Button';
 
-export const Transfer = ({ user, onBack, addToast, initialAction, setHideBottomNav }: { 
-  user: Employee, 
-  onBack?: () => void,
-  addToast?: (message: string, type?: ToastType) => void,
-  initialAction?: string,
-  setHideBottomNav?: (hide: boolean) => void
+export const Transfer = ({
+  user,
+  onBack,
+  addToast,
+  initialAction,
+  setHideBottomNav,
+}: {
+  user: Employee;
+  onBack?: () => void;
+  addToast?: (message: string, type?: ToastType) => void;
+  initialAction?: string;
+  setHideBottomNav?: (hide: boolean) => void;
 }) => {
   const [slips, setSlips] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -42,14 +59,15 @@ export const Transfer = ({ user, onBack, addToast, initialAction, setHideBottomN
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showAddMaterial, setShowAddMaterial] = useState(false);
 
-  const { warehouses, materials, groups, refreshAll, fetchWarehouses } = useInventoryData(user.data_view_permission);
+  const { warehouses, materials, groups, refreshAll, fetchWarehouses } = useInventoryData(
+    user.data_view_permission,
+  );
   const [showFilter, setShowFilter] = useState(false);
   const [statusFilter, setStatusFilter] = useState('Tất cả');
   const [filterStartDate, setFilterStartDate] = useState('');
   const [filterEndDate, setFilterEndDate] = useState('');
   const [filterWarehouseId, setFilterWarehouseId] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
-
 
   const initialFormState = {
     date: new Date().toISOString().split('T')[0],
@@ -59,7 +77,7 @@ export const Transfer = ({ user, onBack, addToast, initialAction, setHideBottomN
     quantity: 0,
     notes: '',
     status: 'Chờ duyệt',
-    transfer_code: generateCode('LC')
+    transfer_code: generateCode('LC'),
   };
 
   const [formData, setFormData] = useState(initialFormState);
@@ -78,13 +96,22 @@ export const Transfer = ({ user, onBack, addToast, initialAction, setHideBottomN
 
   const checkStock = async () => {
     try {
-      const fromWh = warehouses.find(w => w.name === formData.from_warehouse_id || w.id === formData.from_warehouse_id);
-      const mat = materials.find(m => m.name === formData.material_id || m.id === formData.material_id);
+      const fromWh = warehouses.find(
+        (w) => w.name === formData.from_warehouse_id || w.id === formData.from_warehouse_id,
+      );
+      const mat = materials.find(
+        (m) => m.name === formData.material_id || m.id === formData.material_id,
+      );
 
       if (!fromWh?.id || !mat?.id || !formData.date) return;
 
       setStockLoading(true);
-      const stock = await getAvailableStock(mat.id, fromWh.id, formData.date, editingId || undefined);
+      const stock = await getAvailableStock(
+        mat.id,
+        fromWh.id,
+        formData.date,
+        editingId || undefined,
+      );
       setAvailableStock(stock);
     } catch (err) {
       console.error('Error checking stock:', err);
@@ -96,8 +123,12 @@ export const Transfer = ({ user, onBack, addToast, initialAction, setHideBottomN
   const fetchSlips = async () => {
     setLoading(true);
     try {
-      let query = supabase.from('transfers').select('*, from_wh:warehouses!from_warehouse_id(name, code), to_wh:warehouses!to_warehouse_id(name, code), materials(name, code, unit)');
-      
+      let query = supabase
+        .from('transfers')
+        .select(
+          '*, from_wh:warehouses!from_warehouse_id(name, code), to_wh:warehouses!to_warehouse_id(name, code), materials(name, code, unit)',
+        );
+
       if (statusFilter === 'Tất cả') {
         query = query.neq('status', 'Đã xóa');
       } else {
@@ -106,13 +137,18 @@ export const Transfer = ({ user, onBack, addToast, initialAction, setHideBottomN
 
       const allowedWhIds = getAllowedWarehouses(user.data_view_permission);
       if (allowedWhIds) {
-        query = query.or(`from_warehouse_id.in.(${allowedWhIds.join(',')}),to_warehouse_id.in.(${allowedWhIds.join(',')})`);
+        query = query.or(
+          `from_warehouse_id.in.(${allowedWhIds.join(',')}),to_warehouse_id.in.(${allowedWhIds.join(',')})`,
+        );
       }
 
       const { data, error } = await query.order('created_at', { ascending: false });
       if (error) {
         console.error('Error fetching transfers:', error);
-        const { data: fallbackData, error: fallbackError } = await supabase.from('transfers').select('*').order('created_at', { ascending: false });
+        const { data: fallbackData, error: fallbackError } = await supabase
+          .from('transfers')
+          .select('*')
+          .order('created_at', { ascending: false });
         if (fallbackError) throw fallbackError;
         setSlips(fallbackData || []);
       } else {
@@ -126,24 +162,23 @@ export const Transfer = ({ user, onBack, addToast, initialAction, setHideBottomN
     }
   };
 
-
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
 
     if (!formData.from_warehouse_id || !formData.to_warehouse_id) {
-      if (addToast) addToast("Vui lòng chọn đầy đủ Kho nguồn và Kho đích.", "error");
+      if (addToast) addToast('Vui lòng chọn đầy đủ Kho nguồn và Kho đích.', 'error');
       return;
     }
     if (formData.from_warehouse_id === formData.to_warehouse_id) {
-      if (addToast) addToast("Kho nguồn và kho đích không được trùng nhau!", "error");
+      if (addToast) addToast('Kho nguồn và kho đích không được trùng nhau!', 'error');
       return;
     }
     if (!formData.material_id) {
-      if (addToast) addToast("Vui lòng chọn Vật tư.", "error");
+      if (addToast) addToast('Vui lòng chọn Vật tư.', 'error');
       return;
     }
     if (!formData.quantity || formData.quantity <= 0) {
-      if (addToast) addToast("Vui lòng nhập số lượng hợp lệ.", "error");
+      if (addToast) addToast('Vui lòng nhập số lượng hợp lệ.', 'error');
       return;
     }
 
@@ -151,39 +186,58 @@ export const Transfer = ({ user, onBack, addToast, initialAction, setHideBottomN
     try {
       let finalFromWhId = formData.from_warehouse_id;
       if (formData.from_warehouse_id && !isUUID(formData.from_warehouse_id)) {
-        const whByName = warehouses.find(w => w.name.toLowerCase() === formData.from_warehouse_id.toLowerCase());
+        const whByName = warehouses.find(
+          (w) => w.name.toLowerCase() === formData.from_warehouse_id.toLowerCase(),
+        );
         if (whByName) finalFromWhId = whByName.id;
         else {
           const random = Math.floor(100 + Math.random() * 900);
           const code = `K${(warehouses.length + 1).toString().padStart(2, '0')}-${random}`;
-          const { data: newWh } = await supabase.from('warehouses').insert([{ name: formData.from_warehouse_id, code }]).select();
+          const { data: newWh } = await supabase
+            .from('warehouses')
+            .insert([{ name: formData.from_warehouse_id, code }])
+            .select();
           if (newWh) finalFromWhId = newWh[0].id;
         }
       }
 
       let finalToWhId = formData.to_warehouse_id;
       if (formData.to_warehouse_id && !isUUID(formData.to_warehouse_id)) {
-        const whByName = warehouses.find(w => w.name.toLowerCase() === formData.to_warehouse_id.toLowerCase());
+        const whByName = warehouses.find(
+          (w) => w.name.toLowerCase() === formData.to_warehouse_id.toLowerCase(),
+        );
         if (whByName) finalToWhId = whByName.id;
         else {
           const random = Math.floor(100 + Math.random() * 900);
           const code = `K${(warehouses.length + 1).toString().padStart(2, '0')}-${random}`;
-          const { data: newWh } = await supabase.from('warehouses').insert([{ name: formData.to_warehouse_id, code }]).select();
+          const { data: newWh } = await supabase
+            .from('warehouses')
+            .insert([{ name: formData.to_warehouse_id, code }])
+            .select();
           if (newWh) finalToWhId = newWh[0].id;
         }
       }
 
       let finalMaterialId = formData.material_id;
       if (formData.material_id && !isUUID(formData.material_id)) {
-        const matByName = materials.find(m => m.name.toLowerCase() === formData.material_id.toLowerCase());
+        const matByName = materials.find(
+          (m) => m.name.toLowerCase() === formData.material_id.toLowerCase(),
+        );
         if (matByName) finalMaterialId = matByName.id;
         else throw new Error('Bạn phải chọn vật tư từ Danh mục!');
       }
 
       // 1. Kiểm tra tồn kho tại Kho NGUỒN vào ngày của phiếu
-      const stockAtDate = await getAvailableStock(finalMaterialId, finalFromWhId, formData.date, editingId || undefined);
+      const stockAtDate = await getAvailableStock(
+        finalMaterialId,
+        finalFromWhId,
+        formData.date,
+        editingId || undefined,
+      );
       if (formData.quantity > stockAtDate) {
-        throw new Error(`Kho nguồn không đủ tồn vào ngày ${formatDate(formData.date)} (Tồn: ${stockAtDate})`);
+        throw new Error(
+          `Kho nguồn không đủ tồn vào ngày ${formatDate(formData.date)} (Tồn: ${stockAtDate})`,
+        );
       }
 
       // 2. Kiểm tra ÂM KHO TƯƠNG LAI (Cho phiếu Đã duyệt)
@@ -195,26 +249,51 @@ export const Transfer = ({ user, onBack, addToast, initialAction, setHideBottomN
 
         if (matChanged || fromWhChanged || toWhChanged || dateChanged) {
           // Check 1: Việc "thu hồi" hàng từ kho ĐÍCH CŨ có gây âm kho tương lai ở đó không?
-          const impactOldTo = await validateFutureImpact(selectedSlip.material_id, selectedSlip.to_warehouse_id, selectedSlip.date, -selectedSlip.quantity);
+          const impactOldTo = await validateFutureImpact(
+            selectedSlip.material_id,
+            selectedSlip.to_warehouse_id,
+            selectedSlip.date,
+            -selectedSlip.quantity,
+          );
           if (!impactOldTo.valid) {
-             throw new Error(`Không thể thay đổi vì kho ĐÍCH CŨ sẽ bị âm kho vào ngày ${impactOldTo.failedDate}`);
+            throw new Error(
+              `Không thể thay đổi vì kho ĐÍCH CŨ sẽ bị âm kho vào ngày ${impactOldTo.failedDate}`,
+            );
           }
           // Check 2: Việc "trừ" hàng từ kho NGUỒN MỚI có gây âm kho tương lai không?
-          const impactNewFrom = await validateFutureImpact(finalMaterialId, finalFromWhId, formData.date, -formData.quantity);
+          const impactNewFrom = await validateFutureImpact(
+            finalMaterialId,
+            finalFromWhId,
+            formData.date,
+            -formData.quantity,
+          );
           if (!impactNewFrom.valid) {
-            throw new Error(`Không thể chuyển đổi vì kho NGUỒN MỚI sẽ bị âm kho vào ngày ${impactNewFrom.failedDate}`);
+            throw new Error(
+              `Không thể chuyển đổi vì kho NGUỒN MỚI sẽ bị âm kho vào ngày ${impactNewFrom.failedDate}`,
+            );
           }
         } else {
           // Cùng vị trí, check chênh lệch
-          const diffFrom = selectedSlip.quantity - formData.quantity; 
+          const diffFrom = selectedSlip.quantity - formData.quantity;
           const diffTo = formData.quantity - selectedSlip.quantity;
 
           if (diffFrom < 0) {
-            const impactFrom = await validateFutureImpact(finalMaterialId, finalFromWhId, formData.date, diffFrom);
-            if (!impactFrom.valid) throw new Error(`Kho NGUỒN lỗi vào ngày ${impactFrom.failedDate}`);
+            const impactFrom = await validateFutureImpact(
+              finalMaterialId,
+              finalFromWhId,
+              formData.date,
+              diffFrom,
+            );
+            if (!impactFrom.valid)
+              throw new Error(`Kho NGUỒN lỗi vào ngày ${impactFrom.failedDate}`);
           }
           if (diffTo < 0) {
-            const impactTo = await validateFutureImpact(finalMaterialId, finalToWhId, formData.date, diffTo);
+            const impactTo = await validateFutureImpact(
+              finalMaterialId,
+              finalToWhId,
+              formData.date,
+              diffTo,
+            );
             if (!impactTo.valid) throw new Error(`Kho ĐÍCH lỗi vào ngày ${impactTo.failedDate}`);
           }
         }
@@ -228,13 +307,16 @@ export const Transfer = ({ user, onBack, addToast, initialAction, setHideBottomN
         employee_id: user.id,
         status: isEditing && selectedSlip?.status === 'Đã duyệt' ? 'Đã duyệt' : 'Chờ duyệt',
         transfer_code: formData.transfer_code || generateCode('LC'),
-        notes: isEditing 
-          ? `[SỬA lúc ${new Date().toLocaleString('vi-VN')}] ${formData.notes.replace(/^\[SỬA lúc .*?\]\s*/, '')}` 
-          : formData.notes
+        notes: isEditing
+          ? `[SỬA lúc ${new Date().toLocaleString('vi-VN')}] ${formData.notes.replace(/^\[SỬA lúc .*?\]\s*/, '')}`
+          : formData.notes,
       };
 
       if (isEditing && selectedSlip) {
-        const { error } = await supabase.from('transfers').update(payload).eq('id', selectedSlip.id);
+        const { error } = await supabase
+          .from('transfers')
+          .update(payload)
+          .eq('id', selectedSlip.id);
         if (error) throw error;
       } else {
         const { error } = await supabase.from('transfers').insert([payload]);
@@ -248,7 +330,11 @@ export const Transfer = ({ user, onBack, addToast, initialAction, setHideBottomN
       setEditingId(null);
       setAvailableStock(null);
       setSelectedSlip(null);
-      if (addToast) addToast(isEditing ? 'Cập nhật thành công!' : 'Lập phiếu luân chuyển thành công!', 'success');
+      if (addToast)
+        addToast(
+          isEditing ? 'Cập nhật thành công!' : 'Lập phiếu luân chuyển thành công!',
+          'success',
+        );
     } catch (err: any) {
       if (addToast) addToast('Lỗi: ' + err.message, 'error');
     } finally {
@@ -270,7 +356,7 @@ export const Transfer = ({ user, onBack, addToast, initialAction, setHideBottomN
       quantity: selectedSlip.quantity,
       notes: selectedSlip.notes?.replace(/^\[SỬA lúc .*?\]\s*/, '') || '',
       status: selectedSlip.status,
-      transfer_code: selectedSlip.transfer_code || formData.transfer_code
+      transfer_code: selectedSlip.transfer_code || formData.transfer_code,
     });
     setIsEditing(true);
     setEditingId(selectedSlip.id);
@@ -291,7 +377,7 @@ export const Transfer = ({ user, onBack, addToast, initialAction, setHideBottomN
         const stockFull = await getAvailableStock(
           selectedSlip.material_id,
           selectedSlip.to_warehouse_id,
-          '9999-12-31'
+          '9999-12-31',
         );
         if (stockFull < selectedSlip.quantity) {
           const thieu = selectedSlip.quantity - stockFull;
@@ -305,21 +391,25 @@ export const Transfer = ({ user, onBack, addToast, initialAction, setHideBottomN
         }
       }
 
-      const { error } = await supabase.from('transfers').update({ status: 'Đã xóa' }).eq('id', selectedSlip.id);
+      const { error } = await supabase
+        .from('transfers')
+        .update({ status: 'Đã xóa' })
+        .eq('id', selectedSlip.id);
       if (error) throw error;
 
       // Vô hiệu chi phí liên quan
-      await supabase.from('costs')
+      await supabase
+        .from('costs')
         .update({ status: 'Đã xóa' })
-        .ilike('content', `%${selectedSlip.transfer_code || selectedSlip.id.slice(0,8)}%`);
+        .ilike('content', `%${selectedSlip.transfer_code || selectedSlip.id.slice(0, 8)}%`);
 
       if (addToast) addToast('Đã chuyển phiếu vào thùng rác', 'success');
       fetchSlips();
       setShowDetailModal(false);
       setShowDeleteConfirm(false);
     } catch (err: any) {
-      const msg = err.message.includes('foreign key constraint') 
-        ? 'Không thể xóa phiếu này vì đang có dữ liệu liên quan khác.' 
+      const msg = err.message.includes('foreign key constraint')
+        ? 'Không thể xóa phiếu này vì đang có dữ liệu liên quan khác.'
         : err.message;
       if (addToast) addToast('Lỗi: ' + msg, 'error');
       else alert('Lỗi: ' + msg);
@@ -340,16 +430,20 @@ export const Transfer = ({ user, onBack, addToast, initialAction, setHideBottomN
           const stockAtDate = await getAvailableStock(
             slipToCheck.material_id,
             slipToCheck.from_warehouse_id,
-            slipToCheck.date
+            slipToCheck.date,
           );
           if (Number(slipToCheck.quantity) > stockAtDate) {
             const thieu = Number(slipToCheck.quantity) - stockAtDate;
-            if (addToast) addToast(`❌ Từ chối duyệt phiếu luân chuyển
+            if (addToast)
+              addToast(
+                `❌ Từ chối duyệt phiếu luân chuyển
 - Mặt hàng: mã ${slipToCheck.material_id}
 - Tồn kho nguồn hiện tại: ${stockAtDate}
 - Số lượng yêu cầu chuyển: ${slipToCheck.quantity}
 - Thiếu hụt: ${thieu}
-→ Vui lòng kiểm tra lại số lượng hoặc bổ sung phiếu nhập kho nguồn trước khi duyệt.`, 'error');
+→ Vui lòng kiểm tra lại số lượng hoặc bổ sung phiếu nhập kho nguồn trước khi duyệt.`,
+                'error',
+              );
             return;
           }
         }
@@ -360,12 +454,16 @@ export const Transfer = ({ user, onBack, addToast, initialAction, setHideBottomN
 
       // Tạo chi phí tự động khi duyệt phiếu luân chuyển
       if (status === 'Đã duyệt') {
-        const { data: slip } = await supabase.from('transfers').select('*, users(id), materials(name, unit)').eq('id', id).maybeSingle();
+        const { data: slip } = await supabase
+          .from('transfers')
+          .select('*, users(id), materials(name, unit)')
+          .eq('id', id)
+          .maybeSingle();
         if (slip) {
           const { data: existingCost } = await supabase
             .from('costs')
             .select('id')
-            .ilike('content', `%${slip.transfer_code || slip.id.slice(0,8)}%`)
+            .ilike('content', `%${slip.transfer_code || slip.id.slice(0, 8)}%`)
             .maybeSingle();
 
           if (!existingCost) {
@@ -377,21 +475,23 @@ export const Transfer = ({ user, onBack, addToast, initialAction, setHideBottomN
             const userPrefix = (slip as any).users?.id?.slice(0, 4) || 'SYS';
             const costCode = `CP-${userPrefix.toUpperCase()}-${d}${m}${y}-${random}`;
 
-            await supabase.from('costs').insert([{
-              transaction_type: 'Nội bộ',
-              cost_code: costCode,
-              date: slip.date,
-              employee_id: user.id,
-              cost_type: 'Luân chuyển',
-              content: `Luân chuyển kho từ phiếu ${slip.transfer_code || slip.id.slice(0,8)}`,
-              material_id: slip.material_id,
-              warehouse_id: slip.from_warehouse_id,
-              quantity: slip.quantity,
-              unit: (slip as any).materials?.unit,
-              unit_price: 0,
-              total_amount: 0,
-              notes: 'Tự động tạo từ hệ thống Luân chuyển kho'
-            }]);
+            await supabase.from('costs').insert([
+              {
+                transaction_type: 'Nội bộ',
+                cost_code: costCode,
+                date: slip.date,
+                employee_id: user.id,
+                cost_type: 'Luân chuyển',
+                content: `Luân chuyển kho từ phiếu ${slip.transfer_code || slip.id.slice(0, 8)}`,
+                material_id: slip.material_id,
+                warehouse_id: slip.from_warehouse_id,
+                quantity: slip.quantity,
+                unit: (slip as any).materials?.unit,
+                unit_price: 0,
+                total_amount: 0,
+                notes: 'Tự động tạo từ hệ thống Luân chuyển kho',
+              },
+            ]);
           }
         }
       }
@@ -413,7 +513,7 @@ export const Transfer = ({ user, onBack, addToast, initialAction, setHideBottomN
           <Button
             size="icon"
             variant={showFilter ? 'primary' : 'outline'}
-            onClick={() => setShowFilter(f => !f)}
+            onClick={() => setShowFilter((f) => !f)}
             icon={Search}
           />
         </div>
@@ -431,26 +531,52 @@ export const Transfer = ({ user, onBack, addToast, initialAction, setHideBottomN
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
                 <div className="space-y-1">
                   <label className="text-[10px] font-bold text-gray-400 uppercase">Từ ngày</label>
-                  <input type="date" value={filterStartDate} onChange={e => setFilterStartDate(e.target.value)} className="w-full px-3 py-2 rounded-lg border border-gray-200 text-xs outline-none focus:ring-2 focus:ring-primary/20" />
+                  <input
+                    type="date"
+                    value={filterStartDate}
+                    onChange={(e) => setFilterStartDate(e.target.value)}
+                    className="w-full px-3 py-2 rounded-lg border border-gray-200 text-xs outline-none focus:ring-2 focus:ring-primary/20"
+                  />
                 </div>
                 <div className="space-y-1">
                   <label className="text-[10px] font-bold text-gray-400 uppercase">Đến ngày</label>
-                  <input type="date" value={filterEndDate} onChange={e => setFilterEndDate(e.target.value)} className="w-full px-3 py-2 rounded-lg border border-gray-200 text-xs outline-none focus:ring-2 focus:ring-primary/20" />
+                  <input
+                    type="date"
+                    value={filterEndDate}
+                    onChange={(e) => setFilterEndDate(e.target.value)}
+                    className="w-full px-3 py-2 rounded-lg border border-gray-200 text-xs outline-none focus:ring-2 focus:ring-primary/20"
+                  />
                 </div>
                 <div className="space-y-1">
                   <label className="text-[10px] font-bold text-gray-400 uppercase">Kho</label>
-                  <select value={filterWarehouseId} onChange={e => setFilterWarehouseId(e.target.value)} className="w-full px-3 py-2 rounded-lg border border-gray-200 text-xs outline-none focus:ring-2 focus:ring-primary/20">
+                  <select
+                    value={filterWarehouseId}
+                    onChange={(e) => setFilterWarehouseId(e.target.value)}
+                    className="w-full px-3 py-2 rounded-lg border border-gray-200 text-xs outline-none focus:ring-2 focus:ring-primary/20"
+                  >
                     <option value="">Tất cả kho</option>
-                    {warehouses.map(w => <option key={w.id} value={w.id}>{w.name}</option>)}
+                    {warehouses.map((w) => (
+                      <option key={w.id} value={w.id}>
+                        {w.name}
+                      </option>
+                    ))}
                   </select>
                 </div>
                 <div className="space-y-1">
                   <label className="text-[10px] font-bold text-gray-400 uppercase">Tìm kiếm</label>
-                  <input type="text" placeholder="Vật tư, mã phiếu, ghi chú..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="w-full px-3 py-2 rounded-lg border border-gray-200 text-xs outline-none focus:ring-2 focus:ring-primary/20" />
+                  <input
+                    type="text"
+                    placeholder="Vật tư, mã phiếu, ghi chú..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="w-full px-3 py-2 rounded-lg border border-gray-200 text-xs outline-none focus:ring-2 focus:ring-primary/20"
+                  />
                 </div>
               </div>
               <div>
-                <label className="text-[10px] font-bold text-gray-400 uppercase block mb-2">Trạng thái</label>
+                <label className="text-[10px] font-bold text-gray-400 uppercase block mb-2">
+                  Trạng thái
+                </label>
                 <div className="flex items-center gap-2 overflow-x-auto pb-2 md:pb-0 no-scrollbar">
                   {['Tất cả', 'Chờ duyệt', 'Đã duyệt', 'Từ chối', 'Đã xóa'].map((status) => (
                     <Button
@@ -470,11 +596,16 @@ export const Transfer = ({ user, onBack, addToast, initialAction, setHideBottomN
       </AnimatePresence>
 
       {(() => {
-        const filteredSlips = slips.filter(item => {
+        const filteredSlips = slips.filter((item) => {
           let match = true;
           if (filterStartDate && item.date < filterStartDate) match = false;
           if (filterEndDate && item.date > filterEndDate) match = false;
-          if (filterWarehouseId && item.from_warehouse_id !== filterWarehouseId && item.to_warehouse_id !== filterWarehouseId) match = false;
+          if (
+            filterWarehouseId &&
+            item.from_warehouse_id !== filterWarehouseId &&
+            item.to_warehouse_id !== filterWarehouseId
+          )
+            match = false;
           if (searchTerm) {
             const s = searchTerm.toLowerCase();
             const nameMatch = (item.materials?.name || '').toLowerCase().includes(s);
@@ -485,54 +616,83 @@ export const Transfer = ({ user, onBack, addToast, initialAction, setHideBottomN
           return match;
         });
         return (
-      <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse min-w-[700px] whitespace-nowrap">
-            <thead>
-              <tr className="bg-orange-500 text-white">
-                <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider">Ngày</th>
-                <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider">Từ kho</th>
-                <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider">Đến kho</th>
-                <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider">Vật tư</th>
-                <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-center">SL</th>
-                <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider">Trạng thái</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100">
-              {loading ? (
-                <tr><td colSpan={6} className="px-4 py-8 text-center text-gray-400 italic">Đang tải...</td></tr>
-              ) : filteredSlips.length === 0 ? (
-                <tr><td colSpan={6} className="px-4 py-8 text-center text-gray-400 italic">Chưa có phiếu chuyển nào</td></tr>
-              ) : (
-                filteredSlips.map((item) => (
-                  <tr key={item.id} onClick={() => handleRowClick(item)} className="hover:bg-gray-50 transition-colors cursor-pointer">
-                    <td className="px-4 py-3 text-xs text-gray-600">{formatDate(item.date)}</td>
-                    <td className="px-4 py-3 text-xs text-gray-600">
-                      {item.from_wh?.name}
-                    </td>
-                    <td className="px-4 py-3 text-xs text-gray-600">
-                      {item.to_wh?.name}
-                    </td>
-                    <td className="px-4 py-3 text-xs text-gray-600 font-medium">
-                      {item.materials?.name}
-                    </td>
-                    <td className="px-4 py-3 text-xs text-orange-600 text-center font-bold">
-                      {formatNumber(item.quantity)} <span className="text-[10px] text-gray-400 font-normal">{item.materials?.unit || ''}</span>
-                    </td>
-                    <td className="px-4 py-3 text-xs">
-                      <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${item.status === 'Đã duyệt' ? 'bg-green-100 text-green-600' :
-                          item.status === 'Từ chối' ? 'bg-red-100 text-red-600' : 'bg-amber-100 text-amber-600'
-                        }`}>
-                        {item.status || 'Chờ duyệt'}
-                      </span>
-                    </td>
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full text-left border-collapse min-w-[700px] whitespace-nowrap">
+                <thead>
+                  <tr className="bg-orange-500 text-white">
+                    <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider">
+                      Ngày
+                    </th>
+                    <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider">
+                      Từ kho
+                    </th>
+                    <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider">
+                      Đến kho
+                    </th>
+                    <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider">
+                      Vật tư
+                    </th>
+                    <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-center">
+                      SL
+                    </th>
+                    <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider">
+                      Trạng thái
+                    </th>
                   </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
+                </thead>
+                <tbody className="divide-y divide-gray-100">
+                  {loading ? (
+                    <tr>
+                      <td colSpan={6} className="px-4 py-8 text-center text-gray-400 italic">
+                        Đang tải...
+                      </td>
+                    </tr>
+                  ) : filteredSlips.length === 0 ? (
+                    <tr>
+                      <td colSpan={6} className="px-4 py-8 text-center text-gray-400 italic">
+                        Chưa có phiếu chuyển nào
+                      </td>
+                    </tr>
+                  ) : (
+                    filteredSlips.map((item) => (
+                      <tr
+                        key={item.id}
+                        onClick={() => handleRowClick(item)}
+                        className="hover:bg-gray-50 transition-colors cursor-pointer"
+                      >
+                        <td className="px-4 py-3 text-xs text-gray-600">{formatDate(item.date)}</td>
+                        <td className="px-4 py-3 text-xs text-gray-600">{item.from_wh?.name}</td>
+                        <td className="px-4 py-3 text-xs text-gray-600">{item.to_wh?.name}</td>
+                        <td className="px-4 py-3 text-xs text-gray-600 font-medium">
+                          {item.materials?.name}
+                        </td>
+                        <td className="px-4 py-3 text-xs text-orange-600 text-center font-bold">
+                          {formatNumber(item.quantity)}{' '}
+                          <span className="text-[10px] text-gray-400 font-normal">
+                            {item.materials?.unit || ''}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 text-xs">
+                          <span
+                            className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                              item.status === 'Đã duyệt'
+                                ? 'bg-green-100 text-green-600'
+                                : item.status === 'Từ chối'
+                                  ? 'bg-red-100 text-red-600'
+                                  : 'bg-amber-100 text-amber-600'
+                            }`}
+                          >
+                            {item.status || 'Chờ duyệt'}
+                          </span>
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
         );
       })()}
 
@@ -560,18 +720,22 @@ export const Transfer = ({ user, onBack, addToast, initialAction, setHideBottomN
               </div>
               <div className="p-5 border-b border-gray-100 flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                   <div 
+                  <div
                     className="w-10 h-10 bg-orange-50 text-orange-600 rounded-xl flex items-center justify-center hover:bg-orange-100 transition-all active:scale-95 cursor-pointer shadow-sm border border-orange-100"
                     onClick={() => setShowDetailModal(false)}
                   >
                     <ArrowLeftRight size={20} />
                   </div>
                   <div>
-                    <p className="text-sm font-black text-orange-600">{selectedSlip.transfer_code}</p>
-                    <p className="text-[10px] text-gray-400 uppercase font-bold tracking-widest">Chi tiết luân chuyển</p>
+                    <p className="text-sm font-black text-orange-600">
+                      {selectedSlip.transfer_code}
+                    </p>
+                    <p className="text-[10px] text-gray-400 uppercase font-bold tracking-widest">
+                      Chi tiết luân chuyển
+                    </p>
                   </div>
                 </div>
-                <button 
+                <button
                   onClick={() => setShowDetailModal(false)}
                   className="p-2 hover:bg-gray-100 rounded-xl transition-all active:scale-95 text-gray-400"
                 >
@@ -584,30 +748,81 @@ export const Transfer = ({ user, onBack, addToast, initialAction, setHideBottomN
                   { label: 'Vật tư', value: selectedSlip.materials?.name },
                   { label: 'Từ kho', value: selectedSlip.from_wh?.name },
                   { label: 'Đến kho', value: selectedSlip.to_wh?.name },
-                  { label: 'Số lượng', value: `${formatNumber(selectedSlip.quantity)} ${selectedSlip.materials?.unit || ''}`, highlight: true },
+                  {
+                    label: 'Số lượng',
+                    value: `${formatNumber(selectedSlip.quantity)} ${selectedSlip.materials?.unit || ''}`,
+                    highlight: true,
+                  },
                   { label: 'Trạng thái', value: selectedSlip.status || 'Chờ duyệt' },
                   { label: 'Diễn giải', value: selectedSlip.notes || '—' },
                 ].map(({ label, value, highlight }) => (
-                  <div key={label} className="flex justify-between items-start border-b border-gray-50 pb-3 gap-4">
+                  <div
+                    key={label}
+                    className="flex justify-between items-start border-b border-gray-50 pb-3 gap-4"
+                  >
                     <span className="text-[11px] text-gray-500 font-medium shrink-0">{label}</span>
-                    <p className={`text-sm text-right ${highlight ? 'text-orange-600 font-bold' : 'text-gray-900'}`}>{value || '—'}</p>
+                    <p
+                      className={`text-sm text-right ${highlight ? 'text-orange-600 font-bold' : 'text-gray-900'}`}
+                    >
+                      {value || '—'}
+                    </p>
                   </div>
                 ))}
               </div>
               <div className="p-4 border-t border-gray-100 bg-gray-50 space-y-2">
-                {selectedSlip.status !== 'Đã xóa' && (user.role === 'Admin' || user.role === 'Admin App') && selectedSlip.status === 'Chờ duyệt' && (
-                  <div className="grid grid-cols-2 gap-2">
-                    <Button fullWidth variant="danger" icon={X} onClick={() => handleApprove(selectedSlip.id, 'Từ chối')}>Từ chối</Button>
-                    <Button fullWidth variant="success" icon={Check} onClick={() => handleApprove(selectedSlip.id, 'Đã duyệt')}>Duyệt</Button>
-                  </div>
-                )}
+                {selectedSlip.status !== 'Đã xóa' &&
+                  (user.role === 'Admin' || user.role === 'Admin App') &&
+                  selectedSlip.status === 'Chờ duyệt' && (
+                    <div className="grid grid-cols-2 gap-2">
+                      <Button
+                        fullWidth
+                        variant="danger"
+                        icon={X}
+                        onClick={() => handleApprove(selectedSlip.id, 'Từ chối')}
+                      >
+                        Từ chối
+                      </Button>
+                      <Button
+                        fullWidth
+                        variant="success"
+                        icon={Check}
+                        onClick={() => handleApprove(selectedSlip.id, 'Đã duyệt')}
+                      >
+                        Duyệt
+                      </Button>
+                    </div>
+                  )}
                 {selectedSlip.status !== 'Đã xóa' && (
                   <div className="grid grid-cols-2 gap-2">
-                    <Button fullWidth variant="outline" icon={Trash2} onClick={handleDelete} className="text-red-600 border-red-200 hover:bg-red-50">Thùng rác</Button>
-                    <Button fullWidth variant="outline" icon={Edit} onClick={handleEdit} className="text-gray-700 hover:bg-gray-50">Sửa</Button>
+                    <Button
+                      fullWidth
+                      variant="outline"
+                      icon={Trash2}
+                      onClick={handleDelete}
+                      className="text-red-600 border-red-200 hover:bg-red-50"
+                    >
+                      Thùng rác
+                    </Button>
+                    <Button
+                      fullWidth
+                      variant="outline"
+                      icon={Edit}
+                      onClick={handleEdit}
+                      className="text-gray-700 hover:bg-gray-50"
+                    >
+                      Sửa
+                    </Button>
                   </div>
                 )}
-                <Button fullWidth variant="outline" icon={X} onClick={() => setShowDetailModal(false)} className="text-gray-600 hover:bg-gray-50 border-gray-200">Đóng cửa sổ</Button>
+                <Button
+                  fullWidth
+                  variant="outline"
+                  icon={X}
+                  onClick={() => setShowDetailModal(false)}
+                  className="text-gray-600 hover:bg-gray-50 border-gray-200"
+                >
+                  Đóng cửa sổ
+                </Button>
               </div>
             </motion.div>
           </>
@@ -616,7 +831,7 @@ export const Transfer = ({ user, onBack, addToast, initialAction, setHideBottomN
 
       <AnimatePresence>
         {showModal && (
-          <div 
+          <div
             className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/50 backdrop-blur-md overflow-hidden"
             onClick={() => setShowModal(false)}
           >
@@ -630,16 +845,18 @@ export const Transfer = ({ user, onBack, addToast, initialAction, setHideBottomN
             >
               <div className="bg-orange-500 p-6 text-white flex items-center justify-between rounded-t-[2rem] md:rounded-t-[2.5rem] flex-shrink-0 relative">
                 <div className="flex items-center gap-3">
-                  <div 
+                  <div
                     className="p-2 bg-white/20 rounded-xl cursor-pointer hover:bg-white/30 transition-all active:scale-95"
                     onClick={() => setShowModal(false)}
                     title="Đóng (Bấm icon hoặc X)"
                   >
                     <ArrowDownCircle size={24} />
                   </div>
-                  <h3 className="font-bold text-lg">{isEditing ? 'Sửa phiếu chuyển kho' : 'Lập phiếu chuyển kho'}</h3>
+                  <h3 className="font-bold text-lg">
+                    {isEditing ? 'Sửa phiếu chuyển kho' : 'Lập phiếu chuyển kho'}
+                  </h3>
                 </div>
-                <button 
+                <button
                   onClick={() => setShowModal(false)}
                   className="p-2 hover:bg-white/20 rounded-xl transition-all"
                 >
@@ -648,18 +865,25 @@ export const Transfer = ({ user, onBack, addToast, initialAction, setHideBottomN
               </div>
 
               <div className="flex-1 overflow-y-auto overflow-x-hidden p-6 custom-scrollbar">
-                <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-6 pb-12">
+                <form
+                  onSubmit={handleSubmit}
+                  className="grid grid-cols-1 md:grid-cols-2 gap-6 pb-12"
+                >
                   <div className="space-y-4">
                     <div className="space-y-1">
-                      <label className="text-[10px] font-bold text-gray-400 uppercase">Ngày chuyển *</label>
-                      <input 
-                        type="date" 
-                        required 
-                        value={formData.date} 
-                        onChange={(e) => setFormData({ ...formData, date: e.target.value })} 
-                        className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-orange-500/20" 
+                      <label className="text-[10px] font-bold text-gray-400 uppercase">
+                        Ngày chuyển *
+                      </label>
+                      <input
+                        type="date"
+                        required
+                        value={formData.date}
+                        onChange={(e) => setFormData({ ...formData, date: e.target.value })}
+                        className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-orange-500/20"
                       />
-                      <p className="text-[10px] text-gray-400">Tồn kho sẽ được kiểm tra tại ngày này</p>
+                      <p className="text-[10px] text-gray-400">
+                        Tồn kho sẽ được kiểm tra tại ngày này
+                      </p>
                     </div>
                     <CreatableSelect
                       label="Từ kho *"
@@ -689,7 +913,11 @@ export const Transfer = ({ user, onBack, addToast, initialAction, setHideBottomN
                           options={materials}
                           onChange={(val) => setFormData({ ...formData, material_id: val })}
                           onCreate={() => {
-                            if (addToast) addToast('Vui lòng chọn vật tư có trong Danh mục. Hoặc click nút + bên cạnh để tạo mới.', 'info');
+                            if (addToast)
+                              addToast(
+                                'Vui lòng chọn vật tư có trong Danh mục. Hoặc click nút + bên cạnh để tạo mới.',
+                                'info',
+                              );
                           }}
                           placeholder="Chọn vật tư..."
                           required
@@ -713,43 +941,82 @@ export const Transfer = ({ user, onBack, addToast, initialAction, setHideBottomN
                       />
                       {stockLoading && (
                         <div className="p-3 bg-gray-50 rounded-xl border border-gray-100 mt-1">
-                          <p className="text-[10px] font-bold text-gray-400 uppercase animate-pulse">Đang kiểm tra tồn kho...</p>
+                          <p className="text-[10px] font-bold text-gray-400 uppercase animate-pulse">
+                            Đang kiểm tra tồn kho...
+                          </p>
                         </div>
                       )}
                       {!stockLoading && availableStock !== null && (
-                        <div className={`p-3 rounded-xl border mt-1 ${
-                          availableStock <= 0
-                            ? 'bg-red-50 border-red-100'
-                            : availableStock <= 5
-                            ? 'bg-amber-50 border-amber-100'
-                            : 'bg-blue-50 border-blue-100'
-                        }`}>
-                          <p className={`text-[10px] font-bold uppercase ${
-                            availableStock <= 0 ? 'text-red-400' : availableStock <= 5 ? 'text-amber-400' : 'text-blue-400'
-                          }`}>Tồn kho tại ngày {formData.date}</p>
-                          <p className={`text-sm font-bold ${
-                            availableStock <= 0 ? 'text-red-600' : availableStock <= 5 ? 'text-amber-600' : 'text-blue-600'
-                          }`}>
-                            {formatNumber(availableStock)} {materials.find(m => m.id === formData.material_id || m.name === formData.material_id)?.unit}
+                        <div
+                          className={`p-3 rounded-xl border mt-1 ${
+                            availableStock <= 0
+                              ? 'bg-red-50 border-red-100'
+                              : availableStock <= 5
+                                ? 'bg-amber-50 border-amber-100'
+                                : 'bg-blue-50 border-blue-100'
+                          }`}
+                        >
+                          <p
+                            className={`text-[10px] font-bold uppercase ${
+                              availableStock <= 0
+                                ? 'text-red-400'
+                                : availableStock <= 5
+                                  ? 'text-amber-400'
+                                  : 'text-blue-400'
+                            }`}
+                          >
+                            Tồn kho tại ngày {formData.date}
+                          </p>
+                          <p
+                            className={`text-sm font-bold ${
+                              availableStock <= 0
+                                ? 'text-red-600'
+                                : availableStock <= 5
+                                  ? 'text-amber-600'
+                                  : 'text-blue-600'
+                            }`}
+                          >
+                            {formatNumber(availableStock)}{' '}
+                            {
+                              materials.find(
+                                (m) =>
+                                  m.id === formData.material_id || m.name === formData.material_id,
+                              )?.unit
+                            }
                             {availableStock <= 0 && ' ⚠ Không đủ tồn kho!'}
                           </p>
                         </div>
                       )}
                     </div>
                     <div className="space-y-1">
-                      <label className="text-[10px] font-bold text-gray-400 uppercase">Ghi chú</label>
-                      <textarea rows={2} value={formData.notes} onChange={(e) => setFormData({ ...formData, notes: e.target.value })} className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-green-600/20 resize-none" />
+                      <label className="text-[10px] font-bold text-gray-400 uppercase">
+                        Ghi chú
+                      </label>
+                      <textarea
+                        rows={2}
+                        value={formData.notes}
+                        onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+                        className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-green-600/20 resize-none"
+                      />
                     </div>
                   </div>
                   <div className="md:col-span-2 flex justify-end gap-3 mt-4">
-                    <Button variant="outline" onClick={() => setShowModal(false)}>Hủy</Button>
-                    <Button 
-                      type="submit" 
+                    <Button variant="outline" onClick={() => setShowModal(false)}>
+                      Hủy
+                    </Button>
+                    <Button
+                      type="submit"
                       variant="orange"
                       className="min-w-[120px]"
                       isLoading={submitting}
-                      disabled={availableStock !== null && Number(formData.quantity) > availableStock} 
-                      title={availableStock !== null && Number(formData.quantity) > availableStock ? `Không đủ tồn kho (tồn: ${availableStock})` : undefined}
+                      disabled={
+                        availableStock !== null && Number(formData.quantity) > availableStock
+                      }
+                      title={
+                        availableStock !== null && Number(formData.quantity) > availableStock
+                          ? `Không đủ tồn kho (tồn: ${availableStock})`
+                          : undefined
+                      }
                     >
                       {isEditing ? 'Cập nhật' : 'Lưu phiếu chuyển'}
                     </Button>
@@ -775,10 +1042,16 @@ export const Transfer = ({ user, onBack, addToast, initialAction, setHideBottomN
       <ConfirmModal
         show={showDeleteConfirm}
         title={selectedSlip?.status === 'Đã duyệt' ? '⚠️ Cảnh báo: Phiếu đã duyệt' : 'Xác nhận xóa'}
-        message={selectedSlip?.status === 'Đã duyệt'
-          ? `Phiếu chuyển kho ${selectedSlip?.transfer_code} đã được duyệt — hàng đã chuyển thực tế.\n\nXóa phiếu sẽ HOÀN TRẢ ${selectedSlip?.quantity} ${selectedSlip?.materials?.unit || ''} ${selectedSlip?.materials?.name || ''} về kho nguồn và TRỪ khỏi kho đích.\n\nBạn có chắc chắn muốn xóa?`
-          : 'Bạn có chắc chắn muốn chuyển phiếu luân chuyển này vào thùng rác không?'}
-        confirmText={selectedSlip?.status === 'Đã duyệt' ? 'Xác nhận xóa phiếu đã duyệt' : 'Chuyển vào thùng rác'}
+        message={
+          selectedSlip?.status === 'Đã duyệt'
+            ? `Phiếu chuyển kho ${selectedSlip?.transfer_code} đã được duyệt — hàng đã chuyển thực tế.\n\nXóa phiếu sẽ HOÀN TRẢ ${selectedSlip?.quantity} ${selectedSlip?.materials?.unit || ''} ${selectedSlip?.materials?.name || ''} về kho nguồn và TRỪ khỏi kho đích.\n\nBạn có chắc chắn muốn xóa?`
+            : 'Bạn có chắc chắn muốn chuyển phiếu luân chuyển này vào thùng rác không?'
+        }
+        confirmText={
+          selectedSlip?.status === 'Đã duyệt'
+            ? 'Xác nhận xóa phiếu đã duyệt'
+            : 'Chuyển vào thùng rác'
+        }
         onConfirm={confirmDelete}
         onCancel={() => setShowDeleteConfirm(false)}
         type={selectedSlip?.status === 'Đã duyệt' ? 'danger' : undefined}

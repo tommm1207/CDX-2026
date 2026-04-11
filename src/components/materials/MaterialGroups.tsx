@@ -1,5 +1,16 @@
 import { useState, useEffect, FormEvent, MouseEvent, ChangeEvent } from 'react';
-import { Layers, Plus, Search, Edit, Trash2, X, Package, Eye, Image as ImageIcon, SlidersHorizontal } from 'lucide-react';
+import {
+  Layers,
+  Plus,
+  Search,
+  Edit,
+  Trash2,
+  X,
+  Package,
+  Eye,
+  Image as ImageIcon,
+  SlidersHorizontal,
+} from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { supabase } from '@/lib/supabase';
 import { Employee } from '@/types';
@@ -9,10 +20,14 @@ import { ToastType } from '../shared/Toast';
 import { FAB } from '../shared/FAB';
 import { checkUsage } from '@/utils/dataIntegrity';
 
-export const MaterialGroups = ({ user, onBack, addToast }: { 
-  user: Employee, 
-  onBack?: () => void,
-  addToast?: (message: string, type?: ToastType) => void
+export const MaterialGroups = ({
+  user,
+  onBack,
+  addToast,
+}: {
+  user: Employee;
+  onBack?: () => void;
+  addToast?: (message: string, type?: ToastType) => void;
 }) => {
   const [showModal, setShowModal] = useState(false);
   const [showDetailModal, setShowDetailModal] = useState(false);
@@ -46,7 +61,7 @@ export const MaterialGroups = ({ user, onBack, addToast }: {
     specification: '',
     unit: '',
     description: '',
-    image_url: ''
+    image_url: '',
   };
 
   const [formData, setFormData] = useState(initialFormState);
@@ -69,7 +84,11 @@ export const MaterialGroups = ({ user, onBack, addToast }: {
   };
 
   const fetchWarehouses = async () => {
-    const { data } = await supabase.from('warehouses').select('*').or('status.is.null,status.neq.Đã xóa').order('name');
+    const { data } = await supabase
+      .from('warehouses')
+      .select('*')
+      .or('status.is.null,status.neq.Đã xóa')
+      .order('name');
     if (data) {
       setWarehouses(data.filter(isActiveWarehouse));
     }
@@ -99,9 +118,10 @@ export const MaterialGroups = ({ user, onBack, addToast }: {
           .order('created_at', { ascending: false });
 
         if (!allError && allMats) {
-          const filtered = allMats.filter(m =>
-            m.group_id === groupId ||
-            m.material_groups?.name?.toLowerCase() === groupName.toLowerCase()
+          const filtered = allMats.filter(
+            (m) =>
+              m.group_id === groupId ||
+              m.material_groups?.name?.toLowerCase() === groupName.toLowerCase(),
           );
 
           if (filtered.length > 0) {
@@ -150,24 +170,30 @@ export const MaterialGroups = ({ user, onBack, addToast }: {
     setSubmitting(true);
     try {
       if (isEditing) {
-        const { error } = await supabase.from('material_groups').update({
-          name: formData.name,
-          notes: formData.notes
-        }).eq('id', formData.id);
+        const { error } = await supabase
+          .from('material_groups')
+          .update({
+            name: formData.name,
+            notes: formData.notes,
+          })
+          .eq('id', formData.id);
         if (error) throw error;
       } else {
         const generatedCode = await generateNextGroupCode();
-        const { error } = await supabase.from('material_groups').insert([{
-          code: generatedCode,
-          name: formData.name,
-          notes: formData.notes
-        }]);
+        const { error } = await supabase.from('material_groups').insert([
+          {
+            code: generatedCode,
+            name: formData.name,
+            notes: formData.notes,
+          },
+        ]);
         if (error) throw error;
       }
       setShowModal(false);
       fetchGroups();
       setFormData(initialFormState);
-      if (addToast) addToast(isEditing ? 'Cập nhật nhóm thành công!' : 'Thêm nhóm thành công!', 'success');
+      if (addToast)
+        addToast(isEditing ? 'Cập nhật nhóm thành công!' : 'Thêm nhóm thành công!', 'success');
     } catch (err: any) {
       if (addToast) addToast('Lỗi: ' + err.message, 'error');
       else alert('Lỗi: ' + err.message);
@@ -194,7 +220,11 @@ export const MaterialGroups = ({ user, onBack, addToast }: {
       setShowMaterialModal(false);
       fetchMaterialsByGroup(selectedGroup.id);
       setMaterialFormData(initialMaterialFormState);
-      if (addToast) addToast(isEditingMaterial ? 'Cập nhật vật tư thành công!' : 'Thêm vật tư thành công!', 'success');
+      if (addToast)
+        addToast(
+          isEditingMaterial ? 'Cập nhật vật tư thành công!' : 'Thêm vật tư thành công!',
+          'success',
+        );
     } catch (err: any) {
       if (addToast) addToast('Lỗi: ' + err.message, 'error');
       else alert('Lỗi: ' + err.message);
@@ -212,12 +242,12 @@ export const MaterialGroups = ({ user, onBack, addToast }: {
 
   const handleEdit = async (e: MouseEvent, item: any) => {
     e.stopPropagation();
-    
+
     setFormData({
       id: item.id,
       code: item.code || '',
       name: item.name,
-      notes: item.notes || ''
+      notes: item.notes || '',
     });
     setIsEditing(true);
     setShowModal(true);
@@ -260,8 +290,12 @@ export const MaterialGroups = ({ user, onBack, addToast }: {
         if (checkError) throw checkError;
 
         if (count && count > 0) {
-          if (addToast) addToast(`Không thể xóa nhóm này vì đang có ${count} vật tư thuộc nhóm.`, 'error');
-          else alert(`Không thể xóa nhóm này vì đang có ${count} vật tư thuộc nhóm. Vui lòng xóa hoặc chuyển các vật tư này sang nhóm khác trước.`);
+          if (addToast)
+            addToast(`Không thể xóa nhóm này vì đang có ${count} vật tư thuộc nhóm.`, 'error');
+          else
+            alert(
+              `Không thể xóa nhóm này vì đang có ${count} vật tư thuộc nhóm. Vui lòng xóa hoặc chuyển các vật tư này sang nhóm khác trước.`,
+            );
           setShowDeleteModal(false);
           return;
         }
@@ -269,12 +303,15 @@ export const MaterialGroups = ({ user, onBack, addToast }: {
         // Double check with integrity helper
         const usage = await checkUsage('group', itemToDelete);
         if (usage.inUse) {
-           if (addToast) addToast(`Nhóm đang được sử dụng, không thể xóa.`, 'error');
-           setShowDeleteModal(false);
-           return;
+          if (addToast) addToast(`Nhóm đang được sử dụng, không thể xóa.`, 'error');
+          setShowDeleteModal(false);
+          return;
         }
 
-        const { error } = await supabase.from('material_groups').update({ status: 'Đã xóa' }).eq('id', itemToDelete);
+        const { error } = await supabase
+          .from('material_groups')
+          .update({ status: 'Đã xóa' })
+          .eq('id', itemToDelete);
         if (error) throw error;
         fetchGroups();
       } else {
@@ -286,7 +323,10 @@ export const MaterialGroups = ({ user, onBack, addToast }: {
           return;
         }
 
-        const { error } = await supabase.from('materials').update({ status: 'Đã xóa' }).eq('id', itemToDelete);
+        const { error } = await supabase
+          .from('materials')
+          .update({ status: 'Đã xóa' })
+          .eq('id', itemToDelete);
         if (error) throw error;
         fetchMaterialsByGroup(selectedGroup.id);
       }
@@ -309,11 +349,12 @@ export const MaterialGroups = ({ user, onBack, addToast }: {
     }
   };
 
-  const uniqueMaterialIds = Array.from(new Set(materials.map(m => m.id)));
+  const uniqueMaterialIds = Array.from(new Set(materials.map((m) => m.id)));
 
-  const filteredGroups = groups.filter(g =>
-    g.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    g.id.toLowerCase().includes(searchTerm.toLowerCase())
+  const filteredGroups = groups.filter(
+    (g) =>
+      g.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      g.id.toLowerCase().includes(searchTerm.toLowerCase()),
   );
 
   return (
@@ -321,9 +362,11 @@ export const MaterialGroups = ({ user, onBack, addToast }: {
       <div className="flex items-center justify-between gap-2">
         <PageBreadcrumb title="Nhóm vật tư" onBack={onBack} />
         <button
-          onClick={() => setShowFilter(f => !f)}
+          onClick={() => setShowFilter((f) => !f)}
           className={`p-2.5 rounded-xl border transition-colors ${
-            showFilter ? 'bg-primary text-white border-primary' : 'bg-white text-gray-500 border-gray-200 hover:border-primary/40'
+            showFilter
+              ? 'bg-primary text-white border-primary'
+              : 'bg-white text-gray-500 border-gray-200 hover:border-primary/40'
           }`}
         >
           <Search size={16} />
@@ -340,7 +383,10 @@ export const MaterialGroups = ({ user, onBack, addToast }: {
           >
             <div className="bg-white p-3 rounded-2xl shadow-sm border border-gray-100">
               <div className="relative">
-                <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                <Search
+                  size={14}
+                  className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
+                />
                 <input
                   type="text"
                   placeholder="Tìm kiếm nhóm vật tư..."
@@ -355,29 +401,47 @@ export const MaterialGroups = ({ user, onBack, addToast }: {
         )}
       </AnimatePresence>
 
-      <FAB onClick={async () => {
-        const nextCode = await generateNextGroupCode();
-        setFormData({ ...initialFormState, code: nextCode });
-        setIsEditing(false);
-        setShowModal(true);
-      }} />
+      <FAB
+        onClick={async () => {
+          const nextCode = await generateNextGroupCode();
+          setFormData({ ...initialFormState, code: nextCode });
+          setIsEditing(false);
+          setShowModal(true);
+        }}
+      />
 
       <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse whitespace-nowrap">
             <thead>
               <tr className="bg-primary text-white">
-                <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider border-r border-white/10 w-32">Mã nhóm</th>
-                <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider border-r border-white/10">Nhóm vật tư</th>
-                <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider border-r border-white/10">Ghi chú</th>
-                <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-center w-24">Thao tác</th>
+                <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider border-r border-white/10 w-32">
+                  Mã nhóm
+                </th>
+                <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider border-r border-white/10">
+                  Nhóm vật tư
+                </th>
+                <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider border-r border-white/10">
+                  Ghi chú
+                </th>
+                <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-center w-24">
+                  Thao tác
+                </th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
               {loading ? (
-                <tr><td colSpan={4} className="px-4 py-8 text-center text-gray-400 italic">Đang tải dữ liệu...</td></tr>
+                <tr>
+                  <td colSpan={4} className="px-4 py-8 text-center text-gray-400 italic">
+                    Đang tải dữ liệu...
+                  </td>
+                </tr>
               ) : filteredGroups.length === 0 ? (
-                <tr><td colSpan={4} className="px-4 py-8 text-center text-gray-400 italic">Chưa có nhóm vật tư nào</td></tr>
+                <tr>
+                  <td colSpan={4} className="px-4 py-8 text-center text-gray-400 italic">
+                    Chưa có nhóm vật tư nào
+                  </td>
+                </tr>
               ) : (
                 filteredGroups.map((item) => (
                   <tr
@@ -385,13 +449,25 @@ export const MaterialGroups = ({ user, onBack, addToast }: {
                     onClick={() => handleRowClick(item)}
                     className="hover:bg-gray-50 transition-colors group cursor-pointer"
                   >
-                    <td className="px-4 py-3 text-xs font-bold text-gray-700">{item.code || item.id.slice(0, 8)}</td>
+                    <td className="px-4 py-3 text-xs font-bold text-gray-700">
+                      {item.code || item.id.slice(0, 8)}
+                    </td>
                     <td className="px-4 py-3 text-xs text-gray-600 font-medium">{item.name}</td>
                     <td className="px-4 py-3 text-xs text-gray-500 italic">{item.notes || '-'}</td>
                     <td className="px-4 py-3 text-center">
                       <div className="flex items-center justify-center gap-1 transition-opacity">
-                        <button onClick={(e) => handleEdit(e, item)} className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"><Edit size={14} /></button>
-                        <button onClick={(e) => handleDeleteClick(e, item.id)} className="p-1.5 text-red-600 hover:bg-red-50 rounded-lg transition-colors"><Trash2 size={14} /></button>
+                        <button
+                          onClick={(e) => handleEdit(e, item)}
+                          className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                        >
+                          <Edit size={14} />
+                        </button>
+                        <button
+                          onClick={(e) => handleDeleteClick(e, item.id)}
+                          className="p-1.5 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                        >
+                          <Trash2 size={14} />
+                        </button>
                       </div>
                     </td>
                   </tr>
@@ -404,7 +480,7 @@ export const MaterialGroups = ({ user, onBack, addToast }: {
 
       <AnimatePresence>
         {showDeleteModal && (
-          <div 
+          <div
             className="fixed inset-0 z-[120] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm"
             onClick={() => setShowDeleteModal(false)}
           >
@@ -419,10 +495,23 @@ export const MaterialGroups = ({ user, onBack, addToast }: {
                 <Trash2 size={32} />
               </div>
               <h3 className="text-lg font-bold text-gray-800 mb-2">Xác nhận xóa?</h3>
-              <p className="text-sm text-gray-500 mb-6">Bạn có chắc chắn muốn xóa {deleteType === 'group' ? 'nhóm vật tư' : 'vật tư'}? Hành động này không thể hoàn tác.</p>
+              <p className="text-sm text-gray-500 mb-6">
+                Bạn có chắc chắn muốn xóa {deleteType === 'group' ? 'nhóm vật tư' : 'vật tư'}? Hành
+                động này không thể hoàn tác.
+              </p>
               <div className="flex gap-3">
-                <button onClick={() => setShowDeleteModal(false)} className="flex-1 px-4 py-2 rounded-xl border border-gray-200 text-sm font-bold text-gray-500 hover:bg-gray-50 transition-colors">Hủy bỏ</button>
-                <button onClick={confirmDelete} className="flex-1 px-4 py-2 rounded-xl bg-red-600 text-white text-sm font-bold hover:bg-red-700 transition-colors">Xóa ngay</button>
+                <button
+                  onClick={() => setShowDeleteModal(false)}
+                  className="flex-1 px-4 py-2 rounded-xl border border-gray-200 text-sm font-bold text-gray-500 hover:bg-gray-50 transition-colors"
+                >
+                  Hủy bỏ
+                </button>
+                <button
+                  onClick={confirmDelete}
+                  className="flex-1 px-4 py-2 rounded-xl bg-red-600 text-white text-sm font-bold hover:bg-red-700 transition-colors"
+                >
+                  Xóa ngay
+                </button>
               </div>
             </motion.div>
           </div>
@@ -431,7 +520,7 @@ export const MaterialGroups = ({ user, onBack, addToast }: {
 
       <AnimatePresence>
         {showModal && (
-          <div 
+          <div
             className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-black/50 backdrop-blur-md overflow-hidden"
             onClick={() => setShowModal(false)}
           >
@@ -444,19 +533,21 @@ export const MaterialGroups = ({ user, onBack, addToast }: {
             >
               <div className="bg-primary p-6 text-white flex items-center justify-between rounded-t-[2rem] md:rounded-t-[2.5rem] flex-shrink-0">
                 <div className="flex items-center gap-3">
-                  <div 
+                  <div
                     className="p-2 bg-white/20 rounded-xl cursor-pointer hover:bg-white/30 transition-all active:scale-95"
                     onClick={() => setShowModal(false)}
                   >
                     <Layers size={24} />
                   </div>
                   <div>
-                    <h3 className="font-bold text-lg">{isEditing ? 'Cập nhật nhóm' : 'Thêm nhóm'}</h3>
+                    <h3 className="font-bold text-lg">
+                      {isEditing ? 'Cập nhật nhóm' : 'Thêm nhóm'}
+                    </h3>
                     <p className="text-xs text-white/70">Mã nhóm tự động sinh</p>
                   </div>
                 </div>
-                <button 
-                  onClick={() => setShowModal(false)} 
+                <button
+                  onClick={() => setShowModal(false)}
                   className="p-2 hover:bg-white/20 rounded-xl transition-all"
                 >
                   <X size={24} />
@@ -466,7 +557,9 @@ export const MaterialGroups = ({ user, onBack, addToast }: {
               <div className="flex-1 overflow-y-auto custom-scrollbar">
                 <form onSubmit={handleSubmit} className="p-6 space-y-4">
                   <div className="space-y-1">
-                    <label className="text-[10px] font-bold text-gray-400 uppercase">Mã nhóm vật tư</label>
+                    <label className="text-[10px] font-bold text-gray-400 uppercase">
+                      Mã nhóm vật tư
+                    </label>
                     <input
                       required
                       disabled
@@ -477,7 +570,9 @@ export const MaterialGroups = ({ user, onBack, addToast }: {
                     />
                   </div>
                   <div className="space-y-1">
-                    <label className="text-[10px] font-bold text-gray-400 uppercase">Tên nhóm vật tư *</label>
+                    <label className="text-[10px] font-bold text-gray-400 uppercase">
+                      Tên nhóm vật tư *
+                    </label>
                     <input
                       required
                       type="text"
@@ -499,7 +594,13 @@ export const MaterialGroups = ({ user, onBack, addToast }: {
                   </div>
 
                   <div className="mt-8 flex justify-end gap-3 flex-shrink-0">
-                    <button type="button" onClick={() => setShowModal(false)} className="px-6 py-2 rounded-xl text-sm font-bold text-gray-500 hover:bg-gray-100 transition-colors">Hủy</button>
+                    <button
+                      type="button"
+                      onClick={() => setShowModal(false)}
+                      className="px-6 py-2 rounded-xl text-sm font-bold text-gray-500 hover:bg-gray-100 transition-colors"
+                    >
+                      Hủy
+                    </button>
                     <button
                       type="submit"
                       disabled={submitting}
@@ -517,7 +618,7 @@ export const MaterialGroups = ({ user, onBack, addToast }: {
 
       <AnimatePresence>
         {showDetailModal && selectedGroup && (
-          <div 
+          <div
             className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/50 backdrop-blur-md overflow-hidden"
             onClick={() => setShowDetailModal(false)}
           >
@@ -530,16 +631,18 @@ export const MaterialGroups = ({ user, onBack, addToast }: {
             >
               <div className="bg-primary p-6 text-white flex items-center justify-between rounded-t-[2rem] md:rounded-t-[2.5rem] flex-shrink-0">
                 <div className="flex items-center gap-3">
-                  <div 
+                  <div
                     className="p-2 bg-white/20 rounded-xl cursor-pointer hover:bg-white/30 transition-all active:scale-95"
                     onClick={() => setShowDetailModal(false)}
                   >
                     <Layers size={24} />
                   </div>
-                  <h3 className="text-xl font-bold uppercase tracking-widest">Chi tiết nhóm vật tư</h3>
+                  <h3 className="text-xl font-bold uppercase tracking-widest">
+                    Chi tiết nhóm vật tư
+                  </h3>
                 </div>
-                <button 
-                  onClick={() => setShowDetailModal(false)} 
+                <button
+                  onClick={() => setShowDetailModal(false)}
                   className="p-2 hover:bg-white/20 rounded-xl transition-all"
                 >
                   <X size={24} />
@@ -549,24 +652,42 @@ export const MaterialGroups = ({ user, onBack, addToast }: {
               <div className="p-8 overflow-y-auto flex-1 space-y-8">
                 <div className="grid grid-cols-2 gap-12">
                   <div className="space-y-1">
-                    <label className="text-[10px] font-bold text-gray-400 uppercase">Mã nhóm vật tư</label>
-                    <p className="text-sm font-bold text-gray-800 border-b border-gray-100 pb-2">{selectedGroup.code || selectedGroup.id.slice(0, 8)}</p>
+                    <label className="text-[10px] font-bold text-gray-400 uppercase">
+                      Mã nhóm vật tư
+                    </label>
+                    <p className="text-sm font-bold text-gray-800 border-b border-gray-100 pb-2">
+                      {selectedGroup.code || selectedGroup.id.slice(0, 8)}
+                    </p>
                   </div>
                   <div className="space-y-1">
-                    <label className="text-[10px] font-bold text-gray-400 uppercase">Nhóm vật tư</label>
-                    <p className="text-sm font-bold text-gray-800 border-b border-gray-100 pb-2">{selectedGroup.name}</p>
+                    <label className="text-[10px] font-bold text-gray-400 uppercase">
+                      Nhóm vật tư
+                    </label>
+                    <p className="text-sm font-bold text-gray-800 border-b border-gray-100 pb-2">
+                      {selectedGroup.name}
+                    </p>
                   </div>
                 </div>
 
                 <div className="space-y-4">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                      <div className="p-1.5 bg-primary/10 text-primary rounded-lg"><Package size={16} /></div>
-                      <h4 className="text-sm font-bold text-gray-700 uppercase tracking-wider">Danh mục vật tư trong nhóm</h4>
-                      <span className="px-2 py-0.5 bg-primary text-white text-[10px] font-bold rounded-full">{materials.length}</span>
+                      <div className="p-1.5 bg-primary/10 text-primary rounded-lg">
+                        <Package size={16} />
+                      </div>
+                      <h4 className="text-sm font-bold text-gray-700 uppercase tracking-wider">
+                        Danh mục vật tư trong nhóm
+                      </h4>
+                      <span className="px-2 py-0.5 bg-primary text-white text-[10px] font-bold rounded-full">
+                        {materials.length}
+                      </span>
                     </div>
                     <button
-                      onClick={() => { setMaterialFormData(initialMaterialFormState); setIsEditingMaterial(false); setShowMaterialModal(true); }}
+                      onClick={() => {
+                        setMaterialFormData(initialMaterialFormState);
+                        setIsEditingMaterial(false);
+                        setShowMaterialModal(true);
+                      }}
                       className="flex items-center gap-2 px-3 py-1.5 bg-blue-600 text-white rounded-lg text-xs font-bold hover:bg-blue-700 transition-colors"
                     >
                       <Plus size={14} /> Thêm dòng
@@ -586,25 +707,67 @@ export const MaterialGroups = ({ user, onBack, addToast }: {
                       </thead>
                       <tbody className="divide-y divide-gray-100">
                         {materialsLoading ? (
-                          <tr><td colSpan={5} className="px-4 py-8 text-center text-gray-400 italic">Đang tải vật tư...</td></tr>
+                          <tr>
+                            <td colSpan={5} className="px-4 py-8 text-center text-gray-400 italic">
+                              Đang tải vật tư...
+                            </td>
+                          </tr>
                         ) : materials.length === 0 ? (
-                          <tr><td colSpan={5} className="px-4 py-8 text-center text-gray-400 italic">Nhóm này chưa có vật tư nào</td></tr>
+                          <tr>
+                            <td colSpan={5} className="px-4 py-8 text-center text-gray-400 italic">
+                              Nhóm này chưa có vật tư nào
+                            </td>
+                          </tr>
                         ) : (
                           materials.map((mat) => (
-                            <tr 
-                              key={mat.id} 
+                            <tr
+                              key={mat.id}
                               className="hover:bg-gray-50 transition-colors group cursor-pointer"
-                              onClick={() => { setSelectedMaterial(mat); setShowMaterialDetailModal(true); }}
+                              onClick={() => {
+                                setSelectedMaterial(mat);
+                                setShowMaterialDetailModal(true);
+                              }}
                             >
-                              <td className="px-4 py-2 text-xs font-medium text-gray-700">{mat.code || mat.id.slice(0, 8)}</td>
+                              <td className="px-4 py-2 text-xs font-medium text-gray-700">
+                                {mat.code || mat.id.slice(0, 8)}
+                              </td>
                               <td className="px-4 py-2 text-xs text-gray-600">{mat.name}</td>
-                              <td className="px-4 py-2 text-xs text-gray-500">{mat.warehouses?.name || '-'}</td>
-                              <td className="px-4 py-2 text-xs text-gray-500">{mat.specification || '-'}</td>
+                              <td className="px-4 py-2 text-xs text-gray-500">
+                                {mat.warehouses?.name || '-'}
+                              </td>
+                              <td className="px-4 py-2 text-xs text-gray-500">
+                                {mat.specification || '-'}
+                              </td>
                               <td className="px-4 py-2 text-center">
                                 <div className="flex items-center justify-center gap-1">
-                                  <button onClick={(e) => { e.stopPropagation(); setSelectedMaterial(mat); setShowMaterialDetailModal(true); }} className="p-1 text-primary hover:bg-primary/10 rounded transition-colors"><Eye size={14} /></button>
-                                  <button onClick={(e) => { e.stopPropagation(); handleEditMaterial(mat); }} className="p-1 text-yellow-600 hover:bg-yellow-50 rounded transition-colors"><Edit size={14} /></button>
-                                  <button onClick={(e) => { e.stopPropagation(); handleDeleteMaterialClick(mat.id); }} className="p-1 text-red-600 hover:bg-red-50 rounded transition-colors"><Trash2 size={14} /></button>
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setSelectedMaterial(mat);
+                                      setShowMaterialDetailModal(true);
+                                    }}
+                                    className="p-1 text-primary hover:bg-primary/10 rounded transition-colors"
+                                  >
+                                    <Eye size={14} />
+                                  </button>
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleEditMaterial(mat);
+                                    }}
+                                    className="p-1 text-yellow-600 hover:bg-yellow-50 rounded transition-colors"
+                                  >
+                                    <Edit size={14} />
+                                  </button>
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleDeleteMaterialClick(mat.id);
+                                    }}
+                                    className="p-1 text-red-600 hover:bg-red-50 rounded transition-colors"
+                                  >
+                                    <Trash2 size={14} />
+                                  </button>
                                 </div>
                               </td>
                             </tr>
@@ -645,7 +808,7 @@ export const MaterialGroups = ({ user, onBack, addToast }: {
 
       <AnimatePresence>
         {showMaterialModal && (
-          <div 
+          <div
             className="fixed inset-0 z-[130] flex items-center justify-center p-4 bg-black/50 backdrop-blur-md overflow-hidden"
             onClick={() => setShowMaterialModal(false)}
           >
@@ -658,19 +821,21 @@ export const MaterialGroups = ({ user, onBack, addToast }: {
             >
               <div className="bg-blue-600 p-6 text-white flex items-center justify-between rounded-t-[2rem] md:rounded-t-[2.5rem] flex-shrink-0">
                 <div className="flex items-center gap-3">
-                  <div 
+                  <div
                     className="p-2 bg-white/20 rounded-xl cursor-pointer hover:bg-white/30 transition-all active:scale-95"
                     onClick={() => setShowMaterialModal(false)}
                   >
                     <Package size={24} />
                   </div>
                   <div>
-                    <h3 className="font-bold text-lg">{isEditingMaterial ? 'Cập nhật vật tư' : 'Thêm vật tư mới'}</h3>
+                    <h3 className="font-bold text-lg">
+                      {isEditingMaterial ? 'Cập nhật vật tư' : 'Thêm vật tư mới'}
+                    </h3>
                     <p className="text-xs text-white/70">Thuộc nhóm: {selectedGroup?.name}</p>
                   </div>
                 </div>
-                <button 
-                  onClick={() => setShowMaterialModal(false)} 
+                <button
+                  onClick={() => setShowMaterialModal(false)}
                   className="p-2 hover:bg-white/20 rounded-xl transition-all"
                 >
                   <X size={24} />
@@ -678,9 +843,14 @@ export const MaterialGroups = ({ user, onBack, addToast }: {
               </div>
 
               <div className="flex-1 overflow-y-auto custom-scrollbar">
-                <form onSubmit={handleMaterialSubmit} className="p-6 grid grid-cols-1 md:grid-cols-2 gap-4">
+                <form
+                  onSubmit={handleMaterialSubmit}
+                  className="p-6 grid grid-cols-1 md:grid-cols-2 gap-4"
+                >
                   <div className="space-y-1">
-                    <label className="text-[10px] font-bold text-gray-400 uppercase">Mã vật tư *</label>
+                    <label className="text-[10px] font-bold text-gray-400 uppercase">
+                      Mã vật tư *
+                    </label>
                     <div className="relative">
                       <input
                         list="material-ids-group"
@@ -690,7 +860,7 @@ export const MaterialGroups = ({ user, onBack, addToast }: {
                         onChange={(e) => {
                           const val = e.target.value;
                           setMaterialFormData({ ...materialFormData, code: val });
-                          const existing = materials.find(m => m.code === val);
+                          const existing = materials.find((m) => m.code === val);
                           if (existing) {
                             setMaterialFormData({ ...existing, code: val });
                           }
@@ -698,46 +868,68 @@ export const MaterialGroups = ({ user, onBack, addToast }: {
                         className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-blue-500/20"
                       />
                       <datalist id="material-ids-group">
-                        {uniqueMaterialIds.map(code => <option key={code} value={code} />)}
+                        {uniqueMaterialIds.map((code) => (
+                          <option key={code} value={code} />
+                        ))}
                       </datalist>
                     </div>
                   </div>
                   <div className="space-y-1">
-                    <label className="text-[10px] font-bold text-gray-400 uppercase">Tên vật tư *</label>
+                    <label className="text-[10px] font-bold text-gray-400 uppercase">
+                      Tên vật tư *
+                    </label>
                     <input
                       required
                       type="text"
                       value={materialFormData.name}
-                      onChange={(e) => setMaterialFormData({ ...materialFormData, name: e.target.value })}
+                      onChange={(e) =>
+                        setMaterialFormData({ ...materialFormData, name: e.target.value })
+                      }
                       className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-blue-500/20"
                     />
                   </div>
                   <div className="space-y-1">
-                    <label className="text-[10px] font-bold text-gray-400 uppercase">Kho lưu trữ</label>
+                    <label className="text-[10px] font-bold text-gray-400 uppercase">
+                      Kho lưu trữ
+                    </label>
                     <select
                       value={materialFormData.warehouse_id}
-                      onChange={(e) => setMaterialFormData({ ...materialFormData, warehouse_id: e.target.value })}
+                      onChange={(e) =>
+                        setMaterialFormData({ ...materialFormData, warehouse_id: e.target.value })
+                      }
                       className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-blue-500/20"
                     >
                       <option value="">-- Chọn kho --</option>
-                      {warehouses.map(w => <option key={w.id} value={w.id}>{w.name}</option>)}
+                      {warehouses.map((w) => (
+                        <option key={w.id} value={w.id}>
+                          {w.name}
+                        </option>
+                      ))}
                     </select>
                   </div>
                   <div className="space-y-1">
-                    <label className="text-[10px] font-bold text-gray-400 uppercase">Quy cách</label>
+                    <label className="text-[10px] font-bold text-gray-400 uppercase">
+                      Quy cách
+                    </label>
                     <input
                       type="text"
                       value={materialFormData.specification}
-                      onChange={(e) => setMaterialFormData({ ...materialFormData, specification: e.target.value })}
+                      onChange={(e) =>
+                        setMaterialFormData({ ...materialFormData, specification: e.target.value })
+                      }
                       className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-blue-500/20"
                     />
                   </div>
                   <div className="space-y-1">
-                    <label className="text-[10px] font-bold text-gray-400 uppercase">Đơn vị tính</label>
+                    <label className="text-[10px] font-bold text-gray-400 uppercase">
+                      Đơn vị tính
+                    </label>
                     <input
                       type="text"
                       value={materialFormData.unit}
-                      onChange={(e) => setMaterialFormData({ ...materialFormData, unit: e.target.value })}
+                      onChange={(e) =>
+                        setMaterialFormData({ ...materialFormData, unit: e.target.value })
+                      }
                       className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-blue-500/20"
                     />
                   </div>
@@ -746,20 +938,31 @@ export const MaterialGroups = ({ user, onBack, addToast }: {
                     <textarea
                       rows={2}
                       value={materialFormData.description}
-                      onChange={(e) => setMaterialFormData({ ...materialFormData, description: e.target.value })}
+                      onChange={(e) =>
+                        setMaterialFormData({ ...materialFormData, description: e.target.value })
+                      }
                       className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-blue-500/20 resize-none"
                     />
                   </div>
                   <div className="col-span-1 md:col-span-2 space-y-3">
-                    <label className="text-[10px] font-bold text-gray-400 uppercase">Hình ảnh vật tư</label>
+                    <label className="text-[10px] font-bold text-gray-400 uppercase">
+                      Hình ảnh vật tư
+                    </label>
                     <div className="flex items-center gap-4">
                       <div className="w-16 h-16 rounded-xl bg-gray-50 border-2 border-dashed border-gray-200 flex items-center justify-center overflow-hidden group relative">
                         {materialFormData.image_url ? (
                           <>
-                            <img src={materialFormData.image_url} alt="Preview" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                            <img
+                              src={materialFormData.image_url}
+                              alt="Preview"
+                              className="w-full h-full object-cover"
+                              referrerPolicy="no-referrer"
+                            />
                             <button
                               type="button"
-                              onClick={() => setMaterialFormData({ ...materialFormData, image_url: '' })}
+                              onClick={() =>
+                                setMaterialFormData({ ...materialFormData, image_url: '' })
+                              }
                               className="absolute inset-0 bg-black/40 text-white opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center"
                             >
                               <X size={14} />
@@ -788,7 +991,13 @@ export const MaterialGroups = ({ user, onBack, addToast }: {
                   </div>
 
                   <div className="col-span-1 md:col-span-2 mt-4 flex justify-end gap-3">
-                    <button type="button" onClick={() => setShowMaterialModal(false)} className="px-6 py-2 rounded-xl text-sm font-bold text-gray-500 hover:bg-gray-100 transition-colors">Hủy</button>
+                    <button
+                      type="button"
+                      onClick={() => setShowMaterialModal(false)}
+                      className="px-6 py-2 rounded-xl text-sm font-bold text-gray-500 hover:bg-gray-100 transition-colors"
+                    >
+                      Hủy
+                    </button>
                     <button
                       type="submit"
                       disabled={submitting}
@@ -806,7 +1015,7 @@ export const MaterialGroups = ({ user, onBack, addToast }: {
 
       <AnimatePresence>
         {showMaterialDetailModal && selectedMaterial && (
-          <div 
+          <div
             className="fixed inset-0 z-[140] flex items-center justify-center p-4 bg-black/50 backdrop-blur-md overflow-hidden"
             onClick={() => setShowMaterialDetailModal(false)}
           >
@@ -819,7 +1028,7 @@ export const MaterialGroups = ({ user, onBack, addToast }: {
             >
               <div className="bg-primary p-6 text-white flex items-center justify-between rounded-t-[2rem] md:rounded-t-[2.5rem] flex-shrink-0">
                 <div className="flex items-center gap-3">
-                  <div 
+                  <div
                     className="p-2 bg-white/20 rounded-xl cursor-pointer hover:bg-white/30 transition-all active:scale-95"
                     onClick={() => setShowMaterialDetailModal(false)}
                   >
@@ -827,8 +1036,8 @@ export const MaterialGroups = ({ user, onBack, addToast }: {
                   </div>
                   <h3 className="text-xl font-bold uppercase tracking-widest">Chi tiết vật tư</h3>
                 </div>
-                <button 
-                  onClick={() => setShowMaterialDetailModal(false)} 
+                <button
+                  onClick={() => setShowMaterialDetailModal(false)}
                   className="p-2 hover:bg-white/20 rounded-xl transition-all"
                 >
                   <X size={24} />
@@ -838,36 +1047,67 @@ export const MaterialGroups = ({ user, onBack, addToast }: {
               <div className="p-8 space-y-8 overflow-y-auto">
                 <div className="grid grid-cols-3 gap-8">
                   <div className="space-y-1">
-                    <label className="text-[10px] font-bold text-gray-400 uppercase">Mã vật tư</label>
-                    <p className="text-sm font-bold text-gray-800 border-b border-gray-100 pb-2">{selectedMaterial.code || selectedMaterial.id.slice(0, 8)}</p>
+                    <label className="text-[10px] font-bold text-gray-400 uppercase">
+                      Mã vật tư
+                    </label>
+                    <p className="text-sm font-bold text-gray-800 border-b border-gray-100 pb-2">
+                      {selectedMaterial.code || selectedMaterial.id.slice(0, 8)}
+                    </p>
                   </div>
                   <div className="col-span-2 space-y-1">
-                    <label className="text-[10px] font-bold text-gray-400 uppercase">Tên vật tư</label>
-                    <p className="text-sm font-bold text-gray-800 border-b border-gray-100 pb-2">{selectedMaterial.name}</p>
+                    <label className="text-[10px] font-bold text-gray-400 uppercase">
+                      Tên vật tư
+                    </label>
+                    <p className="text-sm font-bold text-gray-800 border-b border-gray-100 pb-2">
+                      {selectedMaterial.name}
+                    </p>
                   </div>
                   <div className="space-y-1">
-                    <label className="text-[10px] font-bold text-gray-400 uppercase">Kho lưu trữ</label>
-                    <p className="text-sm font-bold text-gray-800 border-b border-gray-100 pb-2">{selectedMaterial.warehouses?.name || '-'}</p>
+                    <label className="text-[10px] font-bold text-gray-400 uppercase">
+                      Kho lưu trữ
+                    </label>
+                    <p className="text-sm font-bold text-gray-800 border-b border-gray-100 pb-2">
+                      {selectedMaterial.warehouses?.name || '-'}
+                    </p>
                   </div>
                   <div className="col-span-2 space-y-1">
-                    <label className="text-[10px] font-bold text-gray-400 uppercase">Quy cách</label>
-                    <p className="text-sm font-bold text-gray-800 border-b border-gray-100 pb-2">{selectedMaterial.specification || '-'}</p>
+                    <label className="text-[10px] font-bold text-gray-400 uppercase">
+                      Quy cách
+                    </label>
+                    <p className="text-sm font-bold text-gray-800 border-b border-gray-100 pb-2">
+                      {selectedMaterial.specification || '-'}
+                    </p>
                   </div>
                   <div className="space-y-1">
-                    <label className="text-[10px] font-bold text-gray-400 uppercase">Nhóm vật tư</label>
-                    <p className="text-sm font-bold text-gray-800 border-b border-gray-100 pb-2">{selectedGroup?.name}</p>
+                    <label className="text-[10px] font-bold text-gray-400 uppercase">
+                      Nhóm vật tư
+                    </label>
+                    <p className="text-sm font-bold text-gray-800 border-b border-gray-100 pb-2">
+                      {selectedGroup?.name}
+                    </p>
                   </div>
                   <div className="space-y-1">
-                    <label className="text-[10px] font-bold text-gray-400 uppercase">Đơn vị tính</label>
-                    <p className="text-sm font-bold text-gray-800 border-b border-gray-100 pb-2">{selectedMaterial.unit || '-'}</p>
+                    <label className="text-[10px] font-bold text-gray-400 uppercase">
+                      Đơn vị tính
+                    </label>
+                    <p className="text-sm font-bold text-gray-800 border-b border-gray-100 pb-2">
+                      {selectedMaterial.unit || '-'}
+                    </p>
                   </div>
                 </div>
 
                 {selectedMaterial.image_url && (
                   <div className="space-y-2">
-                    <label className="text-[10px] font-bold text-gray-400 uppercase">Hình ảnh</label>
+                    <label className="text-[10px] font-bold text-gray-400 uppercase">
+                      Hình ảnh
+                    </label>
                     <div className="w-full h-48 rounded-2xl overflow-hidden border border-gray-100">
-                      <img src={selectedMaterial.image_url} alt={selectedMaterial.name} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                      <img
+                        src={selectedMaterial.image_url}
+                        alt={selectedMaterial.name}
+                        className="w-full h-full object-cover"
+                        referrerPolicy="no-referrer"
+                      />
                     </div>
                   </div>
                 )}
@@ -875,14 +1115,20 @@ export const MaterialGroups = ({ user, onBack, addToast }: {
 
               <div className="p-6 bg-gray-50 border-t border-gray-100 flex items-center justify-between">
                 <button
-                  onClick={() => { setShowMaterialDetailModal(false); handleDeleteMaterialClick(selectedMaterial.id); }}
+                  onClick={() => {
+                    setShowMaterialDetailModal(false);
+                    handleDeleteMaterialClick(selectedMaterial.id);
+                  }}
                   className="flex items-center gap-2 px-6 py-2 bg-red-500 text-white rounded-xl text-sm font-bold hover:bg-red-600 transition-colors shadow-lg shadow-red-500/20"
                 >
                   <Trash2 size={16} /> Xóa
                 </button>
                 <div className="flex gap-3">
                   <button
-                    onClick={() => { setShowMaterialDetailModal(false); handleEditMaterial(selectedMaterial); }}
+                    onClick={() => {
+                      setShowMaterialDetailModal(false);
+                      handleEditMaterial(selectedMaterial);
+                    }}
                     className="flex items-center gap-2 px-6 py-2 bg-yellow-500 text-white rounded-xl text-sm font-bold hover:bg-yellow-600 transition-colors shadow-lg shadow-yellow-500/20"
                   >
                     <Edit size={16} /> Sửa

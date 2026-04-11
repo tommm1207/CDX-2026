@@ -9,10 +9,14 @@ import { FAB } from '../shared/FAB';
 import { Button } from '../shared/Button';
 import { checkUsage } from '@/utils/dataIntegrity';
 
-export const HRRecords = ({ user, onBack, addToast }: { 
-  user: Employee, 
-  onBack?: () => void,
-  addToast?: (message: string, type?: ToastType) => void
+export const HRRecords = ({
+  user,
+  onBack,
+  addToast,
+}: {
+  user: Employee;
+  onBack?: () => void;
+  addToast?: (message: string, type?: ToastType) => void;
 }) => {
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [loading, setLoading] = useState(true);
@@ -41,7 +45,7 @@ export const HRRecords = ({ user, onBack, addToast }: {
     avatar_url: '',
     resign_date: '',
     initial_budget: 0,
-    status: 'Đang làm việc'
+    status: 'Đang làm việc',
   };
 
   const [formData, setFormData] = useState(initialFormState);
@@ -106,7 +110,7 @@ export const HRRecords = ({ user, onBack, addToast }: {
       department: emp.department || '',
       position: emp.position || '',
       data_view_permission: emp.data_view_permission || '',
-      avatar_url: emp.avatar_url || ''
+      avatar_url: emp.avatar_url || '',
     });
     setIsEditing(true);
     setShowModal(true);
@@ -123,7 +127,7 @@ export const HRRecords = ({ user, onBack, addToast }: {
   const confirmDelete = async () => {
     if (!itemToDelete) return;
 
-    const target = employees.find(e => e.id === itemToDelete);
+    const target = employees.find((e) => e.id === itemToDelete);
     if (target?.role === 'Admin App' && user.role !== 'Admin App') {
       if (addToast) addToast('Bạn không có quyền xóa tài khoản Admin App', 'error');
       else alert('Bạn không có quyền xóa tài khoản Admin App');
@@ -133,12 +137,19 @@ export const HRRecords = ({ user, onBack, addToast }: {
     try {
       const usage = await checkUsage('employee', itemToDelete);
       if (usage.inUse) {
-        if (addToast) addToast(`Không thể xóa vì nhân sự này đang được dùng trong: ${usage.tables.join(', ')}`, 'error');
+        if (addToast)
+          addToast(
+            `Không thể xóa vì nhân sự này đang được dùng trong: ${usage.tables.join(', ')}`,
+            'error',
+          );
         setShowDeleteModal(false);
         return;
       }
 
-      const { error } = await supabase.from('users').update({ status: 'Đã xóa' }).eq('id', itemToDelete);
+      const { error } = await supabase
+        .from('users')
+        .update({ status: 'Đã xóa' })
+        .eq('id', itemToDelete);
       if (error) throw error;
       fetchEmployees();
       if (addToast) addToast('Đã chuyển nhân sự vào thùng rác', 'success');
@@ -167,7 +178,7 @@ export const HRRecords = ({ user, onBack, addToast }: {
         department: formData.department || null,
         position: formData.position || null,
         data_view_permission: formData.data_view_permission || null,
-        avatar_url: formData.avatar_url || null
+        avatar_url: formData.avatar_url || null,
       };
 
       if (isEditing) {
@@ -182,7 +193,11 @@ export const HRRecords = ({ user, onBack, addToast }: {
       fetchEmployees();
       setFormData(initialFormState);
       setIsEditing(false);
-      if (addToast) addToast(isEditing ? 'Cập nhật nhân sự thành công!' : 'Thêm mới nhân sự thành công!', 'success');
+      if (addToast)
+        addToast(
+          isEditing ? 'Cập nhật nhân sự thành công!' : 'Thêm mới nhân sự thành công!',
+          'success',
+        );
     } catch (err: any) {
       if (addToast) addToast('Lỗi khi lưu nhân sự: ' + err.message, 'error');
       else alert('Lỗi khi lưu nhân sự: ' + err.message);
@@ -191,8 +206,9 @@ export const HRRecords = ({ user, onBack, addToast }: {
     }
   };
 
-  const filteredEmployees = employees.filter(emp => {
-    const matchesSearch = emp.full_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+  const filteredEmployees = employees.filter((emp) => {
+    const matchesSearch =
+      emp.full_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       (emp.code && emp.code.toLowerCase().includes(searchTerm.toLowerCase()));
 
     if (user.role !== 'Admin App' && emp.role === 'Admin App') {
@@ -211,7 +227,7 @@ export const HRRecords = ({ user, onBack, addToast }: {
         <Button
           size="icon"
           variant={showFilter ? 'primary' : 'outline'}
-          onClick={() => setShowFilter(f => !f)}
+          onClick={() => setShowFilter((f) => !f)}
           icon={Search}
         />
       </div>
@@ -227,7 +243,10 @@ export const HRRecords = ({ user, onBack, addToast }: {
             >
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 mb-4">
                 <div className="relative lg:col-span-1">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
+                  <Search
+                    className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
+                    size={16}
+                  />
                   <input
                     type="text"
                     placeholder="Tìm kiếm nhanh..."
@@ -242,8 +261,14 @@ export const HRRecords = ({ user, onBack, addToast }: {
                 <select className="px-4 py-2 rounded-lg border border-gray-200 text-sm outline-none">
                   <option>-- Kho --</option>
                 </select>
-                <input type="date" className="px-4 py-2 rounded-lg border border-gray-200 text-sm outline-none" />
-                <input type="date" className="px-4 py-2 rounded-lg border border-gray-200 text-sm outline-none" />
+                <input
+                  type="date"
+                  className="px-4 py-2 rounded-lg border border-gray-200 text-sm outline-none"
+                />
+                <input
+                  type="date"
+                  className="px-4 py-2 rounded-lg border border-gray-200 text-sm outline-none"
+                />
               </div>
             </motion.div>
           )}
@@ -276,62 +301,91 @@ export const HRRecords = ({ user, onBack, addToast }: {
                   </td>
                 </tr>
               ) : filteredEmployees.length === 0 ? (
-                <tr><td colSpan={user.role === 'Admin App' ? 11 : 10} className="p-8 text-center">Không tìm thấy nhân sự nào</td></tr>
-              ) : filteredEmployees.map((emp) => (
-                <tr key={emp.id} onClick={() => handleEdit(emp)} className="border-b border-gray-50 hover:bg-primary/5 transition-colors whitespace-nowrap cursor-pointer">
-                  <td className="p-3 font-bold text-gray-800 sticky left-0 bg-white group-hover:bg-gray-50 z-10 border-b border-gray-50">{emp.code || emp.id.slice(0, 8)}</td>
-                  <td className="p-3">{emp.full_name}</td>
-                  <td className="p-3">{emp.email || '-'}</td>
-                  <td className="p-3">{emp.phone || '-'}</td>
-                  <td className="p-3">{emp.join_date || '-'}</td>
-                  {user.role === 'Admin App' && (
-                    <td className="p-3 font-mono text-blue-600">
-                      <div className="flex items-center gap-2 group/pass">
-                        <span className="opacity-0 group-hover/pass:opacity-100 transition-opacity absolute bg-white px-2 py-1 rounded shadow-sm border border-gray-100 z-50 pointer-events-none -mt-8 ml-4">
-                          {emp.app_pass}
-                        </span>
-                        <span>••••••••</span>
-                        <Eye className="w-4 h-4 text-gray-400 group-hover/pass:text-blue-500 cursor-pointer" />
-                      </div>
-                    </td>
-                  )}
-                  <td className="p-3">{emp.department || '-'}</td>
-                  <td className="p-3">{emp.position || '-'}</td>
-                  <td className="p-3">
-                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${emp.role === 'Admin App' ? 'bg-purple-100 text-purple-600' :
-                        emp.role === 'Admin' ? 'bg-blue-100 text-blue-600' : 'bg-gray-100 text-gray-600'
-                      }`}>
-                      {emp.role}
-                    </span>
-                  </td>
-                  <td className="p-3">
-                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${emp.status === 'Đang làm việc' || emp.status === 'Hoạt động' ? 'bg-green-100 text-green-600' : 'bg-red-100 text-red-600'
-                      }`}>
-                      {emp.status}
-                    </span>
-                  </td>
-                  <td className="p-3" onClick={(e) => e.stopPropagation()}>
-                    <div className="flex gap-2">
-                      <Button
-                        size="icon"
-                        variant="ghost"
-                        className="text-blue-600 hover:bg-blue-50"
-                        onClick={(e) => { e.stopPropagation(); handleEdit(emp); }}
-                        icon={Edit}
-                        iconSize={14}
-                      />
-                      <Button
-                        size="icon"
-                        variant="ghost"
-                        className="text-red-600 hover:bg-red-50"
-                        onClick={(e) => { e.stopPropagation(); handleDeleteClick(emp.id); }}
-                        icon={Trash2}
-                        iconSize={14}
-                      />
-                    </div>
+                <tr>
+                  <td colSpan={user.role === 'Admin App' ? 11 : 10} className="p-8 text-center">
+                    Không tìm thấy nhân sự nào
                   </td>
                 </tr>
-              ))}
+              ) : (
+                filteredEmployees.map((emp) => (
+                  <tr
+                    key={emp.id}
+                    onClick={() => handleEdit(emp)}
+                    className="border-b border-gray-50 hover:bg-primary/5 transition-colors whitespace-nowrap cursor-pointer"
+                  >
+                    <td className="p-3 font-bold text-gray-800 sticky left-0 bg-white group-hover:bg-gray-50 z-10 border-b border-gray-50">
+                      {emp.code || emp.id.slice(0, 8)}
+                    </td>
+                    <td className="p-3">{emp.full_name}</td>
+                    <td className="p-3">{emp.email || '-'}</td>
+                    <td className="p-3">{emp.phone || '-'}</td>
+                    <td className="p-3">{emp.join_date || '-'}</td>
+                    {user.role === 'Admin App' && (
+                      <td className="p-3 font-mono text-blue-600">
+                        <div className="flex items-center gap-2 group/pass">
+                          <span className="opacity-0 group-hover/pass:opacity-100 transition-opacity absolute bg-white px-2 py-1 rounded shadow-sm border border-gray-100 z-50 pointer-events-none -mt-8 ml-4">
+                            {emp.app_pass}
+                          </span>
+                          <span>••••••••</span>
+                          <Eye className="w-4 h-4 text-gray-400 group-hover/pass:text-blue-500 cursor-pointer" />
+                        </div>
+                      </td>
+                    )}
+                    <td className="p-3">{emp.department || '-'}</td>
+                    <td className="p-3">{emp.position || '-'}</td>
+                    <td className="p-3">
+                      <span
+                        className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                          emp.role === 'Admin App'
+                            ? 'bg-purple-100 text-purple-600'
+                            : emp.role === 'Admin'
+                              ? 'bg-blue-100 text-blue-600'
+                              : 'bg-gray-100 text-gray-600'
+                        }`}
+                      >
+                        {emp.role}
+                      </span>
+                    </td>
+                    <td className="p-3">
+                      <span
+                        className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                          emp.status === 'Đang làm việc' || emp.status === 'Hoạt động'
+                            ? 'bg-green-100 text-green-600'
+                            : 'bg-red-100 text-red-600'
+                        }`}
+                      >
+                        {emp.status}
+                      </span>
+                    </td>
+                    <td className="p-3" onClick={(e) => e.stopPropagation()}>
+                      <div className="flex gap-2">
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          className="text-blue-600 hover:bg-blue-50"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleEdit(emp);
+                          }}
+                          icon={Edit}
+                          iconSize={14}
+                        />
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          className="text-red-600 hover:bg-red-50"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDeleteClick(emp.id);
+                          }}
+                          icon={Trash2}
+                          iconSize={14}
+                        />
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </div>
@@ -339,7 +393,7 @@ export const HRRecords = ({ user, onBack, addToast }: {
 
       <AnimatePresence>
         {showDeleteModal && (
-          <div 
+          <div
             className="fixed inset-0 z-[120] flex items-center justify-center p-4 bg-black/50 backdrop-blur-md overflow-hidden"
             onClick={() => setShowDeleteModal(false)}
           >
@@ -354,20 +408,20 @@ export const HRRecords = ({ user, onBack, addToast }: {
                 <Trash2 size={32} />
               </div>
               <h3 className="text-xl font-bold text-gray-800 mb-2">Xác nhận xóa?</h3>
-              <p className="text-sm text-gray-500 mb-6 font-medium">Bạn có chắc chắn muốn chuyển nhân sự <strong>{employees.find(e => e.id === itemToDelete)?.code || itemToDelete?.slice(0, 8)}</strong> vào thùng rác?<br/>Hành động này có thể hoàn tác trong mục Thùng rác.</p>
+              <p className="text-sm text-gray-500 mb-6 font-medium">
+                Bạn có chắc chắn muốn chuyển nhân sự{' '}
+                <strong>
+                  {employees.find((e) => e.id === itemToDelete)?.code || itemToDelete?.slice(0, 8)}
+                </strong>{' '}
+                vào thùng rác?
+                <br />
+                Hành động này có thể hoàn tác trong mục Thùng rác.
+              </p>
               <div className="flex gap-3">
-                <Button 
-                  fullWidth 
-                  variant="outline" 
-                  onClick={() => setShowDeleteModal(false)}
-                >
+                <Button fullWidth variant="outline" onClick={() => setShowDeleteModal(false)}>
                   Hủy bỏ
                 </Button>
-                <Button 
-                  fullWidth 
-                  variant="danger" 
-                  onClick={confirmDelete}
-                >
+                <Button fullWidth variant="danger" onClick={confirmDelete}>
                   Di chuyển
                 </Button>
               </div>
@@ -378,7 +432,7 @@ export const HRRecords = ({ user, onBack, addToast }: {
 
       <AnimatePresence>
         {showModal && (
-          <div 
+          <div
             className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/50 backdrop-blur-md overflow-hidden"
             onClick={() => setShowModal(false)}
           >
@@ -391,16 +445,18 @@ export const HRRecords = ({ user, onBack, addToast }: {
             >
               <div className="bg-primary p-6 flex items-center justify-between text-white rounded-t-[2rem] md:rounded-t-[2.5rem] flex-shrink-0 transition-colors">
                 <div className="flex items-center gap-3">
-                  <div 
+                  <div
                     className="p-2 bg-white/20 rounded-xl cursor-pointer hover:bg-white/30 transition-all active:scale-95"
                     onClick={() => setShowModal(false)}
                   >
                     <UserPlus size={24} />
                   </div>
-                  <h3 className="font-bold text-lg">{isEditing ? 'Cập Nhật Nhân Sự' : 'Thêm Mới Nhân Sự'}</h3>
+                  <h3 className="font-bold text-lg">
+                    {isEditing ? 'Cập Nhật Nhân Sự' : 'Thêm Mới Nhân Sự'}
+                  </h3>
                 </div>
-                <button 
-                  onClick={() => setShowModal(false)} 
+                <button
+                  onClick={() => setShowModal(false)}
                   className="p-2 hover:bg-white/20 rounded-xl transition-all"
                 >
                   <X size={24} />
@@ -412,7 +468,9 @@ export const HRRecords = ({ user, onBack, addToast }: {
                   <div className="p-6">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                       <div className="space-y-1">
-                        <label className="text-[10px] font-bold text-gray-400 uppercase">Mã nhân viên</label>
+                        <label className="text-[10px] font-bold text-gray-400 uppercase">
+                          Mã nhân viên
+                        </label>
                         <input
                           required
                           type="text"
@@ -423,7 +481,9 @@ export const HRRecords = ({ user, onBack, addToast }: {
                         />
                       </div>
                       <div className="space-y-1">
-                        <label className="text-[10px] font-bold text-gray-400 uppercase">Họ và tên</label>
+                        <label className="text-[10px] font-bold text-gray-400 uppercase">
+                          Họ và tên
+                        </label>
                         <input
                           required
                           type="text"
@@ -433,7 +493,9 @@ export const HRRecords = ({ user, onBack, addToast }: {
                         />
                       </div>
                       <div className="space-y-1">
-                        <label className="text-[10px] font-bold text-gray-400 uppercase">Email</label>
+                        <label className="text-[10px] font-bold text-gray-400 uppercase">
+                          Email
+                        </label>
                         <input
                           type="email"
                           value={formData.email}
@@ -442,7 +504,9 @@ export const HRRecords = ({ user, onBack, addToast }: {
                         />
                       </div>
                       <div className="space-y-1">
-                        <label className="text-[10px] font-bold text-gray-400 uppercase">Số điện thoại</label>
+                        <label className="text-[10px] font-bold text-gray-400 uppercase">
+                          Số điện thoại
+                        </label>
                         <input
                           type="text"
                           value={formData.phone}
@@ -451,7 +515,9 @@ export const HRRecords = ({ user, onBack, addToast }: {
                         />
                       </div>
                       <div className="space-y-1">
-                        <label className="text-[10px] font-bold text-gray-400 uppercase">CMND / CCCD</label>
+                        <label className="text-[10px] font-bold text-gray-400 uppercase">
+                          CMND / CCCD
+                        </label>
                         <input
                           type="text"
                           value={formData.id_card}
@@ -460,7 +526,9 @@ export const HRRecords = ({ user, onBack, addToast }: {
                         />
                       </div>
                       <div className="space-y-1">
-                        <label className="text-[10px] font-bold text-gray-400 uppercase">Ngày sinh</label>
+                        <label className="text-[10px] font-bold text-gray-400 uppercase">
+                          Ngày sinh
+                        </label>
                         <input
                           type="date"
                           value={formData.dob}
@@ -469,7 +537,9 @@ export const HRRecords = ({ user, onBack, addToast }: {
                         />
                       </div>
                       <div className="space-y-1">
-                        <label className="text-[10px] font-bold text-gray-400 uppercase">Ngày vào làm</label>
+                        <label className="text-[10px] font-bold text-gray-400 uppercase">
+                          Ngày vào làm
+                        </label>
                         <input
                           type="date"
                           value={formData.join_date}
@@ -478,7 +548,9 @@ export const HRRecords = ({ user, onBack, addToast }: {
                         />
                       </div>
                       <div className="space-y-1">
-                        <label className="text-[10px] font-bold text-gray-400 uppercase">Mã số thuế</label>
+                        <label className="text-[10px] font-bold text-gray-400 uppercase">
+                          Mã số thuế
+                        </label>
                         <input
                           type="text"
                           value={formData.tax_id}
@@ -488,7 +560,9 @@ export const HRRecords = ({ user, onBack, addToast }: {
                       </div>
                       {user.role === 'Admin App' && (
                         <div className="space-y-1">
-                          <label className="text-[10px] font-bold text-gray-400 uppercase">Mật khẩu ứng dụng</label>
+                          <label className="text-[10px] font-bold text-gray-400 uppercase">
+                            Mật khẩu ứng dụng
+                          </label>
                           <input
                             required
                             type="text"
@@ -499,7 +573,9 @@ export const HRRecords = ({ user, onBack, addToast }: {
                         </div>
                       )}
                       <div className="space-y-1">
-                        <label className="text-[10px] font-bold text-gray-400 uppercase">Bộ phận</label>
+                        <label className="text-[10px] font-bold text-gray-400 uppercase">
+                          Bộ phận
+                        </label>
                         <input
                           type="text"
                           value={formData.department}
@@ -508,7 +584,9 @@ export const HRRecords = ({ user, onBack, addToast }: {
                         />
                       </div>
                       <div className="space-y-1">
-                        <label className="text-[10px] font-bold text-gray-400 uppercase">Chức vụ</label>
+                        <label className="text-[10px] font-bold text-gray-400 uppercase">
+                          Chức vụ
+                        </label>
                         <input
                           type="text"
                           value={formData.position}
@@ -517,10 +595,14 @@ export const HRRecords = ({ user, onBack, addToast }: {
                         />
                       </div>
                       <div className="space-y-1">
-                        <label className="text-[10px] font-bold text-gray-400 uppercase">Có tính lương</label>
+                        <label className="text-[10px] font-bold text-gray-400 uppercase">
+                          Có tính lương
+                        </label>
                         <select
                           value={formData.has_salary ? 'true' : 'false'}
-                          onChange={(e) => setFormData({ ...formData, has_salary: e.target.value === 'true' })}
+                          onChange={(e) =>
+                            setFormData({ ...formData, has_salary: e.target.value === 'true' })
+                          }
                           className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20"
                         >
                           <option value="false">Không</option>
@@ -528,30 +610,44 @@ export const HRRecords = ({ user, onBack, addToast }: {
                         </select>
                       </div>
                       <div className="space-y-1">
-                        <label className="text-[10px] font-bold text-gray-400 uppercase">Phân quyền</label>
+                        <label className="text-[10px] font-bold text-gray-400 uppercase">
+                          Phân quyền
+                        </label>
                         <select
                           value={formData.role}
-                          onChange={(e) => setFormData({ ...formData, role: e.target.value as any })}
+                          onChange={(e) =>
+                            setFormData({ ...formData, role: e.target.value as any })
+                          }
                           className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20"
                         >
                           <option value="User">User</option>
                           <option value="Admin">Admin</option>
-                          {user.role === 'Admin App' && <option value="Admin App">Admin App</option>}
+                          {user.role === 'Admin App' && (
+                            <option value="Admin App">Admin App</option>
+                          )}
                         </select>
                       </div>
                       <div className="space-y-1">
-                        <label className="text-[10px] font-bold text-gray-400 uppercase">Quyền xem dữ liệu</label>
+                        <label className="text-[10px] font-bold text-gray-400 uppercase">
+                          Quyền xem dữ liệu
+                        </label>
                         <input
                           type="text"
                           placeholder="VD: kho-a,kho-b (chức năng đang phát triển)"
                           value={formData.data_view_permission}
-                          onChange={(e) => setFormData({ ...formData, data_view_permission: e.target.value })}
+                          onChange={(e) =>
+                            setFormData({ ...formData, data_view_permission: e.target.value })
+                          }
                           className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20"
                         />
-                        <p className="text-[10px] text-gray-400 italic mt-1">* Tính năng phân quyền theo kho đang được phát triển</p>
+                        <p className="text-[10px] text-gray-400 italic mt-1">
+                          * Tính năng phân quyền theo kho đang được phát triển
+                        </p>
                       </div>
                       <div className="space-y-1">
-                        <label className="text-[10px] font-bold text-gray-400 uppercase">Ảnh cá nhân (URL)</label>
+                        <label className="text-[10px] font-bold text-gray-400 uppercase">
+                          Ảnh cá nhân (URL)
+                        </label>
                         <input
                           type="text"
                           value={formData.avatar_url}
@@ -560,25 +656,35 @@ export const HRRecords = ({ user, onBack, addToast }: {
                         />
                       </div>
                       <div className="space-y-1">
-                        <label className="text-[10px] font-bold text-gray-400 uppercase">Ngày nghỉ việc</label>
+                        <label className="text-[10px] font-bold text-gray-400 uppercase">
+                          Ngày nghỉ việc
+                        </label>
                         <input
                           type="date"
                           value={formData.resign_date}
-                          onChange={(e) => setFormData({ ...formData, resign_date: e.target.value })}
+                          onChange={(e) =>
+                            setFormData({ ...formData, resign_date: e.target.value })
+                          }
                           className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20"
                         />
                       </div>
                       <div className="space-y-1">
-                        <label className="text-[10px] font-bold text-gray-400 uppercase">Ngân sách đầu kỳ</label>
+                        <label className="text-[10px] font-bold text-gray-400 uppercase">
+                          Ngân sách đầu kỳ
+                        </label>
                         <input
                           type="number"
                           value={formData.initial_budget}
-                          onChange={(e) => setFormData({ ...formData, initial_budget: parseFloat(e.target.value) })}
+                          onChange={(e) =>
+                            setFormData({ ...formData, initial_budget: parseFloat(e.target.value) })
+                          }
                           className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20"
                         />
                       </div>
                       <div className="space-y-1">
-                        <label className="text-[10px] font-bold text-gray-400 uppercase">Trạng thái</label>
+                        <label className="text-[10px] font-bold text-gray-400 uppercase">
+                          Trạng thái
+                        </label>
                         <select
                           value={formData.status}
                           onChange={(e) => setFormData({ ...formData, status: e.target.value })}
@@ -592,10 +698,7 @@ export const HRRecords = ({ user, onBack, addToast }: {
                   </div>
 
                   <div className="p-6 bg-gray-50 flex justify-end gap-3 flex-shrink-0">
-                    <Button 
-                      variant="ghost" 
-                      onClick={() => setShowModal(false)}
-                    >
+                    <Button variant="ghost" onClick={() => setShowModal(false)}>
                       Hủy bỏ
                     </Button>
                     <Button

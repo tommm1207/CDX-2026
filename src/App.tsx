@@ -40,9 +40,10 @@ export default function App() {
     setUser(null);
     localStorage.removeItem('cdx_user');
   }, []);
-  
+
   // Check for missing configuration
-  const isConfigMissing = !import.meta.env.VITE_SUPABASE_URL || !import.meta.env.VITE_SUPABASE_ANON_KEY;
+  const isConfigMissing =
+    !import.meta.env.VITE_SUPABASE_URL || !import.meta.env.VITE_SUPABASE_ANON_KEY;
 
   const [currentPage, setCurrentPage] = useState('dashboard');
   const [pageParams, setPageParams] = useState<any>(null);
@@ -52,26 +53,41 @@ export default function App() {
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
   const [hideBottomNav, setHideBottomNav] = useState(false);
 
-  const addToast = useCallback((message: string, type: ToastType = 'info', title?: string, duration: number = 4000) => {
-    const id = Math.random().toString(36).substr(2, 9);
-    setToasts(prev => [...prev, { id, message, type, title }]);
-    setTimeout(() => {
-      removeToast(id);
-    }, duration);
-  }, []);
+  const addToast = useCallback(
+    (message: string, type: ToastType = 'info', title?: string, duration: number = 4000) => {
+      const id = Math.random().toString(36).substr(2, 9);
+      setToasts((prev) => [...prev, { id, message, type, title }]);
+      setTimeout(() => {
+        removeToast(id);
+      }, duration);
+    },
+    [],
+  );
 
   const removeToast = useCallback((id: string) => {
-    setToasts(prev => prev.filter(t => t.id !== id));
+    setToasts((prev) => prev.filter((t) => t.id !== id));
   }, []);
 
   const fetchPendingCount = useCallback(async () => {
     if (!user) return;
     try {
       const [si, so, tr, co] = await Promise.all([
-        supabase.from('stock_in').select('*', { count: 'exact', head: true }).eq('status', 'Chờ duyệt'),
-        supabase.from('stock_out').select('*', { count: 'exact', head: true }).eq('status', 'Chờ duyệt'),
-        supabase.from('transfers').select('*', { count: 'exact', head: true }).eq('status', 'Chờ duyệt'),
-        supabase.from('costs').select('*', { count: 'exact', head: true }).eq('status', 'Chờ duyệt')
+        supabase
+          .from('stock_in')
+          .select('*', { count: 'exact', head: true })
+          .eq('status', 'Chờ duyệt'),
+        supabase
+          .from('stock_out')
+          .select('*', { count: 'exact', head: true })
+          .eq('status', 'Chờ duyệt'),
+        supabase
+          .from('transfers')
+          .select('*', { count: 'exact', head: true })
+          .eq('status', 'Chờ duyệt'),
+        supabase
+          .from('costs')
+          .select('*', { count: 'exact', head: true })
+          .eq('status', 'Chờ duyệt'),
       ]);
       setPendingCount((si.count || 0) + (so.count || 0) + (tr.count || 0) + (co.count || 0));
     } catch (err) {
@@ -121,27 +137,41 @@ export default function App() {
 
     const channel = supabase
       .channel('pending-count-realtime')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'stock_in' }, fetchPendingCount)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'stock_out' }, fetchPendingCount)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'transfers' }, fetchPendingCount)
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'stock_in' },
+        fetchPendingCount,
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'stock_out' },
+        fetchPendingCount,
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'transfers' },
+        fetchPendingCount,
+      )
       .on('postgres_changes', { event: '*', schema: 'public', table: 'costs' }, fetchPendingCount)
       .subscribe();
 
-    return () => { supabase.removeChannel(channel); };
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [user, fetchPendingCount]);
 
   // Reminders / Notifications
   useEffect(() => {
     if (!user) return;
 
-    if ("Notification" in window && Notification.permission === "default") {
+    if ('Notification' in window && Notification.permission === 'default') {
       Notification.requestPermission();
     }
 
     const checkReminders = setInterval(async () => {
       const now = new Date().toISOString();
       const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
-      
+
       try {
         const { data, error } = await supabase
           .from('reminders')
@@ -159,8 +189,9 @@ export default function App() {
 
           data.forEach((rem) => {
             const payload = parseReminderContent(rem.content);
-            const isParticipant = payload.assignees.length === 0 || payload.assignees.includes(user.id);
-            
+            const isParticipant =
+              payload.assignees.length === 0 || payload.assignees.includes(user.id);
+
             if (!isParticipant) return;
 
             if (!notifiedMap.has(rem.id)) {
@@ -168,11 +199,11 @@ export default function App() {
               const displayTitle = rem.title;
               const displayMessage = `${payload.text}\n\n**Thông báo từ ${senderName}**`;
 
-              if (rem.browser_notification && Notification.permission === "granted") {
+              if (rem.browser_notification && Notification.permission === 'granted') {
                 try {
-                  new Notification(rem.title, { 
-                    body: `${payload.text}\nThông báo từ ${senderName}`, 
-                    icon: '/logo.png' 
+                  new Notification(rem.title, {
+                    body: `${payload.text}\nThông báo từ ${senderName}`,
+                    icon: '/logo.png',
                   });
                 } catch (e) {}
               }
@@ -185,7 +216,7 @@ export default function App() {
 
           if (hasNew) {
             localStorage.setItem('notified_reminders', JSON.stringify([...notifiedMap]));
-            if (currentPage === 'reminders') setRefreshKey(prev => prev + 1);
+            if (currentPage === 'reminders') setRefreshKey((prev) => prev + 1);
           }
         }
       } catch (err) {}
@@ -194,21 +225,24 @@ export default function App() {
     return () => clearInterval(checkReminders);
   }, [user, currentPage]);
 
-  const navigateTo = useCallback((page: string, params: any = null) => {
-    if (page !== currentPage || params !== pageParams) {
-      setNavigationHistory(prev => [...prev, currentPage]);
-      setCurrentPage(page);
-      setPageParams(params);
-      // Reset navigation visibility on page change
-      setHideBottomNav(false);
-    }
-  }, [currentPage, pageParams]);
+  const navigateTo = useCallback(
+    (page: string, params: any = null) => {
+      if (page !== currentPage || params !== pageParams) {
+        setNavigationHistory((prev) => [...prev, currentPage]);
+        setCurrentPage(page);
+        setPageParams(params);
+        // Reset navigation visibility on page change
+        setHideBottomNav(false);
+      }
+    },
+    [currentPage, pageParams],
+  );
 
   const goBack = useCallback(() => {
     setHideBottomNav(false);
     if (navigationHistory.length > 0) {
       const prevPage = navigationHistory[navigationHistory.length - 1];
-      setNavigationHistory(prev => prev.slice(0, -1));
+      setNavigationHistory((prev) => prev.slice(0, -1));
       setCurrentPage(prevPage);
     } else {
       setCurrentPage('dashboard');
@@ -217,16 +251,30 @@ export default function App() {
 
   const filteredMenuGroups = useMemo(() => {
     if (!user) return [];
-    return getMenuGroups(pendingCount).map(group => ({
-      ...group,
-      items: group.items.filter(item => {
-        if (user.role === 'User') {
-          return ['stock-in', 'stock-out', 'transfer', 'attendance', 'cost-report', 'production-list', 'production-detail'].includes(item.id);
-        }
-        if (user.role === 'Admin') return item.id !== 'database-setup';
-        return true; 
-      }).map(item => item.id === 'pending-approvals' ? { ...item, badge: pendingCount } : item)
-    })).filter(group => group.items.length > 0);
+    return getMenuGroups(pendingCount)
+      .map((group) => ({
+        ...group,
+        items: group.items
+          .filter((item) => {
+            if (user.role === 'User') {
+              return [
+                'stock-in',
+                'stock-out',
+                'transfer',
+                'attendance',
+                'cost-report',
+                'production-list',
+                'production-detail',
+              ].includes(item.id);
+            }
+            if (user.role === 'Admin') return item.id !== 'database-setup';
+            return true;
+          })
+          .map((item) =>
+            item.id === 'pending-approvals' ? { ...item, badge: pendingCount } : item,
+          ),
+      }))
+      .filter((group) => group.items.length > 0);
   }, [user, pendingCount]);
 
   if (isConfigMissing) {
@@ -236,8 +284,16 @@ export default function App() {
           <Settings2 size={32} />
         </div>
         <h1 className="text-xl font-bold text-gray-900 mb-2">Thiếu cấu hình hệ thống</h1>
-        <p className="text-sm text-gray-500 max-w-sm mb-6">Vui lòng thiết lập <strong>VITE_SUPABASE_URL</strong> và <strong>VITE_SUPABASE_ANON_KEY</strong> trong Vercel.</p>
-        <button onClick={() => window.location.reload()} className="px-6 py-2 bg-primary text-white rounded-xl font-bold text-sm shadow-lg shadow-primary/20">Thử lại</button>
+        <p className="text-sm text-gray-500 max-w-sm mb-6">
+          Vui lòng thiết lập <strong>VITE_SUPABASE_URL</strong> và{' '}
+          <strong>VITE_SUPABASE_ANON_KEY</strong> trong Vercel.
+        </p>
+        <button
+          onClick={() => window.location.reload()}
+          className="px-6 py-2 bg-primary text-white rounded-xl font-bold text-sm shadow-lg shadow-primary/20"
+        >
+          Thử lại
+        </button>
       </div>
     );
   }
@@ -256,10 +312,13 @@ export default function App() {
         filteredMenuGroups={filteredMenuGroups}
         onNavigate={navigateTo}
         onLogout={handleLogout}
-        onRefresh={() => { fetchPendingCount(); setRefreshKey(prev => prev + 1); }}
+        onRefresh={() => {
+          fetchPendingCount();
+          setRefreshKey((prev) => prev + 1);
+        }}
         hideBottomNav={hideBottomNav}
       >
-        <AppRouter 
+        <AppRouter
           currentPage={currentPage}
           pageParams={pageParams}
           user={user}

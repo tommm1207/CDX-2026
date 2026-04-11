@@ -13,10 +13,14 @@ import { MonthYearPicker } from '../shared/MonthYearPicker';
 import { Button } from '../shared/Button';
 import { ExcelButton } from '../shared/ExcelButton';
 
-export const MonthlySalary = ({ user, onBack, addToast }: { 
-  user: Employee, 
-  onBack?: () => void,
-  addToast?: (message: string, type?: ToastType) => void
+export const MonthlySalary = ({
+  user,
+  onBack,
+  addToast,
+}: {
+  user: Employee;
+  onBack?: () => void;
+  addToast?: (message: string, type?: ToastType) => void;
 }) => {
   const [salaries, setSalaries] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -30,23 +34,44 @@ export const MonthlySalary = ({ user, onBack, addToast }: {
   const fetchSalaries = async () => {
     setLoading(true);
     try {
-      const { data: employees } = await supabase.from('users').select('*').neq('status', 'Nghỉ việc').neq('role', 'Admin App').eq('has_salary', true).order('code');
+      const { data: employees } = await supabase
+        .from('users')
+        .select('*')
+        .neq('status', 'Nghỉ việc')
+        .neq('role', 'Admin App')
+        .eq('has_salary', true)
+        .order('code');
       if (!employees) return;
 
       const { data: settings } = await supabase.from('salary_settings').select('*');
 
       const startDate = `${selectedYear}-${String(selectedMonth).padStart(2, '0')}-01`;
       const endDate = new Date(selectedYear, selectedMonth, 0).toISOString().split('T')[0];
-      const { data: att } = await supabase.from('attendance').select('*').gte('date', startDate).lte('date', endDate);
+      const { data: att } = await supabase
+        .from('attendance')
+        .select('*')
+        .gte('date', startDate)
+        .lte('date', endDate);
 
-      const { data: adv } = await supabase.from('advances').select('*').gte('date', startDate).lte('date', endDate);
-      const { data: all } = await supabase.from('allowances').select('*').gte('date', startDate).lte('date', endDate);
+      const { data: adv } = await supabase
+        .from('advances')
+        .select('*')
+        .gte('date', startDate)
+        .lte('date', endDate);
+      const { data: all } = await supabase
+        .from('allowances')
+        .select('*')
+        .gte('date', startDate)
+        .lte('date', endDate);
 
-      const calculated = employees.map(emp => {
-        const set = settings?.find(s => s.employee_id === emp.id) || { base_salary: 0, daily_rate: 0 };
-        const empAtt = att?.filter(a => a.employee_id === emp.id) || [];
-        const empAdv = adv?.filter(a => a.employee_id === emp.id) || [];
-        const empAll = all?.filter(a => a.employee_id === emp.id) || [];
+      const calculated = employees.map((emp) => {
+        const set = settings?.find((s) => s.employee_id === emp.id) || {
+          base_salary: 0,
+          daily_rate: 0,
+        };
+        const empAtt = att?.filter((a) => a.employee_id === emp.id) || [];
+        const empAdv = adv?.filter((a) => a.employee_id === emp.id) || [];
+        const empAll = all?.filter((a) => a.employee_id === emp.id) || [];
 
         const totalDays = empAtt.reduce((sum, a) => sum + Number(a.hours_worked || 0), 0) / 8;
         const totalOT = empAtt.reduce((sum, a) => sum + Number(a.overtime_hours || 0), 0);
@@ -74,7 +99,7 @@ export const MonthlySalary = ({ user, onBack, addToast }: {
           hourlyRate,
           attendanceDetails: empAtt,
           advancesDetails: empAdv,
-          allowancesDetails: empAll
+          allowancesDetails: empAll,
         };
       });
 
@@ -93,9 +118,13 @@ export const MonthlySalary = ({ user, onBack, addToast }: {
 
   const handleSaveImage = async () => {
     if (billRef.current === null) return;
-    
+
     try {
-      const dataUrl = await toPng(billRef.current, { cacheBust: true, backgroundColor: '#fff', quality: 1 });
+      const dataUrl = await toPng(billRef.current, {
+        cacheBust: true,
+        backgroundColor: '#fff',
+        quality: 1,
+      });
       const link = document.createElement('a');
       link.download = `Phieu_Luong_${selectedSalary.full_name}_T${selectedMonth}_${selectedYear}.png`;
       link.href = dataUrl;
@@ -117,10 +146,20 @@ export const MonthlySalary = ({ user, onBack, addToast }: {
 
   const handleExportExcel = () => {
     const data = [
-      ['Mã NV', 'Họ tên', 'Công', 'Tăng ca', 'Lương công', 'Phụ cấp', 'Tạm ứng', 'Bảo hiểm', 'Thực lĩnh']
+      [
+        'Mã NV',
+        'Họ tên',
+        'Công',
+        'Tăng ca',
+        'Lương công',
+        'Phụ cấp',
+        'Tạm ứng',
+        'Bảo hiểm',
+        'Thực lĩnh',
+      ],
     ];
 
-    salaries.forEach(s => {
+    salaries.forEach((s) => {
       data.push([
         s.code || s.id.slice(0, 8),
         s.full_name,
@@ -130,7 +169,7 @@ export const MonthlySalary = ({ user, onBack, addToast }: {
         s.totalAll,
         s.totalAdv,
         s.insuranceDeduction,
-        s.netSalary
+        s.netSalary,
       ]);
     });
 
@@ -143,7 +182,7 @@ export const MonthlySalary = ({ user, onBack, addToast }: {
       totalAllAll,
       totalAdvAll,
       insuranceDeductionAll,
-      netSalaryAll
+      netSalaryAll,
     ]);
 
     const ws = XLSX.utils.aoa_to_sheet(data);
@@ -171,14 +210,30 @@ export const MonthlySalary = ({ user, onBack, addToast }: {
         <table className="w-full text-left border-collapse min-w-[800px] whitespace-nowrap">
           <thead>
             <tr className="bg-primary text-white">
-              <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider">Nhân viên</th>
-              <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-center">Công</th>
-              <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-center">Tăng ca</th>
-              <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-right">Lương công</th>
-              <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-right">Phụ cấp</th>
-              <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-right">Tạm ứng</th>
-              <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-right">Bảo hiểm</th>
-              <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-right">Thực lĩnh</th>
+              <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider">
+                Nhân viên
+              </th>
+              <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-center">
+                Công
+              </th>
+              <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-center">
+                Tăng ca
+              </th>
+              <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-right">
+                Lương công
+              </th>
+              <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-right">
+                Phụ cấp
+              </th>
+              <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-right">
+                Tạm ứng
+              </th>
+              <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-right">
+                Bảo hiểm
+              </th>
+              <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-right">
+                Thực lĩnh
+              </th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-100">
@@ -199,18 +254,39 @@ export const MonthlySalary = ({ user, onBack, addToast }: {
               </tr>
             ) : (
               salaries.map((s) => (
-                <tr key={s.id} onClick={() => { setSelectedSalary(s); setShowDetailModal(true); }} className="hover:bg-gray-50 transition-colors cursor-pointer">
+                <tr
+                  key={s.id}
+                  onClick={() => {
+                    setSelectedSalary(s);
+                    setShowDetailModal(true);
+                  }}
+                  className="hover:bg-gray-50 transition-colors cursor-pointer"
+                >
                   <td className="px-4 py-3">
                     <p className="text-xs font-bold text-gray-800">{s.full_name}</p>
                     <p className="text-[9px] text-gray-400">{s.code || s.id.slice(0, 8)}</p>
                   </td>
-                  <td className="px-4 py-3 text-center text-xs font-bold text-gray-600">{s.totalDays.toFixed(1)}</td>
-                  <td className="px-4 py-3 text-center text-xs font-bold text-amber-600">{s.totalOT.toFixed(1)}h</td>
-                  <td className="px-4 py-3 text-right text-xs font-medium text-gray-600">{formatCurrency(s.earnedSalary + s.otSalary)}</td>
-                  <td className="px-4 py-3 text-right text-xs font-medium text-green-600">+{formatCurrency(s.totalAll)}</td>
-                  <td className="px-4 py-3 text-right text-xs font-medium text-red-600">-{formatCurrency(s.totalAdv)}</td>
-                  <td className="px-4 py-3 text-right text-xs font-medium text-red-600">-{formatCurrency(s.insuranceDeduction)}</td>
-                  <td className="px-4 py-3 text-right text-xs font-black text-primary">{formatCurrency(s.netSalary)}</td>
+                  <td className="px-4 py-3 text-center text-xs font-bold text-gray-600">
+                    {s.totalDays.toFixed(1)}
+                  </td>
+                  <td className="px-4 py-3 text-center text-xs font-bold text-amber-600">
+                    {s.totalOT.toFixed(1)}h
+                  </td>
+                  <td className="px-4 py-3 text-right text-xs font-medium text-gray-600">
+                    {formatCurrency(s.earnedSalary + s.otSalary)}
+                  </td>
+                  <td className="px-4 py-3 text-right text-xs font-medium text-green-600">
+                    +{formatCurrency(s.totalAll)}
+                  </td>
+                  <td className="px-4 py-3 text-right text-xs font-medium text-red-600">
+                    -{formatCurrency(s.totalAdv)}
+                  </td>
+                  <td className="px-4 py-3 text-right text-xs font-medium text-red-600">
+                    -{formatCurrency(s.insuranceDeduction)}
+                  </td>
+                  <td className="px-4 py-3 text-right text-xs font-black text-primary">
+                    {formatCurrency(s.netSalary)}
+                  </td>
                 </tr>
               ))
             )}
@@ -219,13 +295,27 @@ export const MonthlySalary = ({ user, onBack, addToast }: {
             <tfoot className="bg-gray-50/80 border-t-2 border-primary/20">
               <tr>
                 <td className="px-4 py-4 text-xs font-black text-gray-800 uppercase">Tổng cộng</td>
-                <td className="px-4 py-4 text-center text-xs font-black text-gray-800">{totalDaysAll.toFixed(1)}</td>
-                <td className="px-4 py-4 text-center text-xs font-black text-amber-600">{totalOTAll.toFixed(1)}h</td>
-                <td className="px-4 py-4 text-right text-xs font-black text-gray-800">{formatCurrency(earnedSalaryAll)}</td>
-                <td className="px-4 py-4 text-right text-xs font-black text-green-600">+{formatCurrency(totalAllAll)}</td>
-                <td className="px-4 py-4 text-right text-xs font-black text-red-600">-{formatCurrency(totalAdvAll)}</td>
-                <td className="px-4 py-4 text-right text-xs font-black text-red-600">-{formatCurrency(insuranceDeductionAll)}</td>
-                <td className="px-4 py-4 text-right text-base font-black text-primary">{formatCurrency(netSalaryAll)}</td>
+                <td className="px-4 py-4 text-center text-xs font-black text-gray-800">
+                  {totalDaysAll.toFixed(1)}
+                </td>
+                <td className="px-4 py-4 text-center text-xs font-black text-amber-600">
+                  {totalOTAll.toFixed(1)}h
+                </td>
+                <td className="px-4 py-4 text-right text-xs font-black text-gray-800">
+                  {formatCurrency(earnedSalaryAll)}
+                </td>
+                <td className="px-4 py-4 text-right text-xs font-black text-green-600">
+                  +{formatCurrency(totalAllAll)}
+                </td>
+                <td className="px-4 py-4 text-right text-xs font-black text-red-600">
+                  -{formatCurrency(totalAdvAll)}
+                </td>
+                <td className="px-4 py-4 text-right text-xs font-black text-red-600">
+                  -{formatCurrency(insuranceDeductionAll)}
+                </td>
+                <td className="px-4 py-4 text-right text-base font-black text-primary">
+                  {formatCurrency(netSalaryAll)}
+                </td>
               </tr>
             </tfoot>
           )}
@@ -234,7 +324,7 @@ export const MonthlySalary = ({ user, onBack, addToast }: {
 
       <AnimatePresence>
         {showDetailModal && selectedSalary && (
-          <div 
+          <div
             className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/50 backdrop-blur-md overflow-hidden no-print"
             onClick={() => setShowDetailModal(false)}
           >
@@ -247,7 +337,7 @@ export const MonthlySalary = ({ user, onBack, addToast }: {
             >
               <div className="bg-primary p-6 text-white flex items-center justify-between no-print transition-colors">
                 <div className="flex items-center gap-3">
-                  <div 
+                  <div
                     className="p-2 bg-white/20 rounded-xl cursor-pointer hover:bg-white/30 transition-all active:scale-95"
                     onClick={() => setShowDetailModal(false)}
                   >
@@ -255,10 +345,12 @@ export const MonthlySalary = ({ user, onBack, addToast }: {
                   </div>
                   <div>
                     <h3 className="font-bold text-lg leading-tight">Phiếu lương chi tiết</h3>
-                    <p className="text-[10px] text-white/70 font-bold uppercase tracking-widest">Tháng {selectedMonth}/{selectedYear}</p>
+                    <p className="text-[10px] text-white/70 font-bold uppercase tracking-widest">
+                      Tháng {selectedMonth}/{selectedYear}
+                    </p>
                   </div>
                 </div>
-                <button 
+                <button
                   onClick={() => setShowDetailModal(false)}
                   className="p-2 hover:bg-white/20 rounded-xl transition-all"
                 >
@@ -277,77 +369,114 @@ export const MonthlySalary = ({ user, onBack, addToast }: {
                     }
                   `}
                 </style>
-                <div ref={billRef} className="p-8 space-y-8 bg-white rounded-b-[2rem] md:rounded-b-[2.5rem] print-only">
-                {/* Bill Header */}
-                <div className="text-center space-y-4 pt-4">
-                   <div className="w-20 h-20 bg-primary/10 rounded-3xl flex items-center justify-center text-primary font-black text-2xl mx-auto shadow-sm">
-                    {selectedSalary.full_name.charAt(0)}
-                  </div>
-                  <div>
-                    <h4 className="text-2xl font-black text-gray-800">{selectedSalary.full_name}</h4>
-                    <p className="text-[11px] text-gray-400 font-black uppercase tracking-[0.2em]">Mã nhân viên: {selectedSalary.code || selectedSalary.id.slice(0, 8)}</p>
-                  </div>
-                </div>
-
-                <div className="w-full h-px bg-gray-100 relative">
-                  <div className="absolute -left-10 -top-2 w-4 h-4 bg-gray-100 rounded-full no-print" />
-                  <div className="absolute -right-10 -top-2 w-4 h-4 bg-gray-100 rounded-full no-print" />
-                </div>
-
-                {/* Calculation Details */}
-                <div className="space-y-6">
-                  <div className="bg-gray-50/50 p-6 rounded-3xl border border-gray-100/50 space-y-3">
-                    <div className="flex justify-between items-center text-xs">
-                      <span className="text-gray-400 font-bold uppercase tracking-wider">Lương cơ bản (8h)</span>
-                      <span className="font-black text-gray-800">{formatCurrency(selectedSalary.dailyRate)}</span>
+                <div
+                  ref={billRef}
+                  className="p-8 space-y-8 bg-white rounded-b-[2rem] md:rounded-b-[2.5rem] print-only"
+                >
+                  {/* Bill Header */}
+                  <div className="text-center space-y-4 pt-4">
+                    <div className="w-20 h-20 bg-primary/10 rounded-3xl flex items-center justify-center text-primary font-black text-2xl mx-auto shadow-sm">
+                      {selectedSalary.full_name.charAt(0)}
                     </div>
-                    <div className="flex justify-between items-center text-xs">
-                      <span className="text-gray-400 font-bold uppercase tracking-wider">Lương tăng ca (1h)</span>
-                      <span className="font-black text-gray-800">{formatCurrency(selectedSalary.hourlyRate)}</span>
+                    <div>
+                      <h4 className="text-2xl font-black text-gray-800">
+                        {selectedSalary.full_name}
+                      </h4>
+                      <p className="text-[11px] text-gray-400 font-black uppercase tracking-[0.2em]">
+                        Mã nhân viên: {selectedSalary.code || selectedSalary.id.slice(0, 8)}
+                      </p>
                     </div>
                   </div>
 
-                  <div className="space-y-3 px-2">
-                    <div className="flex justify-between items-center text-sm">
-                      <span className="text-gray-500 font-medium text-xs">Lương ngày công ({selectedSalary.totalDays.toFixed(1)} ngày)</span>
-                      <span className="font-bold text-gray-800">{formatCurrency(selectedSalary.earnedSalary)}</span>
+                  <div className="w-full h-px bg-gray-100 relative">
+                    <div className="absolute -left-10 -top-2 w-4 h-4 bg-gray-100 rounded-full no-print" />
+                    <div className="absolute -right-10 -top-2 w-4 h-4 bg-gray-100 rounded-full no-print" />
+                  </div>
+
+                  {/* Calculation Details */}
+                  <div className="space-y-6">
+                    <div className="bg-gray-50/50 p-6 rounded-3xl border border-gray-100/50 space-y-3">
+                      <div className="flex justify-between items-center text-xs">
+                        <span className="text-gray-400 font-bold uppercase tracking-wider">
+                          Lương cơ bản (8h)
+                        </span>
+                        <span className="font-black text-gray-800">
+                          {formatCurrency(selectedSalary.dailyRate)}
+                        </span>
+                      </div>
+                      <div className="flex justify-between items-center text-xs">
+                        <span className="text-gray-400 font-bold uppercase tracking-wider">
+                          Lương tăng ca (1h)
+                        </span>
+                        <span className="font-black text-gray-800">
+                          {formatCurrency(selectedSalary.hourlyRate)}
+                        </span>
+                      </div>
                     </div>
-                    <div className="flex justify-between items-center text-sm">
-                      <span className="text-gray-500 font-medium text-xs">Lương tăng ca ({selectedSalary.totalOT.toFixed(1)} giờ)</span>
-                      <span className="font-bold text-amber-600">+{formatCurrency(selectedSalary.otSalary)}</span>
+
+                    <div className="space-y-3 px-2">
+                      <div className="flex justify-between items-center text-sm">
+                        <span className="text-gray-500 font-medium text-xs">
+                          Lương ngày công ({selectedSalary.totalDays.toFixed(1)} ngày)
+                        </span>
+                        <span className="font-bold text-gray-800">
+                          {formatCurrency(selectedSalary.earnedSalary)}
+                        </span>
+                      </div>
+                      <div className="flex justify-between items-center text-sm">
+                        <span className="text-gray-500 font-medium text-xs">
+                          Lương tăng ca ({selectedSalary.totalOT.toFixed(1)} giờ)
+                        </span>
+                        <span className="font-bold text-amber-600">
+                          +{formatCurrency(selectedSalary.otSalary)}
+                        </span>
+                      </div>
+                      <div className="flex justify-between items-center text-sm">
+                        <span className="text-gray-500 font-medium text-xs">Các khoản phụ cấp</span>
+                        <span className="font-bold text-green-600">
+                          +{formatCurrency(selectedSalary.totalAll)}
+                        </span>
+                      </div>
+                      <div className="flex justify-between items-center text-sm">
+                        <span className="text-gray-500 font-medium text-xs">
+                          Tạm ứng trong tháng
+                        </span>
+                        <span className="font-bold text-red-500">
+                          -{formatCurrency(selectedSalary.totalAdv)}
+                        </span>
+                      </div>
+                      <div className="flex justify-between items-center text-sm">
+                        <span className="text-gray-500 font-medium text-xs">Khấu trừ bảo hiểm</span>
+                        <span className="font-bold text-red-500">
+                          -{formatCurrency(selectedSalary.insuranceDeduction)}
+                        </span>
+                      </div>
                     </div>
-                    <div className="flex justify-between items-center text-sm">
-                      <span className="text-gray-500 font-medium text-xs">Các khoản phụ cấp</span>
-                      <span className="font-bold text-green-600">+{formatCurrency(selectedSalary.totalAll)}</span>
-                    </div>
-                    <div className="flex justify-between items-center text-sm">
-                      <span className="text-gray-500 font-medium text-xs">Tạm ứng trong tháng</span>
-                      <span className="font-bold text-red-500">-{formatCurrency(selectedSalary.totalAdv)}</span>
-                    </div>
-                    <div className="flex justify-between items-center text-sm">
-                      <span className="text-gray-500 font-medium text-xs">Khấu trừ bảo hiểm</span>
-                      <span className="font-bold text-red-500">-{formatCurrency(selectedSalary.insuranceDeduction)}</span>
+
+                    <div className="pt-6 border-t-4 border-double border-gray-100 flex justify-between items-end">
+                      <div className="space-y-1">
+                        <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest leading-none">
+                          Tổng thực lĩnh
+                        </p>
+                        <h4 className="text-sm font-black text-gray-800 uppercase leading-none">
+                          Net Salary
+                        </h4>
+                      </div>
+                      <span className="text-3xl font-black text-primary leading-none tracking-tight">
+                        {formatCurrency(selectedSalary.netSalary)}
+                      </span>
                     </div>
                   </div>
 
-                  <div className="pt-6 border-t-4 border-double border-gray-100 flex justify-between items-end">
-                    <div className="space-y-1">
-                      <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest leading-none">Tổng thực lĩnh</p>
-                      <h4 className="text-sm font-black text-gray-800 uppercase leading-none">Net Salary</h4>
-                    </div>
-                    <span className="text-3xl font-black text-primary leading-none tracking-tight">{formatCurrency(selectedSalary.netSalary)}</span>
+                  {/* Footer Notes */}
+                  <div className="p-4 bg-amber-50/50 rounded-2xl border border-amber-100/30">
+                    <p className="text-[9px] text-amber-700/80 leading-relaxed text-center font-medium italic">
+                      * Bảng lương này được tính toán tự động dựa trên dữ liệu chấm công thực tế.
+                      Mọi thắc mắc vui lòng phản hồi bộ phận kế toán trước ngày 05 hàng tháng.
+                    </p>
                   </div>
-                </div>
-
-                {/* Footer Notes */}
-                <div className="p-4 bg-amber-50/50 rounded-2xl border border-amber-100/30">
-                  <p className="text-[9px] text-amber-700/80 leading-relaxed text-center font-medium italic">
-                    * Bảng lương này được tính toán tự động dựa trên dữ liệu chấm công thực tế. 
-                    Mọi thắc mắc vui lòng phản hồi bộ phận kế toán trước ngày 05 hàng tháng.
-                  </p>
                 </div>
               </div>
-            </div>
 
               <div className="p-8 pt-0 flex flex-col gap-3 no-print mt-2">
                 <div className="flex gap-3">

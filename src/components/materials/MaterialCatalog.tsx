@@ -1,5 +1,14 @@
 import { useState, useEffect, FormEvent, ChangeEvent } from 'react';
-import { Package, Plus, Search, Edit, Trash2, X, Image as ImageIcon, RefreshCw } from 'lucide-react';
+import {
+  Package,
+  Plus,
+  Search,
+  Edit,
+  Trash2,
+  X,
+  Image as ImageIcon,
+  RefreshCw,
+} from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { supabase } from '@/lib/supabase';
 import { Employee } from '@/types';
@@ -11,11 +20,16 @@ import { Button } from '../shared/Button';
 import { FAB } from '../shared/FAB';
 import { checkUsage } from '@/utils/dataIntegrity';
 
-export const MaterialCatalog = ({ user, onBack, onNavigate, addToast }: { 
-  user: Employee, 
-  onBack?: () => void, 
-  onNavigate?: (page: string) => void,
-  addToast?: (message: string, type?: ToastType) => void
+export const MaterialCatalog = ({
+  user,
+  onBack,
+  onNavigate,
+  addToast,
+}: {
+  user: Employee;
+  onBack?: () => void;
+  onNavigate?: (page: string) => void;
+  addToast?: (message: string, type?: ToastType) => void;
 }) => {
   const [materials, setMaterials] = useState<any[]>([]);
   const [groups, setGroups] = useState<any[]>([]);
@@ -41,7 +55,7 @@ export const MaterialCatalog = ({ user, onBack, onNavigate, addToast }: {
     specification: '',
     unit: '',
     description: '',
-    image_url: ''
+    image_url: '',
   };
 
   const [formData, setFormData] = useState(initialFormState);
@@ -81,7 +95,11 @@ export const MaterialCatalog = ({ user, onBack, onNavigate, addToast }: {
   };
 
   const fetchWarehouses = async () => {
-    const { data } = await supabase.from('warehouses').select('*').or('status.is.null,status.neq.Đã xóa').order('name');
+    const { data } = await supabase
+      .from('warehouses')
+      .select('*')
+      .or('status.is.null,status.neq.Đã xóa')
+      .order('name');
     if (data) {
       setWarehouses(data.filter(isActiveWarehouse));
     }
@@ -133,11 +151,16 @@ export const MaterialCatalog = ({ user, onBack, onNavigate, addToast }: {
     try {
       let finalGroupId = formData.group_id;
       if (formData.group_id && !isUUID(formData.group_id)) {
-        const groupByName = groups.find(g => g.name.toLowerCase() === formData.group_id.toLowerCase());
+        const groupByName = groups.find(
+          (g) => g.name.toLowerCase() === formData.group_id.toLowerCase(),
+        );
         if (groupByName) {
           finalGroupId = groupByName.id;
         } else {
-          const { data: newGroup, error: groupErr } = await supabase.from('material_groups').insert([{ name: formData.group_id }]).select();
+          const { data: newGroup, error: groupErr } = await supabase
+            .from('material_groups')
+            .insert([{ name: formData.group_id }])
+            .select();
           if (groupErr) throw groupErr;
           if (newGroup) {
             finalGroupId = newGroup[0].id;
@@ -154,21 +177,25 @@ export const MaterialCatalog = ({ user, onBack, onNavigate, addToast }: {
         specification: formData.specification,
         unit: formData.unit,
         description: formData.description,
-        image_url: formData.image_url
+        image_url: formData.image_url,
       };
 
       if (isEditing && formData.id) {
         const { error } = await supabase.from('materials').update(dbPayload).eq('id', formData.id);
         if (error) throw error;
       } else {
-        dbPayload.code = formData.code || await generateNextMaterialCode(finalGroupId);
+        dbPayload.code = formData.code || (await generateNextMaterialCode(finalGroupId));
         const { error } = await supabase.from('materials').insert([dbPayload]);
         if (error) throw error;
       }
       setShowModal(false);
       fetchMaterials();
       setFormData(initialFormState);
-      if (addToast) addToast(isEditing ? 'Cập nhật vật tư thành công!' : 'Thêm mới vật tư thành công!', 'success');
+      if (addToast)
+        addToast(
+          isEditing ? 'Cập nhật vật tư thành công!' : 'Thêm mới vật tư thành công!',
+          'success',
+        );
     } catch (err: any) {
       if (addToast) addToast('Lỗi: ' + err.message, 'error');
       else alert('Lỗi: ' + err.message);
@@ -201,12 +228,19 @@ export const MaterialCatalog = ({ user, onBack, onNavigate, addToast }: {
       // Check usage first
       const usage = await checkUsage('material', itemToDelete);
       if (usage.inUse) {
-        if (addToast) addToast(`Không thể xóa vì vật tư đang được dùng trong: ${usage.tables.join(', ')}`, 'error');
+        if (addToast)
+          addToast(
+            `Không thể xóa vì vật tư đang được dùng trong: ${usage.tables.join(', ')}`,
+            'error',
+          );
         setShowDeleteModal(false);
         return;
       }
 
-      const { error } = await supabase.from('materials').update({ status: 'Đã xóa' }).eq('id', itemToDelete);
+      const { error } = await supabase
+        .from('materials')
+        .update({ status: 'Đã xóa' })
+        .eq('id', itemToDelete);
       if (error) throw error;
       fetchMaterials();
       if (addToast) addToast('Đã chuyển vật tư vào thùng rác!', 'success');
@@ -228,10 +262,11 @@ export const MaterialCatalog = ({ user, onBack, onNavigate, addToast }: {
     }
   };
 
-  const filteredMaterials = materials.filter(m => {
+  const filteredMaterials = materials.filter((m) => {
     const name = m.name || '';
     const code = m.code || '';
-    const matchesSearch = name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    const matchesSearch =
+      name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       code.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesGroup = groupFilter === '' || m.group_id === groupFilter;
     return matchesSearch && matchesGroup;
@@ -242,9 +277,11 @@ export const MaterialCatalog = ({ user, onBack, onNavigate, addToast }: {
       <div className="flex items-center justify-between gap-2">
         <PageBreadcrumb title="Danh mục Vật tư" onBack={onBack} />
         <button
-          onClick={() => setShowFilter(f => !f)}
+          onClick={() => setShowFilter((f) => !f)}
           className={`p-2.5 rounded-xl border transition-colors ${
-            showFilter ? 'bg-primary text-white border-primary' : 'bg-white text-gray-500 border-gray-200 hover:border-primary/40'
+            showFilter
+              ? 'bg-primary text-white border-primary'
+              : 'bg-white text-gray-500 border-gray-200 hover:border-primary/40'
           }`}
         >
           <Search size={16} />
@@ -268,13 +305,22 @@ export const MaterialCatalog = ({ user, onBack, onNavigate, addToast }: {
                   className="w-full px-3 py-2 rounded-lg border border-gray-200 text-xs outline-none focus:ring-2 focus:ring-primary/20"
                 >
                   <option value="">-- Tất cả nhóm --</option>
-                  {groups.map(g => <option key={g.id} value={g.id}>{g.name}</option>)}
+                  {groups.map((g) => (
+                    <option key={g.id} value={g.id}>
+                      {g.name}
+                    </option>
+                  ))}
                 </select>
               </div>
               <div className="md:col-span-2 space-y-1">
-                <label className="text-[10px] font-bold text-gray-400 uppercase">Tìm kiếm nhanh</label>
+                <label className="text-[10px] font-bold text-gray-400 uppercase">
+                  Tìm kiếm nhanh
+                </label>
                 <div className="relative">
-                  <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                  <Search
+                    size={14}
+                    className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
+                  />
                   <input
                     type="text"
                     placeholder="Tìm theo tên hoặc mã vật tư..."
@@ -305,42 +351,86 @@ export const MaterialCatalog = ({ user, onBack, onNavigate, addToast }: {
           <table className="w-full text-left border-collapse whitespace-nowrap">
             <thead>
               <tr className="bg-primary text-white">
-                <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider border-r border-white/10">Tên vật tư</th>
-                <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider border-r border-white/10">Nhóm</th>
-                <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider border-r border-white/10">Quy cách</th>
-                <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider border-r border-white/10">ĐVT</th>
-                <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-center w-24">Thao tác</th>
+                <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider border-r border-white/10">
+                  Tên vật tư
+                </th>
+                <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider border-r border-white/10">
+                  Nhóm
+                </th>
+                <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider border-r border-white/10">
+                  Quy cách
+                </th>
+                <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider border-r border-white/10">
+                  ĐVT
+                </th>
+                <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-center w-24">
+                  Thao tác
+                </th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
               {loading ? (
-                <tr><td colSpan={6} className="px-4 py-8 text-center text-gray-400 italic">Đang tải dữ liệu...</td></tr>
+                <tr>
+                  <td colSpan={6} className="px-4 py-8 text-center text-gray-400 italic">
+                    Đang tải dữ liệu...
+                  </td>
+                </tr>
               ) : filteredMaterials.length === 0 ? (
-                <tr><td colSpan={6} className="px-4 py-8 text-center text-gray-400 italic">Không tìm thấy vật tư nào</td></tr>
+                <tr>
+                  <td colSpan={6} className="px-4 py-8 text-center text-gray-400 italic">
+                    Không tìm thấy vật tư nào
+                  </td>
+                </tr>
               ) : (
                 filteredMaterials.map((item) => (
                   <tr
                     key={item.id}
                     className="hover:bg-gray-50 transition-colors group cursor-pointer"
-                    onClick={() => { setSelectedMaterial(item); setShowDetailModal(true); }}
+                    onClick={() => {
+                      setSelectedMaterial(item);
+                      setShowDetailModal(true);
+                    }}
                   >
                     <td className="px-4 py-3 text-xs text-gray-600 font-medium">
                       <div className="flex items-center gap-2">
                         {item.image_url && (
                           <div className="w-6 h-6 rounded bg-gray-100 overflow-hidden flex-shrink-0">
-                            <img src={item.image_url} alt="" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                            <img
+                              src={item.image_url}
+                              alt=""
+                              className="w-full h-full object-cover"
+                              referrerPolicy="no-referrer"
+                            />
                           </div>
                         )}
                         {item.name}
                       </div>
                     </td>
-                    <td className="px-4 py-3 text-xs text-gray-500">{item.material_groups?.name || '-'}</td>
+                    <td className="px-4 py-3 text-xs text-gray-500">
+                      {item.material_groups?.name || '-'}
+                    </td>
                     <td className="px-4 py-3 text-xs text-gray-500">{item.specification || '-'}</td>
                     <td className="px-4 py-3 text-xs text-gray-500">{item.unit || '-'}</td>
                     <td className="px-4 py-3 text-center">
                       <div className="flex items-center justify-center gap-1 transition-opacity">
-                        <button onClick={(e) => { e.stopPropagation(); handleEdit(item); }} className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"><Edit size={14} /></button>
-                        <button onClick={(e) => { e.stopPropagation(); handleDeleteClick(item.id); }} className="p-1.5 text-red-600 hover:bg-red-50 rounded-lg transition-colors"><Trash2 size={14} /></button>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleEdit(item);
+                          }}
+                          className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                        >
+                          <Edit size={14} />
+                        </button>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDeleteClick(item.id);
+                          }}
+                          className="p-1.5 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                        >
+                          <Trash2 size={14} />
+                        </button>
                       </div>
                     </td>
                   </tr>
@@ -353,7 +443,7 @@ export const MaterialCatalog = ({ user, onBack, onNavigate, addToast }: {
 
       <AnimatePresence>
         {showDeleteModal && (
-          <div 
+          <div
             className="fixed inset-0 z-[120] flex items-center justify-center p-4 bg-black/50 backdrop-blur-md overflow-hidden"
             onClick={() => setShowDeleteModal(false)}
           >
@@ -368,10 +458,31 @@ export const MaterialCatalog = ({ user, onBack, onNavigate, addToast }: {
                 <Trash2 size={32} />
               </div>
               <h3 className="text-xl font-bold text-gray-800 mb-2">Xác nhận xóa?</h3>
-              <p className="text-sm text-gray-500 mb-6 font-medium">Bạn có chắc chắn muốn xóa vật tư <strong>{materials.find(m => m.id === itemToDelete)?.code || itemToDelete?.slice(0, 8)}</strong>?<br/>Hành động này không thể hoàn tác.</p>
+              <p className="text-sm text-gray-500 mb-6 font-medium">
+                Bạn có chắc chắn muốn xóa vật tư{' '}
+                <strong>
+                  {materials.find((m) => m.id === itemToDelete)?.code || itemToDelete?.slice(0, 8)}
+                </strong>
+                ?<br />
+                Hành động này không thể hoàn tác.
+              </p>
               <div className="flex gap-3">
-                <Button variant="ghost" fullWidth onClick={() => setShowDeleteModal(false)} className="bg-gray-100 hover:bg-gray-200">Hủy bỏ</Button>
-                <Button variant="danger" fullWidth onClick={confirmDelete} className="shadow-lg shadow-red-500/20">Xóa ngay</Button>
+                <Button
+                  variant="ghost"
+                  fullWidth
+                  onClick={() => setShowDeleteModal(false)}
+                  className="bg-gray-100 hover:bg-gray-200"
+                >
+                  Hủy bỏ
+                </Button>
+                <Button
+                  variant="danger"
+                  fullWidth
+                  onClick={confirmDelete}
+                  className="shadow-lg shadow-red-500/20"
+                >
+                  Xóa ngay
+                </Button>
               </div>
             </motion.div>
           </div>
@@ -380,7 +491,7 @@ export const MaterialCatalog = ({ user, onBack, onNavigate, addToast }: {
 
       <AnimatePresence>
         {showModal && (
-          <div 
+          <div
             className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-black/50 backdrop-blur-md overflow-hidden"
             onClick={() => setShowModal(false)}
           >
@@ -393,19 +504,21 @@ export const MaterialCatalog = ({ user, onBack, onNavigate, addToast }: {
             >
               <div className="bg-primary p-6 text-white flex items-center justify-between rounded-t-[2rem] md:rounded-t-[2.5rem] flex-shrink-0">
                 <div className="flex items-center gap-3">
-                  <div 
+                  <div
                     className="p-2 bg-white/20 rounded-xl cursor-pointer hover:bg-white/30 transition-all active:scale-95"
                     onClick={() => setShowModal(false)}
                   >
                     <Package size={24} />
                   </div>
                   <div>
-                    <h3 className="font-bold text-lg">{isEditing ? 'Cập nhật vật tư' : 'Thêm vật tư mới'}</h3>
+                    <h3 className="font-bold text-lg">
+                      {isEditing ? 'Cập nhật vật tư' : 'Thêm vật tư mới'}
+                    </h3>
                     <p className="text-xs text-white/70">Thông tin chi tiết vật tư hệ thống</p>
                   </div>
                 </div>
-                <button 
-                  onClick={() => setShowModal(false)} 
+                <button
+                  onClick={() => setShowModal(false)}
                   className="p-2 hover:bg-white/20 rounded-xl transition-all"
                 >
                   <X size={24} />
@@ -417,7 +530,9 @@ export const MaterialCatalog = ({ user, onBack, onNavigate, addToast }: {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div className="space-y-4">
                       <div className="space-y-1">
-                        <label className="text-[10px] font-bold text-gray-400 uppercase">Mã vật tư</label>
+                        <label className="text-[10px] font-bold text-gray-400 uppercase">
+                          Mã vật tư
+                        </label>
                         <input
                           required
                           type="text"
@@ -428,7 +543,9 @@ export const MaterialCatalog = ({ user, onBack, onNavigate, addToast }: {
                         />
                       </div>
                       <div className="space-y-1">
-                        <label className="text-[10px] font-bold text-gray-400 uppercase">Tên vật tư *</label>
+                        <label className="text-[10px] font-bold text-gray-400 uppercase">
+                          Tên vật tư *
+                        </label>
                         <input
                           required
                           type="text"
@@ -463,7 +580,9 @@ export const MaterialCatalog = ({ user, onBack, onNavigate, addToast }: {
                       <CreatableSelect
                         label={`Đơn vị tính${isEditing && editingInUse ? ' 🔒' : ''}`}
                         value={formData.unit}
-                        options={Array.from(new Set(materials.map(m => m.unit))).filter(Boolean).map((u: any) => ({ id: String(u), name: String(u) }))}
+                        options={Array.from(new Set(materials.map((m) => m.unit)))
+                          .filter(Boolean)
+                          .map((u: any) => ({ id: String(u), name: String(u) }))}
                         onChange={(val) => setFormData({ ...formData, unit: val })}
                         onCreate={(val) => setFormData({ ...formData, unit: val })}
                         placeholder="Chọn hoặc nhập mới..."
@@ -471,33 +590,48 @@ export const MaterialCatalog = ({ user, onBack, onNavigate, addToast }: {
                       />
 
                       <div className="space-y-1">
-                        <label className="text-[10px] font-bold text-gray-400 uppercase">Quy cách / Kích thước</label>
+                        <label className="text-[10px] font-bold text-gray-400 uppercase">
+                          Quy cách / Kích thước
+                        </label>
                         <input
                           type="text"
                           placeholder="Ví dụ: 1200mm x 2400mm"
                           value={formData.specification}
-                          onChange={(e) => setFormData({ ...formData, specification: e.target.value })}
+                          onChange={(e) =>
+                            setFormData({ ...formData, specification: e.target.value })
+                          }
                           className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20"
                         />
                       </div>
                       <div className="space-y-1">
-                        <label className="text-[10px] font-bold text-gray-400 uppercase">Mô tả chi tiết</label>
+                        <label className="text-[10px] font-bold text-gray-400 uppercase">
+                          Mô tả chi tiết
+                        </label>
                         <textarea
                           rows={3}
                           placeholder="Thông tin thêm về vật tư..."
                           value={formData.description}
-                          onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                          onChange={(e) =>
+                            setFormData({ ...formData, description: e.target.value })
+                          }
                           className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20 resize-none"
                         />
                       </div>
                     </div>
                     <div className="col-span-1 md:col-span-2 space-y-3">
-                      <label className="text-[10px] font-bold text-gray-400 uppercase">Hình ảnh vật tư</label>
+                      <label className="text-[10px] font-bold text-gray-400 uppercase">
+                        Hình ảnh vật tư
+                      </label>
                       <div className="flex items-center gap-4">
                         <div className="w-20 h-20 rounded-2xl bg-gray-50 border-2 border-dashed border-gray-200 flex items-center justify-center overflow-hidden group relative">
                           {formData.image_url ? (
                             <>
-                              <img src={formData.image_url} alt="Preview" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                              <img
+                                src={formData.image_url}
+                                alt="Preview"
+                                className="w-full h-full object-cover"
+                                referrerPolicy="no-referrer"
+                              />
                               <button
                                 type="button"
                                 onClick={() => setFormData({ ...formData, image_url: '' })}
@@ -524,19 +658,19 @@ export const MaterialCatalog = ({ user, onBack, onNavigate, addToast }: {
                           >
                             <ImageIcon size={14} /> Tải ảnh từ máy
                           </label>
-                          <p className="text-[10px] text-gray-400 italic">Dung lượng tối đa 2MB. Hỗ trợ JPG, PNG.</p>
+                          <p className="text-[10px] text-gray-400 italic">
+                            Dung lượng tối đa 2MB. Hỗ trợ JPG, PNG.
+                          </p>
                         </div>
                       </div>
                     </div>
                   </div>
 
                   <div className="mt-8 flex justify-end gap-3 flex-shrink-0">
-                    <Button variant="outline" onClick={() => setShowModal(false)}>Hủy</Button>
-                    <Button
-                      type="submit"
-                      isLoading={submitting}
-                      className="min-w-[140px]"
-                    >
+                    <Button variant="outline" onClick={() => setShowModal(false)}>
+                      Hủy
+                    </Button>
+                    <Button type="submit" isLoading={submitting} className="min-w-[140px]">
                       Lưu dữ liệu
                     </Button>
                   </div>
@@ -549,7 +683,7 @@ export const MaterialCatalog = ({ user, onBack, onNavigate, addToast }: {
 
       <AnimatePresence>
         {showDetailModal && selectedMaterial && (
-          <div 
+          <div
             className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/50 backdrop-blur-md overflow-hidden"
             onClick={() => setShowDetailModal(false)}
           >
@@ -562,7 +696,7 @@ export const MaterialCatalog = ({ user, onBack, onNavigate, addToast }: {
             >
               <div className="bg-primary p-6 text-white flex items-center justify-between rounded-t-[2rem] md:rounded-t-[2.5rem] flex-shrink-0">
                 <div className="flex items-center gap-3">
-                  <div 
+                  <div
                     className="p-2 bg-white/20 rounded-xl cursor-pointer hover:bg-white/30 transition-all active:scale-95"
                     onClick={() => setShowDetailModal(false)}
                   >
@@ -570,8 +704,8 @@ export const MaterialCatalog = ({ user, onBack, onNavigate, addToast }: {
                   </div>
                   <h3 className="text-xl font-bold uppercase tracking-widest">Chi tiết vật tư</h3>
                 </div>
-                <button 
-                  onClick={() => setShowDetailModal(false)} 
+                <button
+                  onClick={() => setShowDetailModal(false)}
                   className="p-2 hover:bg-white/20 rounded-xl transition-all"
                 >
                   <X size={24} />
@@ -582,7 +716,12 @@ export const MaterialCatalog = ({ user, onBack, onNavigate, addToast }: {
                 <div className="flex flex-col md:flex-row gap-8">
                   <div className="w-full md:w-48 h-48 rounded-2xl bg-gray-50 border border-gray-100 overflow-hidden flex-shrink-0">
                     {selectedMaterial.image_url ? (
-                      <img src={selectedMaterial.image_url} alt={selectedMaterial.name} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                      <img
+                        src={selectedMaterial.image_url}
+                        alt={selectedMaterial.name}
+                        className="w-full h-full object-cover"
+                        referrerPolicy="no-referrer"
+                      />
                     ) : (
                       <div className="w-full h-full flex flex-col items-center justify-center text-gray-300 gap-2">
                         <ImageIcon size={48} />
@@ -592,34 +731,60 @@ export const MaterialCatalog = ({ user, onBack, onNavigate, addToast }: {
                   </div>
                   <div className="flex-1 grid grid-cols-2 gap-6">
                     <div className="space-y-1">
-                      <label className="text-[10px] font-bold text-gray-400 uppercase">Mã vật tư</label>
-                      <p className="text-sm font-bold text-gray-800 border-b border-gray-100 pb-2">{selectedMaterial.code || selectedMaterial.id.slice(0, 8)}</p>
+                      <label className="text-[10px] font-bold text-gray-400 uppercase">
+                        Mã vật tư
+                      </label>
+                      <p className="text-sm font-bold text-gray-800 border-b border-gray-100 pb-2">
+                        {selectedMaterial.code || selectedMaterial.id.slice(0, 8)}
+                      </p>
                     </div>
                     <div className="space-y-1">
-                      <label className="text-[10px] font-bold text-gray-400 uppercase">Tên vật tư</label>
-                      <p className="text-sm font-bold text-gray-800 border-b border-gray-100 pb-2">{selectedMaterial.name}</p>
+                      <label className="text-[10px] font-bold text-gray-400 uppercase">
+                        Tên vật tư
+                      </label>
+                      <p className="text-sm font-bold text-gray-800 border-b border-gray-100 pb-2">
+                        {selectedMaterial.name}
+                      </p>
                     </div>
                     <div className="space-y-1">
-                      <label className="text-[10px] font-bold text-gray-400 uppercase">Nhóm vật tư</label>
-                      <p className="text-sm font-bold text-gray-800 border-b border-gray-100 pb-2">{selectedMaterial.material_groups?.name || '-'}</p>
+                      <label className="text-[10px] font-bold text-gray-400 uppercase">
+                        Nhóm vật tư
+                      </label>
+                      <p className="text-sm font-bold text-gray-800 border-b border-gray-100 pb-2">
+                        {selectedMaterial.material_groups?.name || '-'}
+                      </p>
                     </div>
                     <div className="space-y-1">
-                      <label className="text-[10px] font-bold text-gray-400 uppercase">Kho lưu trữ</label>
-                      <p className="text-sm font-bold text-gray-800 border-b border-gray-100 pb-2">{selectedMaterial.warehouses?.name || '-'}</p>
+                      <label className="text-[10px] font-bold text-gray-400 uppercase">
+                        Kho lưu trữ
+                      </label>
+                      <p className="text-sm font-bold text-gray-800 border-b border-gray-100 pb-2">
+                        {selectedMaterial.warehouses?.name || '-'}
+                      </p>
                     </div>
                     <div className="space-y-1">
-                      <label className="text-[10px] font-bold text-gray-400 uppercase">Đơn vị tính</label>
-                      <p className="text-sm font-bold text-gray-800 border-b border-gray-100 pb-2">{selectedMaterial.unit || '-'}</p>
+                      <label className="text-[10px] font-bold text-gray-400 uppercase">
+                        Đơn vị tính
+                      </label>
+                      <p className="text-sm font-bold text-gray-800 border-b border-gray-100 pb-2">
+                        {selectedMaterial.unit || '-'}
+                      </p>
                     </div>
                     <div className="col-span-2 space-y-1">
-                      <label className="text-[10px] font-bold text-gray-400 uppercase">Quy cách / Kích thước</label>
-                      <p className="text-sm font-bold text-gray-800 border-b border-gray-100 pb-2">{selectedMaterial.specification || '-'}</p>
+                      <label className="text-[10px] font-bold text-gray-400 uppercase">
+                        Quy cách / Kích thước
+                      </label>
+                      <p className="text-sm font-bold text-gray-800 border-b border-gray-100 pb-2">
+                        {selectedMaterial.specification || '-'}
+                      </p>
                     </div>
                   </div>
                 </div>
 
                 <div className="space-y-2">
-                  <label className="text-[10px] font-bold text-gray-400 uppercase">Mô tả chi tiết</label>
+                  <label className="text-[10px] font-bold text-gray-400 uppercase">
+                    Mô tả chi tiết
+                  </label>
                   <div className="p-4 bg-gray-50 rounded-xl text-sm text-gray-600 italic">
                     {selectedMaterial.description || 'Chưa có mô tả cho vật tư này.'}
                   </div>
@@ -630,7 +795,10 @@ export const MaterialCatalog = ({ user, onBack, onNavigate, addToast }: {
                 <Button
                   variant="danger"
                   icon={Trash2}
-                  onClick={() => { setShowDetailModal(false); handleDeleteClick(selectedMaterial.id); }}
+                  onClick={() => {
+                    setShowDetailModal(false);
+                    handleDeleteClick(selectedMaterial.id);
+                  }}
                 >
                   Xóa
                 </Button>
@@ -638,15 +806,14 @@ export const MaterialCatalog = ({ user, onBack, onNavigate, addToast }: {
                   <Button
                     variant="warning"
                     icon={Edit}
-                    onClick={() => { setShowDetailModal(false); handleEdit(selectedMaterial); }}
+                    onClick={() => {
+                      setShowDetailModal(false);
+                      handleEdit(selectedMaterial);
+                    }}
                   >
                     Sửa
                   </Button>
-                  <Button
-                    variant="outline"
-                    icon={X}
-                    onClick={() => setShowDetailModal(false)}
-                  >
+                  <Button variant="outline" icon={X} onClick={() => setShowDetailModal(false)}>
                     Đóng
                   </Button>
                 </div>

@@ -1,5 +1,14 @@
 import { useState, useEffect, useRef } from 'react';
-import { Search, X, UserCircle, Package, ArrowDownCircle, Wallet, Command, FileText } from 'lucide-react';
+import {
+  Search,
+  X,
+  UserCircle,
+  Package,
+  ArrowDownCircle,
+  Wallet,
+  Command,
+  FileText,
+} from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { supabase } from '@/lib/supabase';
 
@@ -68,17 +77,57 @@ export const GlobalSearch = ({ isOpen, onClose, onNavigate }: GlobalSearchProps)
       const q = `%${searchTerm}%`;
 
       const [users, materials, stock_in, costs] = await Promise.all([
-        supabase.from('users').select('id, full_name, code, role').or(`full_name.ilike.${q},code.ilike.${q}`).limit(5),
-        supabase.from('materials').select('id, name, code, specification').or(`name.ilike.${q},code.ilike.${q}`).limit(5),
-        supabase.from('stock_in').select('id, import_code, notes, date').or(`import_code.ilike.${q},notes.ilike.${q}`).limit(5),
-        supabase.from('costs').select('id, cost_code, content, cost_type').or(`content.ilike.${q},cost_code.ilike.${q}`).limit(5)
+        supabase
+          .from('users')
+          .select('id, full_name, code, role')
+          .or(`full_name.ilike.${q},code.ilike.${q}`)
+          .limit(5),
+        supabase
+          .from('materials')
+          .select('id, name, code, specification')
+          .or(`name.ilike.${q},code.ilike.${q}`)
+          .limit(5),
+        supabase
+          .from('stock_in')
+          .select('id, import_code, notes, date')
+          .or(`import_code.ilike.${q},notes.ilike.${q}`)
+          .limit(5),
+        supabase
+          .from('costs')
+          .select('id, cost_code, content, cost_type')
+          .or(`content.ilike.${q},cost_code.ilike.${q}`)
+          .limit(5),
       ]);
 
       setResults({
-        employee: (users.data || []).map(u => ({ id: u.id, title: u.full_name, subtitle: u.code + ' - ' + u.role, type: 'employee', data: u })),
-        material: (materials.data || []).map(m => ({ id: m.id, title: m.name, subtitle: m.code + (m.specification ? ` - ${m.specification}` : ''), type: 'material', data: m })),
-        stock_in: (stock_in.data || []).map(s => ({ id: s.id, title: s.import_code || 'Phiếu nhập mới', subtitle: s.notes || s.date, type: 'stock_in', data: s })),
-        cost: (costs.data || []).map(c => ({ id: c.id, title: c.content || c.cost_code, subtitle: c.cost_type, type: 'cost', data: c })),
+        employee: (users.data || []).map((u) => ({
+          id: u.id,
+          title: u.full_name,
+          subtitle: u.code + ' - ' + u.role,
+          type: 'employee',
+          data: u,
+        })),
+        material: (materials.data || []).map((m) => ({
+          id: m.id,
+          title: m.name,
+          subtitle: m.code + (m.specification ? ` - ${m.specification}` : ''),
+          type: 'material',
+          data: m,
+        })),
+        stock_in: (stock_in.data || []).map((s) => ({
+          id: s.id,
+          title: s.import_code || 'Phiếu nhập mới',
+          subtitle: s.notes || s.date,
+          type: 'stock_in',
+          data: s,
+        })),
+        cost: (costs.data || []).map((c) => ({
+          id: c.id,
+          title: c.content || c.cost_code,
+          subtitle: c.cost_type,
+          type: 'cost',
+          data: c,
+        })),
       });
     } catch (err) {
       console.error('Search error:', err);
@@ -108,12 +157,42 @@ export const GlobalSearch = ({ isOpen, onClose, onNavigate }: GlobalSearchProps)
   const hasResults = Object.values(results).some((arr: any) => arr.length > 0);
 
   const getGroupTitle = (type: string) => {
-    switch(type) {
-      case 'employee': return { text: 'Nhân viên', icon: <UserCircle size={14} className="text-blue-500" />, color: 'text-blue-600', bg: 'bg-blue-50' };
-      case 'material': return { text: 'Vật tư', icon: <Package size={14} className="text-amber-500" />, color: 'text-amber-600', bg: 'bg-amber-50' };
-      case 'stock_in': return { text: 'Phiếu nhập', icon: <ArrowDownCircle size={14} className="text-green-500" />, color: 'text-green-600', bg: 'bg-green-50' };
-      case 'cost': return { text: 'Chi phí', icon: <Wallet size={14} className="text-purple-500" />, color: 'text-purple-600', bg: 'bg-purple-50' };
-      default: return { text: 'Khác', icon: <FileText size={14} />, color: 'text-gray-600', bg: 'bg-gray-50' };
+    switch (type) {
+      case 'employee':
+        return {
+          text: 'Nhân viên',
+          icon: <UserCircle size={14} className="text-blue-500" />,
+          color: 'text-blue-600',
+          bg: 'bg-blue-50',
+        };
+      case 'material':
+        return {
+          text: 'Vật tư',
+          icon: <Package size={14} className="text-amber-500" />,
+          color: 'text-amber-600',
+          bg: 'bg-amber-50',
+        };
+      case 'stock_in':
+        return {
+          text: 'Phiếu nhập',
+          icon: <ArrowDownCircle size={14} className="text-green-500" />,
+          color: 'text-green-600',
+          bg: 'bg-green-50',
+        };
+      case 'cost':
+        return {
+          text: 'Chi phí',
+          icon: <Wallet size={14} className="text-purple-500" />,
+          color: 'text-purple-600',
+          bg: 'bg-purple-50',
+        };
+      default:
+        return {
+          text: 'Khác',
+          icon: <FileText size={14} />,
+          color: 'text-gray-600',
+          bg: 'bg-gray-50',
+        };
     }
   };
 
@@ -138,7 +217,9 @@ export const GlobalSearch = ({ isOpen, onClose, onNavigate }: GlobalSearchProps)
           >
             {/* Input Header */}
             <div className="flex items-center gap-3 px-6 py-4 border-b border-gray-100 bg-white sticky top-0 z-10">
-              <Search className={`w-6 h-6 ${loading ? 'text-primary animate-pulse' : 'text-gray-400'}`} />
+              <Search
+                className={`w-6 h-6 ${loading ? 'text-primary animate-pulse' : 'text-gray-400'}`}
+              />
               <input
                 ref={inputRef}
                 type="text"
@@ -147,11 +228,11 @@ export const GlobalSearch = ({ isOpen, onClose, onNavigate }: GlobalSearchProps)
                 onChange={(e) => setQuery(e.target.value)}
                 className="flex-1 bg-transparent text-gray-800 text-lg outline-none placeholder-gray-300"
               />
-              <button 
+              <button
                 onClick={onClose}
                 className="p-1.5 hover:bg-gray-100 rounded-full transition-colors text-gray-400"
               >
-                 <X size={20} />
+                <X size={20} />
               </button>
             </div>
 
@@ -188,11 +269,13 @@ export const GlobalSearch = ({ isOpen, onClose, onNavigate }: GlobalSearchProps)
                     return (
                       <div key={groupKey} className="space-y-2">
                         <div className="flex items-center gap-2 px-2 text-xs font-bold uppercase tracking-wider">
-                          <span className={`p-1 rounded-md ${groupStyle.bg}`}>{groupStyle.icon}</span>
+                          <span className={`p-1 rounded-md ${groupStyle.bg}`}>
+                            {groupStyle.icon}
+                          </span>
                           <span className={groupStyle.color}>{groupStyle.text}</span>
                         </div>
                         <div className="space-y-1">
-                          {groupResults.map(item => (
+                          {groupResults.map((item) => (
                             <button
                               key={item.id}
                               onClick={() => handleResultClick(item)}
@@ -217,9 +300,13 @@ export const GlobalSearch = ({ isOpen, onClose, onNavigate }: GlobalSearchProps)
                 </div>
               )}
             </div>
-            
+
             <div className="bg-gray-50/50 p-3 text-center text-[10px] text-gray-400 border-t border-gray-100">
-              Nhấn <kbd className="px-1.5 py-0.5 rounded-md bg-white border border-gray-200 shadow-sm mx-1">ESC</kbd> để đóng trình tìm kiếm
+              Nhấn{' '}
+              <kbd className="px-1.5 py-0.5 rounded-md bg-white border border-gray-200 shadow-sm mx-1">
+                ESC
+              </kbd>{' '}
+              để đóng trình tìm kiếm
             </div>
           </motion.div>
         </div>

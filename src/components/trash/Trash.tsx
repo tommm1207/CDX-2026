@@ -2,14 +2,50 @@ import { motion } from 'motion/react';
 import { Package, Warehouse, Archive, UserCircle, Wallet, Layers } from 'lucide-react';
 import { PageBreadcrumb } from '../shared/PageBreadcrumb';
 
-export const Trash = ({ onNavigate, onBack }: { onNavigate: (page: string) => void, onBack: () => void }) => {
+export const Trash = ({
+  onNavigate,
+  onBack,
+}: {
+  onNavigate: (page: string) => void;
+  onBack: () => void;
+}) => {
   const trashItems = [
-    { id: 'deleted-slips', label: 'Phiếu nhập xuất đã xóa', icon: Archive, color: 'bg-blue-50 text-blue-600' },
-    { id: 'deleted-costs', label: 'Báo cáo chi phí đã xóa', icon: Wallet, color: 'bg-purple-50 text-purple-600' },
-    { id: 'deleted-materials', label: 'Danh mục vật tư & nhóm xóa', icon: Package, color: 'bg-emerald-50 text-emerald-600' },
-    { id: 'deleted-production-orders', label: 'Sản xuất & Định mức đã xóa', icon: Layers, color: 'bg-indigo-50 text-indigo-600' },
-    { id: 'deleted-employees', label: 'Hồ sơ nhân sự đã xóa', icon: UserCircle, color: 'bg-rose-50 text-rose-600' },
-    { id: 'deleted-warehouses', label: 'Danh sách kho xóa', icon: Warehouse, color: 'bg-orange-50 text-orange-600' },
+    {
+      id: 'deleted-slips',
+      label: 'Phiếu nhập xuất đã xóa',
+      icon: Archive,
+      color: 'bg-blue-50 text-blue-600',
+    },
+    {
+      id: 'deleted-costs',
+      label: 'Báo cáo chi phí đã xóa',
+      icon: Wallet,
+      color: 'bg-purple-50 text-purple-600',
+    },
+    {
+      id: 'deleted-materials',
+      label: 'Danh mục vật tư & nhóm xóa',
+      icon: Package,
+      color: 'bg-emerald-50 text-emerald-600',
+    },
+    {
+      id: 'deleted-production-orders',
+      label: 'Sản xuất & Định mức đã xóa',
+      icon: Layers,
+      color: 'bg-indigo-50 text-indigo-600',
+    },
+    {
+      id: 'deleted-employees',
+      label: 'Hồ sơ nhân sự đã xóa',
+      icon: UserCircle,
+      color: 'bg-rose-50 text-rose-600',
+    },
+    {
+      id: 'deleted-warehouses',
+      label: 'Danh sách kho xóa',
+      icon: Warehouse,
+      color: 'bg-orange-50 text-orange-600',
+    },
   ];
 
   return (
@@ -24,12 +60,16 @@ export const Trash = ({ onNavigate, onBack }: { onNavigate: (page: string) => vo
             onClick={() => onNavigate(item.id)}
             className="bg-white p-8 rounded-2xl shadow-sm border border-gray-100 flex flex-col items-center justify-center gap-4 cursor-pointer group"
           >
-            <div className={`p-6 rounded-2xl ${item.color} group-hover:scale-110 transition-transform`}>
+            <div
+              className={`p-6 rounded-2xl ${item.color} group-hover:scale-110 transition-transform`}
+            >
               <item.icon size={40} />
             </div>
             <div className="text-center">
               <h3 className="text-sm font-bold text-gray-800">{item.label}</h3>
-              <p className="text-[10px] text-gray-400 mt-1 uppercase tracking-wider">Xem dữ liệu đã xóa</p>
+              <p className="text-[10px] text-gray-400 mt-1 uppercase tracking-wider">
+                Xem dữ liệu đã xóa
+              </p>
             </div>
           </motion.div>
         ))}

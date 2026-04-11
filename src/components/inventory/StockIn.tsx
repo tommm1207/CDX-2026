@@ -1,5 +1,17 @@
 import { useState, useEffect, FormEvent } from 'react';
-import { Plus, Search, ChevronRight, X, ArrowDownCircle, Edit, Navigation, Trash2, PackagePlus, ChevronDown, Check } from 'lucide-react';
+import {
+  Plus,
+  Search,
+  ChevronRight,
+  X,
+  ArrowDownCircle,
+  Edit,
+  Navigation,
+  Trash2,
+  PackagePlus,
+  ChevronDown,
+  Check,
+} from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { supabase } from '@/lib/supabase';
 import { Employee } from '@/types';
@@ -16,13 +28,20 @@ import { isUUID, getAllowedWarehouses } from '@/utils/helpers';
 import { getAvailableStock, validateFutureImpact } from '@/utils/inventory';
 import { Button } from '../shared/Button';
 
-export const StockIn = ({ user, onBack, initialStatus, initialAction, addToast, setHideBottomNav }: {
-  user: Employee,
-  onBack?: () => void,
-  initialStatus?: string,
-  initialAction?: string,
-  addToast?: (message: string, type?: ToastType) => void,
-  setHideBottomNav?: (hide: boolean) => void
+export const StockIn = ({
+  user,
+  onBack,
+  initialStatus,
+  initialAction,
+  addToast,
+  setHideBottomNav,
+}: {
+  user: Employee;
+  onBack?: () => void;
+  initialStatus?: string;
+  initialAction?: string;
+  addToast?: (message: string, type?: ToastType) => void;
+  setHideBottomNav?: (hide: boolean) => void;
 }) => {
   const [slips, setSlips] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -48,7 +67,9 @@ export const StockIn = ({ user, onBack, initialStatus, initialAction, addToast, 
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showAddMaterial, setShowAddMaterial] = useState(false);
 
-  const { warehouses, materials, groups, refreshAll, fetchWarehouses } = useInventoryData(user.data_view_permission);
+  const { warehouses, materials, groups, refreshAll, fetchWarehouses } = useInventoryData(
+    user.data_view_permission,
+  );
 
   const initialFormState = {
     date: new Date().toISOString().split('T')[0],
@@ -59,7 +80,7 @@ export const StockIn = ({ user, onBack, initialStatus, initialAction, addToast, 
     unit: '',
     notes: '',
     import_code: `NK-${new Date().getFullYear().toString().slice(-2)}${(new Date().getMonth() + 1).toString().padStart(2, '0')}${new Date().getDate().toString().padStart(2, '0')}-${Math.floor(1000 + Math.random() * 9000)}`,
-    status: 'Chờ duyệt'
+    status: 'Chờ duyệt',
   };
 
   const [formData, setFormData] = useState(initialFormState);
@@ -71,7 +92,10 @@ export const StockIn = ({ user, onBack, initialStatus, initialAction, addToast, 
   const fetchSlips = async () => {
     setLoading(true);
     try {
-      let query = supabase.from('stock_in').select('*, warehouses(name, code), materials(name, code, unit)').order('created_at', { ascending: false });
+      let query = supabase
+        .from('stock_in')
+        .select('*, warehouses(name, code), materials(name, code, unit)')
+        .order('created_at', { ascending: false });
 
       if (statusFilter === 'Tất cả') {
         query = query.neq('status', 'Đã xóa');
@@ -87,7 +111,10 @@ export const StockIn = ({ user, onBack, initialStatus, initialAction, addToast, 
       const { data, error } = await query;
       if (error) {
         console.error('Error fetching stock_in:', error);
-        const { data: fallbackData, error: fallbackError } = await supabase.from('stock_in').select('*').order('created_at', { ascending: false });
+        const { data: fallbackData, error: fallbackError } = await supabase
+          .from('stock_in')
+          .select('*')
+          .order('created_at', { ascending: false });
         if (fallbackError) throw fallbackError;
         setSlips(fallbackData || []);
       } else {
@@ -109,15 +136,15 @@ export const StockIn = ({ user, onBack, initialStatus, initialAction, addToast, 
     e.preventDefault();
 
     if (!formData.material_id) {
-      if (addToast) addToast("Vui lòng chọn Tên vật tư nhập.", "error");
+      if (addToast) addToast('Vui lòng chọn Tên vật tư nhập.', 'error');
       return;
     }
     if (!formData.warehouse_id) {
-      if (addToast) addToast("Vui lòng chọn Kho nhập.", "error");
+      if (addToast) addToast('Vui lòng chọn Kho nhập.', 'error');
       return;
     }
     if (!formData.quantity || formData.quantity <= 0) {
-      if (addToast) addToast("Vui lòng nhập số lượng nhập hợp lệ.", "error");
+      if (addToast) addToast('Vui lòng nhập số lượng nhập hợp lệ.', 'error');
       return;
     }
 
@@ -125,13 +152,18 @@ export const StockIn = ({ user, onBack, initialStatus, initialAction, addToast, 
     try {
       let finalWarehouseId = formData.warehouse_id;
       if (formData.warehouse_id && !isUUID(formData.warehouse_id)) {
-        const whByName = warehouses.find(w => w.name.toLowerCase() === formData.warehouse_id.toLowerCase());
+        const whByName = warehouses.find(
+          (w) => w.name.toLowerCase() === formData.warehouse_id.toLowerCase(),
+        );
         if (whByName) {
           finalWarehouseId = whByName.id;
         } else {
           const random = Math.floor(100 + Math.random() * 900);
           const code = `K${(warehouses.length + 1).toString().padStart(2, '0')}-${random}`;
-          const { data: newWh, error: whErr } = await supabase.from('warehouses').insert([{ name: formData.warehouse_id, code }]).select();
+          const { data: newWh, error: whErr } = await supabase
+            .from('warehouses')
+            .insert([{ name: formData.warehouse_id, code }])
+            .select();
           if (whErr) throw whErr;
           if (newWh) {
             finalWarehouseId = newWh[0].id;
@@ -142,7 +174,9 @@ export const StockIn = ({ user, onBack, initialStatus, initialAction, addToast, 
 
       let finalMaterialId = formData.material_id;
       if (formData.material_id && !isUUID(formData.material_id)) {
-        const matByName = materials.find(m => m.name.toLowerCase() === formData.material_id.toLowerCase());
+        const matByName = materials.find(
+          (m) => m.name.toLowerCase() === formData.material_id.toLowerCase(),
+        );
         if (matByName) {
           finalMaterialId = matByName.id;
         } else {
@@ -156,11 +190,11 @@ export const StockIn = ({ user, onBack, initialStatus, initialAction, addToast, 
         material_id: finalMaterialId,
         employee_id: user.id,
         total_amount: formData.quantity * formData.unit_price,
-        unit: formData.unit || materials.find(m => m.id === finalMaterialId)?.unit || '',
+        unit: formData.unit || materials.find((m) => m.id === finalMaterialId)?.unit || '',
         status: isEditing && selectedSlip?.status === 'Đã duyệt' ? 'Đã duyệt' : 'Chờ duyệt',
         notes: isEditing
           ? `[SỬA lúc ${new Date().toLocaleString('vi-VN')}] ${formData.notes.replace(/^\[SỬA lúc .*?\]\s*/, '')}`
-          : formData.notes
+          : formData.notes,
       };
 
       if (isEditing && selectedSlip) {
@@ -170,19 +204,33 @@ export const StockIn = ({ user, onBack, initialStatus, initialAction, addToast, 
           const dateChanged = formData.date !== selectedSlip.date;
 
           if (matChanged || whChanged || dateChanged) {
-            // Khi đổi các trường cốt lõi của phiếu Đã duyệt, ta cần kiểm tra xem 
+            // Khi đổi các trường cốt lõi của phiếu Đã duyệt, ta cần kiểm tra xem
             // nếu "thu hồi" phiếu cũ (giảm tồn cũ) thì có gây âm kho ở tương lai không.
-            const impactOld = await validateFutureImpact(selectedSlip.material_id, selectedSlip.warehouse_id, selectedSlip.date, -selectedSlip.quantity);
+            const impactOld = await validateFutureImpact(
+              selectedSlip.material_id,
+              selectedSlip.warehouse_id,
+              selectedSlip.date,
+              -selectedSlip.quantity,
+            );
             if (!impactOld.valid) {
-              throw new Error(`Không thể thay đổi vì tồn kho ${selectedSlip.materials?.name} tại kho cũ sẽ bị âm vào ngày ${impactOld.failedDate}`);
+              throw new Error(
+                `Không thể thay đổi vì tồn kho ${selectedSlip.materials?.name} tại kho cũ sẽ bị âm vào ngày ${impactOld.failedDate}`,
+              );
             }
           } else {
             // Chỉ đổi số lượng hoặc các trường khác tại cùng vị trí
             const diff = formData.quantity - selectedSlip.quantity;
             if (diff < 0) {
-              const impact = await validateFutureImpact(finalMaterialId, finalWarehouseId, formData.date, diff);
+              const impact = await validateFutureImpact(
+                finalMaterialId,
+                finalWarehouseId,
+                formData.date,
+                diff,
+              );
               if (!impact.valid) {
-                 throw new Error(`Không thể giảm số lượng nhập vì sẽ gây âm kho vào ngày ${impact.failedDate}`);
+                throw new Error(
+                  `Không thể giảm số lượng nhập vì sẽ gây âm kho vào ngày ${impact.failedDate}`,
+                );
               }
             }
           }
@@ -190,16 +238,16 @@ export const StockIn = ({ user, onBack, initialStatus, initialAction, addToast, 
 
         const { error } = await supabase.from('stock_in').update(payload).eq('id', selectedSlip.id);
         if (error) throw error;
-        
-        await supabase.from('costs')
+
+        await supabase
+          .from('costs')
           .update({
             quantity: payload.quantity,
             unit_price: payload.unit_price,
             total_amount: payload.total_amount,
-            notes: `Cập nhật từ phiếu ${payload.import_code} (Sửa ngày ${new Date().toLocaleDateString()})`
+            notes: `Cập nhật từ phiếu ${payload.import_code} (Sửa ngày ${new Date().toLocaleDateString()})`,
           })
           .ilike('content', `%${payload.import_code}%`);
-
       } else {
         const { error } = await supabase.from('stock_in').insert([payload]);
         if (error) throw error;
@@ -209,7 +257,8 @@ export const StockIn = ({ user, onBack, initialStatus, initialAction, addToast, 
       fetchSlips();
       setIsEditing(false);
       setSelectedSlip(null);
-      if (addToast) addToast(isEditing ? 'Cập nhật phiếu nhập thành công!' : 'Nhập kho thành công!', 'success');
+      if (addToast)
+        addToast(isEditing ? 'Cập nhật phiếu nhập thành công!' : 'Nhập kho thành công!', 'success');
     } catch (err: any) {
       if (addToast) addToast('Lỗi: ' + err.message, 'error');
     } finally {
@@ -248,7 +297,7 @@ export const StockIn = ({ user, onBack, initialStatus, initialAction, addToast, 
       unit: selectedSlip.unit,
       notes: selectedSlip.notes?.replace(/^\[SỬA lúc .*?\]\s*/, '') || '',
       import_code: selectedSlip.import_code || formData.import_code,
-      status: selectedSlip.status
+      status: selectedSlip.status,
     });
     setIsEditing(true);
     setShowDetailModal(false);
@@ -261,7 +310,11 @@ export const StockIn = ({ user, onBack, initialStatus, initialAction, addToast, 
       if (error) throw error;
 
       if (status === 'Đã duyệt') {
-        const { data: slip } = await supabase.from('stock_in').select('*, users(id)').eq('id', id).maybeSingle();
+        const { data: slip } = await supabase
+          .from('stock_in')
+          .select('*, users(id)')
+          .eq('id', id)
+          .maybeSingle();
         if (slip && slip.total_amount > 0) {
           // Check if cost already exists to prevent duplicates
           const { data: existingCost } = await supabase
@@ -279,21 +332,23 @@ export const StockIn = ({ user, onBack, initialStatus, initialAction, addToast, 
             const userPrefix = (slip as any).users?.id?.slice(0, 4) || 'SYS';
             const costCode = `CP-${userPrefix.toUpperCase()}-${d}${m}${y}-${random}`;
 
-            await supabase.from('costs').insert([{
-              transaction_type: 'Chi',
-              cost_code: costCode,
-              date: slip.date,
-              employee_id: user.id,
-              cost_type: 'Vật tư',
-              content: `Nhập kho từ phiếu ${slip.import_code}`,
-              material_id: slip.material_id,
-              warehouse_id: slip.warehouse_id,
-              quantity: slip.quantity,
-              unit: slip.unit,
-              unit_price: slip.unit_price,
-              total_amount: slip.total_amount,
-              notes: 'Tự động tạo từ hệ thống Nhập Kho'
-            }]);
+            await supabase.from('costs').insert([
+              {
+                transaction_type: 'Chi',
+                cost_code: costCode,
+                date: slip.date,
+                employee_id: user.id,
+                cost_type: 'Vật tư',
+                content: `Nhập kho từ phiếu ${slip.import_code}`,
+                material_id: slip.material_id,
+                warehouse_id: slip.warehouse_id,
+                quantity: slip.quantity,
+                unit: slip.unit,
+                unit_price: slip.unit_price,
+                total_amount: slip.total_amount,
+                notes: 'Tự động tạo từ hệ thống Nhập Kho',
+              },
+            ]);
           }
         }
       }
@@ -317,7 +372,11 @@ export const StockIn = ({ user, onBack, initialStatus, initialAction, addToast, 
       if (selectedSlip.status === 'Đã duyệt') {
         // Kiểm tra toàn bộ timeline (đến '9999-12-31') để đảm bảo xóa phiếu nhập này
         // không gây âm kho tại bất kỳ thời điểm nào sau ngày nhập.
-        const stockFull = await getAvailableStock(selectedSlip.material_id, selectedSlip.warehouse_id, '9999-12-31');
+        const stockFull = await getAvailableStock(
+          selectedSlip.material_id,
+          selectedSlip.warehouse_id,
+          '9999-12-31',
+        );
         if (stockFull < selectedSlip.quantity) {
           const thieu = selectedSlip.quantity - stockFull;
           throw new Error(`❌ Từ chối xóa phiếu nhập ${selectedSlip.import_code}
@@ -330,11 +389,15 @@ export const StockIn = ({ user, onBack, initialStatus, initialAction, addToast, 
         }
       }
 
-      const { error } = await supabase.from('stock_in').update({ status: 'Đã xóa' }).eq('id', selectedSlip.id);
+      const { error } = await supabase
+        .from('stock_in')
+        .update({ status: 'Đã xóa' })
+        .eq('id', selectedSlip.id);
       if (error) throw error;
 
       // Also void associated cost
-      await supabase.from('costs')
+      await supabase
+        .from('costs')
         .update({ status: 'Đã xóa' })
         .ilike('content', `%${selectedSlip.import_code}%`);
 
@@ -359,7 +422,7 @@ export const StockIn = ({ user, onBack, initialStatus, initialAction, addToast, 
           <Button
             size="icon"
             variant={showFilter ? 'primary' : 'outline'}
-            onClick={() => setShowFilter(f => !f)}
+            onClick={() => setShowFilter((f) => !f)}
             icon={Search}
           />
         </div>
@@ -377,26 +440,52 @@ export const StockIn = ({ user, onBack, initialStatus, initialAction, addToast, 
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
                 <div className="space-y-1">
                   <label className="text-[10px] font-bold text-gray-400 uppercase">Từ ngày</label>
-                  <input type="date" value={filterStartDate} onChange={e => setFilterStartDate(e.target.value)} className="w-full px-3 py-2 rounded-lg border border-gray-200 text-xs outline-none focus:ring-2 focus:ring-primary/20" />
+                  <input
+                    type="date"
+                    value={filterStartDate}
+                    onChange={(e) => setFilterStartDate(e.target.value)}
+                    className="w-full px-3 py-2 rounded-lg border border-gray-200 text-xs outline-none focus:ring-2 focus:ring-primary/20"
+                  />
                 </div>
                 <div className="space-y-1">
                   <label className="text-[10px] font-bold text-gray-400 uppercase">Đến ngày</label>
-                  <input type="date" value={filterEndDate} onChange={e => setFilterEndDate(e.target.value)} className="w-full px-3 py-2 rounded-lg border border-gray-200 text-xs outline-none focus:ring-2 focus:ring-primary/20" />
+                  <input
+                    type="date"
+                    value={filterEndDate}
+                    onChange={(e) => setFilterEndDate(e.target.value)}
+                    className="w-full px-3 py-2 rounded-lg border border-gray-200 text-xs outline-none focus:ring-2 focus:ring-primary/20"
+                  />
                 </div>
                 <div className="space-y-1">
                   <label className="text-[10px] font-bold text-gray-400 uppercase">Kho</label>
-                  <select value={filterWarehouseId} onChange={e => setFilterWarehouseId(e.target.value)} className="w-full px-3 py-2 rounded-lg border border-gray-200 text-xs outline-none focus:ring-2 focus:ring-primary/20">
+                  <select
+                    value={filterWarehouseId}
+                    onChange={(e) => setFilterWarehouseId(e.target.value)}
+                    className="w-full px-3 py-2 rounded-lg border border-gray-200 text-xs outline-none focus:ring-2 focus:ring-primary/20"
+                  >
                     <option value="">Tất cả kho</option>
-                    {warehouses.map(w => <option key={w.id} value={w.id}>{w.name}</option>)}
+                    {warehouses.map((w) => (
+                      <option key={w.id} value={w.id}>
+                        {w.name}
+                      </option>
+                    ))}
                   </select>
                 </div>
                 <div className="space-y-1">
                   <label className="text-[10px] font-bold text-gray-400 uppercase">Tìm kiếm</label>
-                  <input type="text" placeholder="Vật tư, mã phiếu, ghi chú..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="w-full px-3 py-2 rounded-lg border border-gray-200 text-xs outline-none focus:ring-2 focus:ring-primary/20" />
+                  <input
+                    type="text"
+                    placeholder="Vật tư, mã phiếu, ghi chú..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="w-full px-3 py-2 rounded-lg border border-gray-200 text-xs outline-none focus:ring-2 focus:ring-primary/20"
+                  />
                 </div>
               </div>
               <div>
-                <label className="text-[10px] font-bold text-gray-400 uppercase block mb-2">Trạng thái</label>
+                <label className="text-[10px] font-bold text-gray-400 uppercase block mb-2">
+                  Trạng thái
+                </label>
                 <div className="flex items-center gap-2 overflow-x-auto pb-2 md:pb-0 no-scrollbar">
                   {['Tất cả', 'Chờ duyệt', 'Đã duyệt', 'Từ chối', 'Đã xóa'].map((status) => (
                     <Button
@@ -416,7 +505,7 @@ export const StockIn = ({ user, onBack, initialStatus, initialAction, addToast, 
       </AnimatePresence>
 
       {(() => {
-        const filteredSlips = slips.filter(item => {
+        const filteredSlips = slips.filter((item) => {
           let match = true;
           if (filterStartDate && item.date < filterStartDate) match = false;
           if (filterEndDate && item.date > filterEndDate) match = false;
@@ -431,60 +520,91 @@ export const StockIn = ({ user, onBack, initialStatus, initialAction, addToast, 
           return match;
         });
         return (
-      <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse whitespace-nowrap">
-            <thead>
-              <tr className="bg-primary text-white">
-                <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider border-r border-white/10">Ngày</th>
-                <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider border-r border-white/10">Vật tư</th>
-                <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider border-r border-white/10">Kho</th>
-                <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider border-r border-white/10 text-center">SL</th>
-                <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider border-r border-white/10 text-right">Thành tiền</th>
-                <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-center">Trạng thái</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100">
-              {loading ? (
-                <tr><td colSpan={6} className="px-4 py-8 text-center text-gray-400 italic">Đang tải...</td></tr>
-              ) : filteredSlips.length === 0 ? (
-                <tr><td colSpan={6} className="px-4 py-8 text-center text-gray-400 italic">Chưa có phiếu nhập nào</td></tr>
-              ) : (
-                filteredSlips.map((item) => (
-                  <tr
-                    key={item.id}
-                    onClick={() => handleRowClick(item)}
-                    className="hover:bg-gray-50 transition-colors cursor-pointer group"
-                  >
-                    <td className="px-4 py-3 text-xs text-gray-600">{formatDate(item.date)}</td>
-                    <td className="px-4 py-3 text-xs text-gray-800 font-bold">
-                      {item.materials?.name}
-                    </td>
-                    <td className="px-4 py-3 text-xs text-gray-600">
-                      {item.warehouses?.name}
-                    </td>
-                    <td className="px-4 py-3 text-xs text-gray-700 font-medium text-center">
-                      {formatNumber(item.quantity)} <span className="text-[10px] text-gray-400">{item.unit || item.materials?.unit}</span>
-                    </td>
-                    <td className="px-4 py-3 text-xs text-primary font-bold text-right">{formatCurrency(item.total_amount || 0)}</td>
-                    <td className="px-4 py-3 text-xs">
-                      <div className="flex items-center justify-between">
-                        <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${item.status === 'Đã duyệt' ? 'bg-green-100 text-green-600' :
-                          item.status === 'Từ chối' ? 'bg-red-100 text-red-600' :
-                            'bg-yellow-100 text-yellow-600'
-                          }`}>
-                          {item.status || 'Chờ duyệt'}
-                        </span>
-                        <ChevronRight size={14} className="text-gray-300 group-hover:text-primary transition-colors" />
-                      </div>
-                    </td>
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full text-left border-collapse whitespace-nowrap">
+                <thead>
+                  <tr className="bg-primary text-white">
+                    <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider border-r border-white/10">
+                      Ngày
+                    </th>
+                    <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider border-r border-white/10">
+                      Vật tư
+                    </th>
+                    <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider border-r border-white/10">
+                      Kho
+                    </th>
+                    <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider border-r border-white/10 text-center">
+                      SL
+                    </th>
+                    <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider border-r border-white/10 text-right">
+                      Thành tiền
+                    </th>
+                    <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-center">
+                      Trạng thái
+                    </th>
                   </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
+                </thead>
+                <tbody className="divide-y divide-gray-100">
+                  {loading ? (
+                    <tr>
+                      <td colSpan={6} className="px-4 py-8 text-center text-gray-400 italic">
+                        Đang tải...
+                      </td>
+                    </tr>
+                  ) : filteredSlips.length === 0 ? (
+                    <tr>
+                      <td colSpan={6} className="px-4 py-8 text-center text-gray-400 italic">
+                        Chưa có phiếu nhập nào
+                      </td>
+                    </tr>
+                  ) : (
+                    filteredSlips.map((item) => (
+                      <tr
+                        key={item.id}
+                        onClick={() => handleRowClick(item)}
+                        className="hover:bg-gray-50 transition-colors cursor-pointer group"
+                      >
+                        <td className="px-4 py-3 text-xs text-gray-600">{formatDate(item.date)}</td>
+                        <td className="px-4 py-3 text-xs text-gray-800 font-bold">
+                          {item.materials?.name}
+                        </td>
+                        <td className="px-4 py-3 text-xs text-gray-600">{item.warehouses?.name}</td>
+                        <td className="px-4 py-3 text-xs text-gray-700 font-medium text-center">
+                          {formatNumber(item.quantity)}{' '}
+                          <span className="text-[10px] text-gray-400">
+                            {item.unit || item.materials?.unit}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 text-xs text-primary font-bold text-right">
+                          {formatCurrency(item.total_amount || 0)}
+                        </td>
+                        <td className="px-4 py-3 text-xs">
+                          <div className="flex items-center justify-between">
+                            <span
+                              className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                                item.status === 'Đã duyệt'
+                                  ? 'bg-green-100 text-green-600'
+                                  : item.status === 'Từ chối'
+                                    ? 'bg-red-100 text-red-600'
+                                    : 'bg-yellow-100 text-yellow-600'
+                              }`}
+                            >
+                              {item.status || 'Chờ duyệt'}
+                            </span>
+                            <ChevronRight
+                              size={14}
+                              className="text-gray-300 group-hover:text-primary transition-colors"
+                            />
+                          </div>
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
         );
       })()}
 
@@ -526,7 +646,9 @@ export const StockIn = ({ user, onBack, initialStatus, initialAction, addToast, 
                   </div>
                   <div>
                     <p className="text-sm font-black text-primary">{selectedSlip.import_code}</p>
-                    <p className="text-[10px] text-gray-400 uppercase font-bold tracking-widest">Chi tiết nhập kho</p>
+                    <p className="text-[10px] text-gray-400 uppercase font-bold tracking-widest">
+                      Chi tiết nhập kho
+                    </p>
                   </div>
                 </div>
                 <button
@@ -542,32 +664,57 @@ export const StockIn = ({ user, onBack, initialStatus, initialAction, addToast, 
                   { label: 'Ngày nhập', value: formatDate(selectedSlip.date) },
                   { label: 'Vật tư', value: selectedSlip.materials?.name },
                   { label: 'Kho nhập', value: selectedSlip.warehouses?.name },
-                  { label: 'Số lượng', value: `${formatNumber(selectedSlip.quantity)} ${selectedSlip.unit || selectedSlip.materials?.unit || ''}` },
+                  {
+                    label: 'Số lượng',
+                    value: `${formatNumber(selectedSlip.quantity)} ${selectedSlip.unit || selectedSlip.materials?.unit || ''}`,
+                  },
                   { label: 'Đơn giá', value: formatCurrency(selectedSlip.unit_price || 0) },
-                  { label: 'Thành tiền', value: formatCurrency(selectedSlip.total_amount || 0), highlight: true },
+                  {
+                    label: 'Thành tiền',
+                    value: formatCurrency(selectedSlip.total_amount || 0),
+                    highlight: true,
+                  },
                   { label: 'Trạng thái', value: selectedSlip.status || 'Chờ duyệt' },
                   { label: 'Diễn giải', value: selectedSlip.notes || '—' },
                 ].map(({ label, value, highlight }) => (
-                  <div key={label} className="flex justify-between items-start border-b border-gray-50 pb-3 gap-4">
+                  <div
+                    key={label}
+                    className="flex justify-between items-start border-b border-gray-50 pb-3 gap-4"
+                  >
                     <span className="text-[11px] text-gray-500 font-medium shrink-0">{label}</span>
-                    <p className={`text-sm text-right ${highlight ? 'text-primary font-bold' : 'text-gray-900'}`}>{value || '—'}</p>
+                    <p
+                      className={`text-sm text-right ${highlight ? 'text-primary font-bold' : 'text-gray-900'}`}
+                    >
+                      {value || '—'}
+                    </p>
                   </div>
                 ))}
 
                 {/* Thành tiền bằng chữ */}
                 <div className="bg-blue-50 rounded-xl p-3">
-                  <p className="text-[10px] text-blue-400 font-bold uppercase mb-1">Thành tiền bằng chữ</p>
-                  <p className="text-xs text-blue-700 italic font-medium">{numberToWords(selectedSlip.total_amount || 0)}</p>
+                  <p className="text-[10px] text-blue-400 font-bold uppercase mb-1">
+                    Thành tiền bằng chữ
+                  </p>
+                  <p className="text-xs text-blue-700 italic font-medium">
+                    {numberToWords(selectedSlip.total_amount || 0)}
+                  </p>
                 </div>
 
                 {/* Lịch sử nhập */}
                 {materialHistory.length > 0 && (
                   <div className="space-y-2">
-                    <p className="text-[10px] text-gray-400 font-bold uppercase">Lịch sử nhập gần đây</p>
+                    <p className="text-[10px] text-gray-400 font-bold uppercase">
+                      Lịch sử nhập gần đây
+                    </p>
                     {materialHistory.map((h, i) => (
-                      <div key={i} className="flex justify-between items-center text-[11px] bg-gray-50 p-2 rounded-lg">
+                      <div
+                        key={i}
+                        className="flex justify-between items-center text-[11px] bg-gray-50 p-2 rounded-lg"
+                      >
                         <span className="text-gray-500">{formatDate(h.date)}</span>
-                        <span className="font-bold text-primary">{formatNumber(h.quantity)} {h.unit}</span>
+                        <span className="font-bold text-primary">
+                          {formatNumber(h.quantity)} {h.unit}
+                        </span>
                         <span className="text-gray-400">{h.warehouses?.name}</span>
                       </div>
                     ))}
@@ -577,19 +724,59 @@ export const StockIn = ({ user, onBack, initialStatus, initialAction, addToast, 
 
               {/* Action buttons */}
               <div className="p-4 border-t border-gray-100 bg-gray-50 rounded-b-3xl md:rounded-b-none space-y-2">
-                {selectedSlip.status !== 'Đã xóa' && (user.role === 'Admin' || user.role === 'Admin App') && selectedSlip.status === 'Chờ duyệt' && (
-                  <div className="grid grid-cols-2 gap-2">
-                    <Button fullWidth variant="danger" icon={X} onClick={() => handleApprove(selectedSlip.id, 'Từ chối')}>Từ chối</Button>
-                    <Button fullWidth variant="success" icon={Check} onClick={() => handleApprove(selectedSlip.id, 'Đã duyệt')}>Duyệt</Button>
-                  </div>
-                )}
+                {selectedSlip.status !== 'Đã xóa' &&
+                  (user.role === 'Admin' || user.role === 'Admin App') &&
+                  selectedSlip.status === 'Chờ duyệt' && (
+                    <div className="grid grid-cols-2 gap-2">
+                      <Button
+                        fullWidth
+                        variant="danger"
+                        icon={X}
+                        onClick={() => handleApprove(selectedSlip.id, 'Từ chối')}
+                      >
+                        Từ chối
+                      </Button>
+                      <Button
+                        fullWidth
+                        variant="success"
+                        icon={Check}
+                        onClick={() => handleApprove(selectedSlip.id, 'Đã duyệt')}
+                      >
+                        Duyệt
+                      </Button>
+                    </div>
+                  )}
                 {selectedSlip.status !== 'Đã xóa' && (
                   <div className="grid grid-cols-2 gap-2">
-                    <Button fullWidth variant="outline" icon={Trash2} onClick={handleDelete} className="text-red-600 border-red-200 hover:bg-red-50">Thùng rác</Button>
-                    <Button fullWidth variant="outline" icon={Edit} onClick={handleEdit} className="text-gray-700 hover:bg-gray-50">Sửa</Button>
+                    <Button
+                      fullWidth
+                      variant="outline"
+                      icon={Trash2}
+                      onClick={handleDelete}
+                      className="text-red-600 border-red-200 hover:bg-red-50"
+                    >
+                      Thùng rác
+                    </Button>
+                    <Button
+                      fullWidth
+                      variant="outline"
+                      icon={Edit}
+                      onClick={handleEdit}
+                      className="text-gray-700 hover:bg-gray-50"
+                    >
+                      Sửa
+                    </Button>
                   </div>
                 )}
-                <Button fullWidth variant="outline" icon={X} onClick={() => setShowDetailModal(false)} className="text-gray-600 hover:bg-gray-50 border-gray-200">Đóng cửa sổ</Button>
+                <Button
+                  fullWidth
+                  variant="outline"
+                  icon={X}
+                  onClick={() => setShowDetailModal(false)}
+                  className="text-gray-600 hover:bg-gray-50 border-gray-200"
+                >
+                  Đóng cửa sổ
+                </Button>
               </div>
             </motion.div>
           </>
@@ -620,7 +807,9 @@ export const StockIn = ({ user, onBack, initialStatus, initialAction, addToast, 
                   >
                     <ArrowDownCircle size={24} />
                   </div>
-                  <h3 className="font-bold text-lg">{isEditing ? 'Sửa phiếu nhập kho' : 'Lập phiếu nhập kho'}</h3>
+                  <h3 className="font-bold text-lg">
+                    {isEditing ? 'Sửa phiếu nhập kho' : 'Lập phiếu nhập kho'}
+                  </h3>
                 </div>
                 <button
                   onClick={() => setShowModal(false)}
@@ -631,10 +820,15 @@ export const StockIn = ({ user, onBack, initialStatus, initialAction, addToast, 
               </div>
 
               <div className="flex-1 overflow-y-auto overflow-x-hidden p-6 custom-scrollbar">
-                <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-6 pb-32">
+                <form
+                  onSubmit={handleSubmit}
+                  className="grid grid-cols-1 md:grid-cols-2 gap-6 pb-32"
+                >
                   <div className="space-y-4">
                     <div className="space-y-1">
-                      <label className="text-[10px] font-bold text-gray-400 uppercase">Ngày nhập *</label>
+                      <label className="text-[10px] font-bold text-gray-400 uppercase">
+                        Ngày nhập *
+                      </label>
                       <input
                         type="date"
                         required
@@ -651,16 +845,23 @@ export const StockIn = ({ user, onBack, initialStatus, initialAction, addToast, 
                           value={formData.material_id}
                           options={materials}
                           onChange={(val) => {
-                            const mat = materials.find(m => m.id === val);
+                            const mat = materials.find((m) => m.id === val);
                             setFormData({
                               ...formData,
                               material_id: val,
-                              unit: mat?.unit || formData.unit
+                              unit: mat?.unit || formData.unit,
                             });
                           }}
                           onCreate={() => {
-                            if (addToast) addToast('Vui lòng chọn vật tư có trong Danh mục. Hoặc click nút + bên cạnh để tạo mới.', 'info');
-                            else alert('Vui lòng chọn vật tư có trong Danh mục. Hoặc click nút + bên cạnh để tạo mới.');
+                            if (addToast)
+                              addToast(
+                                'Vui lòng chọn vật tư có trong Danh mục. Hoặc click nút + bên cạnh để tạo mới.',
+                                'info',
+                              );
+                            else
+                              alert(
+                                'Vui lòng chọn vật tư có trong Danh mục. Hoặc click nút + bên cạnh để tạo mới.',
+                              );
                           }}
                           placeholder="Chọn vật tư..."
                           required
@@ -685,7 +886,9 @@ export const StockIn = ({ user, onBack, initialStatus, initialAction, addToast, 
                     />
 
                     <div className="space-y-1">
-                      <label className="text-[10px] font-bold text-gray-400 uppercase">Thành tiền</label>
+                      <label className="text-[10px] font-bold text-gray-400 uppercase">
+                        Thành tiền
+                      </label>
                       <div className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm text-center bg-gray-50 outline-none font-bold text-blue-600">
                         {formatCurrency(formData.quantity * formData.unit_price)}
                       </div>
@@ -704,8 +907,15 @@ export const StockIn = ({ user, onBack, initialStatus, initialAction, addToast, 
                     />
 
                     <div className="space-y-1">
-                      <label className="text-[10px] font-bold text-gray-400 uppercase">Đơn vị tính</label>
-                      <input type="text" value={formData.unit} onChange={(e) => setFormData({ ...formData, unit: e.target.value })} className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-blue-500/20" />
+                      <label className="text-[10px] font-bold text-gray-400 uppercase">
+                        Đơn vị tính
+                      </label>
+                      <input
+                        type="text"
+                        value={formData.unit}
+                        onChange={(e) => setFormData({ ...formData, unit: e.target.value })}
+                        className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-blue-500/20"
+                      />
                     </div>
 
                     <NumericInput
@@ -717,13 +927,22 @@ export const StockIn = ({ user, onBack, initialStatus, initialAction, addToast, 
                     />
 
                     <div className="space-y-1">
-                      <label className="text-[10px] font-bold text-gray-400 uppercase">Diễn giải</label>
-                      <textarea rows={2} value={formData.notes} onChange={(e) => setFormData({ ...formData, notes: e.target.value })} className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-blue-500/20 resize-none" />
+                      <label className="text-[10px] font-bold text-gray-400 uppercase">
+                        Diễn giải
+                      </label>
+                      <textarea
+                        rows={2}
+                        value={formData.notes}
+                        onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+                        className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-blue-500/20 resize-none"
+                      />
                     </div>
                   </div>
 
                   <div className="md:col-span-2 flex justify-end gap-3 mt-4">
-                    <Button variant="outline" onClick={() => setShowModal(false)}>Hủy</Button>
+                    <Button variant="outline" onClick={() => setShowModal(false)}>
+                      Hủy
+                    </Button>
                     <Button
                       type="submit"
                       variant="blue"
@@ -765,7 +984,7 @@ export const StockIn = ({ user, onBack, initialStatus, initialAction, addToast, 
         onClick={() => {
           setFormData({
             ...initialFormState,
-            import_code: `NK-${new Date().getFullYear().toString().slice(-2)}${(new Date().getMonth() + 1).toString().padStart(2, '0')}${new Date().getDate().toString().padStart(2, '0')}-${Math.floor(1000 + Math.random() * 9000)}`
+            import_code: `NK-${new Date().getFullYear().toString().slice(-2)}${(new Date().getMonth() + 1).toString().padStart(2, '0')}${new Date().getDate().toString().padStart(2, '0')}-${Math.floor(1000 + Math.random() * 9000)}`,
           });
           setIsEditing(false);
           setShowModal(true);

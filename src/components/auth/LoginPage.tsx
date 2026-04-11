@@ -1,6 +1,16 @@
 import { useState, useEffect, FormEvent } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { User as UserIcon, Lock, AlertCircle, RefreshCw, ArrowRight, Download, X, ArrowUpCircle, Menu as MenuIcon } from 'lucide-react';
+import {
+  User as UserIcon,
+  Lock,
+  AlertCircle,
+  RefreshCw,
+  ArrowRight,
+  Download,
+  X,
+  ArrowUpCircle,
+  Menu as MenuIcon,
+} from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { Employee } from '@/types';
 import { isUUID } from '@/utils/helpers';
@@ -21,7 +31,10 @@ export const LoginPage = ({ onLogin }: { onLogin: (user: Employee) => void }) =>
   const checkConnection = async () => {
     try {
       setConnectionStatus('checking');
-      const { error } = await supabase.from('users').select('id', { count: 'exact', head: true }).limit(1);
+      const { error } = await supabase
+        .from('users')
+        .select('id', { count: 'exact', head: true })
+        .limit(1);
       if (error) throw error;
       setConnectionStatus('ok');
     } catch (err) {
@@ -44,9 +57,7 @@ export const LoginPage = ({ onLogin }: { onLogin: (user: Employee) => void }) =>
         query = query.eq('code', employeeId);
       }
 
-      const { data, error: fetchError } = await query
-        .eq('app_pass', password)
-        .maybeSingle();
+      const { data, error: fetchError } = await query.eq('app_pass', password).maybeSingle();
 
       if (fetchError) {
         console.error('Login error:', fetchError);
@@ -78,20 +89,34 @@ export const LoginPage = ({ onLogin }: { onLogin: (user: Employee) => void }) =>
       >
         <div className="flex flex-col items-center mb-8">
           <div className="w-24 h-24 bg-primary rounded-2xl flex items-center justify-center mb-4 overflow-hidden shadow-lg shadow-primary/20">
-            <img src={LOGO_URL} alt="Logo" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+            <img
+              src={LOGO_URL}
+              alt="Logo"
+              className="w-full h-full object-cover"
+              referrerPolicy="no-referrer"
+            />
           </div>
           <div className="text-center">
-            <h2 className="text-primary font-black text-xl tracking-widest uppercase">QUẢN LÝ KHO CDX</h2>
-            <p className="text-[10px] text-gray-400 font-bold tracking-widest uppercase mt-1">Hệ thống quản lý nội bộ</p>
+            <h2 className="text-primary font-black text-xl tracking-widest uppercase">
+              QUẢN LÝ KHO CDX
+            </h2>
+            <p className="text-[10px] text-gray-400 font-bold tracking-widest uppercase mt-1">
+              Hệ thống quản lý nội bộ
+            </p>
           </div>
         </div>
 
         <form onSubmit={handleLogin} className="space-y-6">
           <div className="space-y-4">
             <div>
-              <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2 ml-1">Mã nhân viên (ID)</label>
+              <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2 ml-1">
+                Mã nhân viên (ID)
+              </label>
               <div className="relative">
-                <UserIcon className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+                <UserIcon
+                  className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400"
+                  size={18}
+                />
                 <input
                   type="text"
                   value={employeeId}
@@ -103,9 +128,14 @@ export const LoginPage = ({ onLogin }: { onLogin: (user: Employee) => void }) =>
               </div>
             </div>
             <div>
-              <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2 ml-1">Mật khẩu</label>
+              <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2 ml-1">
+                Mật khẩu
+              </label>
               <div className="relative">
-                <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+                <Lock
+                  className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400"
+                  size={18}
+                />
                 <input
                   type="password"
                   value={password}
@@ -119,7 +149,11 @@ export const LoginPage = ({ onLogin }: { onLogin: (user: Employee) => void }) =>
           </div>
 
           {error && (
-            <motion.div initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} className="bg-red-50 p-3 rounded-xl border border-red-100 flex items-center gap-2">
+            <motion.div
+              initial={{ opacity: 0, x: -10 }}
+              animate={{ opacity: 1, x: 0 }}
+              className="bg-red-50 p-3 rounded-xl border border-red-100 flex items-center gap-2"
+            >
               <AlertCircle size={16} className="text-red-500" />
               <p className="text-red-600 text-[11px] font-bold">{error}</p>
             </motion.div>
@@ -136,7 +170,10 @@ export const LoginPage = ({ onLogin }: { onLogin: (user: Employee) => void }) =>
               ) : (
                 <>
                   <span>ĐĂNG NHẬP NGAY</span>
-                  <ArrowRight size={20} className="group-hover:translate-x-1 transition-transform" />
+                  <ArrowRight
+                    size={20}
+                    className="group-hover:translate-x-1 transition-transform"
+                  />
                 </>
               )}
             </button>
@@ -153,7 +190,9 @@ export const LoginPage = ({ onLogin }: { onLogin: (user: Employee) => void }) =>
         </form>
 
         <div className="mt-8 text-center">
-          <p className="text-[10px] text-gray-300 font-medium">Phiên bản 2.0.26 • Phát triển bởi CDX Tom</p>
+          <p className="text-[10px] text-gray-300 font-medium">
+            Phiên bản 2.0.26 • Phát triển bởi CDX Tom
+          </p>
         </div>
       </motion.div>
 
@@ -180,44 +219,83 @@ export const LoginPage = ({ onLogin }: { onLogin: (user: Employee) => void }) =>
                       <Download size={24} />
                     </div>
                     <div>
-                      <h3 className="text-xl font-black text-gray-800 uppercase tracking-tight">Cài đặt Ứng dụng</h3>
-                      <p className="text-xs text-gray-400 font-medium">Hướng dẫn đưa ứng dụng ra màn hình chính</p>
+                      <h3 className="text-xl font-black text-gray-800 uppercase tracking-tight">
+                        Cài đặt Ứng dụng
+                      </h3>
+                      <p className="text-xs text-gray-400 font-medium">
+                        Hướng dẫn đưa ứng dụng ra màn hình chính
+                      </p>
                     </div>
                   </div>
-                  <button onClick={() => setShowInstructions(false)} className="p-2 hover:bg-gray-100 rounded-full transition-colors text-gray-400"><X size={24} /></button>
+                  <button
+                    onClick={() => setShowInstructions(false)}
+                    className="p-2 hover:bg-gray-100 rounded-full transition-colors text-gray-400"
+                  >
+                    <X size={24} />
+                  </button>
                 </div>
 
                 <div className="space-y-6">
                   <div className="flex gap-4">
-                    <div className="flex-shrink-0 w-8 h-8 bg-primary text-white rounded-full flex items-center justify-center font-black text-sm shadow-lg shadow-primary/20">1</div>
+                    <div className="flex-shrink-0 w-8 h-8 bg-primary text-white rounded-full flex items-center justify-center font-black text-sm shadow-lg shadow-primary/20">
+                      1
+                    </div>
                     <div className="space-y-1">
-                      <h4 className="font-bold text-gray-800 text-sm">Mở trình duyệt trên điện thoại</h4>
-                      <p className="text-xs text-gray-500 leading-relaxed">Truy cập vào địa chỉ sau bằng Safari (iPhone) hoặc Chrome (Android):</p>
+                      <h4 className="font-bold text-gray-800 text-sm">
+                        Mở trình duyệt trên điện thoại
+                      </h4>
+                      <p className="text-xs text-gray-500 leading-relaxed">
+                        Truy cập vào địa chỉ sau bằng Safari (iPhone) hoặc Chrome (Android):
+                      </p>
                       <div className="mt-2 p-3 bg-gray-50 rounded-xl border border-gray-100 flex items-center justify-between group">
-                        <span className="text-xs font-mono text-primary font-bold">https://cdx-team.vercel.app</span>
-                        <button onClick={() => window.open('https://cdx-team.vercel.app', '_blank')} className="p-1.5 bg-white rounded-lg shadow-sm text-gray-400 hover:text-primary transition-colors"><ArrowRight size={14} /></button>
+                        <span className="text-xs font-mono text-primary font-bold">
+                          https://cdx-team.vercel.app
+                        </span>
+                        <button
+                          onClick={() => window.open('https://cdx-team.vercel.app', '_blank')}
+                          className="p-1.5 bg-white rounded-lg shadow-sm text-gray-400 hover:text-primary transition-colors"
+                        >
+                          <ArrowRight size={14} />
+                        </button>
                       </div>
                     </div>
                   </div>
 
                   <div className="flex gap-4">
-                    <div className="flex-shrink-0 w-8 h-8 bg-primary text-white rounded-full flex items-center justify-center font-black text-sm shadow-lg shadow-primary/20">2</div>
+                    <div className="flex-shrink-0 w-8 h-8 bg-primary text-white rounded-full flex items-center justify-center font-black text-sm shadow-lg shadow-primary/20">
+                      2
+                    </div>
                     <div className="space-y-1">
                       <h4 className="font-bold text-gray-800 text-sm">Thêm vào màn hình chính</h4>
                       <p className="text-xs text-gray-500 leading-relaxed">
-                        <span className="font-bold text-gray-700">iOS (iPhone):</span> Nhấn nút <span className="inline-block p-1 bg-gray-100 rounded text-blue-500"><ArrowUpCircle size={12} /> Chia sẻ</span>, sau đó chọn <span className="font-bold text-gray-700">"Thêm vào MH chính"</span>.
+                        <span className="font-bold text-gray-700">iOS (iPhone):</span> Nhấn nút{' '}
+                        <span className="inline-block p-1 bg-gray-100 rounded text-blue-500">
+                          <ArrowUpCircle size={12} /> Chia sẻ
+                        </span>
+                        , sau đó chọn{' '}
+                        <span className="font-bold text-gray-700">"Thêm vào MH chính"</span>.
                       </p>
                       <p className="text-xs text-gray-500 leading-relaxed mt-2">
-                        <span className="font-bold text-gray-700">Android:</span> Nhấn nút <span className="inline-block p-1 bg-gray-100 rounded text-gray-600"><MenuIcon size={12} /> Menu</span> (3 chấm), sau đó chọn <span className="font-bold text-gray-700">"Cài đặt ứng dụng"</span>.
+                        <span className="font-bold text-gray-700">Android:</span> Nhấn nút{' '}
+                        <span className="inline-block p-1 bg-gray-100 rounded text-gray-600">
+                          <MenuIcon size={12} /> Menu
+                        </span>{' '}
+                        (3 chấm), sau đó chọn{' '}
+                        <span className="font-bold text-gray-700">"Cài đặt ứng dụng"</span>.
                       </p>
                     </div>
                   </div>
 
                   <div className="flex gap-4">
-                    <div className="flex-shrink-0 w-8 h-8 bg-primary text-white rounded-full flex items-center justify-center font-black text-sm shadow-lg shadow-primary/20">3</div>
+                    <div className="flex-shrink-0 w-8 h-8 bg-primary text-white rounded-full flex items-center justify-center font-black text-sm shadow-lg shadow-primary/20">
+                      3
+                    </div>
                     <div className="space-y-1">
                       <h4 className="font-bold text-gray-800 text-sm">Hoàn tất</h4>
-                      <p className="text-xs text-gray-500 leading-relaxed">Biểu tượng ứng dụng sẽ xuất hiện trên màn hình điện thoại của bạn như một ứng dụng thông thường.</p>
+                      <p className="text-xs text-gray-500 leading-relaxed">
+                        Biểu tượng ứng dụng sẽ xuất hiện trên màn hình điện thoại của bạn như một
+                        ứng dụng thông thường.
+                      </p>
                     </div>
                   </div>
                 </div>

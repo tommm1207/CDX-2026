@@ -17,7 +17,7 @@ const TABLE_LABELS: Record<string, string> = {
   production_orders: 'Lệnh sản xuất',
   materials: 'Danh mục vật tư',
   users: 'Nhân sự phụ trách',
-  inventory: 'Tồn kho thực tế'
+  inventory: 'Tồn kho thực tế',
 };
 
 export const checkUsage = async (type: UsageType, id: string): Promise<UsageResult> => {
@@ -25,7 +25,15 @@ export const checkUsage = async (type: UsageType, id: string): Promise<UsageResu
   const results: string[] = [];
 
   if (type === 'material') {
-    tablesToCheck.push('stock_in', 'stock_out', 'transfers', 'bom_configs', 'bom_items', 'costs', 'inventory');
+    tablesToCheck.push(
+      'stock_in',
+      'stock_out',
+      'transfers',
+      'bom_configs',
+      'bom_items',
+      'costs',
+      'inventory',
+    );
   } else if (type === 'group') {
     tablesToCheck.push('materials');
   } else if (type === 'warehouse') {
@@ -36,12 +44,13 @@ export const checkUsage = async (type: UsageType, id: string): Promise<UsageResu
     tablesToCheck.push('production_orders');
   }
 
-  const queries = tablesToCheck.map(table => {
+  const queries = tablesToCheck.map((table) => {
     let query = supabase.from(table).select('*', { count: 'exact', head: true });
-    
+
     if (table === 'transfers') {
       if (type === 'material') query = query.eq('material_id', id);
-      if (type === 'warehouse') query = query.or(`from_warehouse_id.eq.${id},to_warehouse_id.eq.${id}`);
+      if (type === 'warehouse')
+        query = query.or(`from_warehouse_id.eq.${id},to_warehouse_id.eq.${id}`);
       if (type === 'employee') query = query.eq('employee_id', id);
     } else if (table === 'users') {
       query = query.eq('warehouse_id', id);
@@ -51,7 +60,8 @@ export const checkUsage = async (type: UsageType, id: string): Promise<UsageResu
     } else if (table === 'production_orders') {
       if (type === 'bom') query = query.eq('bom_id', id);
       if (type === 'employee') query = query.eq('created_by', id);
-      if (type === 'warehouse') query = query.or(`warehouse_id.eq.${id},output_warehouse_id.eq.${id}`);
+      if (type === 'warehouse')
+        query = query.or(`warehouse_id.eq.${id},output_warehouse_id.eq.${id}`);
     } else if (table === 'bom_items') {
       if (type === 'material') query = query.eq('material_item_id', id);
     } else if (table === 'bom_configs') {
@@ -65,12 +75,12 @@ export const checkUsage = async (type: UsageType, id: string): Promise<UsageResu
 
     // Always ignore records in Trash (Soft-deleted)
     query = query.or('status.is.null,status.neq.Đã xóa');
-    
+
     return { table, query };
   });
 
-  const resolved = await Promise.all(queries.map(q => q.query));
-  
+  const resolved = await Promise.all(queries.map((q) => q.query));
+
   resolved.forEach((res, index) => {
     if (res.count && res.count > 0) {
       results.push(TABLE_LABELS[queries[index].table] || queries[index].table);
@@ -79,6 +89,6 @@ export const checkUsage = async (type: UsageType, id: string): Promise<UsageResu
 
   return {
     inUse: results.length > 0,
-    tables: results
+    tables: results,
   };
 };

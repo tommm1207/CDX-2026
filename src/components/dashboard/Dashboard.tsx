@@ -398,4 +398,3 @@ const RadialMenu = ({ onNavigate }: { onNavigate: (page: string, params?: any) =
     </>
   );
 };
-const testVar = 'day la bien test';

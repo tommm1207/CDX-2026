@@ -14,7 +14,7 @@ import { useInventoryData } from '@/hooks/useInventoryData';
 import { formatDate, formatCurrency, formatNumber } from '@/utils/format';
 import { isUUID, generateCode, getAllowedWarehouses } from '@/utils/helpers';
 import { Button } from '../shared/Button';
-import { getAvailableStock } from '@/utils/inventory';
+import { getAvailableStock, validateFutureImpact } from '@/utils/inventory';
 
 export const StockOut = ({ user, onBack, addToast, initialAction, setHideBottomNav }: { 
   user: Employee, 
@@ -131,20 +131,16 @@ export const StockOut = ({ user, onBack, addToast, initialAction, setHideBottomN
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
 
-    // Explicit validation since custom components don't always trigger HTML5 forms properly
     if (!formData.warehouse_id) {
-      if (addToast) addToast("Vui lòng chọn hoặc nhập Kho xuất.", "error");
-      else alert("Vui lòng chọn hoặc nhập Kho xuất.");
+      if (addToast) addToast("Vui lòng chọn Kho xuất.", "error");
       return;
     }
     if (!formData.material_id) {
-      if (addToast) addToast("Vui lòng chọn hoặc nhập Vật tư xuất.", "error");
-      else alert("Vui lòng chọn hoặc nhập Vật tư xuất.");
+      if (addToast) addToast("Vui lòng chọn Vật tư xuất.", "error");
       return;
     }
     if (!formData.quantity || formData.quantity <= 0) {
-      if (addToast) addToast("Vui lòng nhập số lượng xuất hợp lệ (lớn hơn 0).", "error");
-      else alert("Vui lòng nhập số lượng xuất hợp lệ (lớn hơn 0).");
+      if (addToast) addToast("Vui lòng nhập số lượng xuất hợp lệ.", "error");
       return;
     }
 
@@ -173,35 +169,47 @@ export const StockOut = ({ user, onBack, addToast, initialAction, setHideBottomN
         if (matByName) {
           finalMaterialId = matByName.id;
         } else {
-          throw new Error('Bạn phải chọn vật tư từ Danh mục, không được tự nhập mới!');
+          throw new Error('Bạn phải chọn vật tư từ Danh mục!');
         }
       }
 
-      // Kiểm tra tồn kho tại ngày của phiếu xuất.
-      // Loại trừ phiếu đang sửa (editingId) để không bị trừ double.
-      const wh = warehouses.find(w => w.name === finalWarehouseId || w.id === finalWarehouseId);
+      // 1. Kiểm tra tồn kho tại THỜI ĐIỂM XUẤT (formData.date)
       const stockAtDate = await getAvailableStock(
         finalMaterialId,
-        wh?.id || finalWarehouseId,
+        finalWarehouseId,
         formData.date,
         isEditing && selectedSlip ? selectedSlip.id : undefined
       );
-      const matName = materials.find(m => m.id === finalMaterialId)?.name || finalMaterialId;
 
       if (stockAtDate === 0) {
-        throw new Error(`❌ Từ chối xuất kho
-- Mặt hàng: ${matName}
-- Tồn kho hiện tại: 0
-→ Mặt hàng này chưa có phiếu nhập kho hợp lệ (hoặc đã xuất hết).
-→ Không thể xuất kho khi chưa có hàng trong kho.`);
+        throw new Error(`Kho hiện không còn mặt hàng này vào ngày ${formatDate(formData.date)}`);
       } else if (Number(formData.quantity) > stockAtDate) {
-        const thieu = Number(formData.quantity) - stockAtDate;
-        throw new Error(`❌ Từ chối xuất kho
-- Mặt hàng: ${matName}
-- Tồn kho hiện tại: ${stockAtDate}
-- Số lượng yêu cầu: ${formData.quantity}
-- Thiếu hụt: ${thieu}
-→ Vui lòng kiểm tra lại số lượng hoặc bổ sung phiếu nhập trước khi xuất.`);
+        throw new Error(`Số lượng xuất (${formData.quantity}) vượt quá tồn kho hiện có (${stockAtDate}) vào ngày ${formData.date}`);
+      }
+
+      // 2. Kiểm tra ÂM KHO TƯƠNG LAI (quan trọng cho phiếu Đã duyệt)
+      if (isEditing && selectedSlip && selectedSlip.status === 'Đã duyệt') {
+        const matChanged = finalMaterialId !== selectedSlip.material_id;
+        const whChanged = finalWarehouseId !== selectedSlip.warehouse_id;
+        const dateChanged = formData.date !== selectedSlip.date;
+
+        if (matChanged || whChanged || dateChanged) {
+          // Khi đổi vị trí/vật tư, ta "trả lại" tồn cũ (luôn an toàn) 
+          // và "trừ" tồn mới. Ta cần check xem việc trừ tồn mới có gây âm kho tương lai không.
+          const impactNew = await validateFutureImpact(finalMaterialId, finalWarehouseId, formData.date, -formData.quantity);
+          if (!impactNew.valid) {
+            throw new Error(`Không thể chuyển sang mặt hàng/kho này vì sẽ gây âm kho vào ngày ${impactNew.failedDate}`);
+          }
+        } else {
+          // Cùng vị trí, check chênh lệch
+          const diff = selectedSlip.quantity - formData.quantity; // positive if we decrease output (safety), negative if we increase output
+          if (diff < 0) {
+            const impact = await validateFutureImpact(finalMaterialId, finalWarehouseId, formData.date, diff);
+            if (!impact.valid) {
+              throw new Error(`Không thể tăng số lượng xuất vì sẽ gây âm kho vào ngày ${impact.failedDate}`);
+            }
+          }
+        }
       }
 
       const payload = {
@@ -209,7 +217,7 @@ export const StockOut = ({ user, onBack, addToast, initialAction, setHideBottomN
         warehouse_id: finalWarehouseId,
         material_id: finalMaterialId,
         employee_id: user.id,
-        status: 'Chờ duyệt',
+        status: isEditing && selectedSlip?.status === 'Đã duyệt' ? 'Đã duyệt' : 'Chờ duyệt',
         total_amount: formData.quantity * formData.unit_price,
         export_code: formData.export_code || generateCode('XK'),
         notes: isEditing 
@@ -220,10 +228,19 @@ export const StockOut = ({ user, onBack, addToast, initialAction, setHideBottomN
       if (isEditing && selectedSlip) {
         const { error } = await supabase.from('stock_out').update(payload).eq('id', selectedSlip.id);
         if (error) throw error;
+        
+        await supabase.from('costs')
+          .update({
+            quantity: payload.quantity,
+            unit_price: payload.unit_price,
+            total_amount: payload.total_amount,
+            notes: `Cập nhật từ phiếu ${payload.export_code} (Sửa ngày ${new Date().toLocaleDateString()})`
+          })
+          .ilike('content', `%${payload.export_code || payload.id.slice(0,8)}%`);
+
       } else {
         const { error } = await supabase.from('stock_out').insert([payload]);
         if (error) throw error;
-
       }
 
       setShowModal(false);
@@ -232,22 +249,9 @@ export const StockOut = ({ user, onBack, addToast, initialAction, setHideBottomN
       setIsEditing(false);
       setEditingId(null);
       setSelectedSlip(null);
-      if (addToast) {
-        if (isEditing) {
-          addToast('Đã cập nhật phiếu xuất!', 'success');
-        } else {
-          const matName = materials.find(m => m.id === finalMaterialId)?.name || finalMaterialId;
-          addToast(`⏳ Phiếu xuất kho đã được tạo — chờ duyệt
-- Mặt hàng: ${matName}
-- Số lượng xuất: ${formData.quantity}
-- Tồn kho hiện tại: ${stockAtDate}
-- Tồn kho sau khi duyệt và thực thi: ${stockAtDate - Number(formData.quantity)}
-→ Hệ thống sẽ ghi nhận và cập nhật tồn kho SAU KHI phiếu được duyệt.`, 'success');
-        }
-      }
+      if (addToast) addToast(isEditing ? 'Cập nhật phiếu xuất thành công!' : 'Lập phiếu xuất kho thành công!', 'success');
     } catch (err: any) {
       if (addToast) addToast('Lỗi: ' + err.message, 'error');
-      else alert('Lỗi: ' + err.message);
     } finally {
       setSubmitting(false);
     }
@@ -368,10 +372,6 @@ export const StockOut = ({ user, onBack, addToast, initialAction, setHideBottomN
   };
 
   const handleEdit = () => {
-    if (selectedSlip.status === 'Đã duyệt') {
-      if (addToast) addToast("Không thể sửa! Phiếu này đã được duyệt, vui lòng sử dụng tính năng Xoá và lập phiếu mới", "error");
-      return;
-    }
     setFormData({
       date: selectedSlip.date,
       warehouse_id: selectedSlip.warehouse_id,
@@ -380,7 +380,7 @@ export const StockOut = ({ user, onBack, addToast, initialAction, setHideBottomN
       unit_price: selectedSlip.unit_price || 0,
       notes: selectedSlip.notes?.replace(/^\[SỬA lúc .*?\]\s*/, '') || '',
       export_code: selectedSlip.export_code || formData.export_code,
-      status: 'Chờ duyệt'
+      status: selectedSlip.status
     });
     setIsEditing(true);
     setEditingId(selectedSlip.id);  // lưu id để loại trừ khỏi tính tồn
@@ -389,7 +389,7 @@ export const StockOut = ({ user, onBack, addToast, initialAction, setHideBottomN
   };
 
   return (
-    <div className="p-4 md:p-6 space-y-6 pb-44">
+    <div className="p-4 md:p-6 space-y-6 pb-44 overflow-x-hidden">
       <div className="flex items-center justify-between gap-2">
         <PageBreadcrumb title="Xuất kho" onBack={onBack} />
         <div className="flex items-center gap-2">
@@ -755,11 +755,14 @@ export const StockOut = ({ user, onBack, addToast, initialAction, setHideBottomN
 
       <ConfirmModal
         show={showDeleteConfirm}
-        title="Xác nhận xóa"
-        message="Bạn có chắc chắn muốn chuyển phiếu xuất kho này vào thùng rác? Hành động này cũng sẽ vô hiệu hóa bản ghi doanh thu liên quan."
-        confirmText="Chuyển vào thùng rác"
+        title={selectedSlip?.status === 'Đã duyệt' ? '⚠️ Cảnh báo: Phiếu đã duyệt' : 'Xác nhận xóa'}
+        message={selectedSlip?.status === 'Đã duyệt'
+          ? `Phiếu xuất ${selectedSlip?.export_code} đã được duyệt — hàng đã xuất thực tế.\n\nXóa phiếu sẽ HOÀN TRẢ ${selectedSlip?.quantity} ${selectedSlip?.materials?.unit || ''} ${selectedSlip?.materials?.name || ''} vào kho.\n\nBạn có chắc chắn muốn xóa?`
+          : 'Bạn có chắc chắn muốn chuyển phiếu xuất kho này vào thùng rác?'}
+        confirmText={selectedSlip?.status === 'Đã duyệt' ? 'Xác nhận xóa phiếu đã duyệt' : 'Chuyển vào thùng rác'}
         onConfirm={confirmDelete}
         onCancel={() => setShowDeleteConfirm(false)}
+        type={selectedSlip?.status === 'Đã duyệt' ? 'danger' : undefined}
       />
 
       {/* FAB — Lập phiếu xuất */}

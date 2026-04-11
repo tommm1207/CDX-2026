@@ -47,18 +47,32 @@ export const MainLayout = ({
   const [isSearchOpen, setIsSearchOpen] = useState(false);
 
   return (
-    <div className="min-h-screen bg-[#F8F9FA] flex flex-col font-sans">
+    <div className="min-h-screen bg-[#F8F9FA] flex flex-col font-sans overflow-x-hidden">
       <header className="bg-primary text-white flex items-center justify-between px-4 sticky top-0 z-[50] shadow-md h-[calc(3.5rem+env(safe-area-inset-top))] pt-[env(safe-area-inset-top)]">
         <div className="flex items-center gap-2">
-          <button
-            onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-            className="flex items-center gap-2 hover:bg-white/10 p-1.5 rounded-xl transition-all active:scale-95"
-          >
-            <div className="w-8 h-8 bg-white rounded-md flex items-center justify-center p-1 shadow-sm">
-              <img src={LOGO_URL} alt="Logo" className="w-full h-full object-contain" referrerPolicy="no-referrer" />
-            </div>
-            <h1 className="font-bold text-sm tracking-wide hidden sm:block">QUẢN LÝ KHO CDX</h1>
-          </button>
+          <div className="relative group/logo">
+            <button
+              onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+              className="flex items-center gap-2 hover:bg-white/10 p-1.5 rounded-xl transition-all active:scale-95 relative z-10"
+            >
+              <div className="w-8 h-8 bg-white rounded-md flex items-center justify-center p-1 shadow-sm">
+                <img src={LOGO_URL} alt="Logo" className="w-full h-full object-contain" referrerPolicy="no-referrer" />
+              </div>
+              <h1 className="font-bold text-sm tracking-wide hidden sm:block">QUẢN LÝ KHO CDX</h1>
+            </button>
+
+            {/* Menu Hint - Subtle Pulsating Dot over logo corner */}
+            <motion.div
+              initial={{ opacity: 0, scale: 0 }}
+              animate={{ opacity: 1, scale: 1 }}
+              className="absolute -top-1 -right-1 z-20 pointer-events-none"
+            >
+              <div className="relative flex items-center justify-center">
+                 <div className="absolute inset-0 bg-amber-400 rounded-full animate-ping opacity-75" />
+                 <div className="relative w-2.5 h-2.5 bg-amber-400 rounded-full border-2 border-primary shadow-sm" />
+              </div>
+            </motion.div>
+          </div>
 
           <div className="h-6 w-px bg-white/20 mx-1 hidden sm:block" />
 

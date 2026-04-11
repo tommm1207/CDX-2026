@@ -7,6 +7,7 @@ import { PageBreadcrumb } from '../shared/PageBreadcrumb';
 import { isActiveWarehouse } from '@/utils/inventory';
 import { ToastType } from '../shared/Toast';
 import { FAB } from '../shared/FAB';
+import { checkUsage } from '@/utils/dataIntegrity';
 
 export const MaterialGroups = ({ user, onBack, addToast }: { 
   user: Employee, 
@@ -61,6 +62,7 @@ export const MaterialGroups = ({ user, onBack, addToast }: {
     const { data } = await supabase
       .from('material_groups')
       .select('*')
+      .or('status.is.null,status.neq.Đã xóa')
       .order('id', { ascending: true });
     if (data) setGroups(data);
     setLoading(false);
@@ -82,6 +84,7 @@ export const MaterialGroups = ({ user, onBack, addToast }: {
         .from('materials')
         .select('*, warehouses(name), material_groups(name)')
         .eq('group_id', groupId)
+        .or('status.is.null,status.neq.Đã xóa')
         .order('created_at', { ascending: false });
 
       if (error) throw error;
@@ -177,11 +180,14 @@ export const MaterialGroups = ({ user, onBack, addToast }: {
     e.preventDefault();
     setSubmitting(true);
     try {
-      const dataToSubmit = { ...materialFormData, group_id: selectedGroup.id };
       if (isEditingMaterial) {
-        const { error } = await supabase.from('materials').update(dataToSubmit).eq('id', materialFormData.id);
+        const { id, ...rest } = materialFormData;
+        const dataToSubmit = { ...rest, group_id: selectedGroup.id };
+        const { error } = await supabase.from('materials').update(dataToSubmit).eq('id', id);
         if (error) throw error;
       } else {
+        const { id, ...rest } = materialFormData;
+        const dataToSubmit = { ...rest, group_id: selectedGroup.id };
         const { error } = await supabase.from('materials').insert([dataToSubmit]);
         if (error) throw error;
       }
@@ -204,8 +210,9 @@ export const MaterialGroups = ({ user, onBack, addToast }: {
     setShowDetailModal(true);
   };
 
-  const handleEdit = (e: MouseEvent, item: any) => {
+  const handleEdit = async (e: MouseEvent, item: any) => {
     e.stopPropagation();
+    
     setFormData({
       id: item.id,
       code: item.code || '',
@@ -216,8 +223,13 @@ export const MaterialGroups = ({ user, onBack, addToast }: {
     setShowModal(true);
   };
 
-  const handleEditMaterial = (item: any) => {
-    setMaterialFormData(item);
+  const handleEditMaterial = async (item: any) => {
+    const usage = await checkUsage('material', item.id);
+    if (usage.inUse && addToast) {
+      addToast(`Vật tư đang được sử dụng — một số trường sẽ bị khóa.`, 'info');
+    }
+
+    setMaterialFormData({ ...item, _inUse: usage.inUse });
     setIsEditingMaterial(true);
     setShowMaterialModal(true);
   };
@@ -254,15 +266,31 @@ export const MaterialGroups = ({ user, onBack, addToast }: {
           return;
         }
 
-        const { error } = await supabase.from('material_groups').delete().eq('id', itemToDelete);
+        // Double check with integrity helper
+        const usage = await checkUsage('group', itemToDelete);
+        if (usage.inUse) {
+           if (addToast) addToast(`Nhóm đang được sử dụng, không thể xóa.`, 'error');
+           setShowDeleteModal(false);
+           return;
+        }
+
+        const { error } = await supabase.from('material_groups').update({ status: 'Đã xóa' }).eq('id', itemToDelete);
         if (error) throw error;
         fetchGroups();
       } else {
-        const { error } = await supabase.from('materials').delete().eq('id', itemToDelete);
+        // Material delete usage check
+        const usage = await checkUsage('material', itemToDelete);
+        if (usage.inUse) {
+          if (addToast) addToast(`Vật tư đang được sử dụng, không thể xóa.`, 'error');
+          setShowDeleteModal(false);
+          return;
+        }
+
+        const { error } = await supabase.from('materials').update({ status: 'Đã xóa' }).eq('id', itemToDelete);
         if (error) throw error;
         fetchMaterialsByGroup(selectedGroup.id);
       }
-      if (addToast) addToast('Đã xóa dữ liệu thành công!', 'success');
+      if (addToast) addToast('Đã chuyển dữ liệu vào thùng rác!', 'success');
     } catch (err: any) {
       if (addToast) addToast('Lỗi: ' + err.message, 'error');
       else alert('Lỗi: ' + err.message);
@@ -652,25 +680,25 @@ export const MaterialGroups = ({ user, onBack, addToast }: {
               <div className="flex-1 overflow-y-auto custom-scrollbar">
                 <form onSubmit={handleMaterialSubmit} className="p-6 grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-1">
-                    <label className="text-[10px] font-bold text-gray-400 uppercase">Mã vật tư (ID) *</label>
+                    <label className="text-[10px] font-bold text-gray-400 uppercase">Mã vật tư *</label>
                     <div className="relative">
                       <input
                         list="material-ids-group"
                         required
                         type="text"
-                        value={materialFormData.id}
+                        value={materialFormData.code || ''}
                         onChange={(e) => {
                           const val = e.target.value;
-                          setMaterialFormData({ ...materialFormData, id: val });
-                          const existing = materials.find(m => m.id === val);
+                          setMaterialFormData({ ...materialFormData, code: val });
+                          const existing = materials.find(m => m.code === val);
                           if (existing) {
-                            setMaterialFormData(existing);
+                            setMaterialFormData({ ...existing, code: val });
                           }
                         }}
                         className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-blue-500/20"
                       />
                       <datalist id="material-ids-group">
-                        {uniqueMaterialIds.map(id => <option key={id} value={id} />)}
+                        {uniqueMaterialIds.map(code => <option key={code} value={code} />)}
                       </datalist>
                     </div>
                   </div>

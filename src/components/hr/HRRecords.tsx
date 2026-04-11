@@ -7,6 +7,7 @@ import { PageBreadcrumb } from '../shared/PageBreadcrumb';
 import { ToastType } from '../shared/Toast';
 import { FAB } from '../shared/FAB';
 import { Button } from '../shared/Button';
+import { checkUsage } from '@/utils/dataIntegrity';
 
 export const HRRecords = ({ user, onBack, addToast }: { 
   user: Employee, 
@@ -86,12 +87,13 @@ export const HRRecords = ({ user, onBack, addToast }: {
     }
   };
 
-  const handleEdit = (emp: Employee) => {
+  const handleEdit = async (emp: Employee) => {
     if (emp.role === 'Admin App' && user.role !== 'Admin App') {
       if (addToast) addToast('Bạn không có quyền chỉnh sửa tài khoản Admin App', 'error');
       else alert('Bạn không có quyền chỉnh sửa tài khoản Admin App');
       return;
     }
+
     setFormData({
       ...emp,
       code: emp.code || '',
@@ -129,6 +131,13 @@ export const HRRecords = ({ user, onBack, addToast }: {
     }
 
     try {
+      const usage = await checkUsage('employee', itemToDelete);
+      if (usage.inUse) {
+        if (addToast) addToast(`Không thể xóa vì nhân sự này đang được dùng trong: ${usage.tables.join(', ')}`, 'error');
+        setShowDeleteModal(false);
+        return;
+      }
+
       const { error } = await supabase.from('users').update({ status: 'Đã xóa' }).eq('id', itemToDelete);
       if (error) throw error;
       fetchEmployees();
@@ -193,7 +202,7 @@ export const HRRecords = ({ user, onBack, addToast }: {
   });
 
   return (
-    <div className="p-4 md:p-6 space-y-6 pb-44">
+    <div className="p-4 md:p-6 space-y-6 pb-44 overflow-x-hidden">
       <PageBreadcrumb title="Hồ sơ Nhân sự" onBack={onBack} />
       <div className="flex items-center justify-between">
         <h2 className="text-lg font-bold text-gray-800 flex items-center gap-2">

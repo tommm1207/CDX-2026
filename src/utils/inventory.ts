@@ -394,3 +394,58 @@ export const isActiveWarehouse = (warehouse: any): boolean => {
                     
   return !isDeleted;
 };
+
+/**
+ * Kiểm tra xem một thay đổi số lượng (diff) vào ngày (fromDate) 
+ * có làm tồn kho bị âm vào bất kỳ thời điểm nào sau đó hay không.
+ * 
+ * @param materialId   ID vật tư
+ * @param warehouseId  ID kho
+ * @param fromDate     Ngày bắt đầu thay đổi (YYYY-MM-DD)
+ * @param diff         Số lượng thay đổi (dương là tăng thêm, âm là giảm đi)
+ * @returns            { valid: boolean, failedDate?: string, currentStock?: number }
+ */
+export const validateFutureImpact = async (
+  materialId: string, 
+  warehouseId: string, 
+  fromDate: string, 
+  diff: number
+): Promise<{ valid: boolean; failedDate?: string; currentStock?: number }> => {
+  if (diff >= 0) return { valid: true }; // Tăng thêm thì không lo âm (giả sử trước đó ko âm)
+
+  try {
+    // 1. Tìm tất cả các ngày có giao dịch từ fromDate trở đi
+    const [si, so, tr] = await Promise.all([
+      supabase.from('stock_in').select('date').eq('material_id', materialId).eq('warehouse_id', warehouseId).eq('status', 'Đã duyệt').gte('date', fromDate),
+      supabase.from('stock_out').select('date').eq('material_id', materialId).eq('warehouse_id', warehouseId).in('status', ['Đã duyệt', 'Chờ duyệt']).gte('date', fromDate),
+      supabase.from('transfers').select('date').eq('material_id', materialId).or(`from_warehouse_id.eq.${warehouseId},to_warehouse_id.eq.${warehouseId}`).eq('status', 'Đã duyệt').gte('date', fromDate)
+    ]);
+
+    const dates = new Set<string>();
+    dates.add(fromDate);
+    (si.data || []).forEach(d => dates.add(d.date));
+    (so.data || []).forEach(d => dates.add(d.date));
+    (tr.data || []).forEach(d => dates.add(d.date));
+
+    // Sắp xếp ngày tăng dần
+    const sortedDates = Array.from(dates).sort();
+
+    // 2. Chạy kiểm tra tồn kho tại mỗi mốc ngày
+    for (const date of sortedDates) {
+      const stock = await getAvailableStock(materialId, warehouseId, date);
+      if (stock + diff < 0) {
+        return { 
+          valid: false, 
+          failedDate: date,
+          currentStock: stock
+        };
+      }
+    }
+
+    return { valid: true };
+  } catch (err) {
+    console.error('Error in validateFutureImpact:', err);
+    return { valid: false };
+  }
+};
+

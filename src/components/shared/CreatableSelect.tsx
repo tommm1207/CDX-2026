@@ -11,6 +11,7 @@ export const CreatableSelect = ({
   onCreate,
   placeholder = "-- Chọn --",
   required = false,
+  disabled = false,
   className = "",
   labelClassName = "text-[10px] font-bold text-gray-400 uppercase",
   selectClassName = "w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20 bg-white",
@@ -22,6 +23,7 @@ export const CreatableSelect = ({
   onCreate: (name: string) => void;
   placeholder?: string;
   required?: boolean;
+  disabled?: boolean;
   className?: string;
   labelClassName?: string;
   selectClassName?: string;
@@ -74,13 +76,14 @@ export const CreatableSelect = ({
             type="text"
             placeholder={placeholder}
             value={searchTerm}
+            disabled={disabled}
             onChange={(e) => {
               setSearchTerm(e.target.value);
               setIsOpen(true);
               if (e.target.value === "") onChange("");
             }}
-            onFocus={() => setIsOpen(true)}
-            className={`${selectClassName} pr-10`}
+            onFocus={() => !disabled && setIsOpen(true)}
+            className={`${selectClassName} pr-10 ${disabled ? 'bg-gray-100 cursor-not-allowed opacity-70' : ''}`}
           />
           <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1">
             {searchTerm && (

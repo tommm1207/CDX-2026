@@ -169,7 +169,7 @@ export const Advances = ({ user, onBack, addToast, initialAction }: { user: Empl
     setShowDeleteModal(true);
   };
   return (
-    <div className="p-4 md:p-6 space-y-6 pb-44">
+    <div className="p-4 md:p-6 space-y-6 pb-44 overflow-x-hidden">
       <PageBreadcrumb title="Tạm ứng & Phụ cấp" onBack={onBack} />
       <div className="flex items-center justify-between">
         <div className="flex gap-2 bg-white p-1 rounded-2xl shadow-sm border border-gray-100">

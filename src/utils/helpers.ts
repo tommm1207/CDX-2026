@@ -29,9 +29,14 @@ export const generateCode = (prefix: string): string => {
  * @returns null = xem tất cả, [] = không có quyền, string[] = danh sách ID
  */
 export const getAllowedWarehouses = (permissionStr?: string): string[] | null => {
-  if (!permissionStr || permissionStr.trim().toUpperCase() === 'ALL' || permissionStr.trim() === '') return null;
+  if (!permissionStr || permissionStr.trim().toUpperCase() === 'ALL' || permissionStr.trim() === '')
+    return null;
   if (permissionStr.startsWith('WH:')) {
-    return permissionStr.replace('WH:', '').split(',').map(id => id.trim()).filter(id => id !== '');
+    return permissionStr
+      .replace('WH:', '')
+      .split(',')
+      .map((id) => id.trim())
+      .filter((id) => id !== '');
   }
   return [];
 };

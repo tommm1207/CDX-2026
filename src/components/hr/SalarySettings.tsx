@@ -9,10 +9,14 @@ import { NumericInput } from '../shared/NumericInput';
 import { ToastType } from '../shared/Toast';
 import { formatCurrency } from '@/utils/format';
 
-export const SalarySettings = ({ user, onBack, addToast }: { 
-  user: Employee, 
-  onBack?: () => void,
-  addToast?: (message: string, type?: ToastType) => void
+export const SalarySettings = ({
+  user,
+  onBack,
+  addToast,
+}: {
+  user: Employee;
+  onBack?: () => void;
+  addToast?: (message: string, type?: ToastType) => void;
 }) => {
   const [employees, setEmployees] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -23,7 +27,7 @@ export const SalarySettings = ({ user, onBack, addToast }: {
   const [formData, setFormData] = useState({
     base_salary: 0,
     daily_rate: 0,
-    insurance_deduction: 0
+    insurance_deduction: 0,
   });
 
   useEffect(() => {
@@ -32,7 +36,11 @@ export const SalarySettings = ({ user, onBack, addToast }: {
 
   const fetchData = async () => {
     setLoading(true);
-    let empQuery = supabase.from('users').select('*').neq('status', 'Nghỉ việc').eq('has_salary', true);
+    let empQuery = supabase
+      .from('users')
+      .select('*')
+      .neq('status', 'Nghỉ việc')
+      .eq('has_salary', true);
     if (user.role !== 'Admin App') {
       empQuery = empQuery.neq('role', 'Admin App');
     }
@@ -40,9 +48,13 @@ export const SalarySettings = ({ user, onBack, addToast }: {
     const { data: setData } = await supabase.from('salary_settings').select('*');
 
     if (empData) {
-      const combined = empData.map(e => ({
+      const combined = empData.map((e) => ({
         ...e,
-        settings: setData?.find(s => s.employee_id === e.id) || { base_salary: 0, daily_rate: 0, insurance_deduction: 0 }
+        settings: setData?.find((s) => s.employee_id === e.id) || {
+          base_salary: 0,
+          daily_rate: 0,
+          insurance_deduction: 0,
+        },
       }));
       setEmployees(combined);
     }
@@ -54,7 +66,7 @@ export const SalarySettings = ({ user, onBack, addToast }: {
     setFormData({
       base_salary: emp.settings.base_salary,
       daily_rate: emp.settings.daily_rate,
-      insurance_deduction: emp.settings.insurance_deduction
+      insurance_deduction: emp.settings.insurance_deduction,
     });
     setShowModal(true);
   };
@@ -63,10 +75,13 @@ export const SalarySettings = ({ user, onBack, addToast }: {
     e.preventDefault();
     setSubmitting(true);
     try {
-      await supabase.from('salary_settings').upsert({
-        employee_id: selectedEmp.id,
-        ...formData
-      }, { onConflict: 'employee_id' });
+      await supabase.from('salary_settings').upsert(
+        {
+          employee_id: selectedEmp.id,
+          ...formData,
+        },
+        { onConflict: 'employee_id' },
+      );
       setShowModal(false);
       fetchData();
       if (addToast) addToast('Cập nhật cài đặt lương thành công!', 'success');
@@ -86,14 +101,24 @@ export const SalarySettings = ({ user, onBack, addToast }: {
         <table className="w-full text-left border-collapse whitespace-nowrap">
           <thead>
             <tr className="bg-primary text-white">
-              <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider">Nhân viên</th>
-              <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-right">Lương/Ngày</th>
-              <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-center w-20">Sửa</th>
+              <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider">
+                Nhân viên
+              </th>
+              <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-right">
+                Lương/Ngày
+              </th>
+              <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-center w-20">
+                Sửa
+              </th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-100">
             {loading ? (
-              <tr><td colSpan={3} className="px-4 py-8 text-center text-gray-400 italic">Đang tải...</td></tr>
+              <tr>
+                <td colSpan={3} className="px-4 py-8 text-center text-gray-400 italic">
+                  Đang tải...
+                </td>
+              </tr>
             ) : (
               employees.map((emp) => (
                 <tr
@@ -102,10 +127,15 @@ export const SalarySettings = ({ user, onBack, addToast }: {
                   onClick={() => handleEdit(emp)}
                 >
                   <td className="px-4 py-3 text-xs font-bold text-gray-800">{emp.full_name}</td>
-                  <td className="px-4 py-3 text-right text-xs font-bold text-primary">{formatCurrency(emp.settings.daily_rate)}</td>
+                  <td className="px-4 py-3 text-right text-xs font-bold text-primary">
+                    {formatCurrency(emp.settings.daily_rate)}
+                  </td>
                   <td className="px-4 py-3 text-center">
                     <button
-                      onClick={(e) => { e.stopPropagation(); handleEdit(emp); }}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleEdit(emp);
+                      }}
                       className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
                     >
                       <Edit size={14} />
@@ -120,7 +150,7 @@ export const SalarySettings = ({ user, onBack, addToast }: {
 
       <AnimatePresence>
         {showModal && (
-          <div 
+          <div
             className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-black/50 backdrop-blur-md overflow-hidden"
             onClick={() => setShowModal(false)}
           >
@@ -133,7 +163,7 @@ export const SalarySettings = ({ user, onBack, addToast }: {
             >
               <div className="bg-primary p-6 text-white flex items-center justify-between transition-colors">
                 <div className="flex items-center gap-3">
-                  <div 
+                  <div
                     className="p-2 bg-white/20 rounded-xl cursor-pointer hover:bg-white/30 transition-all active:scale-95"
                     onClick={() => setShowModal(false)}
                   >
@@ -141,7 +171,7 @@ export const SalarySettings = ({ user, onBack, addToast }: {
                   </div>
                   <h3 className="font-bold text-lg">Thiết lập lương</h3>
                 </div>
-                <button 
+                <button
                   onClick={() => setShowModal(false)}
                   className="p-2 hover:bg-white/20 rounded-xl transition-all"
                 >
@@ -150,7 +180,9 @@ export const SalarySettings = ({ user, onBack, addToast }: {
               </div>
               <form onSubmit={handleSubmit} className="p-8 space-y-6">
                 <div className="p-4 bg-primary/5 rounded-2xl border border-primary/10 mb-2">
-                  <p className="text-[10px] text-primary/60 font-black uppercase tracking-widest mb-1 italic">Nhân viên</p>
+                  <p className="text-[10px] text-primary/60 font-black uppercase tracking-widest mb-1 italic">
+                    Nhân viên
+                  </p>
                   <p className="text-sm font-black text-gray-800">{selectedEmp?.full_name}</p>
                 </div>
 
@@ -160,13 +192,15 @@ export const SalarySettings = ({ user, onBack, addToast }: {
                   value={formData.daily_rate}
                   onChange={(val) => setFormData({ ...formData, daily_rate: val })}
                 />
-                
+
                 <div className="flex gap-3 pt-2">
-                  <Button variant="outline" fullWidth onClick={() => setShowModal(false)}>Hủy bỏ</Button>
-                  <Button 
-                    type="submit" 
-                    variant="primary" 
-                    fullWidth 
+                  <Button variant="outline" fullWidth onClick={() => setShowModal(false)}>
+                    Hủy bỏ
+                  </Button>
+                  <Button
+                    type="submit"
+                    variant="primary"
+                    fullWidth
                     isLoading={submitting}
                     className="shadow-lg shadow-primary/20"
                   >

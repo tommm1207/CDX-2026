@@ -6,14 +6,14 @@ export interface ReminderContentPayload {
 
 export const parseReminderContent = (contentRaw: string): ReminderContentPayload => {
   if (!contentRaw) return { text: '', assignees: [] };
-  
+
   try {
     if (contentRaw.trim().startsWith('{"__v":1')) {
       const parsed = JSON.parse(contentRaw);
-      return { 
-        text: parsed.text || '', 
+      return {
+        text: parsed.text || '',
         assignees: parsed.assignees || [],
-        show_assignees: parsed.show_assignees ?? false
+        show_assignees: parsed.show_assignees ?? false,
       };
     }
   } catch (e) {
@@ -22,6 +22,10 @@ export const parseReminderContent = (contentRaw: string): ReminderContentPayload
   return { text: contentRaw, assignees: [] };
 };
 
-export const serializeReminderContent = (text: string, assignees: string[], show_assignees: boolean = false): string => {
+export const serializeReminderContent = (
+  text: string,
+  assignees: string[],
+  show_assignees: boolean = false,
+): string => {
   return JSON.stringify({ __v: 1, text, assignees, show_assignees });
 };

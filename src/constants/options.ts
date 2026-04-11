@@ -1,4 +1,4 @@
-export const LOGO_URL = "/logo.png";
+export const LOGO_URL = '/logo.png';
 
 export const WEATHER_OPTIONS = [
   { value: 'sunny', label: '☀️ Nắng nóng gay gắt' },

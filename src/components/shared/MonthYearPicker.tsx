@@ -40,12 +40,19 @@ export const MonthYearPicker = ({
     <div className="flex items-center gap-2 bg-white p-1.5 rounded-2xl shadow-sm border border-gray-100 relative">
       {/* Month Picker */}
       <div className="relative" ref={monthRef}>
-        <div className="flex flex-col items-start px-3 py-1 bg-gray-50 rounded-xl border border-gray-100 cursor-pointer hover:bg-white hover:border-gray-200 transition-all min-w-[100px]"
-          onClick={() => setIsMonthOpen(!isMonthOpen)}>
-          <span className="text-[8px] font-black text-gray-400 uppercase tracking-widest">Tháng</span>
+        <div
+          className="flex flex-col items-start px-3 py-1 bg-gray-50 rounded-xl border border-gray-100 cursor-pointer hover:bg-white hover:border-gray-200 transition-all min-w-[100px]"
+          onClick={() => setIsMonthOpen(!isMonthOpen)}
+        >
+          <span className="text-[8px] font-black text-gray-400 uppercase tracking-widest">
+            Tháng
+          </span>
           <div className="flex items-center justify-between w-full">
             <span className="text-sm font-black text-gray-700">Tháng {selectedMonth}</span>
-            <ChevronDown size={14} className={`text-gray-400 transition-transform ${isMonthOpen ? 'rotate-180' : ''}`} />
+            <ChevronDown
+              size={14}
+              className={`text-gray-400 transition-transform ${isMonthOpen ? 'rotate-180' : ''}`}
+            />
           </div>
         </div>
 
@@ -78,12 +85,20 @@ export const MonthYearPicker = ({
 
       {/* Year Picker */}
       <div className="relative" ref={yearRef}>
-        <div className="flex flex-col items-start px-3 py-1 bg-gray-50 rounded-xl border border-gray-100 cursor-pointer hover:bg-white hover:border-gray-200 transition-all min-w-[100px]"
-          onClick={() => setIsYearOpen(!isYearOpen)}>
+        <div
+          className="flex flex-col items-start px-3 py-1 bg-gray-50 rounded-xl border border-gray-100 cursor-pointer hover:bg-white hover:border-gray-200 transition-all min-w-[100px]"
+          onClick={() => setIsYearOpen(!isYearOpen)}
+        >
           <span className="text-[8px] font-black text-gray-400 uppercase tracking-widest">Năm</span>
           <div className="flex items-center justify-between w-full">
-            <span className="text-sm font-black text-gray-700">{selectedYear}{selectedYear === currentYear ? ' ★' : ''}</span>
-            <ChevronDown size={14} className={`text-gray-400 transition-transform ${isYearOpen ? 'rotate-180' : ''}`} />
+            <span className="text-sm font-black text-gray-700">
+              {selectedYear}
+              {selectedYear === currentYear ? ' ★' : ''}
+            </span>
+            <ChevronDown
+              size={14}
+              className={`text-gray-400 transition-transform ${isYearOpen ? 'rotate-180' : ''}`}
+            />
           </div>
         </div>
 

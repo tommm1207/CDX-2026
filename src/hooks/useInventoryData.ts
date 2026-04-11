@@ -12,12 +12,12 @@ export const useInventoryData = (dataViewPermission?: string) => {
   const fetchWarehouses = useCallback(async () => {
     try {
       let query = supabase.from('warehouses').select('*').or('status.is.null,status.neq.Đã xóa');
-      
+
       const allowedWhIds = getAllowedWarehouses(dataViewPermission);
       if (allowedWhIds) {
         query = query.in('id', allowedWhIds);
       }
-      
+
       const { data, error } = await query.order('name');
       if (error) throw error;
       if (data) {
@@ -58,5 +58,14 @@ export const useInventoryData = (dataViewPermission?: string) => {
     refreshAll();
   }, [refreshAll]);
 
-  return { warehouses, materials, groups, loading, refreshAll, fetchWarehouses, fetchMaterials, fetchGroups };
+  return {
+    warehouses,
+    materials,
+    groups,
+    loading,
+    refreshAll,
+    fetchWarehouses,
+    fetchMaterials,
+    fetchGroups,
+  };
 };

@@ -1,5 +1,15 @@
 import { useState, useEffect } from 'react';
-import { Filter, RotateCcw, Search, Download, Printer, User, Warehouse, FileText, X } from 'lucide-react';
+import {
+  Filter,
+  RotateCcw,
+  Search,
+  Download,
+  Printer,
+  User,
+  Warehouse,
+  FileText,
+  X,
+} from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { supabase } from '@/lib/supabase';
 import { Employee } from '@/types';
@@ -11,18 +21,24 @@ import { ToastType } from '../shared/Toast';
 import { formatCurrency, formatDate, numberToWords } from '@/utils/format';
 import { isUUID } from '@/utils/helpers';
 
-export const CostFilter = ({ user, onBack, addToast }: { 
-  user: Employee, 
-  onBack?: () => void,
-  addToast?: (message: string, type?: ToastType) => void 
+export const CostFilter = ({
+  user,
+  onBack,
+  addToast,
+}: {
+  user: Employee;
+  onBack?: () => void;
+  addToast?: (message: string, type?: ToastType) => void;
 }) => {
   const [filters, setFilters] = useState({
-    fromDate: new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0],
+    fromDate: new Date(new Date().getFullYear(), new Date().getMonth(), 1)
+      .toISOString()
+      .split('T')[0],
     toDate: new Date().toISOString().split('T')[0],
     category: '',
     warehouse: '',
     employee: '',
-    content: ''
+    content: '',
   });
 
   const [costs, setCosts] = useState<any[]>([]);
@@ -45,12 +61,16 @@ export const CostFilter = ({ user, onBack, addToast }: {
     // Fetch unique categories
     const { data: catData } = await supabase.from('costs').select('cost_type');
     if (catData) {
-      const unique = Array.from(new Set(catData.map(i => i.cost_type).filter(Boolean)))
-        .map((name, id) => ({ id, name }));
+      const unique = Array.from(new Set(catData.map((i) => i.cost_type).filter(Boolean))).map(
+        (name, id) => ({ id, name }),
+      );
       setCategories(unique);
     }
 
-    const { data: whData } = await supabase.from('warehouses').select('id, name, status').or('status.is.null,status.neq.Đã xóa');
+    const { data: whData } = await supabase
+      .from('warehouses')
+      .select('id, name, status')
+      .or('status.is.null,status.neq.Đã xóa');
     if (whData) {
       setWarehouses(whData.filter(isActiveWarehouse));
     }
@@ -61,13 +81,14 @@ export const CostFilter = ({ user, onBack, addToast }: {
       empQuery = empQuery.neq('role', 'Admin App');
     }
     const { data: empData } = await empQuery;
-    if (empData) setEmployees(empData.map(e => ({ id: e.id, name: e.full_name })));
+    if (empData) setEmployees(empData.map((e) => ({ id: e.id, name: e.full_name })));
 
     // Fetch unique contents
     const { data: contentData } = await supabase.from('costs').select('content');
     if (contentData) {
-      const unique = Array.from(new Set(contentData.map(i => i.content).filter(Boolean)))
-        .map((name, id) => ({ id, name }));
+      const unique = Array.from(new Set(contentData.map((i) => i.content).filter(Boolean))).map(
+        (name, id) => ({ id, name }),
+      );
       setContents(unique);
     }
   };
@@ -82,14 +103,16 @@ export const CostFilter = ({ user, onBack, addToast }: {
         .lte('date', filters.toDate);
 
       if (filters.category) {
-        const cat = categories.find(c => c.id === filters.category || c.name === filters.category);
+        const cat = categories.find(
+          (c) => c.id === filters.category || c.name === filters.category,
+        );
         query = query.ilike('cost_type', `%${cat?.name || filters.category}%`);
       }
       if (filters.warehouse) {
         if (isUUID(filters.warehouse)) {
           query = query.eq('warehouse_id', filters.warehouse);
         } else {
-          const wh = warehouses.find(w => w.name === filters.warehouse);
+          const wh = warehouses.find((w) => w.name === filters.warehouse);
           if (wh) query = query.eq('warehouse_id', wh.id);
         }
       }
@@ -97,12 +120,12 @@ export const CostFilter = ({ user, onBack, addToast }: {
         if (isUUID(filters.employee)) {
           query = query.eq('employee_id', filters.employee);
         } else {
-          const emp = employees.find(e => e.name === filters.employee);
+          const emp = employees.find((e) => e.name === filters.employee);
           if (emp) query = query.eq('employee_id', emp.id);
         }
       }
       if (filters.content) {
-        const cont = contents.find(c => c.id === filters.content || c.name === filters.content);
+        const cont = contents.find((c) => c.id === filters.content || c.name === filters.content);
         query = query.ilike('content', `%${cont?.name || filters.content}%`);
       }
 
@@ -120,12 +143,14 @@ export const CostFilter = ({ user, onBack, addToast }: {
   const resetFilters = () => {
     setIsResetting(true);
     setFilters({
-      fromDate: new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0],
+      fromDate: new Date(new Date().getFullYear(), new Date().getMonth(), 1)
+        .toISOString()
+        .split('T')[0],
       toDate: new Date().toISOString().split('T')[0],
       category: '',
       warehouse: '',
       employee: '',
-      content: ''
+      content: '',
     });
     setTimeout(() => {
       handleFilter();
@@ -137,10 +162,7 @@ export const CostFilter = ({ user, onBack, addToast }: {
 
   return (
     <div className="p-4 md:p-6 space-y-6 pb-32">
-      <PageBreadcrumb
-        title="Lọc chi phí"
-        onBack={onBack}
-      />
+      <PageBreadcrumb title="Lọc chi phí" onBack={onBack} />
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         {/* Left Panel: Filter Form */}
@@ -159,7 +181,7 @@ export const CostFilter = ({ user, onBack, addToast }: {
                 <div className="p-2 bg-gray-50 rounded-full group-hover:bg-primary/10 transition-colors">
                   <motion.div
                     animate={{ rotate: isResetting ? -360 : 0 }}
-                    transition={{ duration: 0.5, ease: "easeInOut" }}
+                    transition={{ duration: 0.5, ease: 'easeInOut' }}
                   >
                     <RotateCcw size={16} />
                   </motion.div>
@@ -225,11 +247,15 @@ export const CostFilter = ({ user, onBack, addToast }: {
               <div className="pt-4 border-t border-gray-50 space-y-3">
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-bold text-gray-400 uppercase">Tổng số tiền</span>
-                  <span className="text-xl font-black text-primary">{formatCurrency(totalAmount)}</span>
+                  <span className="text-xl font-black text-primary">
+                    {formatCurrency(totalAmount)}
+                  </span>
                 </div>
                 <div className="space-y-1">
                   <p className="text-[10px] font-bold text-gray-400 uppercase">Bằng chữ</p>
-                  <p className="text-xs font-medium text-primary italic">{numberToWords(totalAmount)}</p>
+                  <p className="text-xs font-medium text-primary italic">
+                    {numberToWords(totalAmount)}
+                  </p>
                 </div>
               </div>
 
@@ -251,8 +277,12 @@ export const CostFilter = ({ user, onBack, addToast }: {
             <div className="p-6 border-b border-gray-50 flex items-center justify-between">
               <h3 className="font-bold text-gray-800">Kết quả lọc chi phí</h3>
               <div className="flex items-center gap-2">
-                <button className="p-2 text-gray-400 hover:text-primary transition-colors"><Download size={18} /></button>
-                <button className="p-2 text-gray-400 hover:text-primary transition-colors"><Printer size={18} /></button>
+                <button className="p-2 text-gray-400 hover:text-primary transition-colors">
+                  <Download size={18} />
+                </button>
+                <button className="p-2 text-gray-400 hover:text-primary transition-colors">
+                  <Printer size={18} />
+                </button>
               </div>
             </div>
 
@@ -285,9 +315,13 @@ export const CostFilter = ({ user, onBack, addToast }: {
                         <span className="text-[10px] font-bold text-primary bg-primary/5 px-2 py-0.5 rounded-full uppercase">
                           {item.cost_code || item.id.slice(0, 8)}
                         </span>
-                        <span className="text-[10px] font-bold text-gray-400">{formatDate(item.date)}</span>
+                        <span className="text-[10px] font-bold text-gray-400">
+                          {formatDate(item.date)}
+                        </span>
                       </div>
-                      <h4 className="text-sm font-bold text-gray-800 mb-1 group-hover:text-primary transition-colors">{item.content}</h4>
+                      <h4 className="text-sm font-bold text-gray-800 mb-1 group-hover:text-primary transition-colors">
+                        {item.content}
+                      </h4>
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2 text-[10px] text-gray-400 font-medium">
                           <User size={12} /> {item.users?.full_name}
@@ -298,7 +332,9 @@ export const CostFilter = ({ user, onBack, addToast }: {
                             </>
                           )}
                         </div>
-                        <span className="text-sm font-black text-primary">{formatCurrency(item.total_amount)}</span>
+                        <span className="text-sm font-black text-primary">
+                          {formatCurrency(item.total_amount)}
+                        </span>
                       </div>
                     </motion.div>
                   ))}
@@ -321,12 +357,17 @@ export const CostFilter = ({ user, onBack, addToast }: {
             >
               <div className="bg-primary p-6 text-white flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  <button onClick={() => setShowDetailModal(false)} className="p-2 bg-white/20 hover:bg-white/30 rounded-xl transition-colors cursor-pointer">
+                  <button
+                    onClick={() => setShowDetailModal(false)}
+                    className="p-2 bg-white/20 hover:bg-white/30 rounded-xl transition-colors cursor-pointer"
+                  >
                     <FileText size={24} />
                   </button>
                   <div>
                     <h3 className="font-bold text-lg">Chi tiết chi phí</h3>
-                    <p className="text-xs text-white/70">Mã: {selectedCost.cost_code || selectedCost.id.slice(0, 8)}</p>
+                    <p className="text-xs text-white/70">
+                      Mã: {selectedCost.cost_code || selectedCost.id.slice(0, 8)}
+                    </p>
                   </div>
                 </div>
               </div>
@@ -335,21 +376,34 @@ export const CostFilter = ({ user, onBack, addToast }: {
                 <div className="grid grid-cols-2 gap-6">
                   <DetailItem label="Ngày chi" value={formatDate(selectedCost.date)} />
                   <DetailItem label="Người chi" value={selectedCost.users?.full_name} />
-                  <DetailItem label="Nội dung" value={selectedCost.content} className="col-span-2" />
+                  <DetailItem
+                    label="Nội dung"
+                    value={selectedCost.content}
+                    className="col-span-2"
+                  />
                   <DetailItem label="Nhóm chi phí" value={selectedCost.cost_type} />
                   <DetailItem label="Loại hình" value={selectedCost.cost_type} />
                   <DetailItem label="Kho" value={selectedCost.warehouses?.name || 'N/A'} />
                   <DetailItem label="Đơn vị tính" value={selectedCost.unit} />
                   <DetailItem label="Số lượng" value={selectedCost.quantity} />
-                  <DetailItem label="Đơn giá" value={formatCurrency(selectedCost.unit_price || 0)} />
-                  <DetailItem label="Tổng tiền" value={formatCurrency(selectedCost.total_amount)} color="text-primary font-black text-lg" />
+                  <DetailItem
+                    label="Đơn giá"
+                    value={formatCurrency(selectedCost.unit_price || 0)}
+                  />
+                  <DetailItem
+                    label="Tổng tiền"
+                    value={formatCurrency(selectedCost.total_amount)}
+                    color="text-primary font-black text-lg"
+                  />
                   <DetailItem label="Trạng thái nhập kho" value={selectedCost.stock_status} />
                   <DetailItem label="Ghi chú" value={selectedCost.notes} className="col-span-2" />
                 </div>
 
                 <div className="bg-primary/5 p-4 rounded-2xl">
                   <p className="text-[10px] font-bold text-gray-400 uppercase mb-1">Bằng chữ</p>
-                  <p className="text-sm font-bold text-primary italic">{numberToWords(selectedCost.total_amount)}</p>
+                  <p className="text-sm font-bold text-primary italic">
+                    {numberToWords(selectedCost.total_amount)}
+                  </p>
                 </div>
               </div>
 

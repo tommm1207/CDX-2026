@@ -9,10 +9,14 @@ import { Button } from '../shared/Button';
 import { FAB } from '../shared/FAB';
 import { checkUsage } from '@/utils/dataIntegrity';
 
-export const Warehouses = ({ user, onBack, addToast }: { 
-  user: Employee, 
-  onBack?: () => void,
-  addToast?: (message: string, type?: ToastType) => void 
+export const Warehouses = ({
+  user,
+  onBack,
+  addToast,
+}: {
+  user: Employee;
+  onBack?: () => void;
+  addToast?: (message: string, type?: ToastType) => void;
 }) => {
   const [showModal, setShowModal] = useState(false);
   const [warehouses, setWarehouses] = useState<any[]>([]);
@@ -32,7 +36,7 @@ export const Warehouses = ({ user, onBack, addToast }: {
     manager_id: '',
     coordinates: '',
     notes: '',
-    capacity: ''
+    capacity: '',
   };
 
   const [formData, setFormData] = useState(initialFormState);
@@ -116,14 +120,17 @@ export const Warehouses = ({ user, onBack, addToast }: {
         const { error } = await supabase.from('warehouses').update(dbPayload).eq('id', id);
         if (error) throw error;
       } else {
-        const nextCode = formData.code || await generateNextWarehouseCode();
-        const { error } = await supabase.from('warehouses').insert([{ ...dbPayload, code: nextCode }]);
+        const nextCode = formData.code || (await generateNextWarehouseCode());
+        const { error } = await supabase
+          .from('warehouses')
+          .insert([{ ...dbPayload, code: nextCode }]);
         if (error) throw error;
       }
       setShowModal(false);
       fetchWarehouses();
       setFormData(initialFormState);
-      if (addToast) addToast(isEditing ? 'Cập nhật kho thành công!' : 'Thêm mới kho thành công!', 'success');
+      if (addToast)
+        addToast(isEditing ? 'Cập nhật kho thành công!' : 'Thêm mới kho thành công!', 'success');
     } catch (err: any) {
       if (addToast) addToast('Lỗi: ' + err.message, 'error');
       else alert('Lỗi: ' + err.message);
@@ -141,7 +148,7 @@ export const Warehouses = ({ user, onBack, addToast }: {
       manager_id: item.manager_id || '',
       coordinates: item.coordinates || '',
       notes: item.notes || '',
-      capacity: item.capacity || ''
+      capacity: item.capacity || '',
     });
     setIsEditing(true);
     setShowModal(true);
@@ -154,19 +161,26 @@ export const Warehouses = ({ user, onBack, addToast }: {
 
   const confirmDelete = async () => {
     if (!itemToDelete) return;
-    
+
     // Check usage before soft delete
     const usage = await checkUsage('warehouse', itemToDelete);
     if (usage.inUse) {
-      if (addToast) addToast(`Không thể xóa vì kho đang có dữ liệu liên quan: ${usage.tables.join(', ')}`, 'error');
+      if (addToast)
+        addToast(
+          `Không thể xóa vì kho đang có dữ liệu liên quan: ${usage.tables.join(', ')}`,
+          'error',
+        );
       setShowDeleteModal(false);
       return;
     }
 
-    const { error } = await supabase.from('warehouses').update({ status: 'Đã xóa' }).eq('id', itemToDelete);
+    const { error } = await supabase
+      .from('warehouses')
+      .update({ status: 'Đã xóa' })
+      .eq('id', itemToDelete);
     if (error) {
-      const msg = error.message.includes('foreign key constraint') 
-        ? 'Không thể xóa kho này vì đang có dữ liệu liên quan khác.' 
+      const msg = error.message.includes('foreign key constraint')
+        ? 'Không thể xóa kho này vì đang có dữ liệu liên quan khác.'
         : error.message;
       if (addToast) addToast('Lỗi: ' + msg, 'error');
       else alert('Lỗi: ' + msg);
@@ -182,7 +196,10 @@ export const Warehouses = ({ user, onBack, addToast }: {
     if (coords.startsWith('http')) {
       window.open(coords, '_blank');
     } else {
-      window.open(`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(coords)}`, '_blank');
+      window.open(
+        `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(coords)}`,
+        '_blank',
+      );
     }
   };
 
@@ -191,9 +208,11 @@ export const Warehouses = ({ user, onBack, addToast }: {
       <div className="flex items-center justify-between gap-2">
         <PageBreadcrumb title="Danh sách Kho" onBack={onBack} />
         <button
-          onClick={() => setShowFilter(f => !f)}
+          onClick={() => setShowFilter((f) => !f)}
           className={`p-2.5 rounded-xl border transition-colors ${
-            showFilter ? 'bg-primary text-white border-primary' : 'bg-white text-gray-500 border-gray-200 hover:border-primary/40'
+            showFilter
+              ? 'bg-primary text-white border-primary'
+              : 'bg-white text-gray-500 border-gray-200 hover:border-primary/40'
           }`}
         >
           <Search size={16} />
@@ -211,11 +230,17 @@ export const Warehouses = ({ user, onBack, addToast }: {
             <div className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-4">
               <div className="space-y-1">
                 <label className="text-[10px] font-bold text-gray-400 uppercase">Từ ngày</label>
-                <input type="date" className="w-full px-3 py-2 rounded-lg border border-gray-200 text-xs outline-none focus:ring-2 focus:ring-primary/20" />
+                <input
+                  type="date"
+                  className="w-full px-3 py-2 rounded-lg border border-gray-200 text-xs outline-none focus:ring-2 focus:ring-primary/20"
+                />
               </div>
               <div className="space-y-1">
                 <label className="text-[10px] font-bold text-gray-400 uppercase">Đến ngày</label>
-                <input type="date" className="w-full px-3 py-2 rounded-lg border border-gray-200 text-xs outline-none focus:ring-2 focus:ring-primary/20" />
+                <input
+                  type="date"
+                  className="w-full px-3 py-2 rounded-lg border border-gray-200 text-xs outline-none focus:ring-2 focus:ring-primary/20"
+                />
               </div>
               <div className="space-y-1">
                 <label className="text-[10px] font-bold text-gray-400 uppercase">Nhân sự</label>
@@ -225,21 +250,34 @@ export const Warehouses = ({ user, onBack, addToast }: {
               </div>
               <div className="space-y-1">
                 <label className="text-[10px] font-bold text-gray-400 uppercase">Kho</label>
-                <select 
+                <select
                   className="w-full px-3 py-2 rounded-lg border border-gray-200 text-xs outline-none focus:ring-2 focus:ring-primary/20"
                   onChange={(e) => {
                     // Logic lọc nội bộ nếu cần
                   }}
                 >
                   <option value="">-- Tất cả kho --</option>
-                  {warehouses.map(w => <option key={w.id} value={w.id}>{w.name}</option>)}
+                  {warehouses.map((w) => (
+                    <option key={w.id} value={w.id}>
+                      {w.name}
+                    </option>
+                  ))}
                 </select>
               </div>
               <div className="space-y-1">
-                <label className="text-[10px] font-bold text-gray-400 uppercase">Tìm kiếm nhanh</label>
+                <label className="text-[10px] font-bold text-gray-400 uppercase">
+                  Tìm kiếm nhanh
+                </label>
                 <div className="relative">
-                  <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-                  <input type="text" placeholder="Gõ để tìm..." className="w-full pl-9 pr-3 py-2 rounded-lg border border-gray-200 text-xs outline-none focus:ring-2 focus:ring-primary/20" />
+                  <Search
+                    size={14}
+                    className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
+                  />
+                  <input
+                    type="text"
+                    placeholder="Gõ để tìm..."
+                    className="w-full pl-9 pr-3 py-2 rounded-lg border border-gray-200 text-xs outline-none focus:ring-2 focus:ring-primary/20"
+                  />
                 </div>
               </div>
             </div>
@@ -252,36 +290,63 @@ export const Warehouses = ({ user, onBack, addToast }: {
           <table className="w-full text-left border-collapse whitespace-nowrap">
             <thead>
               <tr className="bg-primary text-white">
-                <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider border-r border-white/10">Tên kho</th>
-                <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider border-r border-white/10">Địa chỉ</th>
-                <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider border-r border-white/10">Nhân viên phụ trách</th>
-                <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider border-r border-white/10">Tọa độ</th>
-                <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider border-r border-white/10">Ghi chú</th>
-                <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider border-r border-white/10">Sức chứa</th>
-                <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-center">Thao tác</th>
+                <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider border-r border-white/10">
+                  Tên kho
+                </th>
+                <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider border-r border-white/10">
+                  Địa chỉ
+                </th>
+                <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider border-r border-white/10">
+                  Nhân viên phụ trách
+                </th>
+                <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider border-r border-white/10">
+                  Tọa độ
+                </th>
+                <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider border-r border-white/10">
+                  Ghi chú
+                </th>
+                <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider border-r border-white/10">
+                  Sức chứa
+                </th>
+                <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-center">
+                  Thao tác
+                </th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
               {loading ? (
-                <tr><td colSpan={8} className="px-4 py-8 text-center text-gray-400 italic">Đang tải dữ liệu...</td></tr>
+                <tr>
+                  <td colSpan={8} className="px-4 py-8 text-center text-gray-400 italic">
+                    Đang tải dữ liệu...
+                  </td>
+                </tr>
               ) : warehouses.length === 0 ? (
-                <tr><td colSpan={8} className="px-4 py-8 text-center text-gray-400 italic">Chưa có dữ liệu kho bãi</td></tr>
+                <tr>
+                  <td colSpan={8} className="px-4 py-8 text-center text-gray-400 italic">
+                    Chưa có dữ liệu kho bãi
+                  </td>
+                </tr>
               ) : (
                 warehouses.map((item) => (
-                  <tr 
-                    key={item.id} 
+                  <tr
+                    key={item.id}
                     className="hover:bg-gray-50 transition-colors group cursor-pointer"
                     onClick={() => handleEdit(item)}
                   >
                     <td className="px-4 py-3 text-xs text-gray-600">{item.name}</td>
                     <td className="px-4 py-3 text-xs text-gray-600">{item.address}</td>
-                    <td className="px-4 py-3 text-xs text-gray-600">{item.users?.full_name || item.manager_id}</td>
+                    <td className="px-4 py-3 text-xs text-gray-600">
+                      {item.users?.full_name || item.manager_id}
+                    </td>
                     <td className="px-4 py-3 text-xs text-gray-600">
                       <div className="flex items-center gap-2">
                         <span className="truncate max-w-[100px]">{item.coordinates}</span>
                         {item.coordinates && (
                           <button
-                            onClick={(e) => { e.stopPropagation(); openInGoogleMaps(item.coordinates); }}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              openInGoogleMaps(item.coordinates);
+                            }}
                             className="p-1 text-primary hover:bg-primary/10 rounded transition-colors"
                             title="Chỉ đường Google Maps"
                           >
@@ -294,8 +359,24 @@ export const Warehouses = ({ user, onBack, addToast }: {
                     <td className="px-4 py-3 text-xs text-gray-600">{item.capacity}</td>
                     <td className="px-4 py-3 text-center">
                       <div className="flex items-center justify-center gap-1 transition-opacity">
-                        <button onClick={(e) => { e.stopPropagation(); handleEdit(item); }} className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"><Edit size={14} /></button>
-                        <button onClick={(e) => { e.stopPropagation(); handleDeleteClick(item.id); }} className="p-1.5 text-red-600 hover:bg-red-50 rounded-lg transition-colors"><Trash2 size={14} /></button>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleEdit(item);
+                          }}
+                          className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                        >
+                          <Edit size={14} />
+                        </button>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDeleteClick(item.id);
+                          }}
+                          className="p-1.5 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                        >
+                          <Trash2 size={14} />
+                        </button>
                       </div>
                     </td>
                   </tr>
@@ -309,7 +390,7 @@ export const Warehouses = ({ user, onBack, addToast }: {
       {/* Delete Confirmation Modal */}
       <AnimatePresence>
         {showDeleteModal && (
-          <div 
+          <div
             className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm"
             onClick={() => setShowDeleteModal(false)}
           >
@@ -324,10 +405,20 @@ export const Warehouses = ({ user, onBack, addToast }: {
                 <Trash2 size={32} />
               </div>
               <h3 className="text-lg font-bold text-gray-800 mb-2">Chuyển vào thùng rác?</h3>
-              <p className="text-sm text-gray-500 mb-6">Bạn có chắc chắn muốn chuyển kho <strong>{warehouses.find(w => w.id === itemToDelete)?.code || itemToDelete?.slice(0, 8)}</strong> vào thùng rác?</p>
+              <p className="text-sm text-gray-500 mb-6">
+                Bạn có chắc chắn muốn chuyển kho{' '}
+                <strong>
+                  {warehouses.find((w) => w.id === itemToDelete)?.code || itemToDelete?.slice(0, 8)}
+                </strong>{' '}
+                vào thùng rác?
+              </p>
               <div className="flex gap-3">
-                <Button variant="outline" fullWidth onClick={() => setShowDeleteModal(false)}>Hủy bỏ</Button>
-                <Button variant="danger" fullWidth onClick={confirmDelete}>Di chuyển</Button>
+                <Button variant="outline" fullWidth onClick={() => setShowDeleteModal(false)}>
+                  Hủy bỏ
+                </Button>
+                <Button variant="danger" fullWidth onClick={confirmDelete}>
+                  Di chuyển
+                </Button>
               </div>
             </motion.div>
           </div>
@@ -336,7 +427,7 @@ export const Warehouses = ({ user, onBack, addToast }: {
 
       <AnimatePresence>
         {showModal && (
-          <div 
+          <div
             className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm overflow-y-auto"
             onClick={() => setShowModal(false)}
           >
@@ -349,11 +440,16 @@ export const Warehouses = ({ user, onBack, addToast }: {
             >
               <div className="bg-primary p-6 text-white flex items-center justify-between rounded-t-3xl flex-shrink-0">
                 <div className="flex items-center gap-3">
-                  <button onClick={() => setShowModal(false)} className="p-2 bg-white/20 hover:bg-white/30 rounded-xl transition-colors cursor-pointer">
+                  <button
+                    onClick={() => setShowModal(false)}
+                    className="p-2 bg-white/20 hover:bg-white/30 rounded-xl transition-colors cursor-pointer"
+                  >
                     <Warehouse size={24} />
                   </button>
                   <div>
-                    <h3 className="font-bold text-lg">{isEditing ? 'Cập nhật thông tin kho' : 'Thêm mới kho bãi'}</h3>
+                    <h3 className="font-bold text-lg">
+                      {isEditing ? 'Cập nhật thông tin kho' : 'Thêm mới kho bãi'}
+                    </h3>
                     <p className="text-xs text-white/70">Vui lòng điền đầy đủ thông tin chi tiết</p>
                   </div>
                 </div>
@@ -364,7 +460,9 @@ export const Warehouses = ({ user, onBack, addToast }: {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div className="space-y-4">
                       <div className="space-y-1">
-                        <label className="text-[10px] font-bold text-gray-400 uppercase">Mã kho</label>
+                        <label className="text-[10px] font-bold text-gray-400 uppercase">
+                          Mã kho
+                        </label>
                         <input
                           required
                           type="text"
@@ -376,7 +474,9 @@ export const Warehouses = ({ user, onBack, addToast }: {
                         />
                       </div>
                       <div className="space-y-1">
-                        <label className="text-[10px] font-bold text-gray-400 uppercase">Tên kho *</label>
+                        <label className="text-[10px] font-bold text-gray-400 uppercase">
+                          Tên kho *
+                        </label>
                         <input
                           required
                           type="text"
@@ -387,7 +487,9 @@ export const Warehouses = ({ user, onBack, addToast }: {
                         />
                       </div>
                       <div className="space-y-1">
-                        <label className="text-[10px] font-bold text-gray-400 uppercase">Địa chỉ</label>
+                        <label className="text-[10px] font-bold text-gray-400 uppercase">
+                          Địa chỉ
+                        </label>
                         <input
                           type="text"
                           placeholder="Địa chỉ cụ thể..."
@@ -397,34 +499,49 @@ export const Warehouses = ({ user, onBack, addToast }: {
                         />
                       </div>
                       <div className="space-y-1">
-                        <label className="text-[10px] font-bold text-gray-400 uppercase">Nhân viên phụ trách</label>
+                        <label className="text-[10px] font-bold text-gray-400 uppercase">
+                          Nhân viên phụ trách
+                        </label>
                         <select
                           value={formData.manager_id}
                           onChange={(e) => setFormData({ ...formData, manager_id: e.target.value })}
                           className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20"
                         >
                           <option value="">-- Chọn nhân sự --</option>
-                          {employees.map(emp => <option key={emp.id} value={emp.id}>{emp.full_name} ({emp.code || emp.id.slice(0, 8)})</option>)}
+                          {employees.map((emp) => (
+                            <option key={emp.id} value={emp.id}>
+                              {emp.full_name} ({emp.code || emp.id.slice(0, 8)})
+                            </option>
+                          ))}
                         </select>
                       </div>
                     </div>
 
                     <div className="space-y-4">
                       <div className="space-y-1">
-                        <label className="text-[10px] font-bold text-gray-400 uppercase">Tọa độ / Link Google Maps</label>
+                        <label className="text-[10px] font-bold text-gray-400 uppercase">
+                          Tọa độ / Link Google Maps
+                        </label>
                         <div className="relative">
-                          <MapPin size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                          <MapPin
+                            size={16}
+                            className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
+                          />
                           <input
                             type="text"
                             placeholder="10.43, 106.59 hoặc dán link..."
                             value={formData.coordinates}
-                            onChange={(e) => setFormData({ ...formData, coordinates: e.target.value })}
+                            onChange={(e) =>
+                              setFormData({ ...formData, coordinates: e.target.value })
+                            }
                             className="w-full pl-10 pr-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20"
                           />
                         </div>
                       </div>
                       <div className="space-y-1">
-                        <label className="text-[10px] font-bold text-gray-400 uppercase">Ghi chú</label>
+                        <label className="text-[10px] font-bold text-gray-400 uppercase">
+                          Ghi chú
+                        </label>
                         <textarea
                           rows={3}
                           placeholder="Thông tin thêm..."
@@ -434,7 +551,9 @@ export const Warehouses = ({ user, onBack, addToast }: {
                         />
                       </div>
                       <div className="space-y-1">
-                        <label className="text-[10px] font-bold text-gray-400 uppercase">Sức chứa</label>
+                        <label className="text-[10px] font-bold text-gray-400 uppercase">
+                          Sức chứa
+                        </label>
                         <input
                           type="text"
                           placeholder="Ví dụ: 1000 tấn"
@@ -447,12 +566,10 @@ export const Warehouses = ({ user, onBack, addToast }: {
                   </div>
 
                   <div className="mt-8 flex justify-end gap-3 flex-shrink-0">
-                    <Button variant="outline" onClick={() => setShowModal(false)}>Hủy</Button>
-                    <Button
-                      type="submit"
-                      isLoading={submitting}
-                      className="min-w-[140px]"
-                    >
+                    <Button variant="outline" onClick={() => setShowModal(false)}>
+                      Hủy
+                    </Button>
+                    <Button type="submit" isLoading={submitting} className="min-w-[140px]">
                       Lưu dữ liệu
                     </Button>
                   </div>

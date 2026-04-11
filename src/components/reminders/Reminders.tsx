@@ -10,12 +10,18 @@ import { FAB } from '../shared/FAB';
 import { Button } from '../shared/Button';
 import { ConfirmModal } from '../shared/ConfirmModal';
 
-export const Reminders = ({ user, onBack, addToast, initialAction, setHideBottomNav }: { 
-  user: Employee, 
-  onBack: () => void, 
-  addToast?: (message: string, type?: ToastType) => void,
-  initialAction?: string,
-  setHideBottomNav?: (hide: boolean) => void 
+export const Reminders = ({
+  user,
+  onBack,
+  addToast,
+  initialAction,
+  setHideBottomNav,
+}: {
+  user: Employee;
+  onBack: () => void;
+  addToast?: (message: string, type?: ToastType) => void;
+  initialAction?: string;
+  setHideBottomNav?: (hide: boolean) => void;
 }) => {
   const [reminders, setReminders] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -38,14 +44,14 @@ export const Reminders = ({ user, onBack, addToast, initialAction, setHideBottom
     d.setHours(d.getHours() + 1);
     d.setMinutes(0);
     // Robust local ISO string conversion
-    return new Date(d.getTime() - (d.getTimezoneOffset() * 60000)).toISOString().slice(0, 16);
+    return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
   };
 
   const [filters, setFilters] = useState({
     fromDate: '',
     toDate: '',
     employee: '',
-    search: ''
+    search: '',
   });
 
   const [formData, setFormData] = useState<{
@@ -60,7 +66,7 @@ export const Reminders = ({ user, onBack, addToast, initialAction, setHideBottom
     reminder_time: getDefaultTime(),
     browser_notification: true,
     assignees: [],
-    show_assignees: false
+    show_assignees: false,
   });
 
   useEffect(() => {
@@ -89,10 +95,14 @@ export const Reminders = ({ user, onBack, addToast, initialAction, setHideBottom
     try {
       const payload = {
         title: formData.title,
-        content: serializeReminderContent(formData.content, formData.assignees, formData.show_assignees),
+        content: serializeReminderContent(
+          formData.content,
+          formData.assignees,
+          formData.show_assignees,
+        ),
         browser_notification: formData.browser_notification,
         reminder_time: new Date(formData.reminder_time).toISOString(),
-        created_by: user.id
+        created_by: user.id,
       };
 
       if (editingId) {
@@ -110,15 +120,17 @@ export const Reminders = ({ user, onBack, addToast, initialAction, setHideBottom
         // Dispatch Web Push Notification via Edge Function
         const parsedContent = payload.content; // already serialized
         const textContent = formData.content;
-        supabase.functions.invoke('send-push', {
-          body: {
-            reminder_id: inserted?.id,
-            title: formData.title,
-            body: textContent,
-            sender_name: user.full_name,
-            assignees: formData.assignees.length > 0 ? formData.assignees : null
-          }
-        }).catch(e => console.warn('[CDX Push] Edge function error:', e));
+        supabase.functions
+          .invoke('send-push', {
+            body: {
+              reminder_id: inserted?.id,
+              title: formData.title,
+              body: textContent,
+              sender_name: user.full_name,
+              assignees: formData.assignees.length > 0 ? formData.assignees : null,
+            },
+          })
+          .catch((e) => console.warn('[CDX Push] Edge function error:', e));
 
         if (addToast) addToast('Đã thêm mới lịch nhắc thành công', 'success');
       }
@@ -132,7 +144,7 @@ export const Reminders = ({ user, onBack, addToast, initialAction, setHideBottom
         reminder_time: getDefaultTime(),
         browser_notification: true,
         assignees: [],
-        show_assignees: false
+        show_assignees: false,
       });
       fetchData();
     } catch (err: any) {
@@ -143,17 +155,19 @@ export const Reminders = ({ user, onBack, addToast, initialAction, setHideBottom
 
   const handleEdit = (rem: any) => {
     const d = new Date(rem.reminder_time);
-    const localStr = new Date(d.getTime() - (d.getTimezoneOffset() * 60000)).toISOString().slice(0, 16);
-    
+    const localStr = new Date(d.getTime() - d.getTimezoneOffset() * 60000)
+      .toISOString()
+      .slice(0, 16);
+
     const parsed = parseReminderContent(rem.content);
-    
+
     setFormData({
       title: rem.title || '',
       content: parsed.text || '',
       reminder_time: localStr,
       browser_notification: rem.browser_notification ?? true,
       assignees: parsed.assignees || [],
-      show_assignees: parsed.show_assignees ?? false
+      show_assignees: parsed.show_assignees ?? false,
     });
     setEditingId(rem.id);
     setShowSetReminder(true);
@@ -166,7 +180,10 @@ export const Reminders = ({ user, onBack, addToast, initialAction, setHideBottom
   const executeDelete = async () => {
     if (!deletingId) return;
     try {
-      const { error } = await supabase.from('reminders').update({ status: 'Đã xóa' }).eq('id', deletingId);
+      const { error } = await supabase
+        .from('reminders')
+        .update({ status: 'Đã xóa' })
+        .eq('id', deletingId);
       if (error) throw error;
       if (addToast) addToast('Đã chuyển lịch nhắc vào thùng rác', 'success');
       setDeletingId(null);
@@ -180,16 +197,16 @@ export const Reminders = ({ user, onBack, addToast, initialAction, setHideBottom
 
   const executeDeleteAll = async () => {
     try {
-      const idsToDelete = filteredReminders.map(r => r.id);
+      const idsToDelete = filteredReminders.map((r) => r.id);
       if (idsToDelete.length === 0) {
         if (addToast) addToast('Không có dữ liệu để xóa', 'info');
         setShowDeleteAllConfirm(false);
         return;
       }
-      
+
       const { error } = await supabase.from('reminders').delete().in('id', idsToDelete);
       if (error) throw error;
-      
+
       if (addToast) addToast(`Đã xóa vĩnh viễn ${idsToDelete.length} lịch nhắc`, 'success');
       setShowDeleteAllConfirm(false);
       fetchData();
@@ -198,13 +215,13 @@ export const Reminders = ({ user, onBack, addToast, initialAction, setHideBottom
     }
   };
 
-  const filteredReminders = reminders.filter(r => {
+  const filteredReminders = reminders.filter((r) => {
     if (filters.fromDate && r.reminder_time < filters.fromDate) return false;
     if (filters.toDate && r.reminder_time > filters.toDate) return false;
-    
+
     const searchLower = filters.search.toLowerCase();
-    const titleMatch = (r.title || "").toLowerCase().includes(searchLower);
-    const senderMatch = (r.sender?.full_name || "").toLowerCase().includes(searchLower);
+    const titleMatch = (r.title || '').toLowerCase().includes(searchLower);
+    const senderMatch = (r.sender?.full_name || '').toLowerCase().includes(searchLower);
 
     if (filters.search && !(titleMatch || senderMatch)) return false;
     return true;
@@ -227,7 +244,7 @@ export const Reminders = ({ user, onBack, addToast, initialAction, setHideBottom
           <Button
             size="icon"
             variant={showFilter ? 'primary' : 'outline'}
-            onClick={() => setShowFilter(f => !f)}
+            onClick={() => setShowFilter((f) => !f)}
             icon={Search}
           />
         </div>
@@ -245,17 +262,35 @@ export const Reminders = ({ user, onBack, addToast, initialAction, setHideBottom
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
                 <div>
                   <label className="text-[10px] font-bold text-gray-400 uppercase">Từ ngày</label>
-                  <input type="date" value={filters.fromDate} onChange={e => setFilters({ ...filters, fromDate: e.target.value })} className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm focus:ring-2 focus:ring-primary/20 outline-none mt-1" />
+                  <input
+                    type="date"
+                    value={filters.fromDate}
+                    onChange={(e) => setFilters({ ...filters, fromDate: e.target.value })}
+                    className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm focus:ring-2 focus:ring-primary/20 outline-none mt-1"
+                  />
                 </div>
                 <div>
                   <label className="text-[10px] font-bold text-gray-400 uppercase">Đến ngày</label>
-                  <input type="date" value={filters.toDate} onChange={e => setFilters({ ...filters, toDate: e.target.value })} className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm focus:ring-2 focus:ring-primary/20 outline-none mt-1" />
+                  <input
+                    type="date"
+                    value={filters.toDate}
+                    onChange={(e) => setFilters({ ...filters, toDate: e.target.value })}
+                    className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm focus:ring-2 focus:ring-primary/20 outline-none mt-1"
+                  />
                 </div>
                 <div>
                   <label className="text-[10px] font-bold text-gray-400 uppercase">Nhân sự</label>
-                  <select value={filters.employee} onChange={e => setFilters({ ...filters, employee: e.target.value })} className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm focus:ring-2 focus:ring-primary/20 outline-none mt-1">
+                  <select
+                    value={filters.employee}
+                    onChange={(e) => setFilters({ ...filters, employee: e.target.value })}
+                    className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm focus:ring-2 focus:ring-primary/20 outline-none mt-1"
+                  >
                     <option value="">-- Tất cả --</option>
-                    {employees.map(e => <option key={e.id} value={e.id}>{e.full_name}</option>)}
+                    {employees.map((e) => (
+                      <option key={e.id} value={e.id}>
+                        {e.full_name}
+                      </option>
+                    ))}
                   </select>
                 </div>
                 <div>
@@ -265,10 +300,21 @@ export const Reminders = ({ user, onBack, addToast, initialAction, setHideBottom
                   </select>
                 </div>
                 <div>
-                  <label className="text-[10px] font-bold text-gray-400 uppercase">Tìm kiếm nhanh</label>
+                  <label className="text-[10px] font-bold text-gray-400 uppercase">
+                    Tìm kiếm nhanh
+                  </label>
                   <div className="relative mt-1">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
-                    <input type="text" placeholder="Gõ để tìm..." value={filters.search} onChange={e => setFilters({ ...filters, search: e.target.value })} className="w-full pl-10 pr-4 py-2 rounded-xl border border-gray-200 text-sm focus:ring-2 focus:ring-primary/20 outline-none" />
+                    <Search
+                      className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
+                      size={16}
+                    />
+                    <input
+                      type="text"
+                      placeholder="Gõ để tìm..."
+                      value={filters.search}
+                      onChange={(e) => setFilters({ ...filters, search: e.target.value })}
+                      className="w-full pl-10 pr-4 py-2 rounded-xl border border-gray-200 text-sm focus:ring-2 focus:ring-primary/20 outline-none"
+                    />
                   </div>
                 </div>
               </div>
@@ -277,105 +323,148 @@ export const Reminders = ({ user, onBack, addToast, initialAction, setHideBottom
         )}
       </AnimatePresence>
 
-
       <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
         <div className="p-4 border-b border-gray-50 flex items-center justify-between bg-primary/5">
           <h3 className="text-sm font-bold text-primary flex items-center gap-2 uppercase tracking-wider">
-            <Bell size={18} /> Danh sách lịch nhắc tháng {new Date().getMonth() + 1}/{new Date().getFullYear()}
+            <Bell size={18} /> Danh sách lịch nhắc tháng {new Date().getMonth() + 1}/
+            {new Date().getFullYear()}
           </h3>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse whitespace-nowrap">
             <thead>
               <tr className="bg-gray-50/50">
-                <th className="px-4 py-3 text-[10px] font-bold text-gray-400 uppercase">Trạng thái</th>
-                <th className="px-4 py-3 text-[10px] font-bold text-gray-400 uppercase">Người gửi</th>
-                <th className="px-4 py-3 text-[10px] font-bold text-gray-400 uppercase">Thời gian nhắc</th>
-                <th className="px-4 py-3 text-[10px] font-bold text-gray-400 uppercase">Đối tượng</th>
-                <th className="px-4 py-3 text-[10px] font-bold text-gray-400 uppercase">Nội dung / Tiêu đề</th>
-                <th className="px-4 py-3 text-[10px] font-bold text-gray-400 uppercase text-center">Thao tác</th>
+                <th className="px-4 py-3 text-[10px] font-bold text-gray-400 uppercase">
+                  Trạng thái
+                </th>
+                <th className="px-4 py-3 text-[10px] font-bold text-gray-400 uppercase">
+                  Người gửi
+                </th>
+                <th className="px-4 py-3 text-[10px] font-bold text-gray-400 uppercase">
+                  Thời gian nhắc
+                </th>
+                <th className="px-4 py-3 text-[10px] font-bold text-gray-400 uppercase">
+                  Đối tượng
+                </th>
+                <th className="px-4 py-3 text-[10px] font-bold text-gray-400 uppercase">
+                  Nội dung / Tiêu đề
+                </th>
+                <th className="px-4 py-3 text-[10px] font-bold text-gray-400 uppercase text-center">
+                  Thao tác
+                </th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-50">
               {loading ? (
-                <tr><td colSpan={7} className="px-4 py-8 text-center text-gray-400 italic">Đang tải dữ liệu...</td></tr>
-              ) : filteredReminders.length === 0 ? (
-                <tr><td colSpan={7} className="px-4 py-8 text-center text-gray-400 italic">Không có lịch nhắc nào</td></tr>
-              ) : filteredReminders.map((rem) => (
-                <tr 
-                  key={rem.id} 
-                  className="hover:bg-gray-50/50 transition-colors cursor-pointer group"
-                  onClick={() => handleEdit(rem)}
-                >
-                  <td className="px-4 py-3">
-                    <span className={`px-2 py-1 rounded-md text-[10px] font-bold uppercase ${rem.status === 'reminded' ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'}`}>
-                      {rem.status === 'reminded' ? 'Đã nhắc' : 'Chờ nhắc'}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3">
-                    <div className="flex items-center gap-2">
-                      <div className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center text-primary text-[10px] font-bold uppercase">
-                        {(rem.sender?.full_name || '??')[0]}
-                      </div>
-                      <span className="text-xs font-semibold text-gray-700">{rem.sender?.full_name || 'Hệ thống'}</span>
-                    </div>
-                  </td>
-                  <td className="px-4 py-3 text-sm font-bold text-primary">
-                    {new Date(rem.reminder_time).toLocaleString('vi-VN', { 
-                      day: '2-digit', month: '2-digit', year: 'numeric',
-                      hour: '2-digit', minute: '2-digit'
-                    })}
-                  </td>
-                  <td className="px-4 py-3">
-                    {(() => {
-                      const payload = parseReminderContent(rem.content);
-                      const isGlobal = !payload.assignees || payload.assignees.length === 0;
-                      return (
-                        <div className="flex items-center gap-1.5">
-                          {isGlobal ? (
-                            <span className="inline-flex items-center gap-1 px-2 py-1 bg-blue-50 text-blue-600 rounded-md text-[10px] font-bold uppercase">
-                              <Users size={10} /> Toàn bộ
-                            </span>
-                          ) : (
-                            <span className="inline-flex items-center gap-1 px-2 py-1 bg-purple-50 text-purple-600 rounded-md text-[10px] font-bold uppercase">
-                              <User size={10} /> Cá nhân ({payload.assignees.length})
-                            </span>
-                          )}
-                          {payload.show_assignees && (
-                            <Share2 size={12} className="text-gray-400" title="Được phép xem danh sách người nhận" />
-                          )}
-                        </div>
-                      );
-                    })()}
-                  </td>
-                  <td className="px-4 py-3">
-                    <div className="flex flex-col">
-                      <span className="text-sm font-black text-gray-900 leading-tight">{rem.title}</span>
-                      <span className="text-xs text-gray-500 truncate max-w-[200px]">{parseReminderContent(rem.content).text}</span>
-                    </div>
-                  </td>
-                  <td className="px-4 py-3">
-                    <div className="flex items-center justify-center gap-2">
-                      <Button
-                        size="icon"
-                        variant="ghost"
-                        className="text-blue-600 hover:bg-blue-50"
-                        onClick={(e) => { e.stopPropagation(); handleEdit(rem); }}
-                        icon={Edit}
-                        iconSize={14}
-                      />
-                      <Button
-                        size="icon"
-                        variant="ghost"
-                        className="text-red-600 hover:bg-red-50"
-                        onClick={(e) => { e.stopPropagation(); confirmDelete(rem.id); }}
-                        icon={Trash2}
-                        iconSize={14}
-                      />
-                    </div>
+                <tr>
+                  <td colSpan={7} className="px-4 py-8 text-center text-gray-400 italic">
+                    Đang tải dữ liệu...
                   </td>
                 </tr>
-              ))}
+              ) : filteredReminders.length === 0 ? (
+                <tr>
+                  <td colSpan={7} className="px-4 py-8 text-center text-gray-400 italic">
+                    Không có lịch nhắc nào
+                  </td>
+                </tr>
+              ) : (
+                filteredReminders.map((rem) => (
+                  <tr
+                    key={rem.id}
+                    className="hover:bg-gray-50/50 transition-colors cursor-pointer group"
+                    onClick={() => handleEdit(rem)}
+                  >
+                    <td className="px-4 py-3">
+                      <span
+                        className={`px-2 py-1 rounded-md text-[10px] font-bold uppercase ${rem.status === 'reminded' ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'}`}
+                      >
+                        {rem.status === 'reminded' ? 'Đã nhắc' : 'Chờ nhắc'}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="flex items-center gap-2">
+                        <div className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center text-primary text-[10px] font-bold uppercase">
+                          {(rem.sender?.full_name || '??')[0]}
+                        </div>
+                        <span className="text-xs font-semibold text-gray-700">
+                          {rem.sender?.full_name || 'Hệ thống'}
+                        </span>
+                      </div>
+                    </td>
+                    <td className="px-4 py-3 text-sm font-bold text-primary">
+                      {new Date(rem.reminder_time).toLocaleString('vi-VN', {
+                        day: '2-digit',
+                        month: '2-digit',
+                        year: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit',
+                      })}
+                    </td>
+                    <td className="px-4 py-3">
+                      {(() => {
+                        const payload = parseReminderContent(rem.content);
+                        const isGlobal = !payload.assignees || payload.assignees.length === 0;
+                        return (
+                          <div className="flex items-center gap-1.5">
+                            {isGlobal ? (
+                              <span className="inline-flex items-center gap-1 px-2 py-1 bg-blue-50 text-blue-600 rounded-md text-[10px] font-bold uppercase">
+                                <Users size={10} /> Toàn bộ
+                              </span>
+                            ) : (
+                              <span className="inline-flex items-center gap-1 px-2 py-1 bg-purple-50 text-purple-600 rounded-md text-[10px] font-bold uppercase">
+                                <User size={10} /> Cá nhân ({payload.assignees.length})
+                              </span>
+                            )}
+                            {payload.show_assignees && (
+                              <Share2
+                                size={12}
+                                className="text-gray-400"
+                                title="Được phép xem danh sách người nhận"
+                              />
+                            )}
+                          </div>
+                        );
+                      })()}
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="flex flex-col">
+                        <span className="text-sm font-black text-gray-900 leading-tight">
+                          {rem.title}
+                        </span>
+                        <span className="text-xs text-gray-500 truncate max-w-[200px]">
+                          {parseReminderContent(rem.content).text}
+                        </span>
+                      </div>
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="flex items-center justify-center gap-2">
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          className="text-blue-600 hover:bg-blue-50"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleEdit(rem);
+                          }}
+                          icon={Edit}
+                          iconSize={14}
+                        />
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          className="text-red-600 hover:bg-red-50"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            confirmDelete(rem.id);
+                          }}
+                          icon={Trash2}
+                          iconSize={14}
+                        />
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </div>
@@ -383,29 +472,31 @@ export const Reminders = ({ user, onBack, addToast, initialAction, setHideBottom
 
       <AnimatePresence>
         {showSetReminder && (
-          <div 
+          <div
             className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-md overflow-hidden"
             onClick={() => setShowSetReminder(false)}
           >
-            <motion.div 
-              initial={{ opacity: 0, scale: 0.95, y: 20 }} 
-              animate={{ opacity: 1, scale: 1, y: 0 }} 
-              exit={{ opacity: 0, scale: 0.95, y: 20 }} 
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
               className="bg-white rounded-[2rem] md:rounded-[2.5rem] shadow-2xl w-[calc(100%-32px)] md:w-full max-w-lg overflow-hidden relative z-10 m-4 flex flex-col max-h-[calc(100vh-40px)]"
               onClick={(e) => e.stopPropagation()}
             >
               <div className="p-6 text-white flex items-center justify-between bg-primary rounded-t-[2rem] md:rounded-t-[2.5rem] flex-shrink-0">
                 <div className="flex items-center gap-3">
-                  <div 
+                  <div
                     className="p-2 bg-white/20 rounded-xl cursor-pointer hover:bg-white/30 transition-all active:scale-95"
                     onClick={() => setShowSetReminder(false)}
                   >
                     <Bell size={20} />
                   </div>
-                  <h3 className="text-lg font-bold uppercase tracking-wide">{editingId ? 'Sửa lịch nhắc' : 'Đặt lịch nhắc'}</h3>
+                  <h3 className="text-lg font-bold uppercase tracking-wide">
+                    {editingId ? 'Sửa lịch nhắc' : 'Đặt lịch nhắc'}
+                  </h3>
                 </div>
-                <button 
-                  onClick={() => setShowSetReminder(false)} 
+                <button
+                  onClick={() => setShowSetReminder(false)}
                   className="p-2 hover:bg-white/20 rounded-xl transition-all"
                 >
                   <X size={20} />
@@ -413,51 +504,68 @@ export const Reminders = ({ user, onBack, addToast, initialAction, setHideBottom
               </div>
               <div className="p-6 space-y-4 overflow-y-auto overflow-x-hidden flex-1 custom-scrollbar">
                 <div>
-                  <label className="text-[10px] font-bold text-gray-400 uppercase">Tiêu đề <span className="text-red-500">*</span></label>
+                  <label className="text-[10px] font-bold text-gray-400 uppercase">
+                    Tiêu đề <span className="text-red-500">*</span>
+                  </label>
                   <input
                     type="text"
                     placeholder="VD: Họp giao ban sáng..."
                     value={formData.title}
-                    onChange={e => setFormData({ ...formData, title: e.target.value })}
+                    onChange={(e) => setFormData({ ...formData, title: e.target.value })}
                     className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm focus:ring-2 focus:ring-primary/20 outline-none mt-1"
                   />
                 </div>
                 <div>
-                  <label className="text-[10px] font-bold text-gray-400 uppercase">Nội dung chi tiết</label>
+                  <label className="text-[10px] font-bold text-gray-400 uppercase">
+                    Nội dung chi tiết
+                  </label>
                   <textarea
                     placeholder="Mô tả thêm..."
                     value={formData.content}
-                    onChange={e => setFormData({ ...formData, content: e.target.value })}
+                    onChange={(e) => setFormData({ ...formData, content: e.target.value })}
                     className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm focus:ring-2 focus:ring-primary/20 outline-none mt-1 min-h-[100px]"
                   />
                 </div>
                 <div>
-                  <label className="text-[10px] font-bold text-gray-400 uppercase">Gửi đến (Nhân sự) <span className="text-gray-400 font-normal italic">- Không chọn ai = Gửi tất cả</span></label>
+                  <label className="text-[10px] font-bold text-gray-400 uppercase">
+                    Gửi đến (Nhân sự){' '}
+                    <span className="text-gray-400 font-normal italic">
+                      - Không chọn ai = Gửi tất cả
+                    </span>
+                  </label>
                   <div className="mt-1 border border-gray-200 rounded-xl max-h-40 overflow-y-auto bg-white/50">
-                    {employees.map(emp => (
-                      <label key={emp.id} className="flex items-center gap-3 px-4 py-2.5 hover:bg-gray-50 border-b border-gray-100 last:border-0 cursor-pointer transition-colors">
+                    {employees.map((emp) => (
+                      <label
+                        key={emp.id}
+                        className="flex items-center gap-3 px-4 py-2.5 hover:bg-gray-50 border-b border-gray-100 last:border-0 cursor-pointer transition-colors"
+                      >
                         <input
                           type="checkbox"
                           checked={formData.assignees.includes(emp.id)}
-                          onChange={e => {
-                            const newAssignees = e.target.checked 
+                          onChange={(e) => {
+                            const newAssignees = e.target.checked
                               ? [...formData.assignees, emp.id]
-                              : formData.assignees.filter(id => id !== emp.id);
+                              : formData.assignees.filter((id) => id !== emp.id);
                             setFormData({ ...formData, assignees: newAssignees });
                           }}
                           className="w-4 h-4 rounded border-gray-300 text-primary focus:ring-primary flex-shrink-0"
                         />
-                        <span className="text-sm text-gray-700 font-medium truncate">{emp.full_name} <span className="text-gray-400 text-xs font-normal">({emp.code})</span></span>
+                        <span className="text-sm text-gray-700 font-medium truncate">
+                          {emp.full_name}{' '}
+                          <span className="text-gray-400 text-xs font-normal">({emp.code})</span>
+                        </span>
                       </label>
                     ))}
                   </div>
                 </div>
                 <div>
-                  <label className="text-[10px] font-bold text-gray-400 uppercase">Thời gian nhắc <span className="text-red-500">*</span></label>
+                  <label className="text-[10px] font-bold text-gray-400 uppercase">
+                    Thời gian nhắc <span className="text-red-500">*</span>
+                  </label>
                   <input
                     type="datetime-local"
                     value={formData.reminder_time}
-                    onChange={e => setFormData({ ...formData, reminder_time: e.target.value })}
+                    onChange={(e) => setFormData({ ...formData, reminder_time: e.target.value })}
                     className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm focus:ring-2 focus:ring-primary/20 outline-none mt-1"
                   />
                 </div>
@@ -466,39 +574,45 @@ export const Reminders = ({ user, onBack, addToast, initialAction, setHideBottom
                     type="checkbox"
                     id="notify"
                     checked={formData.browser_notification}
-                    onChange={e => setFormData({ ...formData, browser_notification: e.target.checked })}
+                    onChange={(e) =>
+                      setFormData({ ...formData, browser_notification: e.target.checked })
+                    }
                     className="w-5 h-5 rounded border-gray-300 text-primary focus:ring-primary"
                   />
-                  <label htmlFor="notify" className="text-sm text-gray-700 font-medium cursor-pointer">Nhắc qua thông báo trình duyệt</label>
+                  <label
+                    htmlFor="notify"
+                    className="text-sm text-gray-700 font-medium cursor-pointer"
+                  >
+                    Nhắc qua thông báo trình duyệt
+                  </label>
                 </div>
-                
+
                 <div className="flex items-center gap-3 p-3 bg-blue-50 rounded-xl border border-blue-100">
                   <input
                     type="checkbox"
                     id="show_assignees"
                     checked={formData.show_assignees}
-                    onChange={e => setFormData({ ...formData, show_assignees: e.target.checked })}
+                    onChange={(e) => setFormData({ ...formData, show_assignees: e.target.checked })}
                     className="w-5 h-5 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
                   />
                   <div className="flex flex-col">
-                    <label htmlFor="show_assignees" className="text-sm text-gray-700 font-bold cursor-pointer transition-colors">Hiển thị danh sách người cùng nhận</label>
-                    <p className="text-[10px] text-gray-500">Mọi người sẽ biết ai khác cũng nhận được báo cáo này</p>
+                    <label
+                      htmlFor="show_assignees"
+                      className="text-sm text-gray-700 font-bold cursor-pointer transition-colors"
+                    >
+                      Hiển thị danh sách người cùng nhận
+                    </label>
+                    <p className="text-[10px] text-gray-500">
+                      Mọi người sẽ biết ai khác cũng nhận được báo cáo này
+                    </p>
                   </div>
                 </div>
               </div>
               <div className="p-6 bg-gray-50 flex gap-3 flex-shrink-0">
-                <Button
-                  fullWidth
-                  variant="success"
-                  onClick={handleSave}
-                  icon={Bell}
-                >
+                <Button fullWidth variant="success" onClick={handleSave} icon={Bell}>
                   {editingId ? 'Cập nhật' : 'Đặt nhắc'}
                 </Button>
-                <Button 
-                  variant="outline"
-                  onClick={() => setShowSetReminder(false)}
-                >
+                <Button variant="outline" onClick={() => setShowSetReminder(false)}>
                   Hủy
                 </Button>
               </div>
@@ -509,20 +623,20 @@ export const Reminders = ({ user, onBack, addToast, initialAction, setHideBottom
 
       <AnimatePresence>
         {showAddNew && (
-          <div 
+          <div
             className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-md overflow-hidden"
             onClick={() => setShowAddNew(false)}
           >
-            <motion.div 
-              initial={{ opacity: 0, scale: 0.95, y: 20 }} 
-              animate={{ opacity: 1, scale: 1, y: 0 }} 
-              exit={{ opacity: 0, scale: 0.95, y: 20 }} 
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
               className="bg-white rounded-[2rem] md:rounded-[2.5rem] shadow-2xl w-full max-w-4xl overflow-hidden relative z-10 m-4 flex flex-col"
               onClick={(e) => e.stopPropagation()}
             >
               <div className="p-6 text-white flex items-center justify-between bg-primary rounded-t-[2rem] md:rounded-t-[2.5rem] flex-shrink-0">
                 <div className="flex items-center gap-3">
-                  <div 
+                  <div
                     className="p-2 bg-white/20 rounded-xl cursor-pointer hover:bg-white/30 transition-all active:scale-95"
                     onClick={() => setShowAddNew(false)}
                   >
@@ -530,8 +644,8 @@ export const Reminders = ({ user, onBack, addToast, initialAction, setHideBottom
                   </div>
                   <h3 className="text-lg font-bold tracking-wide">Thêm Mới</h3>
                 </div>
-                <button 
-                  onClick={() => setShowAddNew(false)} 
+                <button
+                  onClick={() => setShowAddNew(false)}
                   className="p-2 hover:bg-white/20 rounded-xl transition-all"
                 >
                   <X size={24} />
@@ -540,54 +654,76 @@ export const Reminders = ({ user, onBack, addToast, initialAction, setHideBottom
               <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-6 max-h-[70vh] overflow-y-auto">
                 <div className="space-y-4">
                   <div>
-                    <label className="text-[10px] font-bold text-gray-400 uppercase">Đã nhắc (Trạng thái)</label>
-                    <input 
-                      type="text" 
-                      value="pending" 
-                      disabled 
-                      className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm bg-gray-50 mt-1" 
+                    <label className="text-[10px] font-bold text-gray-400 uppercase">
+                      Đã nhắc (Trạng thái)
+                    </label>
+                    <input
+                      type="text"
+                      value="pending"
+                      disabled
+                      className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm bg-gray-50 mt-1"
                     />
                   </div>
                   <div>
-                    <label className="text-[10px] font-bold text-gray-400 uppercase">Thời gian nhắc</label>
-                    <input 
-                      type="datetime-local" 
+                    <label className="text-[10px] font-bold text-gray-400 uppercase">
+                      Thời gian nhắc
+                    </label>
+                    <input
+                      type="datetime-local"
                       value={formData.reminder_time}
-                      onChange={e => setFormData({ ...formData, reminder_time: e.target.value })}
-                      className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm focus:ring-2 focus:ring-primary/20 outline-none mt-1" 
+                      onChange={(e) => setFormData({ ...formData, reminder_time: e.target.value })}
+                      className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm focus:ring-2 focus:ring-primary/20 outline-none mt-1"
                     />
                   </div>
                   <div>
-                    <label className="text-[10px] font-bold text-gray-400 uppercase">Nội dung</label>
-                    <textarea 
+                    <label className="text-[10px] font-bold text-gray-400 uppercase">
+                      Nội dung
+                    </label>
+                    <textarea
                       value={formData.content}
-                      onChange={e => setFormData({ ...formData, content: e.target.value })}
-                      className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm focus:ring-2 focus:ring-primary/20 outline-none mt-1 min-h-[80px]" 
+                      onChange={(e) => setFormData({ ...formData, content: e.target.value })}
+                      className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm focus:ring-2 focus:ring-primary/20 outline-none mt-1 min-h-[80px]"
                     />
                   </div>
                 </div>
                 <div className="space-y-4">
                   <div>
                     <label className="text-[10px] font-bold text-gray-400 uppercase">Tiêu đề</label>
-                    <input type="text" value={formData.title} onChange={e => setFormData({ ...formData, title: e.target.value })} className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm focus:ring-2 focus:ring-primary/20 outline-none mt-1" />
+                    <input
+                      type="text"
+                      value={formData.title}
+                      onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                      className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm focus:ring-2 focus:ring-primary/20 outline-none mt-1"
+                    />
                   </div>
                   <div>
-                    <label className="text-[10px] font-bold text-gray-400 uppercase">Gửi đến (Nhân sự) <span className="text-gray-400 font-normal italic">- Không chọn ai = Gửi tất cả</span></label>
+                    <label className="text-[10px] font-bold text-gray-400 uppercase">
+                      Gửi đến (Nhân sự){' '}
+                      <span className="text-gray-400 font-normal italic">
+                        - Không chọn ai = Gửi tất cả
+                      </span>
+                    </label>
                     <div className="mt-1 border border-gray-200 rounded-xl max-h-48 overflow-y-auto bg-white/50">
-                      {employees.map(emp => (
-                        <label key={emp.id} className="flex items-center gap-3 px-4 py-2 hover:bg-gray-50 border-b border-gray-100 last:border-0 cursor-pointer transition-colors">
+                      {employees.map((emp) => (
+                        <label
+                          key={emp.id}
+                          className="flex items-center gap-3 px-4 py-2 hover:bg-gray-50 border-b border-gray-100 last:border-0 cursor-pointer transition-colors"
+                        >
                           <input
                             type="checkbox"
                             checked={formData.assignees.includes(emp.id)}
-                            onChange={e => {
-                              const newAssignees = e.target.checked 
+                            onChange={(e) => {
+                              const newAssignees = e.target.checked
                                 ? [...formData.assignees, emp.id]
-                                : formData.assignees.filter(id => id !== emp.id);
+                                : formData.assignees.filter((id) => id !== emp.id);
                               setFormData({ ...formData, assignees: newAssignees });
                             }}
                             className="w-4 h-4 rounded border-gray-300 text-primary focus:ring-primary flex-shrink-0"
                           />
-                          <span className="text-sm text-gray-700 font-medium truncate">{emp.full_name} <span className="text-gray-400 text-xs font-normal">({emp.code})</span></span>
+                          <span className="text-sm text-gray-700 font-medium truncate">
+                            {emp.full_name}{' '}
+                            <span className="text-gray-400 text-xs font-normal">({emp.code})</span>
+                          </span>
                         </label>
                       ))}
                     </div>
@@ -595,16 +731,10 @@ export const Reminders = ({ user, onBack, addToast, initialAction, setHideBottom
                 </div>
               </div>
               <div className="p-6 bg-gray-50 flex justify-end gap-3 flex-shrink-0">
-                <Button 
-                  variant="ghost"
-                  onClick={() => setShowAddNew(false)}
-                >
+                <Button variant="ghost" onClick={() => setShowAddNew(false)}>
                   Hủy bỏ
                 </Button>
-                <Button 
-                  variant="success"
-                  onClick={handleSave}
-                >
+                <Button variant="success" onClick={handleSave}>
                   Lưu dữ liệu
                 </Button>
               </div>
@@ -616,27 +746,32 @@ export const Reminders = ({ user, onBack, addToast, initialAction, setHideBottom
       <AnimatePresence>
         {deletingId && (
           <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setDeletingId(null)} className="absolute inset-0 bg-black/40 backdrop-blur-sm" />
-            <motion.div initial={{ opacity: 0, scale: 0.95, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95, y: 20 }} className="bg-white rounded-3xl shadow-2xl overflow-hidden relative z-10 w-full max-w-sm">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setDeletingId(null)}
+              className="absolute inset-0 bg-black/40 backdrop-blur-sm"
+            />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              className="bg-white rounded-3xl shadow-2xl overflow-hidden relative z-10 w-full max-w-sm"
+            >
               <div className="p-6 text-center space-y-4">
                 <div className="w-16 h-16 bg-red-100 text-red-500 rounded-full flex items-center justify-center mx-auto mb-4">
                   <Trash2 size={32} />
                 </div>
                 <h3 className="text-xl font-bold text-gray-900">Chuyển vào thùng rác?</h3>
-                <p className="text-gray-500 text-sm">Bạn có chắc chắn muốn chuyển lịch nhắc này vào thùng rác?</p>
+                <p className="text-gray-500 text-sm">
+                  Bạn có chắc chắn muốn chuyển lịch nhắc này vào thùng rác?
+                </p>
                 <div className="flex gap-3 pt-4">
-                  <Button 
-                    fullWidth
-                    variant="outline"
-                    onClick={() => setDeletingId(null)}
-                  >
+                  <Button fullWidth variant="outline" onClick={() => setDeletingId(null)}>
                     Hủy
                   </Button>
-                  <Button 
-                    fullWidth
-                    variant="danger"
-                    onClick={executeDelete}
-                  >
+                  <Button fullWidth variant="danger" onClick={executeDelete}>
                     Di chuyển
                   </Button>
                 </div>
@@ -654,10 +789,17 @@ export const Reminders = ({ user, onBack, addToast, initialAction, setHideBottom
         onCancel={() => setShowDeleteAllConfirm(false)}
       />
 
-      <FAB 
+      <FAB
         onClick={() => {
           setEditingId(null);
-          setFormData({ title: '', content: '', reminder_time: getDefaultTime(), browser_notification: true, assignees: [], show_assignees: false });
+          setFormData({
+            title: '',
+            content: '',
+            reminder_time: getDefaultTime(),
+            browser_notification: true,
+            assignees: [],
+            show_assignees: false,
+          });
           setShowSetReminder(true);
         }}
         label="Đặt lịch nhắc mới"

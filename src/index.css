@@ -1,11 +1,11 @@
-@import "tailwindcss";
+@import 'tailwindcss';
 
 @theme {
-  --color-primary: #2D5A27;
-  --color-primary-hover: #1E3D1A;
-  --color-primary-dark: #1A3D15;
-  --color-primary-light: #E8F1E5;
-  --font-sans: "Inter", sans-serif;
+  --color-primary: #2d5a27;
+  --color-primary-hover: #1e3d1a;
+  --color-primary-dark: #1a3d15;
+  --color-primary-light: #e8f1e5;
+  --font-sans: 'Inter', sans-serif;
 }
 
 :root {
@@ -23,16 +23,21 @@
   background: transparent;
 }
 .custom-scrollbar::-webkit-scrollbar-thumb {
-  background: #E5E7EB;
+  background: #e5e7eb;
   border-radius: 10px;
 }
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-  background: #D1D5DB;
+  background: #d1d5db;
 }
 
 @keyframes slow-fade {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.1; }
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.1;
+  }
 }
 
 .animate-slow-fade {

@@ -1,5 +1,18 @@
 import { useState, useEffect, FormEvent } from 'react';
-import { Plus, Search, ChevronRight, X, ArrowUpCircle, ArrowDownCircle, Edit, Navigation, Trash2, PackagePlus, ChevronDown, Check } from 'lucide-react';
+import {
+  Plus,
+  Search,
+  ChevronRight,
+  X,
+  ArrowUpCircle,
+  ArrowDownCircle,
+  Edit,
+  Navigation,
+  Trash2,
+  PackagePlus,
+  ChevronDown,
+  Check,
+} from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { supabase } from '@/lib/supabase';
 import { Employee } from '@/types';
@@ -16,12 +29,18 @@ import { isUUID, generateCode, getAllowedWarehouses } from '@/utils/helpers';
 import { Button } from '../shared/Button';
 import { getAvailableStock, validateFutureImpact } from '@/utils/inventory';
 
-export const StockOut = ({ user, onBack, addToast, initialAction, setHideBottomNav }: { 
-  user: Employee, 
-  onBack?: () => void,
-  addToast?: (message: string, type?: ToastType) => void,
-  initialAction?: string,
-  setHideBottomNav?: (hide: boolean) => void 
+export const StockOut = ({
+  user,
+  onBack,
+  addToast,
+  initialAction,
+  setHideBottomNav,
+}: {
+  user: Employee;
+  onBack?: () => void;
+  addToast?: (message: string, type?: ToastType) => void;
+  initialAction?: string;
+  setHideBottomNav?: (hide: boolean) => void;
 }) => {
   const [slips, setSlips] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -47,7 +66,9 @@ export const StockOut = ({ user, onBack, addToast, initialAction, setHideBottomN
   const [filterWarehouseId, setFilterWarehouseId] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
 
-  const { warehouses, materials, groups, refreshAll, fetchWarehouses } = useInventoryData(user.data_view_permission);
+  const { warehouses, materials, groups, refreshAll, fetchWarehouses } = useInventoryData(
+    user.data_view_permission,
+  );
 
   const initialFormState = {
     date: new Date().toISOString().split('T')[0],
@@ -57,7 +78,7 @@ export const StockOut = ({ user, onBack, addToast, initialAction, setHideBottomN
     unit_price: 0,
     notes: '',
     status: 'Chờ duyệt',
-    export_code: generateCode('XK')
+    export_code: generateCode('XK'),
   };
 
   const [stockLoading, setStockLoading] = useState(false);
@@ -76,8 +97,12 @@ export const StockOut = ({ user, onBack, addToast, initialAction, setHideBottomN
   }, [formData.warehouse_id, formData.material_id, formData.date, editingId]);
 
   const checkStock = async () => {
-    const wh = warehouses.find(w => w.name === formData.warehouse_id || w.id === formData.warehouse_id);
-    const mat = materials.find(m => m.name === formData.material_id || m.id === formData.material_id);
+    const wh = warehouses.find(
+      (w) => w.name === formData.warehouse_id || w.id === formData.warehouse_id,
+    );
+    const mat = materials.find(
+      (m) => m.name === formData.material_id || m.id === formData.material_id,
+    );
 
     if (!wh?.id || !mat?.id || !formData.date) return;
 
@@ -97,8 +122,10 @@ export const StockOut = ({ user, onBack, addToast, initialAction, setHideBottomN
   const fetchSlips = async () => {
     setLoading(true);
     try {
-      let query = supabase.from('stock_out').select('*, warehouses(name, code), materials(name, code, unit)');
-      
+      let query = supabase
+        .from('stock_out')
+        .select('*, warehouses(name, code), materials(name, code, unit)');
+
       if (statusFilter === 'Tất cả') {
         query = query.neq('status', 'Đã xóa');
       } else {
@@ -113,7 +140,10 @@ export const StockOut = ({ user, onBack, addToast, initialAction, setHideBottomN
       const { data, error } = await query.order('created_at', { ascending: false });
       if (error) {
         console.error('Error fetching stock_out:', error);
-        const { data: fallbackData, error: fallbackError } = await supabase.from('stock_out').select('*').order('created_at', { ascending: false });
+        const { data: fallbackData, error: fallbackError } = await supabase
+          .from('stock_out')
+          .select('*')
+          .order('created_at', { ascending: false });
         if (fallbackError) throw fallbackError;
         setSlips(fallbackData || []);
       } else {
@@ -127,20 +157,19 @@ export const StockOut = ({ user, onBack, addToast, initialAction, setHideBottomN
     }
   };
 
-
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
 
     if (!formData.warehouse_id) {
-      if (addToast) addToast("Vui lòng chọn Kho xuất.", "error");
+      if (addToast) addToast('Vui lòng chọn Kho xuất.', 'error');
       return;
     }
     if (!formData.material_id) {
-      if (addToast) addToast("Vui lòng chọn Vật tư xuất.", "error");
+      if (addToast) addToast('Vui lòng chọn Vật tư xuất.', 'error');
       return;
     }
     if (!formData.quantity || formData.quantity <= 0) {
-      if (addToast) addToast("Vui lòng nhập số lượng xuất hợp lệ.", "error");
+      if (addToast) addToast('Vui lòng nhập số lượng xuất hợp lệ.', 'error');
       return;
     }
 
@@ -148,13 +177,18 @@ export const StockOut = ({ user, onBack, addToast, initialAction, setHideBottomN
     try {
       let finalWarehouseId = formData.warehouse_id;
       if (formData.warehouse_id && !isUUID(formData.warehouse_id)) {
-        const whByName = warehouses.find(w => w.name.toLowerCase() === formData.warehouse_id.toLowerCase());
+        const whByName = warehouses.find(
+          (w) => w.name.toLowerCase() === formData.warehouse_id.toLowerCase(),
+        );
         if (whByName) {
           finalWarehouseId = whByName.id;
         } else {
           const random = Math.floor(100 + Math.random() * 900);
           const code = `K${(warehouses.length + 1).toString().padStart(2, '0')}-${random}`;
-          const { data: newWh, error: whErr } = await supabase.from('warehouses').insert([{ name: formData.warehouse_id, code }]).select();
+          const { data: newWh, error: whErr } = await supabase
+            .from('warehouses')
+            .insert([{ name: formData.warehouse_id, code }])
+            .select();
           if (whErr) throw whErr;
           if (newWh) {
             finalWarehouseId = newWh[0].id;
@@ -165,7 +199,9 @@ export const StockOut = ({ user, onBack, addToast, initialAction, setHideBottomN
 
       let finalMaterialId = formData.material_id;
       if (formData.material_id && !isUUID(formData.material_id)) {
-        const matByName = materials.find(m => m.name.toLowerCase() === formData.material_id.toLowerCase());
+        const matByName = materials.find(
+          (m) => m.name.toLowerCase() === formData.material_id.toLowerCase(),
+        );
         if (matByName) {
           finalMaterialId = matByName.id;
         } else {
@@ -178,13 +214,15 @@ export const StockOut = ({ user, onBack, addToast, initialAction, setHideBottomN
         finalMaterialId,
         finalWarehouseId,
         formData.date,
-        isEditing && selectedSlip ? selectedSlip.id : undefined
+        isEditing && selectedSlip ? selectedSlip.id : undefined,
       );
 
       if (stockAtDate === 0) {
         throw new Error(`Kho hiện không còn mặt hàng này vào ngày ${formatDate(formData.date)}`);
       } else if (Number(formData.quantity) > stockAtDate) {
-        throw new Error(`Số lượng xuất (${formData.quantity}) vượt quá tồn kho hiện có (${stockAtDate}) vào ngày ${formData.date}`);
+        throw new Error(
+          `Số lượng xuất (${formData.quantity}) vượt quá tồn kho hiện có (${stockAtDate}) vào ngày ${formData.date}`,
+        );
       }
 
       // 2. Kiểm tra ÂM KHO TƯƠNG LAI (quan trọng cho phiếu Đã duyệt)
@@ -194,19 +232,33 @@ export const StockOut = ({ user, onBack, addToast, initialAction, setHideBottomN
         const dateChanged = formData.date !== selectedSlip.date;
 
         if (matChanged || whChanged || dateChanged) {
-          // Khi đổi vị trí/vật tư, ta "trả lại" tồn cũ (luôn an toàn) 
+          // Khi đổi vị trí/vật tư, ta "trả lại" tồn cũ (luôn an toàn)
           // và "trừ" tồn mới. Ta cần check xem việc trừ tồn mới có gây âm kho tương lai không.
-          const impactNew = await validateFutureImpact(finalMaterialId, finalWarehouseId, formData.date, -formData.quantity);
+          const impactNew = await validateFutureImpact(
+            finalMaterialId,
+            finalWarehouseId,
+            formData.date,
+            -formData.quantity,
+          );
           if (!impactNew.valid) {
-            throw new Error(`Không thể chuyển sang mặt hàng/kho này vì sẽ gây âm kho vào ngày ${impactNew.failedDate}`);
+            throw new Error(
+              `Không thể chuyển sang mặt hàng/kho này vì sẽ gây âm kho vào ngày ${impactNew.failedDate}`,
+            );
           }
         } else {
           // Cùng vị trí, check chênh lệch
           const diff = selectedSlip.quantity - formData.quantity; // positive if we decrease output (safety), negative if we increase output
           if (diff < 0) {
-            const impact = await validateFutureImpact(finalMaterialId, finalWarehouseId, formData.date, diff);
+            const impact = await validateFutureImpact(
+              finalMaterialId,
+              finalWarehouseId,
+              formData.date,
+              diff,
+            );
             if (!impact.valid) {
-              throw new Error(`Không thể tăng số lượng xuất vì sẽ gây âm kho vào ngày ${impact.failedDate}`);
+              throw new Error(
+                `Không thể tăng số lượng xuất vì sẽ gây âm kho vào ngày ${impact.failedDate}`,
+              );
             }
           }
         }
@@ -220,24 +272,27 @@ export const StockOut = ({ user, onBack, addToast, initialAction, setHideBottomN
         status: isEditing && selectedSlip?.status === 'Đã duyệt' ? 'Đã duyệt' : 'Chờ duyệt',
         total_amount: formData.quantity * formData.unit_price,
         export_code: formData.export_code || generateCode('XK'),
-        notes: isEditing 
-          ? `[SỬA lúc ${new Date().toLocaleString('vi-VN')}] ${formData.notes.replace(/^\[SỬA lúc .*?\]\s*/, '')}` 
-          : formData.notes
+        notes: isEditing
+          ? `[SỬA lúc ${new Date().toLocaleString('vi-VN')}] ${formData.notes.replace(/^\[SỬA lúc .*?\]\s*/, '')}`
+          : formData.notes,
       };
 
       if (isEditing && selectedSlip) {
-        const { error } = await supabase.from('stock_out').update(payload).eq('id', selectedSlip.id);
+        const { error } = await supabase
+          .from('stock_out')
+          .update(payload)
+          .eq('id', selectedSlip.id);
         if (error) throw error;
-        
-        await supabase.from('costs')
+
+        await supabase
+          .from('costs')
           .update({
             quantity: payload.quantity,
             unit_price: payload.unit_price,
             total_amount: payload.total_amount,
-            notes: `Cập nhật từ phiếu ${payload.export_code} (Sửa ngày ${new Date().toLocaleDateString()})`
+            notes: `Cập nhật từ phiếu ${payload.export_code} (Sửa ngày ${new Date().toLocaleDateString()})`,
           })
-          .ilike('content', `%${payload.export_code || payload.id.slice(0,8)}%`);
-
+          .ilike('content', `%${payload.export_code || payload.id.slice(0, 8)}%`);
       } else {
         const { error } = await supabase.from('stock_out').insert([payload]);
         if (error) throw error;
@@ -249,7 +304,11 @@ export const StockOut = ({ user, onBack, addToast, initialAction, setHideBottomN
       setIsEditing(false);
       setEditingId(null);
       setSelectedSlip(null);
-      if (addToast) addToast(isEditing ? 'Cập nhật phiếu xuất thành công!' : 'Lập phiếu xuất kho thành công!', 'success');
+      if (addToast)
+        addToast(
+          isEditing ? 'Cập nhật phiếu xuất thành công!' : 'Lập phiếu xuất kho thành công!',
+          'success',
+        );
     } catch (err: any) {
       if (addToast) addToast('Lỗi: ' + err.message, 'error');
     } finally {
@@ -274,15 +333,19 @@ export const StockOut = ({ user, onBack, addToast, initialAction, setHideBottomN
             slipToCheck.material_id,
             slipToCheck.warehouse_id,
             slipToCheck.date,
-            id  // excludeId — bỏ phiếu hiện tại ra khỏi tính toán
+            id, // excludeId — bỏ phiếu hiện tại ra khỏi tính toán
           );
           if (Number(slipToCheck.quantity) > stockAtDate) {
             const thieu = Number(slipToCheck.quantity) - stockAtDate;
-            if (addToast) addToast(`❌ Từ chối duyệt phiếu xuất kho
+            if (addToast)
+              addToast(
+                `❌ Từ chối duyệt phiếu xuất kho
 - Tồn kho hiện tại: ${stockAtDate}
 - Số lượng yêu cầu: ${slipToCheck.quantity}
 - Thiếu hụt: ${thieu}
-→ Vui lòng kiểm tra lại số lượng hoặc bổ sung phiếu nhập trước khi duyệt.`, 'error');
+→ Vui lòng kiểm tra lại số lượng hoặc bổ sung phiếu nhập trước khi duyệt.`,
+                'error',
+              );
             return;
           }
         }
@@ -290,15 +353,19 @@ export const StockOut = ({ user, onBack, addToast, initialAction, setHideBottomN
 
       const { error } = await supabase.from('stock_out').update({ status }).eq('id', id);
       if (error) throw error;
-      
+
       if (status === 'Đã duyệt') {
-        const { data: slip } = await supabase.from('stock_out').select('*, users(id)').eq('id', id).maybeSingle();
+        const { data: slip } = await supabase
+          .from('stock_out')
+          .select('*, users(id)')
+          .eq('id', id)
+          .maybeSingle();
         if (slip && (slip as any).total_amount > 0) {
           // Check if cost already exists to prevent duplicates
           const { data: existingCost } = await supabase
             .from('costs')
             .select('id')
-            .ilike('content', `%${slip.export_code || slip.id.slice(0,8)}%`)
+            .ilike('content', `%${slip.export_code || slip.id.slice(0, 8)}%`)
             .maybeSingle();
 
           if (!existingCost) {
@@ -310,21 +377,23 @@ export const StockOut = ({ user, onBack, addToast, initialAction, setHideBottomN
             const userPrefix = (slip as any).users?.id?.slice(0, 4) || 'SYS';
             const costCode = `CP-${userPrefix.toUpperCase()}-${d}${m}${y}-${random}`;
 
-            await supabase.from('costs').insert([{
-              transaction_type: 'Thu',
-              cost_code: costCode,
-              date: slip.date,
-              employee_id: user.id,
-              cost_type: 'Doanh thu',
-              content: `Xuất kho từ phiếu ${slip.export_code || slip.id.slice(0,8)}`,
-              material_id: slip.material_id,
-              warehouse_id: slip.warehouse_id,
-              quantity: slip.quantity,
-              unit: (slip as any).unit,
-              unit_price: (slip as any).unit_price,
-              total_amount: (slip as any).total_amount,
-              notes: 'Tự động tạo từ hệ thống Xuất Kho'
-            }]);
+            await supabase.from('costs').insert([
+              {
+                transaction_type: 'Thu',
+                cost_code: costCode,
+                date: slip.date,
+                employee_id: user.id,
+                cost_type: 'Doanh thu',
+                content: `Xuất kho từ phiếu ${slip.export_code || slip.id.slice(0, 8)}`,
+                material_id: slip.material_id,
+                warehouse_id: slip.warehouse_id,
+                quantity: slip.quantity,
+                unit: (slip as any).unit,
+                unit_price: (slip as any).unit_price,
+                total_amount: (slip as any).total_amount,
+                notes: 'Tự động tạo từ hệ thống Xuất Kho',
+              },
+            ]);
           }
         }
       }
@@ -345,21 +414,25 @@ export const StockOut = ({ user, onBack, addToast, initialAction, setHideBottomN
 
   const confirmDelete = async () => {
     try {
-      const { error } = await supabase.from('stock_out').update({ status: 'Đã xóa' }).eq('id', selectedSlip.id);
+      const { error } = await supabase
+        .from('stock_out')
+        .update({ status: 'Đã xóa' })
+        .eq('id', selectedSlip.id);
       if (error) throw error;
 
       // Also void associated cost
-      await supabase.from('costs')
+      await supabase
+        .from('costs')
         .update({ status: 'Đã xóa' })
-        .ilike('content', `%${selectedSlip.export_code || selectedSlip.id.slice(0,8)}%`);
-      
+        .ilike('content', `%${selectedSlip.export_code || selectedSlip.id.slice(0, 8)}%`);
+
       if (addToast) addToast('Đã chuyển phiếu vào thùng rác', 'success');
       setShowDetailModal(false);
       setShowDeleteConfirm(false);
       fetchSlips();
     } catch (err: any) {
-      const msg = err.message.includes('foreign key constraint') 
-        ? 'Không thể xóa phiếu này vì đang có dữ liệu liên quan khác.' 
+      const msg = err.message.includes('foreign key constraint')
+        ? 'Không thể xóa phiếu này vì đang có dữ liệu liên quan khác.'
         : err.message;
       if (addToast) addToast('Lỗi: ' + msg, 'error');
       else alert('Lỗi: ' + msg);
@@ -380,10 +453,10 @@ export const StockOut = ({ user, onBack, addToast, initialAction, setHideBottomN
       unit_price: selectedSlip.unit_price || 0,
       notes: selectedSlip.notes?.replace(/^\[SỬA lúc .*?\]\s*/, '') || '',
       export_code: selectedSlip.export_code || formData.export_code,
-      status: selectedSlip.status
+      status: selectedSlip.status,
     });
     setIsEditing(true);
-    setEditingId(selectedSlip.id);  // lưu id để loại trừ khỏi tính tồn
+    setEditingId(selectedSlip.id); // lưu id để loại trừ khỏi tính tồn
     setShowDetailModal(false);
     setShowModal(true);
   };
@@ -396,7 +469,7 @@ export const StockOut = ({ user, onBack, addToast, initialAction, setHideBottomN
           <Button
             size="icon"
             variant={showFilter ? 'primary' : 'outline'}
-            onClick={() => setShowFilter(f => !f)}
+            onClick={() => setShowFilter((f) => !f)}
             icon={Search}
           />
         </div>
@@ -414,26 +487,52 @@ export const StockOut = ({ user, onBack, addToast, initialAction, setHideBottomN
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
                 <div className="space-y-1">
                   <label className="text-[10px] font-bold text-gray-400 uppercase">Từ ngày</label>
-                  <input type="date" value={filterStartDate} onChange={e => setFilterStartDate(e.target.value)} className="w-full px-3 py-2 rounded-lg border border-gray-200 text-xs outline-none focus:ring-2 focus:ring-primary/20" />
+                  <input
+                    type="date"
+                    value={filterStartDate}
+                    onChange={(e) => setFilterStartDate(e.target.value)}
+                    className="w-full px-3 py-2 rounded-lg border border-gray-200 text-xs outline-none focus:ring-2 focus:ring-primary/20"
+                  />
                 </div>
                 <div className="space-y-1">
                   <label className="text-[10px] font-bold text-gray-400 uppercase">Đến ngày</label>
-                  <input type="date" value={filterEndDate} onChange={e => setFilterEndDate(e.target.value)} className="w-full px-3 py-2 rounded-lg border border-gray-200 text-xs outline-none focus:ring-2 focus:ring-primary/20" />
+                  <input
+                    type="date"
+                    value={filterEndDate}
+                    onChange={(e) => setFilterEndDate(e.target.value)}
+                    className="w-full px-3 py-2 rounded-lg border border-gray-200 text-xs outline-none focus:ring-2 focus:ring-primary/20"
+                  />
                 </div>
                 <div className="space-y-1">
                   <label className="text-[10px] font-bold text-gray-400 uppercase">Kho</label>
-                  <select value={filterWarehouseId} onChange={e => setFilterWarehouseId(e.target.value)} className="w-full px-3 py-2 rounded-lg border border-gray-200 text-xs outline-none focus:ring-2 focus:ring-primary/20">
+                  <select
+                    value={filterWarehouseId}
+                    onChange={(e) => setFilterWarehouseId(e.target.value)}
+                    className="w-full px-3 py-2 rounded-lg border border-gray-200 text-xs outline-none focus:ring-2 focus:ring-primary/20"
+                  >
                     <option value="">Tất cả kho</option>
-                    {warehouses.map(w => <option key={w.id} value={w.id}>{w.name}</option>)}
+                    {warehouses.map((w) => (
+                      <option key={w.id} value={w.id}>
+                        {w.name}
+                      </option>
+                    ))}
                   </select>
                 </div>
                 <div className="space-y-1">
                   <label className="text-[10px] font-bold text-gray-400 uppercase">Tìm kiếm</label>
-                  <input type="text" placeholder="Vật tư, mã phiếu, ghi chú..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="w-full px-3 py-2 rounded-lg border border-gray-200 text-xs outline-none focus:ring-2 focus:ring-primary/20" />
+                  <input
+                    type="text"
+                    placeholder="Vật tư, mã phiếu, ghi chú..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="w-full px-3 py-2 rounded-lg border border-gray-200 text-xs outline-none focus:ring-2 focus:ring-primary/20"
+                  />
                 </div>
               </div>
               <div>
-                <label className="text-[10px] font-bold text-gray-400 uppercase block mb-2">Trạng thái</label>
+                <label className="text-[10px] font-bold text-gray-400 uppercase block mb-2">
+                  Trạng thái
+                </label>
                 <div className="flex items-center gap-2 overflow-x-auto pb-2 md:pb-0 no-scrollbar">
                   {['Tất cả', 'Chờ duyệt', 'Đã duyệt', 'Từ chối', 'Đã xóa'].map((status) => (
                     <Button
@@ -453,7 +552,7 @@ export const StockOut = ({ user, onBack, addToast, initialAction, setHideBottomN
       </AnimatePresence>
 
       {(() => {
-        const filteredSlips = slips.filter(item => {
+        const filteredSlips = slips.filter((item) => {
           let match = true;
           if (filterStartDate && item.date < filterStartDate) match = false;
           if (filterEndDate && item.date > filterEndDate) match = false;
@@ -468,53 +567,85 @@ export const StockOut = ({ user, onBack, addToast, initialAction, setHideBottomN
           return match;
         });
         return (
-      <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse min-w-[700px] whitespace-nowrap">
-            <thead>
-              <tr className="bg-red-600 text-white">
-                <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider">Ngày</th>
-                <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider">Kho</th>
-                <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider">Vật tư</th>
-                <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-center">SL</th>
-                <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider">Trạng thái</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100">
-              {loading ? (
-                <tr><td colSpan={5} className="px-4 py-8 text-center text-gray-400 italic">Đang tải...</td></tr>
-              ) : filteredSlips.length === 0 ? (
-                <tr><td colSpan={5} className="px-4 py-8 text-center text-gray-400 italic">Chưa có phiếu xuất nào</td></tr>
-              ) : (
-                filteredSlips.map((item) => (
-                  <tr key={item.id} onClick={() => handleRowClick(item)} className="hover:bg-gray-50 transition-colors cursor-pointer group">
-                    <td className="px-4 py-3 text-xs text-gray-600">{formatDate(item.date)}</td>
-                    <td className="px-4 py-3 text-xs text-gray-600">
-                      {item.warehouses?.name}
-                    </td>
-                    <td className="px-4 py-3 text-xs text-gray-800 font-bold">
-                      {item.materials?.name}
-                    </td>
-                    <td className="px-4 py-3 text-xs text-red-600 text-center font-bold">
-                      -{formatNumber(item.quantity)} <span className="text-[10px] text-gray-400 font-normal">{item.materials?.unit || ''}</span>
-                    </td>
-                    <td className="px-4 py-3 text-xs">
-                      <div className="flex items-center justify-between">
-                        <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${item.status === 'Đã duyệt' ? 'bg-green-100 text-green-600' :
-                            item.status === 'Từ chối' ? 'bg-red-100 text-red-600' : 'bg-amber-100 text-amber-600'
-                          }`}>
-                          {item.status || 'Chờ duyệt'}
-                        </span>
-                        <ChevronRight size={14} className="text-gray-300 group-hover:text-primary transition-colors" />
-                      </div>
-                    </td>
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full text-left border-collapse min-w-[700px] whitespace-nowrap">
+                <thead>
+                  <tr className="bg-red-600 text-white">
+                    <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider">
+                      Ngày
+                    </th>
+                    <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider">
+                      Kho
+                    </th>
+                    <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider">
+                      Vật tư
+                    </th>
+                    <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-center">
+                      SL
+                    </th>
+                    <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider">
+                      Trạng thái
+                    </th>
                   </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
+                </thead>
+                <tbody className="divide-y divide-gray-100">
+                  {loading ? (
+                    <tr>
+                      <td colSpan={5} className="px-4 py-8 text-center text-gray-400 italic">
+                        Đang tải...
+                      </td>
+                    </tr>
+                  ) : filteredSlips.length === 0 ? (
+                    <tr>
+                      <td colSpan={5} className="px-4 py-8 text-center text-gray-400 italic">
+                        Chưa có phiếu xuất nào
+                      </td>
+                    </tr>
+                  ) : (
+                    filteredSlips.map((item) => (
+                      <tr
+                        key={item.id}
+                        onClick={() => handleRowClick(item)}
+                        className="hover:bg-gray-50 transition-colors cursor-pointer group"
+                      >
+                        <td className="px-4 py-3 text-xs text-gray-600">{formatDate(item.date)}</td>
+                        <td className="px-4 py-3 text-xs text-gray-600">{item.warehouses?.name}</td>
+                        <td className="px-4 py-3 text-xs text-gray-800 font-bold">
+                          {item.materials?.name}
+                        </td>
+                        <td className="px-4 py-3 text-xs text-red-600 text-center font-bold">
+                          -{formatNumber(item.quantity)}{' '}
+                          <span className="text-[10px] text-gray-400 font-normal">
+                            {item.materials?.unit || ''}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 text-xs">
+                          <div className="flex items-center justify-between">
+                            <span
+                              className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                                item.status === 'Đã duyệt'
+                                  ? 'bg-green-100 text-green-600'
+                                  : item.status === 'Từ chối'
+                                    ? 'bg-red-100 text-red-600'
+                                    : 'bg-amber-100 text-amber-600'
+                              }`}
+                            >
+                              {item.status || 'Chờ duyệt'}
+                            </span>
+                            <ChevronRight
+                              size={14}
+                              className="text-gray-300 group-hover:text-primary transition-colors"
+                            />
+                          </div>
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
         );
       })()}
 
@@ -542,7 +673,7 @@ export const StockOut = ({ user, onBack, addToast, initialAction, setHideBottomN
               </div>
               <div className="p-5 border-b border-gray-100 flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  <div 
+                  <div
                     className="w-10 h-10 bg-red-100 text-red-600 rounded-xl flex items-center justify-center hover:bg-red-200 transition-all active:scale-95 cursor-pointer shadow-sm border border-red-200"
                     onClick={() => setShowDetailModal(false)}
                   >
@@ -550,10 +681,12 @@ export const StockOut = ({ user, onBack, addToast, initialAction, setHideBottomN
                   </div>
                   <div>
                     <p className="text-sm font-black text-red-600">{selectedSlip.export_code}</p>
-                    <p className="text-[10px] text-gray-400 uppercase font-bold tracking-widest">Chi tiết xuất kho</p>
+                    <p className="text-[10px] text-gray-400 uppercase font-bold tracking-widest">
+                      Chi tiết xuất kho
+                    </p>
                   </div>
                 </div>
-                <button 
+                <button
                   onClick={() => setShowDetailModal(false)}
                   className="p-2 hover:bg-gray-100 rounded-xl transition-all active:scale-95 text-gray-400"
                 >
@@ -565,30 +698,81 @@ export const StockOut = ({ user, onBack, addToast, initialAction, setHideBottomN
                   { label: 'Ngày xuất', value: formatDate(selectedSlip.date) },
                   { label: 'Vật tư', value: selectedSlip.materials?.name },
                   { label: 'Kho xuất', value: selectedSlip.warehouses?.name },
-                  { label: 'Số lượng', value: `-${formatNumber(selectedSlip.quantity)} ${selectedSlip.materials?.unit || ''}`, highlight: true },
+                  {
+                    label: 'Số lượng',
+                    value: `-${formatNumber(selectedSlip.quantity)} ${selectedSlip.materials?.unit || ''}`,
+                    highlight: true,
+                  },
                   { label: 'Đơn giá bán', value: formatCurrency(selectedSlip.unit_price || 0) },
                   { label: 'Thành tiền', value: formatCurrency(selectedSlip.total_amount || 0) },
                   { label: 'Trạng thái', value: selectedSlip.status || 'Chờ duyệt' },
                   { label: 'Diễn giải', value: selectedSlip.notes || '—' },
                 ].map(({ label, value, highlight }) => (
-                  <div key={label} className="flex justify-between items-start border-b border-gray-50 pb-3 gap-4">
+                  <div
+                    key={label}
+                    className="flex justify-between items-start border-b border-gray-50 pb-3 gap-4"
+                  >
                     <span className="text-[11px] text-gray-500 font-medium shrink-0">{label}</span>
-                    <p className={`text-sm text-right ${highlight ? 'text-red-600 font-bold' : 'text-gray-900'}`}>{value || '—'}</p>
+                    <p
+                      className={`text-sm text-right ${highlight ? 'text-red-600 font-bold' : 'text-gray-900'}`}
+                    >
+                      {value || '—'}
+                    </p>
                   </div>
                 ))}
-                {selectedSlip.status !== 'Đã xóa' && (user.role === 'Admin' || user.role === 'Admin App') && selectedSlip.status === 'Chờ duyệt' && (
-                  <div className="grid grid-cols-2 gap-2">
-                    <Button fullWidth variant="danger" icon={X} onClick={() => handleApprove(selectedSlip.id, 'Từ chối')}>Từ chối</Button>
-                    <Button fullWidth variant="success" icon={Check} onClick={() => handleApprove(selectedSlip.id, 'Đã duyệt')}>Duyệt</Button>
-                  </div>
-                )}
+                {selectedSlip.status !== 'Đã xóa' &&
+                  (user.role === 'Admin' || user.role === 'Admin App') &&
+                  selectedSlip.status === 'Chờ duyệt' && (
+                    <div className="grid grid-cols-2 gap-2">
+                      <Button
+                        fullWidth
+                        variant="danger"
+                        icon={X}
+                        onClick={() => handleApprove(selectedSlip.id, 'Từ chối')}
+                      >
+                        Từ chối
+                      </Button>
+                      <Button
+                        fullWidth
+                        variant="success"
+                        icon={Check}
+                        onClick={() => handleApprove(selectedSlip.id, 'Đã duyệt')}
+                      >
+                        Duyệt
+                      </Button>
+                    </div>
+                  )}
                 {selectedSlip.status !== 'Đã xóa' && (
                   <div className="grid grid-cols-2 gap-2">
-                    <Button fullWidth variant="outline" icon={Trash2} onClick={handleDelete} className="text-red-600 border-red-200 hover:bg-red-50">Thùng rác</Button>
-                    <Button fullWidth variant="outline" icon={Edit} onClick={handleEdit} className="text-gray-700 hover:bg-gray-50">Sửa</Button>
+                    <Button
+                      fullWidth
+                      variant="outline"
+                      icon={Trash2}
+                      onClick={handleDelete}
+                      className="text-red-600 border-red-200 hover:bg-red-50"
+                    >
+                      Thùng rác
+                    </Button>
+                    <Button
+                      fullWidth
+                      variant="outline"
+                      icon={Edit}
+                      onClick={handleEdit}
+                      className="text-gray-700 hover:bg-gray-50"
+                    >
+                      Sửa
+                    </Button>
                   </div>
                 )}
-                <Button fullWidth variant="outline" icon={X} onClick={() => setShowDetailModal(false)} className="text-gray-600 hover:bg-gray-50 border-gray-200">Đóng cửa sổ</Button>
+                <Button
+                  fullWidth
+                  variant="outline"
+                  icon={X}
+                  onClick={() => setShowDetailModal(false)}
+                  className="text-gray-600 hover:bg-gray-50 border-gray-200"
+                >
+                  Đóng cửa sổ
+                </Button>
               </div>
             </motion.div>
           </>
@@ -597,7 +781,7 @@ export const StockOut = ({ user, onBack, addToast, initialAction, setHideBottomN
 
       <AnimatePresence>
         {showModal && (
-          <div 
+          <div
             className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/50 backdrop-blur-md overflow-hidden"
             onClick={() => setShowModal(false)}
           >
@@ -611,16 +795,18 @@ export const StockOut = ({ user, onBack, addToast, initialAction, setHideBottomN
             >
               <div className="bg-red-600 p-6 text-white flex items-center justify-between rounded-t-[2rem] md:rounded-t-[2.5rem] flex-shrink-0 relative">
                 <div className="flex items-center gap-3">
-                  <div 
+                  <div
                     className="p-2 bg-white/20 rounded-xl cursor-pointer hover:bg-white/30 transition-all active:scale-95"
                     onClick={() => setShowModal(false)}
                     title="Đóng"
                   >
                     <ArrowDownCircle size={24} />
                   </div>
-                  <h3 className="font-bold text-lg">{isEditing ? 'Sửa phiếu xuất kho' : 'Lập phiếu xuất kho'}</h3>
+                  <h3 className="font-bold text-lg">
+                    {isEditing ? 'Sửa phiếu xuất kho' : 'Lập phiếu xuất kho'}
+                  </h3>
                 </div>
-                <button 
+                <button
                   onClick={() => setShowModal(false)}
                   className="p-2 hover:bg-white/20 rounded-xl transition-all"
                 >
@@ -629,18 +815,25 @@ export const StockOut = ({ user, onBack, addToast, initialAction, setHideBottomN
               </div>
 
               <div className="flex-1 overflow-y-auto overflow-x-hidden p-6 custom-scrollbar">
-                <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-6 pb-32">
+                <form
+                  onSubmit={handleSubmit}
+                  className="grid grid-cols-1 md:grid-cols-2 gap-6 pb-32"
+                >
                   <div className="space-y-4">
                     <div className="space-y-1">
-                      <label className="text-[10px] font-bold text-gray-400 uppercase">Ngày xuất *</label>
-                      <input 
-                        type="date" 
-                        required 
-                        value={formData.date} 
-                        onChange={(e) => setFormData({ ...formData, date: e.target.value })} 
-                        className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-red-600/20" 
+                      <label className="text-[10px] font-bold text-gray-400 uppercase">
+                        Ngày xuất *
+                      </label>
+                      <input
+                        type="date"
+                        required
+                        value={formData.date}
+                        onChange={(e) => setFormData({ ...formData, date: e.target.value })}
+                        className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-red-600/20"
                       />
-                      <p className="text-[10px] text-gray-400">Tồn kho sẽ được kiểm tra tại ngày này</p>
+                      <p className="text-[10px] text-gray-400">
+                        Tồn kho sẽ được kiểm tra tại ngày này
+                      </p>
                     </div>
 
                     <CreatableSelect
@@ -660,7 +853,12 @@ export const StockOut = ({ user, onBack, addToast, initialAction, setHideBottomN
                           value={formData.material_id}
                           options={materials}
                           onChange={(val) => setFormData({ ...formData, material_id: val })}
-                          onCreate={() => addToast?.('Vui lòng chọn vật tư có trong Danh mục. Hoặc click nút + bên cạnh để tạo mới.', 'error')}
+                          onCreate={() =>
+                            addToast?.(
+                              'Vui lòng chọn vật tư có trong Danh mục. Hoặc click nút + bên cạnh để tạo mới.',
+                              'error',
+                            )
+                          }
                           placeholder="Chọn vật tư..."
                           required
                         />
@@ -677,24 +875,48 @@ export const StockOut = ({ user, onBack, addToast, initialAction, setHideBottomN
 
                     {stockLoading && (
                       <div className="p-3 bg-gray-50 rounded-xl border border-gray-100">
-                        <p className="text-[10px] font-bold text-gray-400 uppercase animate-pulse">Đang kiểm tra tồn kho...</p>
+                        <p className="text-[10px] font-bold text-gray-400 uppercase animate-pulse">
+                          Đang kiểm tra tồn kho...
+                        </p>
                       </div>
                     )}
                     {!stockLoading && availableStock !== null && (
-                      <div className={`p-3 rounded-xl border ${
-                        availableStock <= 0
-                          ? 'bg-red-50 border-red-100'
-                          : availableStock <= 5
-                          ? 'bg-amber-50 border-amber-100'
-                          : 'bg-blue-50 border-blue-100'
-                      }`}>
-                        <p className={`text-[10px] font-bold uppercase ${
-                          availableStock <= 0 ? 'text-red-400' : availableStock <= 5 ? 'text-amber-400' : 'text-blue-400'
-                        }`}>Tồn kho tại ngày {formData.date}</p>
-                        <p className={`text-sm font-bold ${
-                          availableStock <= 0 ? 'text-red-600' : availableStock <= 5 ? 'text-amber-600' : 'text-blue-600'
-                        }`}>
-                          {formatNumber(availableStock)} {materials.find(m => m.id === formData.material_id || m.name === formData.material_id)?.unit}
+                      <div
+                        className={`p-3 rounded-xl border ${
+                          availableStock <= 0
+                            ? 'bg-red-50 border-red-100'
+                            : availableStock <= 5
+                              ? 'bg-amber-50 border-amber-100'
+                              : 'bg-blue-50 border-blue-100'
+                        }`}
+                      >
+                        <p
+                          className={`text-[10px] font-bold uppercase ${
+                            availableStock <= 0
+                              ? 'text-red-400'
+                              : availableStock <= 5
+                                ? 'text-amber-400'
+                                : 'text-blue-400'
+                          }`}
+                        >
+                          Tồn kho tại ngày {formData.date}
+                        </p>
+                        <p
+                          className={`text-sm font-bold ${
+                            availableStock <= 0
+                              ? 'text-red-600'
+                              : availableStock <= 5
+                                ? 'text-amber-600'
+                                : 'text-blue-600'
+                          }`}
+                        >
+                          {formatNumber(availableStock)}{' '}
+                          {
+                            materials.find(
+                              (m) =>
+                                m.id === formData.material_id || m.name === formData.material_id,
+                            )?.unit
+                          }
                           {availableStock <= 0 && ' ⚠ Không đủ tồn kho!'}
                         </p>
                       </div>
@@ -717,20 +939,35 @@ export const StockOut = ({ user, onBack, addToast, initialAction, setHideBottomN
                     />
 
                     <div className="space-y-1">
-                      <label className="text-[10px] font-bold text-gray-400 uppercase">Ghi chú / Mục đích xuất</label>
-                      <textarea rows={4} value={formData.notes} onChange={(e) => setFormData({ ...formData, notes: e.target.value })} className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-orange-600/20 resize-none" />
+                      <label className="text-[10px] font-bold text-gray-400 uppercase">
+                        Ghi chú / Mục đích xuất
+                      </label>
+                      <textarea
+                        rows={4}
+                        value={formData.notes}
+                        onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+                        className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-orange-600/20 resize-none"
+                      />
                     </div>
                   </div>
 
                   <div className="md:col-span-2 flex justify-end gap-3 mt-4">
-                    <Button variant="outline" onClick={() => setShowModal(false)}>Hủy</Button>
-                    <Button 
-                      type="submit" 
+                    <Button variant="outline" onClick={() => setShowModal(false)}>
+                      Hủy
+                    </Button>
+                    <Button
+                      type="submit"
                       variant="danger"
                       className="min-w-[120px]"
                       isLoading={submitting}
-                      disabled={availableStock !== null && Number(formData.quantity) > availableStock} 
-                      title={availableStock !== null && Number(formData.quantity) > availableStock ? `Không đủ tồn kho (tồn: ${availableStock})` : undefined}
+                      disabled={
+                        availableStock !== null && Number(formData.quantity) > availableStock
+                      }
+                      title={
+                        availableStock !== null && Number(formData.quantity) > availableStock
+                          ? `Không đủ tồn kho (tồn: ${availableStock})`
+                          : undefined
+                      }
                     >
                       {isEditing ? 'Cập nhật' : 'Lưu phiếu xuất'}
                     </Button>
@@ -756,10 +993,16 @@ export const StockOut = ({ user, onBack, addToast, initialAction, setHideBottomN
       <ConfirmModal
         show={showDeleteConfirm}
         title={selectedSlip?.status === 'Đã duyệt' ? '⚠️ Cảnh báo: Phiếu đã duyệt' : 'Xác nhận xóa'}
-        message={selectedSlip?.status === 'Đã duyệt'
-          ? `Phiếu xuất ${selectedSlip?.export_code} đã được duyệt — hàng đã xuất thực tế.\n\nXóa phiếu sẽ HOÀN TRẢ ${selectedSlip?.quantity} ${selectedSlip?.materials?.unit || ''} ${selectedSlip?.materials?.name || ''} vào kho.\n\nBạn có chắc chắn muốn xóa?`
-          : 'Bạn có chắc chắn muốn chuyển phiếu xuất kho này vào thùng rác?'}
-        confirmText={selectedSlip?.status === 'Đã duyệt' ? 'Xác nhận xóa phiếu đã duyệt' : 'Chuyển vào thùng rác'}
+        message={
+          selectedSlip?.status === 'Đã duyệt'
+            ? `Phiếu xuất ${selectedSlip?.export_code} đã được duyệt — hàng đã xuất thực tế.\n\nXóa phiếu sẽ HOÀN TRẢ ${selectedSlip?.quantity} ${selectedSlip?.materials?.unit || ''} ${selectedSlip?.materials?.name || ''} vào kho.\n\nBạn có chắc chắn muốn xóa?`
+            : 'Bạn có chắc chắn muốn chuyển phiếu xuất kho này vào thùng rác?'
+        }
+        confirmText={
+          selectedSlip?.status === 'Đã duyệt'
+            ? 'Xác nhận xóa phiếu đã duyệt'
+            : 'Chuyển vào thùng rác'
+        }
         onConfirm={confirmDelete}
         onCancel={() => setShowDeleteConfirm(false)}
         type={selectedSlip?.status === 'Đã duyệt' ? 'danger' : undefined}

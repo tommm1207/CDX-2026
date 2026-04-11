@@ -1,5 +1,32 @@
 import { useState, useEffect, FormEvent, useRef, useMemo } from 'react';
-import { Search, Plus, Filter, PackageOpen, Download, Upload, AlertCircle, Edit, Trash2, Settings, ArrowRight, ArrowLeft, MoreVertical, Wallet, XCircle, CheckCircle, Calculator, CreditCard, RefreshCw, X, Check, ChevronDown, FileSpreadsheet, ArrowDownCircle, ArrowUpCircle, Info } from 'lucide-react';
+import {
+  Search,
+  Plus,
+  Filter,
+  PackageOpen,
+  Download,
+  Upload,
+  AlertCircle,
+  Edit,
+  Trash2,
+  Settings,
+  ArrowRight,
+  ArrowLeft,
+  MoreVertical,
+  Wallet,
+  XCircle,
+  CheckCircle,
+  Calculator,
+  CreditCard,
+  RefreshCw,
+  X,
+  Check,
+  ChevronDown,
+  FileSpreadsheet,
+  ArrowDownCircle,
+  ArrowUpCircle,
+  Info,
+} from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { utils, writeFile } from 'xlsx';
 import { supabase } from '@/lib/supabase';
@@ -15,12 +42,18 @@ import { isUUID, getAllowedWarehouses } from '@/utils/helpers';
 import { isActiveWarehouse } from '@/utils/inventory';
 import { Button } from '../shared/Button';
 
-export const Costs = ({ user, onBack, addToast, initialAction, setHideBottomNav }: { 
-  user: Employee, 
-  onBack?: () => void,
-  addToast?: (message: string, type?: ToastType) => void,
-  initialAction?: string,
-  setHideBottomNav?: (hide: boolean) => void
+export const Costs = ({
+  user,
+  onBack,
+  addToast,
+  initialAction,
+  setHideBottomNav,
+}: {
+  user: Employee;
+  onBack?: () => void;
+  addToast?: (message: string, type?: ToastType) => void;
+  initialAction?: string;
+  setHideBottomNav?: (hide: boolean) => void;
 }) => {
   const [showModal, setShowModal] = useState(initialAction === 'add');
   const [showDetailModal, setShowDetailModal] = useState(false);
@@ -61,7 +94,7 @@ export const Costs = ({ user, onBack, addToast, initialAction, setHideBottomNav 
     quantity: 0,
     unit: '',
     total_amount: 0,
-    notes: ''
+    notes: '',
   };
 
   const [formData, setFormData] = useState(initialFormState);
@@ -79,7 +112,10 @@ export const Costs = ({ user, onBack, addToast, initialAction, setHideBottomNav 
   }, []);
 
   const fetchEmployees = async () => {
-    const { data } = await supabase.from('users').select('id, full_name, code').neq('status', 'Nghỉ việc');
+    const { data } = await supabase
+      .from('users')
+      .select('id, full_name, code')
+      .neq('status', 'Nghỉ việc');
     if (data) setEmployees(data);
   };
 
@@ -105,7 +141,11 @@ export const Costs = ({ user, onBack, addToast, initialAction, setHideBottomNav 
 
       if (error) {
         console.error('Error fetching costs:', error);
-        const { data: fallbackData, error: fallbackError } = await supabase.from('costs').select('*').neq('status', 'Đã xóa').order('date', { ascending: false });
+        const { data: fallbackData, error: fallbackError } = await supabase
+          .from('costs')
+          .select('*')
+          .neq('status', 'Đã xóa')
+          .order('date', { ascending: false });
         if (fallbackError) throw fallbackError;
         setCosts(fallbackData || []);
       } else {
@@ -120,13 +160,19 @@ export const Costs = ({ user, onBack, addToast, initialAction, setHideBottomNav 
   };
 
   const fetchMaterials = async () => {
-    const { data } = await supabase.from('materials').select('id, name').or('status.is.null,status.neq.Đã xóa');
+    const { data } = await supabase
+      .from('materials')
+      .select('id, name')
+      .or('status.is.null,status.neq.Đã xóa');
     if (data) setMaterials(data);
   };
 
   const fetchWarehouses = async () => {
-    let query = supabase.from('warehouses').select('id, name, status').or('status.is.null,status.neq.Đã xóa');
-    
+    let query = supabase
+      .from('warehouses')
+      .select('id, name, status')
+      .or('status.is.null,status.neq.Đã xóa');
+
     const allowedWhIds = getAllowedWarehouses(user.data_view_permission);
     if (allowedWhIds) {
       query = query.in('id', allowedWhIds);
@@ -141,7 +187,7 @@ export const Costs = ({ user, onBack, addToast, initialAction, setHideBottomNav 
   const fetchCostTypes = async () => {
     const { data } = await supabase.from('costs').select('cost_type');
     if (data) {
-      const uniqueTypes = Array.from(new Set(data.map(item => item.cost_type)))
+      const uniqueTypes = Array.from(new Set(data.map((item) => item.cost_type)))
         .filter(Boolean)
         .map((name) => ({ id: name as string, name: name as string }));
       setCostTypes(uniqueTypes);
@@ -151,20 +197,25 @@ export const Costs = ({ user, onBack, addToast, initialAction, setHideBottomNav 
   const fetchUnits = async () => {
     const { data } = await supabase.from('costs').select('unit');
     if (data) {
-      const uniqueUnits = Array.from(new Set(data.map(item => item.unit)))
+      const uniqueUnits = Array.from(new Set(data.map((item) => item.unit)))
         .filter(Boolean)
         .map((name) => ({ id: name, name }));
       setUnits(uniqueUnits);
     }
   };
 
-  const ensureValueExists = async (table: string, name: string, currentList: any[], fetchFn: () => void) => {
+  const ensureValueExists = async (
+    table: string,
+    name: string,
+    currentList: any[],
+    fetchFn: () => void,
+  ) => {
     if (!name) return null;
     if (isUUID(name)) return name;
 
     if (table === 'costs') return null;
 
-    const existing = currentList.find(item => item.name.toLowerCase() === name.toLowerCase());
+    const existing = currentList.find((item) => item.name.toLowerCase() === name.toLowerCase());
     if (existing) return existing.id;
 
     let code = '';
@@ -188,11 +239,23 @@ export const Costs = ({ user, onBack, addToast, initialAction, setHideBottomNav 
     setSubmitting(true);
 
     try {
-      const warehouse_id = await ensureValueExists('warehouses', formData.warehouse_name, warehouses, fetchWarehouses);
-      
+      const warehouse_id = await ensureValueExists(
+        'warehouses',
+        formData.warehouse_name,
+        warehouses,
+        fetchWarehouses,
+      );
+
       const isContentUuid = isUUID(formData.content);
-      const finalContent = isContentUuid ? materials.find(m => m.id === formData.content)?.name || formData.content : formData.content;
-      const material_id = await ensureValueExists('materials', finalContent, materials, fetchMaterials);
+      const finalContent = isContentUuid
+        ? materials.find((m) => m.id === formData.content)?.name || formData.content
+        : formData.content;
+      const material_id = await ensureValueExists(
+        'materials',
+        finalContent,
+        materials,
+        fetchMaterials,
+      );
 
       const dateObj = new Date(formData.date);
       const d = String(dateObj.getDate()).padStart(2, '0');
@@ -215,7 +278,7 @@ export const Costs = ({ user, onBack, addToast, initialAction, setHideBottomNav 
         unit: formData.unit,
         total_amount: formData.total_amount,
         notes: formData.notes,
-        status: 'Đã duyệt'
+        status: 'Đã duyệt',
       };
 
       let error;
@@ -236,7 +299,8 @@ export const Costs = ({ user, onBack, addToast, initialAction, setHideBottomNav 
       fetchCosts();
       fetchCostTypes();
       fetchUnits();
-      if (addToast) addToast(isEditing ? 'Cập nhật thành công!' : 'Nhập chi phí thành công!', 'success');
+      if (addToast)
+        addToast(isEditing ? 'Cập nhật thành công!' : 'Nhập chi phí thành công!', 'success');
     } catch (err: any) {
       if (addToast) addToast('Lỗi: ' + err.message, 'error');
       else alert('Lỗi: ' + err.message);
@@ -247,7 +311,7 @@ export const Costs = ({ user, onBack, addToast, initialAction, setHideBottomNav 
 
   const handleEdit = (item: any) => {
     if (item.notes?.includes('Tự động tạo từ hệ thống')) {
-      if (addToast) addToast("Bút toán tự động từ hệ thống không được phép thay đổi.", "error");
+      if (addToast) addToast('Bút toán tự động từ hệ thống không được phép thay đổi.', 'error');
       return;
     }
     setFormData({
@@ -259,7 +323,7 @@ export const Costs = ({ user, onBack, addToast, initialAction, setHideBottomNav 
       quantity: item.quantity,
       unit: item.unit || '',
       total_amount: item.total_amount,
-      notes: item.notes || ''
+      notes: item.notes || '',
     });
     setEditingId(item.id);
     setIsEditing(true);
@@ -272,7 +336,11 @@ export const Costs = ({ user, onBack, addToast, initialAction, setHideBottomNav 
 
   const handleDeleteClick = (item: any) => {
     if (item.notes?.includes('Tự động tạo từ hệ thống')) {
-      if (addToast) addToast("Bút toán hệ thống không được phép xóa tay. Vui lòng thao tác trên chứng từ gốc.", "error");
+      if (addToast)
+        addToast(
+          'Bút toán hệ thống không được phép xóa tay. Vui lòng thao tác trên chứng từ gốc.',
+          'error',
+        );
       return;
     }
     setItemToDelete(item.id);
@@ -282,15 +350,18 @@ export const Costs = ({ user, onBack, addToast, initialAction, setHideBottomNav 
   const confirmDelete = async () => {
     if (!itemToDelete) return;
     try {
-      const { error } = await supabase.from('costs').update({ status: 'Đã xóa' }).eq('id', itemToDelete);
+      const { error } = await supabase
+        .from('costs')
+        .update({ status: 'Đã xóa' })
+        .eq('id', itemToDelete);
       if (error) throw error;
       fetchCosts();
       if (addToast) addToast('Đã chuyển vào thùng rác', 'success');
       setShowDeleteModal(false);
       setItemToDelete(null);
     } catch (err: any) {
-      const msg = err.message.includes('foreign key constraint') 
-        ? 'Không thể xóa vì đang có dữ liệu liên quan khác.' 
+      const msg = err.message.includes('foreign key constraint')
+        ? 'Không thể xóa vì đang có dữ liệu liên quan khác.'
         : err.message;
       if (addToast) addToast('Lỗi: ' + msg, 'error');
       else alert('Lỗi khi xóa chi phí: ' + msg);
@@ -298,27 +369,27 @@ export const Costs = ({ user, onBack, addToast, initialAction, setHideBottomNav 
   };
 
   const exportToExcel = () => {
-    const data = costs.map(item => ({
+    const data = costs.map((item) => ({
       'Mã chứng từ': item.cost_code,
-      'Ngày': item.date,
+      Ngày: item.date,
       'Loại giao dịch': item.transaction_type || 'Chi',
       'Người lập': item.users?.full_name || item.employee_id,
       'Hạng mục': item.cost_type,
       'Nội dung': item.content,
       'Vật tư': item.materials?.name || '',
-      'Kho': item.warehouses?.name || '',
+      Kho: item.warehouses?.name || '',
       'Số lượng': item.quantity,
-      'ĐVT': item.unit,
+      ĐVT: item.unit,
       'Thành tiền': item.total_amount,
-      'Ghi chú': item.notes
+      'Ghi chú': item.notes,
     }));
     const ws = utils.json_to_sheet(data);
     const wb = utils.book_new();
-    utils.book_append_sheet(wb, ws, "Chi phí");
+    utils.book_append_sheet(wb, ws, 'Chi phí');
     writeFile(wb, `QuanLyChiPhi_${new Date().toISOString().split('T')[0]}.xlsx`);
   };
 
-  const filteredCosts = costs.filter(item => {
+  const filteredCosts = costs.filter((item) => {
     let match = true;
     if (filterStartDate && item.date < filterStartDate) match = false;
     if (filterEndDate && item.date > filterEndDate) match = false;
@@ -346,7 +417,7 @@ export const Costs = ({ user, onBack, addToast, initialAction, setHideBottomNav 
           <Button
             size="icon"
             variant={showFilter ? 'primary' : 'outline'}
-            onClick={() => setShowFilter(f => !f)}
+            onClick={() => setShowFilter((f) => !f)}
             icon={Search}
           />
           <ExcelButton onClick={exportToExcel} />
@@ -361,7 +432,11 @@ export const Costs = ({ user, onBack, addToast, initialAction, setHideBottomNav 
           <div>
             <p className="text-xs text-gray-500 font-bold uppercase">Tổng Thu</p>
             <p className="text-xl font-black text-green-600">
-              {formatCurrency(filteredCosts.filter(c => c.transaction_type === 'Thu').reduce((sum, c) => sum + Number(c.total_amount || 0), 0))}
+              {formatCurrency(
+                filteredCosts
+                  .filter((c) => c.transaction_type === 'Thu')
+                  .reduce((sum, c) => sum + Number(c.total_amount || 0), 0),
+              )}
             </p>
           </div>
         </div>
@@ -372,7 +447,11 @@ export const Costs = ({ user, onBack, addToast, initialAction, setHideBottomNav 
           <div>
             <p className="text-xs text-gray-500 font-bold uppercase">Tổng Chi</p>
             <p className="text-xl font-black text-red-600">
-              {formatCurrency(filteredCosts.filter(c => c.transaction_type !== 'Thu').reduce((sum, c) => sum + Number(c.total_amount || 0), 0))}
+              {formatCurrency(
+                filteredCosts
+                  .filter((c) => c.transaction_type !== 'Thu')
+                  .reduce((sum, c) => sum + Number(c.total_amount || 0), 0),
+              )}
             </p>
           </div>
         </div>
@@ -384,8 +463,12 @@ export const Costs = ({ user, onBack, addToast, initialAction, setHideBottomNav 
             <p className="text-xs text-gray-500 font-bold uppercase">Lợi Nhuận Gộp</p>
             <p className="text-xl font-black text-blue-600">
               {formatCurrency(
-                filteredCosts.filter(c => c.transaction_type === 'Thu').reduce((sum, c) => sum + Number(c.total_amount || 0), 0) -
-                filteredCosts.filter(c => c.transaction_type !== 'Thu').reduce((sum, c) => sum + Number(c.total_amount || 0), 0)
+                filteredCosts
+                  .filter((c) => c.transaction_type === 'Thu')
+                  .reduce((sum, c) => sum + Number(c.total_amount || 0), 0) -
+                  filteredCosts
+                    .filter((c) => c.transaction_type !== 'Thu')
+                    .reduce((sum, c) => sum + Number(c.total_amount || 0), 0),
               )}
             </p>
           </div>
@@ -403,36 +486,75 @@ export const Costs = ({ user, onBack, addToast, initialAction, setHideBottomNav 
             <div className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-4">
               <div className="space-y-1">
                 <label className="text-[10px] font-bold text-gray-400 uppercase">Từ ngày</label>
-                <input type="date" value={filterStartDate} onChange={(e) => setFilterStartDate(e.target.value)} className="w-full px-3 py-2 rounded-lg border border-gray-200 text-xs outline-none focus:ring-2 focus:ring-primary/20" />
+                <input
+                  type="date"
+                  value={filterStartDate}
+                  onChange={(e) => setFilterStartDate(e.target.value)}
+                  className="w-full px-3 py-2 rounded-lg border border-gray-200 text-xs outline-none focus:ring-2 focus:ring-primary/20"
+                />
               </div>
               <div className="space-y-1">
                 <label className="text-[10px] font-bold text-gray-400 uppercase">Đến ngày</label>
-                <input type="date" value={filterEndDate} onChange={(e) => setFilterEndDate(e.target.value)} className="w-full px-3 py-2 rounded-lg border border-gray-200 text-xs outline-none focus:ring-2 focus:ring-primary/20" />
+                <input
+                  type="date"
+                  value={filterEndDate}
+                  onChange={(e) => setFilterEndDate(e.target.value)}
+                  className="w-full px-3 py-2 rounded-lg border border-gray-200 text-xs outline-none focus:ring-2 focus:ring-primary/20"
+                />
               </div>
               <div className="space-y-1">
                 <label className="text-[10px] font-bold text-gray-400 uppercase">Nhân sự</label>
-                <select value={filterEmployeeId} onChange={(e) => setFilterEmployeeId(e.target.value)} className="w-full px-3 py-2 rounded-lg border border-gray-200 text-xs outline-none focus:ring-2 focus:ring-primary/20">
+                <select
+                  value={filterEmployeeId}
+                  onChange={(e) => setFilterEmployeeId(e.target.value)}
+                  className="w-full px-3 py-2 rounded-lg border border-gray-200 text-xs outline-none focus:ring-2 focus:ring-primary/20"
+                >
                   <option value="">-- Tất cả --</option>
-                  {employees.map(emp => <option key={emp.id} value={emp.id}>{emp.full_name} ({emp.code})</option>)}
+                  {employees.map((emp) => (
+                    <option key={emp.id} value={emp.id}>
+                      {emp.full_name} ({emp.code})
+                    </option>
+                  ))}
                 </select>
               </div>
               <div className="space-y-1">
                 <label className="text-[10px] font-bold text-gray-400 uppercase">Kho</label>
-                <select value={filterWarehouseId} onChange={(e) => setFilterWarehouseId(e.target.value)} className="w-full px-3 py-2 rounded-lg border border-gray-200 text-xs outline-none focus:ring-2 focus:ring-primary/20">
+                <select
+                  value={filterWarehouseId}
+                  onChange={(e) => setFilterWarehouseId(e.target.value)}
+                  className="w-full px-3 py-2 rounded-lg border border-gray-200 text-xs outline-none focus:ring-2 focus:ring-primary/20"
+                >
                   <option value="">-- Tất cả kho --</option>
-                  {warehouses.map(w => <option key={w.id} value={w.id}>{w.name}</option>)}
+                  {warehouses.map((w) => (
+                    <option key={w.id} value={w.id}>
+                      {w.name}
+                    </option>
+                  ))}
                 </select>
               </div>
               <div className="space-y-1">
-                <label className="text-[10px] font-bold text-gray-400 uppercase">Tìm kiếm nhanh</label>
+                <label className="text-[10px] font-bold text-gray-400 uppercase">
+                  Tìm kiếm nhanh
+                </label>
                 <div className="relative">
-                  <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-                  <input type="text" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} placeholder="Gõ để tìm..." className="w-full pl-9 pr-3 py-2 rounded-lg border border-gray-200 text-xs outline-none focus:ring-2 focus:ring-primary/20" />
+                  <Search
+                    size={14}
+                    className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
+                  />
+                  <input
+                    type="text"
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    placeholder="Gõ để tìm..."
+                    className="w-full pl-9 pr-3 py-2 rounded-lg border border-gray-200 text-xs outline-none focus:ring-2 focus:ring-primary/20"
+                  />
                 </div>
               </div>
             </div>
             <div className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 mt-4">
-              <label className="text-[10px] font-bold text-gray-400 uppercase block mb-2">Lọc theo trạng thái</label>
+              <label className="text-[10px] font-bold text-gray-400 uppercase block mb-2">
+                Lọc theo trạng thái
+              </label>
               <div className="flex items-center gap-2 overflow-x-auto pb-2 no-scrollbar">
                 {['Tất cả', 'Chờ duyệt', 'Đã duyệt', 'Từ chối', 'Đã xóa'].map((status) => (
                   <Button
@@ -455,53 +577,100 @@ export const Costs = ({ user, onBack, addToast, initialAction, setHideBottomNav 
           <table className="w-full text-left border-collapse whitespace-nowrap">
             <thead>
               <tr className="bg-primary text-white">
-                <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider border-r border-white/10">Ngày</th>
-                <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider border-r border-white/10">Loại GD</th>
-                <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider border-r border-white/10">Tên kho</th>
-                <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider border-r border-white/10">Hạng mục</th>
-                <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider border-r border-white/10">Nội dung</th>
-                <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider border-r border-white/10 text-center">SL</th>
-                <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider border-r border-white/10 text-center">ĐVT</th>
-                <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider border-r border-white/10 text-right">Số tiền</th>
-                <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider border-r border-white/10 text-center">Trạng thái</th>
-                <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider">Người lập</th>
+                <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider border-r border-white/10">
+                  Ngày
+                </th>
+                <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider border-r border-white/10">
+                  Loại GD
+                </th>
+                <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider border-r border-white/10">
+                  Tên kho
+                </th>
+                <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider border-r border-white/10">
+                  Hạng mục
+                </th>
+                <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider border-r border-white/10">
+                  Nội dung
+                </th>
+                <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider border-r border-white/10 text-center">
+                  SL
+                </th>
+                <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider border-r border-white/10 text-center">
+                  ĐVT
+                </th>
+                <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider border-r border-white/10 text-right">
+                  Số tiền
+                </th>
+                <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider border-r border-white/10 text-center">
+                  Trạng thái
+                </th>
+                <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider">
+                  Người lập
+                </th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
               {loading ? (
-                <tr><td colSpan={10} className="px-4 py-8 text-center text-gray-400 italic">Đang tải dữ liệu...</td></tr>
+                <tr>
+                  <td colSpan={10} className="px-4 py-8 text-center text-gray-400 italic">
+                    Đang tải dữ liệu...
+                  </td>
+                </tr>
               ) : filteredCosts.length === 0 ? (
-                <tr><td colSpan={10} className="px-4 py-8 text-center text-gray-400 italic">Không tìm thấy chi phí phù hợp với bộ lọc</td></tr>
+                <tr>
+                  <td colSpan={10} className="px-4 py-8 text-center text-gray-400 italic">
+                    Không tìm thấy chi phí phù hợp với bộ lọc
+                  </td>
+                </tr>
               ) : (
                 filteredCosts.map((item) => (
                   <tr
                     key={item.id}
-                    onClick={() => { setSelectedCost(item); setShowDetailModal(true); }}
+                    onClick={() => {
+                      setSelectedCost(item);
+                      setShowDetailModal(true);
+                    }}
                     className="hover:bg-gray-50 transition-colors cursor-pointer group"
                   >
                     <td className="px-4 py-3">
-                      <div className="text-[10px] text-gray-500">{new Date(item.date).toLocaleDateString('vi-VN')}</div>
+                      <div className="text-[10px] text-gray-500">
+                        {new Date(item.date).toLocaleDateString('vi-VN')}
+                      </div>
                     </td>
                     <td className="px-4 py-3 text-xs font-bold">
-                      <span className={`px-2 py-0.5 rounded-full ${item.transaction_type === 'Thu' ? 'bg-green-100 text-green-600' : 'bg-red-100 text-red-600'}`}>
+                      <span
+                        className={`px-2 py-0.5 rounded-full ${item.transaction_type === 'Thu' ? 'bg-green-100 text-green-600' : 'bg-red-100 text-red-600'}`}
+                      >
                         {item.transaction_type || 'Chi'}
                       </span>
                     </td>
-                    <td className="px-4 py-3 text-xs text-gray-600 font-medium">{item.warehouses?.name || 'N/A'}</td>
+                    <td className="px-4 py-3 text-xs text-gray-600 font-medium">
+                      {item.warehouses?.name || 'N/A'}
+                    </td>
                     <td className="px-4 py-3 text-xs text-gray-600">{item.cost_type}</td>
-                    <td className="px-4 py-3 text-xs text-gray-600">{item.materials?.name || item.content}</td>
+                    <td className="px-4 py-3 text-xs text-gray-600">
+                      {item.materials?.name || item.content}
+                    </td>
                     <td className="px-4 py-3 text-xs text-gray-600 text-center">{item.quantity}</td>
                     <td className="px-4 py-3 text-xs text-gray-600 text-center">{item.unit}</td>
-                    <td className={`px-4 py-3 text-xs font-bold text-right ${item.transaction_type === 'Thu' ? 'text-green-600' : 'text-red-600'}`}>
-                      {item.transaction_type === 'Thu' ? '+' : '-'}{formatCurrency(item.total_amount)}
+                    <td
+                      className={`px-4 py-3 text-xs font-bold text-right ${item.transaction_type === 'Thu' ? 'text-green-600' : 'text-red-600'}`}
+                    >
+                      {item.transaction_type === 'Thu' ? '+' : '-'}
+                      {formatCurrency(item.total_amount)}
                     </td>
                     <td className="px-4 py-3 text-center">
-                      <span className={`px-2 py-1 rounded-lg text-[10px] font-bold ${
-                        item.status === 'Đã duyệt' ? 'bg-green-100 text-green-700' :
-                        item.status === 'Từ chối' ? 'bg-red-100 text-red-700' :
-                        item.status === 'Đã hoàn thành' ? 'bg-blue-100 text-blue-700' :
-                        'bg-amber-100 text-amber-700'
-                      }`}>
+                      <span
+                        className={`px-2 py-1 rounded-lg text-[10px] font-bold ${
+                          item.status === 'Đã duyệt'
+                            ? 'bg-green-100 text-green-700'
+                            : item.status === 'Từ chối'
+                              ? 'bg-red-100 text-red-700'
+                              : item.status === 'Đã hoàn thành'
+                                ? 'bg-blue-100 text-blue-700'
+                                : 'bg-amber-100 text-amber-700'
+                        }`}
+                      >
                         {item.status || 'Chờ duyệt'}
                       </span>
                     </td>
@@ -538,7 +707,7 @@ export const Costs = ({ user, onBack, addToast, initialAction, setHideBottomNav 
               </div>
               <div className="p-5 border-b border-gray-100 flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  <div 
+                  <div
                     className="w-10 h-10 bg-primary/10 text-primary rounded-xl flex items-center justify-center hover:bg-primary/20 transition-all active:scale-95 cursor-pointer shadow-sm border border-primary/10"
                     onClick={() => setShowDetailModal(false)}
                   >
@@ -546,10 +715,12 @@ export const Costs = ({ user, onBack, addToast, initialAction, setHideBottomNav 
                   </div>
                   <div>
                     <p className="text-sm font-black text-primary">{selectedCost.cost_code}</p>
-                    <p className="text-[10px] text-gray-400 uppercase font-bold tracking-widest">Chi tiết chứng từ</p>
+                    <p className="text-[10px] text-gray-400 uppercase font-bold tracking-widest">
+                      Chi tiết chứng từ
+                    </p>
                   </div>
                 </div>
-                <button 
+                <button
                   onClick={() => setShowDetailModal(false)}
                   className="p-2 hover:bg-gray-100 rounded-xl transition-all active:scale-95 text-gray-400"
                 >
@@ -565,23 +736,67 @@ export const Costs = ({ user, onBack, addToast, initialAction, setHideBottomNav 
                   { label: 'Loại chi phí', value: selectedCost.cost_type },
                   { label: 'Nội dung', value: selectedCost.content },
                   { label: 'Số lượng', value: `${selectedCost.quantity} ${selectedCost.unit}` },
-                  { label: 'Số tiền', value: `${selectedCost.transaction_type === 'Thu' ? '+' : '-'}${formatCurrency(selectedCost.total_amount)}`, highlight: true },
+                  {
+                    label: 'Số tiền',
+                    value: `${selectedCost.transaction_type === 'Thu' ? '+' : '-'}${formatCurrency(selectedCost.total_amount)}`,
+                    highlight: true,
+                  },
                   { label: 'Ghi chú', value: selectedCost.notes || '—' },
                 ].map(({ label, value, highlight }) => (
-                  <div key={label} className="flex justify-between items-start border-b border-gray-50 pb-3 gap-4">
-                    <span className="text-[10px] text-gray-400 font-bold uppercase shrink-0">{label}</span>
-                    <p className={`text-sm font-medium text-right ${highlight ? (selectedCost.transaction_type === 'Thu' ? 'text-green-600 font-bold' : 'text-red-600 font-bold') : 'text-gray-800'}`}>{value || '—'}</p>
+                  <div
+                    key={label}
+                    className="flex justify-between items-start border-b border-gray-50 pb-3 gap-4"
+                  >
+                    <span className="text-[10px] text-gray-400 font-bold uppercase shrink-0">
+                      {label}
+                    </span>
+                    <p
+                      className={`text-sm font-medium text-right ${highlight ? (selectedCost.transaction_type === 'Thu' ? 'text-green-600 font-bold' : 'text-red-600 font-bold') : 'text-gray-800'}`}
+                    >
+                      {value || '—'}
+                    </p>
                   </div>
                 ))}
               </div>
               <div className="p-4 border-t border-gray-100 bg-gray-50 space-y-2">
-                <div className={`grid gap-2 ${selectedCost.status !== 'Đã duyệt' && selectedCost.status !== 'Từ chối' ? 'grid-cols-2' : 'grid-cols-1'}`}>
-                  <Button fullWidth variant="outline" icon={Trash2} onClick={() => { setShowDetailModal(false); handleDeleteClick(selectedCost); }} className="text-red-600 border-red-200 hover:bg-red-50">Thùng rác</Button>
-                  {selectedCost.status !== 'Đã duyệt' && selectedCost.status !== 'Từ chối' && selectedCost.status !== 'Đã hoàn thành' && (
-                    <Button fullWidth variant="outline" icon={Edit} onClick={() => handleEdit(selectedCost)} className="text-gray-700 hover:bg-gray-50">Sửa</Button>
-                  )}
+                <div
+                  className={`grid gap-2 ${selectedCost.status !== 'Đã duyệt' && selectedCost.status !== 'Từ chối' ? 'grid-cols-2' : 'grid-cols-1'}`}
+                >
+                  <Button
+                    fullWidth
+                    variant="outline"
+                    icon={Trash2}
+                    onClick={() => {
+                      setShowDetailModal(false);
+                      handleDeleteClick(selectedCost);
+                    }}
+                    className="text-red-600 border-red-200 hover:bg-red-50"
+                  >
+                    Thùng rác
+                  </Button>
+                  {selectedCost.status !== 'Đã duyệt' &&
+                    selectedCost.status !== 'Từ chối' &&
+                    selectedCost.status !== 'Đã hoàn thành' && (
+                      <Button
+                        fullWidth
+                        variant="outline"
+                        icon={Edit}
+                        onClick={() => handleEdit(selectedCost)}
+                        className="text-gray-700 hover:bg-gray-50"
+                      >
+                        Sửa
+                      </Button>
+                    )}
                 </div>
-                <Button fullWidth variant="outline" icon={X} onClick={() => setShowDetailModal(false)} className="text-gray-600 hover:bg-gray-50 border-gray-200">Đóng cửa sổ</Button>
+                <Button
+                  fullWidth
+                  variant="outline"
+                  icon={X}
+                  onClick={() => setShowDetailModal(false)}
+                  className="text-gray-600 hover:bg-gray-50 border-gray-200"
+                >
+                  Đóng cửa sổ
+                </Button>
               </div>
             </motion.div>
           </>
@@ -590,7 +805,7 @@ export const Costs = ({ user, onBack, addToast, initialAction, setHideBottomNav 
 
       <AnimatePresence>
         {showDeleteModal && (
-          <div 
+          <div
             className="fixed inset-0 z-[120] flex items-center justify-center p-4 bg-black/50 backdrop-blur-md overflow-hidden"
             onClick={() => setShowDeleteModal(false)}
           >
@@ -605,10 +820,28 @@ export const Costs = ({ user, onBack, addToast, initialAction, setHideBottomNav 
                 <Trash2 size={32} />
               </div>
               <h3 className="text-xl font-bold text-gray-800 mb-2">Xác nhận xóa?</h3>
-              <p className="text-sm text-gray-500 mb-6 font-medium">Bạn có chắc chắn muốn chuyển chứng từ này vào thùng rác?<br/>Hành động này có thể hoàn tác trong mục Thùng rác.</p>
+              <p className="text-sm text-gray-500 mb-6 font-medium">
+                Bạn có chắc chắn muốn chuyển chứng từ này vào thùng rác?
+                <br />
+                Hành động này có thể hoàn tác trong mục Thùng rác.
+              </p>
               <div className="flex gap-3">
-                <Button variant="ghost" fullWidth onClick={() => setShowDeleteModal(false)} className="bg-gray-100 hover:bg-gray-200">Hủy bỏ</Button>
-                <Button variant="danger" fullWidth onClick={confirmDelete} className="shadow-lg shadow-red-500/20">Xác nhận</Button>
+                <Button
+                  variant="ghost"
+                  fullWidth
+                  onClick={() => setShowDeleteModal(false)}
+                  className="bg-gray-100 hover:bg-gray-200"
+                >
+                  Hủy bỏ
+                </Button>
+                <Button
+                  variant="danger"
+                  fullWidth
+                  onClick={confirmDelete}
+                  className="shadow-lg shadow-red-500/20"
+                >
+                  Xác nhận
+                </Button>
               </div>
             </motion.div>
           </div>
@@ -617,7 +850,7 @@ export const Costs = ({ user, onBack, addToast, initialAction, setHideBottomNav 
 
       <AnimatePresence>
         {showModal && (
-          <div 
+          <div
             className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/50 backdrop-blur-md"
             onClick={() => setShowModal(false)}
           >
@@ -631,7 +864,7 @@ export const Costs = ({ user, onBack, addToast, initialAction, setHideBottomNav 
             >
               <div className="bg-primary p-6 text-white flex items-center justify-between rounded-t-[2rem] md:rounded-t-[2.5rem] flex-shrink-0 relative">
                 <div className="flex items-center gap-3">
-                  <div 
+                  <div
                     className="p-2 bg-white/20 rounded-xl cursor-pointer hover:bg-white/30 transition-all active:scale-95"
                     onClick={() => setShowModal(false)}
                     title="Đóng"
@@ -639,11 +872,13 @@ export const Costs = ({ user, onBack, addToast, initialAction, setHideBottomNav 
                     <Wallet size={24} />
                   </div>
                   <div>
-                    <h3 className="font-bold text-lg">{isEditing ? 'Cập nhật chi phí' : 'Nhập chi phí'}</h3>
+                    <h3 className="font-bold text-lg">
+                      {isEditing ? 'Cập nhật chi phí' : 'Nhập chi phí'}
+                    </h3>
                     <p className="text-xs text-white/70">Vui lòng điền đầy đủ thông tin chi phí</p>
                   </div>
                 </div>
-                <button 
+                <button
                   onClick={() => setShowModal(false)}
                   className="p-2 hover:bg-white/20 rounded-xl transition-all"
                 >
@@ -656,19 +891,34 @@ export const Costs = ({ user, onBack, addToast, initialAction, setHideBottomNav 
                   <div className="bg-blue-50 p-4 rounded-2xl mb-6 flex items-start gap-3 border border-blue-100">
                     <Info size={18} className="text-blue-600 mt-0.5 shrink-0" />
                     <p className="text-xs text-blue-700 leading-relaxed">
-                      Sử dụng form này để nhập tay các khoản <strong>Thu</strong> (doanh thu, thanh lý) hoặc khoản <strong>Chi</strong> (mua sắm ngoài hệ thống kho).
+                      Sử dụng form này để nhập tay các khoản <strong>Thu</strong> (doanh thu, thanh
+                      lý) hoặc khoản <strong>Chi</strong> (mua sắm ngoài hệ thống kho).
                     </p>
                   </div>
 
                   <div className="mb-6">
-                    <label className="text-[10px] font-bold text-gray-400 uppercase block mb-2">Loại giao dịch *</label>
+                    <label className="text-[10px] font-bold text-gray-400 uppercase block mb-2">
+                      Loại giao dịch *
+                    </label>
                     <div className="flex gap-4">
                       <label className="flex items-center gap-2 cursor-pointer bg-green-50 px-4 py-2 rounded-xl text-sm font-bold text-green-700 border border-green-200">
-                        <input type="radio" name="transType" checked={formData.transaction_type === 'Thu'} onChange={() => setFormData({ ...formData, transaction_type: 'Thu' })} className="accent-green-600 w-4 h-4 cursor-pointer" />
+                        <input
+                          type="radio"
+                          name="transType"
+                          checked={formData.transaction_type === 'Thu'}
+                          onChange={() => setFormData({ ...formData, transaction_type: 'Thu' })}
+                          className="accent-green-600 w-4 h-4 cursor-pointer"
+                        />
                         Khoản Thu (Tiền vào)
                       </label>
                       <label className="flex items-center gap-2 cursor-pointer bg-red-50 px-4 py-2 rounded-xl text-sm font-bold text-red-700 border border-red-200">
-                        <input type="radio" name="transType" checked={formData.transaction_type === 'Chi'} onChange={() => setFormData({ ...formData, transaction_type: 'Chi' })} className="accent-red-600 w-4 h-4 cursor-pointer" />
+                        <input
+                          type="radio"
+                          name="transType"
+                          checked={formData.transaction_type === 'Chi'}
+                          onChange={() => setFormData({ ...formData, transaction_type: 'Chi' })}
+                          className="accent-red-600 w-4 h-4 cursor-pointer"
+                        />
                         Khoản Chi (Tiền ra)
                       </label>
                     </div>
@@ -678,7 +928,9 @@ export const Costs = ({ user, onBack, addToast, initialAction, setHideBottomNav 
                     <div className="space-y-4">
                       <div className="grid grid-cols-2 gap-4">
                         <div className="space-y-1">
-                          <label className="text-[10px] font-bold text-gray-400 uppercase">Ngày chi *</label>
+                          <label className="text-[10px] font-bold text-gray-400 uppercase">
+                            Ngày chi *
+                          </label>
                           <input
                             type="date"
                             required
@@ -688,7 +940,9 @@ export const Costs = ({ user, onBack, addToast, initialAction, setHideBottomNav 
                           />
                         </div>
                         <div className="space-y-1">
-                          <label className="text-[10px] font-bold text-gray-400 uppercase">Người lập</label>
+                          <label className="text-[10px] font-bold text-gray-400 uppercase">
+                            Người lập
+                          </label>
                           <input
                             type="text"
                             readOnly
@@ -719,7 +973,9 @@ export const Costs = ({ user, onBack, addToast, initialAction, setHideBottomNav 
                       />
 
                       <CreatableSelect
-                        label={formData.transaction_type === 'Thu' ? "Nội dung thu *" : "Nội dung chi *"}
+                        label={
+                          formData.transaction_type === 'Thu' ? 'Nội dung thu *' : 'Nội dung chi *'
+                        }
                         value={formData.content}
                         options={materials}
                         onChange={(val) => setFormData({ ...formData, content: val })}
@@ -755,7 +1011,9 @@ export const Costs = ({ user, onBack, addToast, initialAction, setHideBottomNav 
                       />
 
                       <div className="space-y-1">
-                        <label className="text-[10px] font-bold text-gray-400 uppercase">Ghi chú</label>
+                        <label className="text-[10px] font-bold text-gray-400 uppercase">
+                          Ghi chú
+                        </label>
                         <textarea
                           rows={3}
                           placeholder="Ghi chú thêm..."
@@ -768,9 +1026,11 @@ export const Costs = ({ user, onBack, addToast, initialAction, setHideBottomNav 
                   </div>
 
                   <div className="mt-8 flex justify-end gap-3">
-                    <Button variant="outline" onClick={() => setShowModal(false)}>Hủy</Button>
-                    <Button 
-                      type="submit" 
+                    <Button variant="outline" onClick={() => setShowModal(false)}>
+                      Hủy
+                    </Button>
+                    <Button
+                      type="submit"
                       variant="primary"
                       className="min-w-[120px]"
                       isLoading={submitting}
@@ -786,7 +1046,11 @@ export const Costs = ({ user, onBack, addToast, initialAction, setHideBottomNav 
       </AnimatePresence>
       {/* FAB — Nhập giao dịch */}
       <FAB
-        onClick={() => { setIsEditing(false); setFormData(initialFormState); setShowModal(true); }}
+        onClick={() => {
+          setIsEditing(false);
+          setFormData(initialFormState);
+          setShowModal(true);
+        }}
         label="Nhập giao dịch"
         color="bg-primary"
       />

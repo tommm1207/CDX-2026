@@ -7,7 +7,13 @@ import { formatDataForExcel } from '@/utils/excelHelper';
 import { PageBreadcrumb } from '../shared/PageBreadcrumb';
 import { BACKUP_TABLES } from './Backup';
 
-export const BackupNow = ({ onBack, addToast }: { onBack: () => void, addToast: (msg: string, type?: 'success' | 'error' | 'info') => void }) => {
+export const BackupNow = ({
+  onBack,
+  addToast,
+}: {
+  onBack: () => void;
+  addToast: (msg: string, type?: 'success' | 'error' | 'info') => void;
+}) => {
   const [loading, setLoading] = useState(false);
   const [status, setStatus] = useState('');
 
@@ -22,21 +28,24 @@ export const BackupNow = ({ onBack, addToast }: { onBack: () => void, addToast: 
       workbook.created = new Date();
 
       // 1. Tạo trang bìa TỔNG QUAN
-      const summarySheet = workbook.addWorksheet('TỔNG QUAN', { views: [{ showGridLines: false }] });
-      
+      const summarySheet = workbook.addWorksheet('TỔNG QUAN', {
+        views: [{ showGridLines: false }],
+      });
+
       summarySheet.getCell('A1').value = 'HỆ THỐNG QUẢN LÝ KHO & NHÂN SỰ CDX 2026';
       summarySheet.getCell('A1').font = { size: 18, bold: true, color: { argb: 'FF008060' } };
-      
+
       summarySheet.getCell('A3').value = 'BÁO CÁO SAO LƯU DỮ LIỆU TOÀN BỘ';
       summarySheet.getCell('A3').font = { size: 14, bold: true };
 
       summarySheet.getCell('A5').value = 'Ngày thực hiện:';
       summarySheet.getCell('B5').value = new Date().toLocaleString('vi-VN');
-      
+
       summarySheet.getCell('A6').value = 'Số lượng bảng:';
       summarySheet.getCell('B6').value = BACKUP_TABLES.length;
 
-      summarySheet.getCell('A8').value = 'Dữ liệu chi tiết được trình bày trong các Tab tương ứng bên dưới.';
+      summarySheet.getCell('A8').value =
+        'Dữ liệu chi tiết được trình bày trong các Tab tương ứng bên dưới.';
       summarySheet.getCell('A8').font = { italic: true };
 
       summarySheet.getColumn(1).width = 25;
@@ -44,12 +53,13 @@ export const BackupNow = ({ onBack, addToast }: { onBack: () => void, addToast: 
 
       // 2. Chuẩn bị dữ liệu tra cứu (Lookup Data)
       setStatus('Đang chuẩn bị dữ liệu tra cứu...');
-      const [{ data: users }, { data: warehouses }, { data: materials }, { data: groups }] = await Promise.all([
-        supabase.from('users').select('id, full_name'),
-        supabase.from('warehouses').select('id, name'),
-        supabase.from('materials').select('id, name'),
-        supabase.from('material_groups').select('id, name')
-      ]);
+      const [{ data: users }, { data: warehouses }, { data: materials }, { data: groups }] =
+        await Promise.all([
+          supabase.from('users').select('id, full_name'),
+          supabase.from('warehouses').select('id, name'),
+          supabase.from('materials').select('id, name'),
+          supabase.from('material_groups').select('id, name'),
+        ]);
       const lookupData = { users, warehouses, materials, groups };
 
       // 3. Thêm dữ liệu các bảng
@@ -59,7 +69,7 @@ export const BackupNow = ({ onBack, addToast }: { onBack: () => void, addToast: 
       for (const table of BACKUP_TABLES) {
         labels.push(table.label);
         setStatus(`Đang trích xuất: ${table.label}...`);
-        
+
         const { data, error } = await supabase.from(table.id).select('*');
         if (error) {
           console.error(`Error fetching ${table.id}:`, error);
@@ -81,7 +91,7 @@ export const BackupNow = ({ onBack, addToast }: { onBack: () => void, addToast: 
             cell.fill = {
               type: 'pattern',
               pattern: 'solid',
-              fgColor: { argb: 'FF2D5A27' }
+              fgColor: { argb: 'FF2D5A27' },
             };
             cell.font = { bold: true, color: { argb: 'FFFFFFFF' }, size: 11 };
             cell.alignment = { vertical: 'middle', horizontal: 'center' };
@@ -89,7 +99,7 @@ export const BackupNow = ({ onBack, addToast }: { onBack: () => void, addToast: 
               top: { style: 'thin' },
               left: { style: 'thin' },
               bottom: { style: 'thin' },
-              right: { style: 'thin' }
+              right: { style: 'thin' },
             };
           });
 
@@ -101,7 +111,7 @@ export const BackupNow = ({ onBack, addToast }: { onBack: () => void, addToast: 
                 top: { style: 'thin' },
                 left: { style: 'thin' },
                 bottom: { style: 'thin' },
-                right: { style: 'thin' }
+                right: { style: 'thin' },
               };
               if (typeof cell.value === 'number') {
                 cell.alignment = { horizontal: 'right' };
@@ -131,7 +141,7 @@ export const BackupNow = ({ onBack, addToast }: { onBack: () => void, addToast: 
       if (email) {
         setStatus(`Đang gửi email tới ${email}...`);
         const buffer = await workbook.xlsx.writeBuffer();
-        
+
         // Chuyển Buffer sang Base64
         const uint8Array = new Uint8Array(buffer);
         let binary = '';
@@ -142,17 +152,17 @@ export const BackupNow = ({ onBack, addToast }: { onBack: () => void, addToast: 
 
         const response = await fetch('/api/send-backup', {
           method: 'POST',
-          headers: { 
+          headers: {
             'Content-Type': 'application/json',
-            'x-api-key': 'cdx-secret-2026'
+            'x-api-key': 'cdx-secret-2026',
           },
           body: JSON.stringify({
             email,
             fileName,
             fileData,
             tableList: labels,
-            tableStats: stats
-          })
+            tableStats: stats,
+          }),
         });
 
         if (!response.ok) {
@@ -162,7 +172,10 @@ export const BackupNow = ({ onBack, addToast }: { onBack: () => void, addToast: 
       }
 
       setStatus('Hoàn tất!');
-      addToast('Sao lưu toàn bộ dữ liệu thành công!' + (email ? ` Đã gửi tới email ${email}.` : ''), 'success');
+      addToast(
+        'Sao lưu toàn bộ dữ liệu thành công!' + (email ? ` Đã gửi tới email ${email}.` : ''),
+        'success',
+      );
     } catch (err: any) {
       console.error('Backup error:', err);
       addToast('Đã xảy ra lỗi khi sao lưu dữ liệu: ' + err.message, 'error');
@@ -176,14 +189,17 @@ export const BackupNow = ({ onBack, addToast }: { onBack: () => void, addToast: 
       <PageBreadcrumb title="Sao lưu toàn phần" onBack={onBack} />
 
       <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-12 flex flex-col items-center justify-center text-center max-w-2xl mx-auto space-y-6">
-        <div className={`p-8 rounded-full ${loading ? 'bg-primary/10 animate-pulse' : 'bg-primary/10'}`}>
+        <div
+          className={`p-8 rounded-full ${loading ? 'bg-primary/10 animate-pulse' : 'bg-primary/10'}`}
+        >
           <Download size={64} className="text-primary" />
         </div>
 
         <div className="space-y-2">
           <h2 className="text-2xl font-bold text-gray-800">Sao lưu toàn bộ dữ liệu</h2>
           <p className="text-gray-500 max-w-md">
-            Hệ thống sẽ xuất toàn bộ dữ liệu từ tất cả các bảng ra một file Excel duy nhất để bạn có thể lưu trữ ngoại tuyến.
+            Hệ thống sẽ xuất toàn bộ dữ liệu từ tất cả các bảng ra một file Excel duy nhất để bạn có
+            thể lưu trữ ngoại tuyến.
           </p>
         </div>
 

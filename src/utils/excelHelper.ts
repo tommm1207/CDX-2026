@@ -77,19 +77,31 @@ export const formatDataForExcel = (data: any[], lookupData: any = {}) => {
   if (!data || data.length === 0) return [];
 
   // Tạo lookup map nếu có truyền vào
-  const userMap = lookupData.users ? Object.fromEntries(lookupData.users.map((u: any) => [u.id, u.full_name])) : {};
-  const whMap = lookupData.warehouses ? Object.fromEntries(lookupData.warehouses.map((w: any) => [w.id, w.name])) : {};
-  const matMap = lookupData.materials ? Object.fromEntries(lookupData.materials.map((m: any) => [m.id, m.name])) : {};
-  const groupMap = lookupData.groups ? Object.fromEntries(lookupData.groups.map((g: any) => [g.id, g.name])) : {};
+  const userMap = lookupData.users
+    ? Object.fromEntries(lookupData.users.map((u: any) => [u.id, u.full_name]))
+    : {};
+  const whMap = lookupData.warehouses
+    ? Object.fromEntries(lookupData.warehouses.map((w: any) => [w.id, w.name]))
+    : {};
+  const matMap = lookupData.materials
+    ? Object.fromEntries(lookupData.materials.map((m: any) => [m.id, m.name]))
+    : {};
+  const groupMap = lookupData.groups
+    ? Object.fromEntries(lookupData.groups.map((g: any) => [g.id, g.name]))
+    : {};
 
-  return data.map(item => {
+  return data.map((item) => {
     const newItem: any = {};
-    Object.keys(item).forEach(key => {
+    Object.keys(item).forEach((key) => {
       let value = item[key];
 
       // Tự động chuyển đổi ID sang Tên nếu có trong lookup
       if (key === 'employee_id' && userMap[value]) value = userMap[value];
-      if ((key === 'warehouse_id' || key === 'from_warehouse_id' || key === 'to_warehouse_id') && whMap[value]) value = whMap[value];
+      if (
+        (key === 'warehouse_id' || key === 'from_warehouse_id' || key === 'to_warehouse_id') &&
+        whMap[value]
+      )
+        value = whMap[value];
       if (key === 'material_id' && matMap[value]) value = matMap[value];
       if (key === 'group_id' && groupMap[value]) value = groupMap[value];
 

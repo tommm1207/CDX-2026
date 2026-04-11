@@ -1,13 +1,13 @@
 // CDX Unified UI System - Refined with Premium Red Theme
 import React, { useState } from 'react';
-import { 
-  Home, 
-  RefreshCw, 
-  Search, 
-  ChevronDown, 
-  User as UserIcon, 
-  LogOut, 
-  UserCircle 
+import {
+  Home,
+  RefreshCw,
+  Search,
+  ChevronDown,
+  User as UserIcon,
+  LogOut,
+  UserCircle,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { SidebarItem } from '@/components/layout/SidebarItem';
@@ -28,7 +28,7 @@ interface MainLayoutProps {
   hideBottomNav?: boolean;
 }
 
-const LOGO_URL = "/logo.png";
+const LOGO_URL = '/logo.png';
 
 export const MainLayout = ({
   user,
@@ -40,7 +40,7 @@ export const MainLayout = ({
   onLogout,
   onRefresh,
   children,
-  hideBottomNav = false
+  hideBottomNav = false,
 }: MainLayoutProps) => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(window.innerWidth >= 1024);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
@@ -56,7 +56,12 @@ export const MainLayout = ({
               className="flex items-center gap-2 hover:bg-white/10 p-1.5 rounded-xl transition-all active:scale-95 relative z-10"
             >
               <div className="w-8 h-8 bg-white rounded-md flex items-center justify-center p-1 shadow-sm">
-                <img src={LOGO_URL} alt="Logo" className="w-full h-full object-contain" referrerPolicy="no-referrer" />
+                <img
+                  src={LOGO_URL}
+                  alt="Logo"
+                  className="w-full h-full object-contain"
+                  referrerPolicy="no-referrer"
+                />
               </div>
               <h1 className="font-bold text-sm tracking-wide hidden sm:block">QUẢN LÝ KHO CDX</h1>
             </button>
@@ -68,12 +73,12 @@ export const MainLayout = ({
               className="absolute -top-1 -right-6 z-20 pointer-events-none flex items-center gap-1"
             >
               <div className="relative flex items-center justify-center">
-                 <div className="absolute inset-0 bg-amber-400 rounded-full animate-ping opacity-75" />
-                 <div className="relative w-2 h-2 bg-amber-400 rounded-full border border-primary shadow-sm" />
+                <div className="absolute inset-0 bg-amber-400 rounded-full animate-ping opacity-75" />
+                <div className="relative w-2 h-2 bg-amber-400 rounded-full border border-primary shadow-sm" />
               </div>
               <motion.span
                 animate={{ opacity: [0.6, 1, 0.6] }}
-                transition={{ duration: 2.5, repeat: Infinity, ease: "easeInOut" }}
+                transition={{ duration: 2.5, repeat: Infinity, ease: 'easeInOut' }}
                 className="text-[6px] font-black text-amber-400 uppercase tracking-tight"
               >
                 menu
@@ -96,9 +101,12 @@ export const MainLayout = ({
             className="hover:bg-white/10 p-2 rounded-xl transition-colors flex items-center gap-2 group"
             title="Tải lại dữ liệu"
           >
-            <RefreshCw size={20} className="group-hover:rotate-180 transition-transform duration-500" />
+            <RefreshCw
+              size={20}
+              className="group-hover:rotate-180 transition-transform duration-500"
+            />
           </button>
-          
+
           <button
             onClick={() => setIsSearchOpen(true)}
             className="hover:bg-white/10 p-2 rounded-xl transition-colors flex items-center gap-2 group"
@@ -117,10 +125,15 @@ export const MainLayout = ({
               <UserIcon size={14} />
             </div>
             <div className="flex flex-col items-start leading-none">
-              <span className="text-[10px] sm:text-xs font-semibold truncate max-w-[80px] sm:max-w-none">{user.full_name}</span>
+              <span className="text-[10px] sm:text-xs font-semibold truncate max-w-[80px] sm:max-w-none">
+                {user.full_name}
+              </span>
               <span className="text-[8px] opacity-70 hidden xs:block">{user.role}</span>
             </div>
-            <ChevronDown size={14} className={`transition-transform duration-200 ${isUserMenuOpen ? 'rotate-180' : ''}`} />
+            <ChevronDown
+              size={14}
+              className={`transition-transform duration-200 ${isUserMenuOpen ? 'rotate-180' : ''}`}
+            />
           </div>
 
           <AnimatePresence>
@@ -134,11 +147,17 @@ export const MainLayout = ({
                   className="absolute right-0 top-full mt-2 w-56 bg-white rounded-2xl shadow-2xl border border-gray-100 overflow-hidden z-[70] text-gray-800"
                 >
                   <div className="p-4 border-b border-gray-50 bg-gray-50/50">
-                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">Tài khoản</p>
+                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">
+                      Tài khoản
+                    </p>
                     <p className="text-sm font-bold text-gray-800">{user.full_name}</p>
                     <div className="flex items-center gap-2 mt-1">
-                      <span className="text-xs text-gray-500">{user.code || user.id.slice(0, 8)}</span>
-                      <span className="text-[9px] bg-primary/10 text-primary px-1.5 py-0.5 rounded-md font-bold uppercase tracking-wider">{user.role}</span>
+                      <span className="text-xs text-gray-500">
+                        {user.code || user.id.slice(0, 8)}
+                      </span>
+                      <span className="text-[9px] bg-primary/10 text-primary px-1.5 py-0.5 rounded-md font-bold uppercase tracking-wider">
+                        {user.role}
+                      </span>
                     </div>
                   </div>
                   <div className="p-2">
@@ -189,12 +208,17 @@ export const MainLayout = ({
               animate={{ x: 0, opacity: 1 }}
               exit={{ x: -280, opacity: 0 }}
               transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-               className="bg-white border-r border-gray-200 overflow-y-auto flex-shrink-0 z-[90] lg:z-30 fixed lg:relative lg:top-0 h-[calc(100vh-3.5rem-env(safe-area-inset-top))] lg:h-[calc(100vh-3.5rem)] w-[280px] shadow-2xl lg:shadow-none custom-scrollbar"
-               style={{ top: window.innerWidth < 1024 ? 'calc(3.5rem + env(safe-area-inset-top))' : undefined }}
+              className="bg-white border-r border-gray-200 overflow-y-auto flex-shrink-0 z-[90] lg:z-30 fixed lg:relative lg:top-0 h-[calc(100vh-3.5rem-env(safe-area-inset-top))] lg:h-[calc(100vh-3.5rem)] w-[280px] shadow-2xl lg:shadow-none custom-scrollbar"
+              style={{
+                top:
+                  window.innerWidth < 1024 ? 'calc(3.5rem + env(safe-area-inset-top))' : undefined,
+              }}
             >
               <div className="p-4 space-y-6 pb-44 lg:pb-4">
                 <div className="flex items-center justify-between px-2">
-                  <h2 className="text-xs font-bold text-gray-400 tracking-widest uppercase">Menu</h2>
+                  <h2 className="text-xs font-bold text-gray-400 tracking-widest uppercase">
+                    Menu
+                  </h2>
                 </div>
 
                 <div className="space-y-6">
@@ -210,7 +234,9 @@ export const MainLayout = ({
 
                   {filteredMenuGroups.map((group, idx) => (
                     <div key={idx} className="space-y-1">
-                      <p className="text-[10px] font-bold text-gray-300 px-4 mb-2 tracking-wider">{group.title}</p>
+                      <p className="text-[10px] font-bold text-gray-300 px-4 mb-2 tracking-wider">
+                        {group.title}
+                      </p>
                       {group.items.map((item: any) => (
                         <SidebarItem
                           key={item.id}
@@ -232,7 +258,10 @@ export const MainLayout = ({
           )}
         </AnimatePresence>
 
-        <main key={refreshKey} className="flex-1 overflow-y-auto overflow-x-hidden relative bg-[#F8F9FA] pb-44 lg:pb-0">
+        <main
+          key={refreshKey}
+          className="flex-1 overflow-y-auto overflow-x-hidden relative bg-[#F8F9FA] pb-44 lg:pb-0"
+        >
           {children}
 
           <footer className="p-4 text-center text-[10px] text-gray-400 border-t border-gray-100 mt-auto">
@@ -240,8 +269,18 @@ export const MainLayout = ({
           </footer>
         </main>
       </div>
-      <BottomNav currentPage={currentPage} onNavigate={onNavigate} user={user} pendingCount={pendingCount} isHidden={hideBottomNav} />
-      <GlobalSearch isOpen={isSearchOpen} onClose={() => setIsSearchOpen(false)} onNavigate={onNavigate} />
+      <BottomNav
+        currentPage={currentPage}
+        onNavigate={onNavigate}
+        user={user}
+        pendingCount={pendingCount}
+        isHidden={hideBottomNav}
+      />
+      <GlobalSearch
+        isOpen={isSearchOpen}
+        onClose={() => setIsSearchOpen(false)}
+        onNavigate={onNavigate}
+      />
     </div>
   );
 };

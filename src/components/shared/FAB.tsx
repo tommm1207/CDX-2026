@@ -10,23 +10,28 @@ interface FABProps {
   showLabel?: boolean;
 }
 
-export const FAB = ({ 
-  onClick, 
-  label = 'Thêm mới', 
-  visible = true, 
+export const FAB = ({
+  onClick,
+  label = 'Thêm mới',
+  visible = true,
   color = 'bg-primary',
   icon: Icon = Plus,
-  showLabel = false
+  showLabel = false,
 }: FABProps) => {
   if (!visible) return null;
 
   // Determine shadow and hover colors based on the main color
-  const shadowColor = color.includes('primary') ? 'shadow-primary/30' : 
-                     color.includes('amber') ? 'shadow-amber-500/30' :
-                     color.includes('red') ? 'shadow-red-500/30' :
-                     color.includes('blue') ? 'shadow-blue-500/30' :
-                     color.includes('indigo') ? 'shadow-indigo-600/30' :
-                     'shadow-gray-400/30';
+  const shadowColor = color.includes('primary')
+    ? 'shadow-primary/30'
+    : color.includes('amber')
+      ? 'shadow-amber-500/30'
+      : color.includes('red')
+        ? 'shadow-red-500/30'
+        : color.includes('blue')
+          ? 'shadow-blue-500/30'
+          : color.includes('indigo')
+            ? 'shadow-indigo-600/30'
+            : 'shadow-gray-400/30';
 
   const hoverColor = color.includes('primary') ? 'hover:bg-primary-dark' : 'hover:brightness-110';
 

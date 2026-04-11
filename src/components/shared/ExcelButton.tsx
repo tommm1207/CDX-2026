@@ -11,7 +11,7 @@ export const ExcelButton = ({
   onClick,
   loading = false,
   label = 'Xuất Excel',
-  className = ''
+  className = '',
 }: ExcelButtonProps) => (
   <Button
     onClick={onClick}
@@ -21,7 +21,14 @@ export const ExcelButton = ({
   >
     <div className="flex items-center gap-2 whitespace-nowrap">
       {/* Brighter integrated Excel SVG */}
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true" className="shrink-0 group-hover:rotate-12 transition-transform">
+      <svg
+        width="20"
+        height="20"
+        viewBox="0 0 24 24"
+        fill="none"
+        aria-hidden="true"
+        className="shrink-0 group-hover:rotate-12 transition-transform"
+      >
         <rect width="24" height="24" rx="6" fill="#2D5A27" />
         <path
           d="M7.5 6L11 12l-3.5 6h3.5l1.5-3.5 1.5 3.5h3.5L14 12l3.5-6h-3.5L12.5 9.5 11 6z"

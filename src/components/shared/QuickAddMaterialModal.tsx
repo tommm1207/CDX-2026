@@ -17,7 +17,7 @@ export const QuickAddMaterialModal = ({
   onClose,
   onSuccess,
   addToast,
-  groups
+  groups,
 }: QuickAddMaterialModalProps) => {
   const [name, setName] = useState('');
   const [unit, setUnit] = useState('');
@@ -26,7 +26,6 @@ export const QuickAddMaterialModal = ({
   const [desc, setDesc] = useState('');
   const [code, setCode] = useState('');
   const [loading, setLoading] = useState(false);
-
 
   const handleGroupChange = async (val: string) => {
     setGroupId(val);
@@ -51,19 +50,19 @@ export const QuickAddMaterialModal = ({
 
     setLoading(true);
     try {
-      const finalCode = code || await generateNextMaterialCode(groupId);
-      const payload = { 
-        name, 
-        code: finalCode, 
+      const finalCode = code || (await generateNextMaterialCode(groupId));
+      const payload = {
+        name,
+        code: finalCode,
         unit: unit || 'Cái',
         group_id: groupId,
         specification: spec,
         description: desc,
-        status: 'Đang sử dụng'
+        status: 'Đang sử dụng',
       };
       const { data, error } = await supabase.from('materials').insert([payload]).select();
       if (error) throw error;
-      
+
       if (data && data[0]) {
         onSuccess(data[0]);
         addToast?.('Đã thêm vật tư mới!', 'success');
@@ -86,7 +85,7 @@ export const QuickAddMaterialModal = ({
   return (
     <AnimatePresence>
       {show && (
-        <div 
+        <div
           className="fixed inset-0 z-[150] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm"
           onClick={onClose}
         >
@@ -99,94 +98,113 @@ export const QuickAddMaterialModal = ({
           >
             <div className="bg-blue-600 p-6 text-white flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <button onClick={onClose} className="p-2 bg-white/20 hover:bg-white/30 rounded-xl transition-colors cursor-pointer">
+                <button
+                  onClick={onClose}
+                  className="p-2 bg-white/20 hover:bg-white/30 rounded-xl transition-colors cursor-pointer"
+                >
                   <PackagePlus size={24} />
                 </button>
                 <h3 className="font-bold text-lg">Thêm vật tư nhanh</h3>
               </div>
             </div>
-            
+
             <div className="flex-1 overflow-y-auto p-6 space-y-4">
-              <form id="quick-add-material-form" onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <form
+                id="quick-add-material-form"
+                onSubmit={handleSubmit}
+                className="grid grid-cols-1 md:grid-cols-2 gap-4"
+              >
                 <div className="md:col-span-2 space-y-1">
-                  <label className="text-[10px] font-bold text-gray-400 uppercase">Nhóm vật tư *</label>
-                  <select 
-                    required 
-                    value={groupId} 
+                  <label className="text-[10px] font-bold text-gray-400 uppercase">
+                    Nhóm vật tư *
+                  </label>
+                  <select
+                    required
+                    value={groupId}
                     onChange={(e) => handleGroupChange(e.target.value)}
                     className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-blue-600/20"
                   >
                     <option value="">-- Chọn nhóm --</option>
-                    {groups.map(g => (
-                      <option key={g.id} value={g.id}>{g.name} ({g.code})</option>
+                    {groups.map((g) => (
+                      <option key={g.id} value={g.id}>
+                        {g.name} ({g.code})
+                      </option>
                     ))}
                   </select>
                 </div>
                 <div className="md:col-span-2 space-y-1">
-                  <label className="text-[10px] font-bold text-gray-400 uppercase">Mã vật tư (Tự động)</label>
-                  <input 
-                    type="text" 
-                    value={code} 
+                  <label className="text-[10px] font-bold text-gray-400 uppercase">
+                    Mã vật tư (Tự động)
+                  </label>
+                  <input
+                    type="text"
+                    value={code}
                     onChange={(e) => setCode(e.target.value)}
                     placeholder="Chọn nhóm để sinh mã..."
                     className="w-full px-4 py-2 rounded-xl border border-gray-100 bg-gray-50 text-sm outline-none font-mono"
                   />
                 </div>
                 <div className="md:col-span-2 space-y-1">
-                  <label className="text-[10px] font-bold text-gray-400 uppercase">Tên vật tư *</label>
-                  <input 
-                    type="text" 
-                    required 
-                    value={name} 
-                    onChange={(e) => setName(e.target.value)} 
+                  <label className="text-[10px] font-bold text-gray-400 uppercase">
+                    Tên vật tư *
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
                     placeholder="VD: Xi măng Hà Tiên..."
-                    className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-blue-600/20" 
+                    className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-blue-600/20"
                   />
                 </div>
                 <div className="space-y-1">
-                  <label className="text-[10px] font-bold text-gray-400 uppercase">Đơn vị tính</label>
-                  <input 
-                    type="text" 
-                    value={unit} 
-                    onChange={(e) => setUnit(e.target.value)} 
+                  <label className="text-[10px] font-bold text-gray-400 uppercase">
+                    Đơn vị tính
+                  </label>
+                  <input
+                    type="text"
+                    value={unit}
+                    onChange={(e) => setUnit(e.target.value)}
                     placeholder="VD: Cái, Kg, Bao..."
-                    className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-blue-600/20" 
+                    className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-blue-600/20"
                   />
                 </div>
                 <div className="space-y-1">
                   <label className="text-[10px] font-bold text-gray-400 uppercase">Quy cách</label>
-                  <input 
-                    type="text" 
-                    value={spec} 
-                    onChange={(e) => setSpec(e.target.value)} 
+                  <input
+                    type="text"
+                    value={spec}
+                    onChange={(e) => setSpec(e.target.value)}
                     placeholder="VD: 50kg, Φ12..."
-                    className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-blue-600/20" 
+                    className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-blue-600/20"
                   />
                 </div>
                 <div className="md:col-span-2 space-y-1">
-                  <label className="text-[10px] font-bold text-gray-400 uppercase">Mô tả chi tiết</label>
-                  <textarea 
-                    rows={2} 
-                    value={desc} 
-                    onChange={(e) => setDesc(e.target.value)} 
+                  <label className="text-[10px] font-bold text-gray-400 uppercase">
+                    Mô tả chi tiết
+                  </label>
+                  <textarea
+                    rows={2}
+                    value={desc}
+                    onChange={(e) => setDesc(e.target.value)}
                     placeholder="Mô tả thêm về vật tư nếu cần..."
-                    className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-blue-600/20 resize-none" 
+                    className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-blue-600/20 resize-none"
                   />
                 </div>
               </form>
             </div>
 
             <div className="p-6 bg-gray-50 border-t border-gray-100 flex justify-end gap-3 rounded-b-3xl">
-              <button 
+              <button
                 type="button"
-                onClick={onClose} 
+                onClick={onClose}
                 className="px-6 py-2 rounded-xl text-sm font-bold text-gray-500 hover:bg-gray-200 transition-colors"
               >
                 Hủy
               </button>
-              <button 
+              <button
                 form="quick-add-material-form"
-                type="submit" 
+                type="submit"
                 disabled={loading}
                 className="px-8 py-2 bg-blue-600 text-white rounded-xl text-sm font-bold hover:bg-blue-700 transition-all shadow-lg shadow-blue-600/20 disabled:opacity-50"
               >

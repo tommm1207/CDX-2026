@@ -17,9 +17,12 @@ export function ReloadPrompt({ currentPage }: ReloadPromptProps) {
       console.log('SW Registered: ' + r);
       // Kiểm tra bản cập nhật định kỳ mỗi 60 phút
       if (r) {
-        setInterval(() => {
-          r.update();
-        }, 60 * 60 * 1000);
+        setInterval(
+          () => {
+            r.update();
+          },
+          60 * 60 * 1000,
+        );
       }
     },
     onRegisterError(error) {
@@ -31,7 +34,7 @@ export function ReloadPrompt({ currentPage }: ReloadPromptProps) {
   useEffect(() => {
     const handleCheckUpdate = () => {
       if (navigator.serviceWorker) {
-        navigator.serviceWorker.getRegistration().then(reg => {
+        navigator.serviceWorker.getRegistration().then((reg) => {
           if (reg) reg.update();
         });
       }
@@ -44,7 +47,7 @@ export function ReloadPrompt({ currentPage }: ReloadPromptProps) {
     };
 
     window.addEventListener('visibilitychange', handleVisibilityChange);
-    
+
     // Check ngay khi đổi trang (currentPage thay đổi)
     handleCheckUpdate();
 
@@ -67,20 +70,26 @@ export function ReloadPrompt({ currentPage }: ReloadPromptProps) {
         >
           <div className="bg-white rounded-2xl shadow-2xl border border-gray-100 p-4 flex flex-col gap-3">
             <div className="flex items-start gap-3">
-              <div className={`p-2 rounded-xl ${needRefresh ? 'bg-primary/10 text-primary' : 'bg-green-100 text-green-600'}`}>
-                {needRefresh ? <RefreshCw size={24} className="animate-spin-slow" /> : <Download size={24} />}
+              <div
+                className={`p-2 rounded-xl ${needRefresh ? 'bg-primary/10 text-primary' : 'bg-green-100 text-green-600'}`}
+              >
+                {needRefresh ? (
+                  <RefreshCw size={24} className="animate-spin-slow" />
+                ) : (
+                  <Download size={24} />
+                )}
               </div>
               <div className="flex-1">
                 <h3 className="font-bold text-gray-900">
                   {needRefresh ? 'Đã có bản cập nhật mới' : 'Sẵn sàng dùng ngoại tuyến'}
                 </h3>
                 <p className="text-sm text-gray-500">
-                  {needRefresh 
-                    ? 'Vui lòng cập nhật để sử dụng các tính năng mới nhất.' 
+                  {needRefresh
+                    ? 'Vui lòng cập nhật để sử dụng các tính năng mới nhất.'
                     : 'Ứng dụng đã có thể hoạt động khi không có mạng.'}
                 </p>
               </div>
-              <button 
+              <button
                 onClick={close}
                 className="p-1 hover:bg-gray-100 rounded-full text-gray-400 transition-colors"
               >

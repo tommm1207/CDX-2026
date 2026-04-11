@@ -9,12 +9,12 @@ export const CreatableSelect = ({
   options,
   onChange,
   onCreate,
-  placeholder = "-- Chọn --",
+  placeholder = '-- Chọn --',
   required = false,
   disabled = false,
-  className = "",
-  labelClassName = "text-[10px] font-bold text-gray-400 uppercase",
-  selectClassName = "w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20 bg-white",
+  className = '',
+  labelClassName = 'text-[10px] font-bold text-gray-400 uppercase',
+  selectClassName = 'w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20 bg-white',
 }: {
   label?: string;
   value: string;
@@ -29,25 +29,27 @@ export const CreatableSelect = ({
   selectClassName?: string;
 }) => {
   const [isOpen, setIsOpen] = useState(false);
-  const [searchTerm, setSearchTerm] = useState("");
+  const [searchTerm, setSearchTerm] = useState('');
   const containerRef = useRef<HTMLDivElement>(null);
 
-  const selectedOption = options.find(opt => opt.id === value);
+  const selectedOption = options.find((opt) => opt.id === value);
 
   useEffect(() => {
     if (!isOpen) {
       if (selectedOption) {
+        // eslint-disable-next-line react-hooks/set-state-in-effect
         setSearchTerm(selectedOption.name);
       } else if (value && !isUUID(value)) {
+         
         setSearchTerm(value);
       } else {
-        setSearchTerm("");
+        setSearchTerm('');
       }
     }
   }, [value, selectedOption, isOpen]);
 
-  const filteredOptions = options.filter(opt =>
-    opt.name.toLowerCase().includes(searchTerm.toLowerCase())
+  const filteredOptions = options.filter((opt) =>
+    opt.name.toLowerCase().includes(searchTerm.toLowerCase()),
   );
 
   useEffect(() => {
@@ -59,17 +61,21 @@ export const CreatableSelect = ({
         } else if (value && !isUUID(value)) {
           setSearchTerm(value);
         } else {
-          setSearchTerm("");
+          setSearchTerm('');
         }
       }
     };
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [selectedOption, value]);
 
   return (
     <div className={`relative ${className}`} ref={containerRef}>
-      {label && <label className={labelClassName}>{label} {required && '*'}</label>}
+      {label && (
+        <label className={labelClassName}>
+          {label} {required && '*'}
+        </label>
+      )}
       <div className="relative mt-1">
         <div className="relative">
           <input
@@ -80,7 +86,7 @@ export const CreatableSelect = ({
             onChange={(e) => {
               setSearchTerm(e.target.value);
               setIsOpen(true);
-              if (e.target.value === "") onChange("");
+              if (e.target.value === '') onChange('');
             }}
             onFocus={() => !disabled && setIsOpen(true)}
             className={`${selectClassName} pr-10 ${disabled ? 'bg-gray-100 cursor-not-allowed opacity-70' : ''}`}
@@ -91,59 +97,73 @@ export const CreatableSelect = ({
                 type="button"
                 onClick={(e) => {
                   e.stopPropagation();
-                  setSearchTerm("");
-                  onChange("");
+                  setSearchTerm('');
+                  onChange('');
                 }}
                 className="p-1 hover:bg-gray-100 rounded-full text-gray-400"
               >
                 <X size={12} />
               </button>
             )}
-            <ChevronDown size={16} className={`text-gray-400 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+            <ChevronDown
+              size={16}
+              className={`text-gray-400 transition-transform ${isOpen ? 'rotate-180' : ''}`}
+            />
           </div>
         </div>
 
         <AnimatePresence>
-          {isOpen && (filteredOptions.length > 0 || (searchTerm && !options.find(opt => opt.name.toLowerCase() === searchTerm.toLowerCase()))) && (
-            <motion.div
-              initial={{ opacity: 0, y: -10 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -10 }}
-              className="absolute z-[9999] left-0 right-0 mt-1 bg-white rounded-xl shadow-xl border border-gray-100 overflow-hidden"
-            >
-              <div className="max-h-60 overflow-y-auto custom-scrollbar">
-                {filteredOptions.map((opt) => (
-                  <div
-                    key={opt.id}
-                    onClick={() => {
-                      onChange(opt.id);
-                      setSearchTerm(opt.name);
-                      setIsOpen(false);
-                    }}
-                    className={`px-4 py-2 text-sm cursor-pointer hover:bg-primary/5 transition-colors ${value === opt.id ? 'bg-primary/10 text-primary font-bold' : 'text-gray-700'}`}
-                  >
-                    {opt.name}
-                  </div>
-                ))}
+          {isOpen &&
+            (filteredOptions.length > 0 ||
+              (searchTerm &&
+                !options.find((opt) => opt.name.toLowerCase() === searchTerm.toLowerCase()))) && (
+              <motion.div
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+                className="absolute z-[9999] left-0 right-0 mt-1 bg-white rounded-xl shadow-xl border border-gray-100 overflow-hidden"
+              >
+                <div className="max-h-60 overflow-y-auto custom-scrollbar">
+                  {filteredOptions.map((opt) => (
+                    <div
+                      key={opt.id}
+                      onClick={() => {
+                        onChange(opt.id);
+                        setSearchTerm(opt.name);
+                        setIsOpen(false);
+                      }}
+                      className={`px-4 py-2 text-sm cursor-pointer hover:bg-primary/5 transition-colors ${value === opt.id ? 'bg-primary/10 text-primary font-bold' : 'text-gray-700'}`}
+                    >
+                      {opt.name}
+                    </div>
+                  ))}
 
-                {searchTerm && !options.find(opt => opt.name.toLowerCase() === searchTerm.toLowerCase()) && (
-                  <div
-                    onClick={() => {
-                      onCreate(searchTerm);
-                      setIsOpen(false);
-                    }}
-                    className="px-4 py-3 border-t border-gray-50 bg-gray-50/50 cursor-pointer hover:bg-primary/5 transition-colors flex items-center gap-2 text-primary font-bold text-sm"
-                  >
-                    <Plus size={16} />
-                    <span>Thêm mới: "{searchTerm}"</span>
-                  </div>
-                )}
-              </div>
-            </motion.div>
-          )}
+                  {searchTerm &&
+                    !options.find((opt) => opt.name.toLowerCase() === searchTerm.toLowerCase()) && (
+                      <div
+                        onClick={() => {
+                          onCreate(searchTerm);
+                          setIsOpen(false);
+                        }}
+                        className="px-4 py-3 border-t border-gray-50 bg-gray-50/50 cursor-pointer hover:bg-primary/5 transition-colors flex items-center gap-2 text-primary font-bold text-sm"
+                      >
+                        <Plus size={16} />
+                        <span>Thêm mới: "{searchTerm}"</span>
+                      </div>
+                    )}
+                </div>
+              </motion.div>
+            )}
         </AnimatePresence>
       </div>
-      {required && !value && <input tabIndex={-1} autoComplete="off" style={{ opacity: 0, height: 0, width: 0, position: 'absolute' }} required />}
+      {required && !value && (
+        <input
+          tabIndex={-1}
+          autoComplete="off"
+          style={{ opacity: 0, height: 0, width: 0, position: 'absolute' }}
+          required
+        />
+      )}
     </div>
   );
 };

@@ -1,5 +1,19 @@
 import { useState, useEffect, FormEvent } from 'react';
-import { ClipboardList, Plus, Trash2, X, Save, CheckCircle2, AlertTriangle, Package, Warehouse, Calendar, Info, Settings, Calculator } from 'lucide-react';
+import {
+  ClipboardList,
+  Plus,
+  Trash2,
+  X,
+  Save,
+  CheckCircle2,
+  AlertTriangle,
+  Package,
+  Warehouse,
+  Calendar,
+  Info,
+  Settings,
+  Calculator,
+} from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { supabase } from '@/lib/supabase';
 import { Employee, Material, BOMConfig, BOMItem, ProductionOrder } from '@/types';
@@ -11,11 +25,16 @@ import { getAvailableStock, isActiveWarehouse } from '@/utils/inventory';
 import { getAllowedWarehouses } from '@/utils/helpers';
 import { Button } from '../shared/Button';
 
-export const ProductionOrderDetail = ({ user, orderId, onBack, addToast }: {
-  user: Employee,
-  orderId?: string,
-  onBack: () => void,
-  addToast?: (message: string, type?: ToastType) => void
+export const ProductionOrderDetail = ({
+  user,
+  orderId,
+  onBack,
+  addToast,
+}: {
+  user: Employee;
+  orderId?: string;
+  onBack: () => void;
+  addToast?: (message: string, type?: ToastType) => void;
 }) => {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
@@ -23,15 +42,17 @@ export const ProductionOrderDetail = ({ user, orderId, onBack, addToast }: {
   const [boms, setBoms] = useState<BOMConfig[]>([]);
   const [warehouses, setWarehouses] = useState<any[]>([]);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
-  
+
   const [order, setOrder] = useState<Partial<ProductionOrder>>({
     order_code: '',
     status: 'Mới',
     quantity: 0,
-    planned_date: new Date().toISOString().split('T')[0]
+    planned_date: new Date().toISOString().split('T')[0],
   });
 
-  const [bomItems, setBomItems] = useState<(BOMItem & { material?: Material, available?: number })[]>([]);
+  const [bomItems, setBomItems] = useState<
+    (BOMItem & { material?: Material; available?: number })[]
+  >([]);
 
   useEffect(() => {
     fetchInitialData();
@@ -43,7 +64,11 @@ export const ProductionOrderDetail = ({ user, orderId, onBack, addToast }: {
       const [matRes, bomRes, whRes] = await Promise.all([
         supabase.from('materials').select('*').order('name'),
         supabase.from('bom_configs').select('*').order('name'),
-        supabase.from('warehouses').select('*').or('status.is.null,status.neq.Đã xóa').order('name')
+        supabase
+          .from('warehouses')
+          .select('*')
+          .or('status.is.null,status.neq.Đã xóa')
+          .order('name'),
       ]);
 
       if (matRes.data) setMaterials(matRes.data);
@@ -52,7 +77,7 @@ export const ProductionOrderDetail = ({ user, orderId, onBack, addToast }: {
         let whs = whRes.data.filter(isActiveWarehouse);
         const allowedWhIds = getAllowedWarehouses(user.data_view_permission);
         if (allowedWhIds) {
-          whs = whs.filter(w => allowedWhIds.includes(w.id));
+          whs = whs.filter((w) => allowedWhIds.includes(w.id));
         }
         setWarehouses(whs);
       }
@@ -63,7 +88,7 @@ export const ProductionOrderDetail = ({ user, orderId, onBack, addToast }: {
           .select('*')
           .eq('id', orderId)
           .single();
-        
+
         if (orderData) {
           // Check permission for existing order
           const allowedWhIds = getAllowedWarehouses(user.data_view_permission);
@@ -79,7 +104,7 @@ export const ProductionOrderDetail = ({ user, orderId, onBack, addToast }: {
         }
       } else {
         const nextCode = await generateOrderCode();
-        setOrder(prev => ({ ...prev, order_code: nextCode }));
+        setOrder((prev) => ({ ...prev, order_code: nextCode }));
       }
     } catch (err: any) {
       if (addToast) addToast('Lỗi tải dữ liệu: ' + err.message, 'error');
@@ -94,7 +119,7 @@ export const ProductionOrderDetail = ({ user, orderId, onBack, addToast }: {
       .select('order_code')
       .order('order_code', { ascending: false })
       .limit(1);
-    
+
     if (data && data.length > 0) {
       const lastCode = data[0].order_code;
       const num = parseInt(lastCode.split('-')[1]) + 1;
@@ -104,23 +129,24 @@ export const ProductionOrderDetail = ({ user, orderId, onBack, addToast }: {
   };
 
   const fetchBomItems = async (bomId: string, quantity: number, warehouseId?: string) => {
-    const { data } = await supabase
-      .from('bom_items')
-      .select('*')
-      .eq('bom_id', bomId);
-    
+    const { data } = await supabase.from('bom_items').select('*').eq('bom_id', bomId);
+
     if (data) {
-      const enriched = await Promise.all(data.map(async (item) => {
-        const mat = materials.find(m => m.id === item.material_item_id);
-        const available = warehouseId ? await getAvailableStock(item.material_item_id, warehouseId, order.planned_date || '') : 0;
-        return { ...item, material: mat, available };
-      }));
+      const enriched = await Promise.all(
+        data.map(async (item) => {
+          const mat = materials.find((m) => m.id === item.material_item_id);
+          const available = warehouseId
+            ? await getAvailableStock(item.material_item_id, warehouseId, order.planned_date || '')
+            : 0;
+          return { ...item, material: mat, available };
+        }),
+      );
       setBomItems(enriched);
     }
   };
 
   const handleBomChange = async (bomId: string) => {
-    setOrder(prev => ({ ...prev, bom_id: bomId }));
+    setOrder((prev) => ({ ...prev, bom_id: bomId }));
     if (bomId) {
       await fetchBomItems(bomId, order.quantity || 0, order.warehouse_id);
     } else {
@@ -129,7 +155,7 @@ export const ProductionOrderDetail = ({ user, orderId, onBack, addToast }: {
   };
 
   const handleWarehouseChange = async (whId: string) => {
-    setOrder(prev => ({ ...prev, warehouse_id: whId }));
+    setOrder((prev) => ({ ...prev, warehouse_id: whId }));
     if (order.bom_id) {
       await fetchBomItems(order.bom_id, order.quantity || 0, whId);
     }
@@ -140,7 +166,13 @@ export const ProductionOrderDetail = ({ user, orderId, onBack, addToast }: {
   };
 
   const handleSave = async () => {
-    if (!order.order_code || !order.bom_id || !order.warehouse_id || !order.output_warehouse_id || (order.quantity || 0) <= 0) {
+    if (
+      !order.order_code ||
+      !order.bom_id ||
+      !order.warehouse_id ||
+      !order.output_warehouse_id ||
+      (order.quantity || 0) <= 0
+    ) {
       if (addToast) addToast('Vui lòng điền đầy đủ thông tin bắt buộc', 'info');
       return;
     }
@@ -149,7 +181,7 @@ export const ProductionOrderDetail = ({ user, orderId, onBack, addToast }: {
     try {
       const dataToSave = {
         ...order,
-        created_by: user.id
+        created_by: user.id,
       };
 
       if (orderId) {
@@ -169,7 +201,12 @@ export const ProductionOrderDetail = ({ user, orderId, onBack, addToast }: {
 
   const handleApprove = async () => {
     if (order.status !== 'Mới') return;
-    if (!window.confirm('Xác nhận duyệt lệnh sản xuất này? Hệ thống sẽ tự động tạo phiếu xuất kho nguyên liệu và nhập kho thành phẩm.')) return;
+    if (
+      !window.confirm(
+        'Xác nhận duyệt lệnh sản xuất này? Hệ thống sẽ tự động tạo phiếu xuất kho nguyên liệu và nhập kho thành phẩm.',
+      )
+    )
+      return;
 
     // Preliminary UI Check stock for all items
     for (const item of bomItems) {
@@ -184,33 +221,49 @@ export const ProductionOrderDetail = ({ user, orderId, onBack, addToast }: {
     const createdStockOutIds: string[] = [];
     try {
       const today = new Date().toISOString().split('T')[0];
-      const bom = boms.find(b => b.id === order.bom_id);
-      
+      const bom = boms.find((b) => b.id === order.bom_id);
+
       // Real-time Stock Check to avoid race condition
       for (const it of bomItems) {
         const qty = calculateTotal(it.quantity_per_unit);
-        const realTimeAvailable = await getAvailableStock(it.material_item_id, order.warehouse_id!, today);
+        const realTimeAvailable = await getAvailableStock(
+          it.material_item_id,
+          order.warehouse_id!,
+          today,
+        );
         if (realTimeAvailable < qty) {
-          throw new Error(`Kho không đủ vật tư: ${it.material?.name}. Hiện có: ${realTimeAvailable}, Yêu cầu: ${qty}. Vui lòng nhập thêm kho!`);
+          throw new Error(
+            `Kho không đủ vật tư: ${it.material?.name}. Hiện có: ${realTimeAvailable}, Yêu cầu: ${qty}. Vui lòng nhập thêm kho!`,
+          );
         }
       }
-      
+
       // 1. Create Stock Out for each material sequentially
       for (const it of bomItems) {
         const qty = calculateTotal(it.quantity_per_unit);
-        if (addToast) addToast(`Đang xuất vật tư: ${it.material?.name} (${formatNumber(qty)} ${it.unit})...`, 'info');
-        
-        const { data, error } = await supabase.from('stock_out').insert([{
-          export_code: `X-LSX-${order.order_code}`,
-          date: today,
-          warehouse_id: order.warehouse_id,
-          material_id: it.material_item_id,
-          quantity: qty,
-          unit: it.unit,
-          employee_id: user.id,
-          status: 'Đã duyệt',
-          notes: `Xuất vật tư theo lệnh sản xuất ${order.order_code}${bom?.is_two_stage ? ' [2 giai đoạn]' : ''}`
-        }]).select('id').single();
+        if (addToast)
+          addToast(
+            `Đang xuất vật tư: ${it.material?.name} (${formatNumber(qty)} ${it.unit})...`,
+            'info',
+          );
+
+        const { data, error } = await supabase
+          .from('stock_out')
+          .insert([
+            {
+              export_code: `X-LSX-${order.order_code}`,
+              date: today,
+              warehouse_id: order.warehouse_id,
+              material_id: it.material_item_id,
+              quantity: qty,
+              unit: it.unit,
+              employee_id: user.id,
+              status: 'Đã duyệt',
+              notes: `Xuất vật tư theo lệnh sản xuất ${order.order_code}${bom?.is_two_stage ? ' [2 giai đoạn]' : ''}`,
+            },
+          ])
+          .select('id')
+          .single();
 
         if (error) throw new Error(`Lỗi xuất vật tư ${it.material?.name}: ${error.message}`);
         if (data) createdStockOutIds.push(data.id);
@@ -222,28 +275,33 @@ export const ProductionOrderDetail = ({ user, orderId, onBack, addToast }: {
       // Bước 1: Nhập Bán thành phẩm vào kho nguyên liệu (order.warehouse_id)
       // Bước 2: Xuất Bán thành phẩm từ kho nguyên liệu và Nhập Thành phẩm vào kho đích (order.output_warehouse_id)
       // Hiện tại vẫn làm 1 bước nhưng thêm note nhận diện.
-      
-      const product = materials.find(m => m.id === bom?.product_item_id);
-      const { error: siError } = await supabase.from('stock_in').insert([{
-        import_code: `N-LSX-${order.order_code}`,
-        date: today,
-        warehouse_id: order.output_warehouse_id,
-        material_id: product?.id,
-        quantity: order.quantity,
-        unit: product?.unit,
-        employee_id: user.id,
-        status: 'Đã duyệt',
-        notes: `Nhập thành phẩm từ lệnh sản xuất ${order.order_code}${bom?.is_two_stage ? ' [2 giai đoạn]' : ''}`
-      }]);
+
+      const product = materials.find((m) => m.id === bom?.product_item_id);
+      const { error: siError } = await supabase.from('stock_in').insert([
+        {
+          import_code: `N-LSX-${order.order_code}`,
+          date: today,
+          warehouse_id: order.output_warehouse_id,
+          material_id: product?.id,
+          quantity: order.quantity,
+          unit: product?.unit,
+          employee_id: user.id,
+          status: 'Đã duyệt',
+          notes: `Nhập thành phẩm từ lệnh sản xuất ${order.order_code}${bom?.is_two_stage ? ' [2 giai đoạn]' : ''}`,
+        },
+      ]);
 
       if (siError) throw new Error(`Lỗi nhập thành phẩm: ${siError.message}`);
 
       // 3. Update order status
       if (addToast) addToast('Đang hoàn thành lệnh sản xuất...', 'info');
-      const { error: upError } = await supabase.from('production_orders').update({
-        status: 'Hoàn thành',
-        approved_by: user.id
-      }).eq('id', order.id);
+      const { error: upError } = await supabase
+        .from('production_orders')
+        .update({
+          status: 'Hoàn thành',
+          approved_by: user.id,
+        })
+        .eq('id', order.id);
 
       if (upError) throw new Error(`Lỗi cập nhật lệnh: ${upError.message}`);
 
@@ -283,21 +341,24 @@ export const ProductionOrderDetail = ({ user, orderId, onBack, addToast }: {
             }
           }
 
-          await supabase.from('costs').insert([{
-            transaction_type: 'Chi',
-            cost_code: costCode,
-            date: today,
-            employee_id: user.id,
-            cost_type: 'Sản xuất',
-            content: `Chi phí sản xuất theo lệnh ${order.order_code}`,
-            material_id: product?.id,
-            warehouse_id: order.warehouse_id,
-            quantity: order.quantity,
-            unit: product?.unit,
-            unit_price: totalMaterialCost > 0 ? Math.round(totalMaterialCost / (order.quantity || 1)) : 0,
-            total_amount: totalMaterialCost,
-            notes: `Tự động tạo từ hệ thống Sản xuất — ${bomItems.length} nguyên liệu tiêu thụ`
-          }]);
+          await supabase.from('costs').insert([
+            {
+              transaction_type: 'Chi',
+              cost_code: costCode,
+              date: today,
+              employee_id: user.id,
+              cost_type: 'Sản xuất',
+              content: `Chi phí sản xuất theo lệnh ${order.order_code}`,
+              material_id: product?.id,
+              warehouse_id: order.warehouse_id,
+              quantity: order.quantity,
+              unit: product?.unit,
+              unit_price:
+                totalMaterialCost > 0 ? Math.round(totalMaterialCost / (order.quantity || 1)) : 0,
+              total_amount: totalMaterialCost,
+              notes: `Tự động tạo từ hệ thống Sản xuất — ${bomItems.length} nguyên liệu tiêu thụ`,
+            },
+          ]);
         }
       } catch (costErr) {
         console.error('Cost creation warning:', costErr);
@@ -322,7 +383,11 @@ export const ProductionOrderDetail = ({ user, orderId, onBack, addToast }: {
   const handleDelete = () => {
     if (!orderId) return;
     if (order.status === 'Đã duyệt' || order.status === 'Hoàn thành') {
-      if (addToast) addToast('❌ Không thể xóa lệnh sản xuất đã duyệt/hoàn thành.\n\nCác phiếu xuất nguyên liệu và nhập thành phẩm đã được tạo tự động. Vui lòng xử lý trên các phiếu kho liên quan.', 'error');
+      if (addToast)
+        addToast(
+          '❌ Không thể xóa lệnh sản xuất đã duyệt/hoàn thành.\n\nCác phiếu xuất nguyên liệu và nhập thành phẩm đã được tạo tự động. Vui lòng xử lý trên các phiếu kho liên quan.',
+          'error',
+        );
       return;
     }
     setShowDeleteModal(true);
@@ -330,7 +395,7 @@ export const ProductionOrderDetail = ({ user, orderId, onBack, addToast }: {
 
   const confirmDelete = async () => {
     if (!orderId) return;
-    
+
     setSubmitting(true);
     try {
       const { error } = await supabase
@@ -349,17 +414,21 @@ export const ProductionOrderDetail = ({ user, orderId, onBack, addToast }: {
     }
   };
 
-  if (loading) return <div className="p-12 text-center text-gray-400 italic">Đang tải chi tiết lệnh...</div>;
+  if (loading)
+    return <div className="p-12 text-center text-gray-400 italic">Đang tải chi tiết lệnh...</div>;
 
   const isViewOnly = order.status !== 'Mới';
 
   return (
     <div className="p-4 md:p-6 space-y-6 pb-44 overflow-y-auto max-h-screen overflow-x-hidden">
-      <PageBreadcrumb title={orderId ? `Chi tiết lệnh ${order.order_code}` : 'Tạo lệnh sản xuất'} onBack={onBack} />
+      <PageBreadcrumb
+        title={orderId ? `Chi tiết lệnh ${order.order_code}` : 'Tạo lệnh sản xuất'}
+        onBack={onBack}
+      />
 
       <AnimatePresence>
         {showDeleteModal && (
-          <div 
+          <div
             className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm overflow-hidden"
             onClick={() => setShowDeleteModal(false)}
           >
@@ -375,12 +444,27 @@ export const ProductionOrderDetail = ({ user, orderId, onBack, addToast }: {
               </div>
               <h3 className="text-xl font-bold text-gray-800 mb-2">Xác nhận xóa lệnh?</h3>
               <p className="text-sm text-gray-500 mb-6 font-medium">
-                Bạn có chắc muốn xóa lệnh sản xuất <strong>{order.order_code}</strong>?<br/>
+                Bạn có chắc muốn xóa lệnh sản xuất <strong>{order.order_code}</strong>?<br />
                 Dữ liệu sẽ được đưa vào <strong>Thùng rác</strong> và có thể khôi phục sau này.
               </p>
               <div className="flex gap-3">
-                <Button variant="ghost" fullWidth onClick={() => setShowDeleteModal(false)} className="bg-gray-100 hover:bg-gray-200">Hủy bỏ</Button>
-                <Button variant="danger" fullWidth onClick={confirmDelete} isLoading={submitting} className="shadow-lg shadow-red-500/20">Xác nhận</Button>
+                <Button
+                  variant="ghost"
+                  fullWidth
+                  onClick={() => setShowDeleteModal(false)}
+                  className="bg-gray-100 hover:bg-gray-200"
+                >
+                  Hủy bỏ
+                </Button>
+                <Button
+                  variant="danger"
+                  fullWidth
+                  onClick={confirmDelete}
+                  isLoading={submitting}
+                  className="shadow-lg shadow-red-500/20"
+                >
+                  Xác nhận
+                </Button>
               </div>
             </motion.div>
           </div>
@@ -393,7 +477,9 @@ export const ProductionOrderDetail = ({ user, orderId, onBack, addToast }: {
             {order.status === 'Mới' ? 'Dự thảo' : order.status}
           </div>
           {order.planned_date && (
-            <div className="text-[10px] text-gray-400 font-bold uppercase">Ngày dự kiến: {order.planned_date}</div>
+            <div className="text-[10px] text-gray-400 font-bold uppercase">
+              Ngày dự kiến: {order.planned_date}
+            </div>
           )}
         </div>
 
@@ -442,7 +528,7 @@ export const ProductionOrderDetail = ({ user, orderId, onBack, addToast }: {
             <h3 className="text-sm font-bold text-gray-400 uppercase tracking-widest flex items-center gap-2">
               <Info size={14} /> Thông tin chung
             </h3>
-            
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-1.5">
                 <div className="flex items-center justify-between">
@@ -454,7 +540,7 @@ export const ProductionOrderDetail = ({ user, orderId, onBack, addToast }: {
                     onChange={handleBomChange}
                     required
                   />
-                  {boms.find(b => b.id === order.bom_id)?.is_two_stage && (
+                  {boms.find((b) => b.id === order.bom_id)?.is_two_stage && (
                     <span className="mt-6 px-2 py-0.5 bg-green-100 text-green-700 rounded text-[10px] font-bold border border-green-200 uppercase">
                       2 giai đoạn
                     </span>
@@ -463,14 +549,19 @@ export const ProductionOrderDetail = ({ user, orderId, onBack, addToast }: {
               </div>
 
               <div className="space-y-1.5">
-                <label className="text-[10px] font-bold text-gray-400 uppercase px-1">Số lượng sản xuất *</label>
+                <label className="text-[10px] font-bold text-gray-400 uppercase px-1">
+                  Số lượng sản xuất *
+                </label>
                 <div className="relative">
-                  <Calculator size={14} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
+                  <Calculator
+                    size={14}
+                    className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400"
+                  />
                   <input
                     readOnly={isViewOnly}
                     type="number"
                     value={order.quantity}
-                    onChange={e => {
+                    onChange={(e) => {
                       const val = parseFloat(e.target.value) || 0;
                       setOrder({ ...order, quantity: val });
                     }}
@@ -502,14 +593,19 @@ export const ProductionOrderDetail = ({ user, orderId, onBack, addToast }: {
               </div>
 
               <div className="space-y-1.5">
-                <label className="text-[10px] font-bold text-gray-400 uppercase px-1">Ngày dự kiến sản xuất</label>
+                <label className="text-[10px] font-bold text-gray-400 uppercase px-1">
+                  Ngày dự kiến sản xuất
+                </label>
                 <div className="relative">
-                  <Calendar size={14} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
+                  <Calendar
+                    size={14}
+                    className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400"
+                  />
                   <input
                     readOnly={isViewOnly}
                     type="date"
                     value={order.planned_date}
-                    onChange={e => setOrder({ ...order, planned_date: e.target.value })}
+                    onChange={(e) => setOrder({ ...order, planned_date: e.target.value })}
                     className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20 bg-white"
                   />
                 </div>
@@ -517,12 +613,14 @@ export const ProductionOrderDetail = ({ user, orderId, onBack, addToast }: {
             </div>
 
             <div className="space-y-1.5">
-              <label className="text-[10px] font-bold text-gray-400 uppercase px-1">Ghi chú lệnh</label>
+              <label className="text-[10px] font-bold text-gray-400 uppercase px-1">
+                Ghi chú lệnh
+              </label>
               <textarea
                 readOnly={isViewOnly}
                 rows={2}
                 value={order.notes || ''}
-                onChange={e => setOrder({ ...order, notes: e.target.value })}
+                onChange={(e) => setOrder({ ...order, notes: e.target.value })}
                 className="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20 resize-none"
                 placeholder="Thông tin bổ sung..."
               />
@@ -543,12 +641,24 @@ export const ProductionOrderDetail = ({ user, orderId, onBack, addToast }: {
               <table className="w-full text-left border-collapse whitespace-nowrap">
                 <thead>
                   <tr className="bg-gray-50/80 border-b border-gray-100">
-                    <th className="px-4 py-3 text-[10px] font-bold text-gray-400 uppercase">Nguyên liệu</th>
-                    <th className="px-4 py-3 text-[10px] font-bold text-gray-400 uppercase text-right">Định mức</th>
-                    <th className="px-4 py-3 text-[10px] font-bold text-gray-400 uppercase text-center w-20">ĐVT</th>
-                    <th className="px-4 py-3 text-[10px] font-bold text-gray-400 uppercase text-right">Cần dùng</th>
-                    <th className="px-4 py-3 text-[10px] font-bold text-gray-400 uppercase text-right">Hiện có</th>
-                    <th className="px-4 py-3 text-[10px] font-bold text-gray-400 uppercase text-center w-32">Khả thi</th>
+                    <th className="px-4 py-3 text-[10px] font-bold text-gray-400 uppercase">
+                      Nguyên liệu
+                    </th>
+                    <th className="px-4 py-3 text-[10px] font-bold text-gray-400 uppercase text-right">
+                      Định mức
+                    </th>
+                    <th className="px-4 py-3 text-[10px] font-bold text-gray-400 uppercase text-center w-20">
+                      ĐVT
+                    </th>
+                    <th className="px-4 py-3 text-[10px] font-bold text-gray-400 uppercase text-right">
+                      Cần dùng
+                    </th>
+                    <th className="px-4 py-3 text-[10px] font-bold text-gray-400 uppercase text-right">
+                      Hiện có
+                    </th>
+                    <th className="px-4 py-3 text-[10px] font-bold text-gray-400 uppercase text-center w-32">
+                      Khả thi
+                    </th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-50">
@@ -559,12 +669,22 @@ export const ProductionOrderDetail = ({ user, orderId, onBack, addToast }: {
                       <tr key={idx} className="hover:bg-gray-50/30 transition-colors">
                         <td className="px-4 py-3">
                           <p className="text-xs font-bold text-gray-800">{item.material?.name}</p>
-                          <p className="text-[10px] text-gray-400 font-mono">#{item.material?.code || '-'}</p>
+                          <p className="text-[10px] text-gray-400 font-mono">
+                            #{item.material?.code || '-'}
+                          </p>
                         </td>
-                        <td className="px-4 py-3 text-xs text-right text-gray-600">{item.quantity_per_unit}</td>
-                        <td className="px-4 py-3 text-[10px] text-center text-gray-500">{item.unit}</td>
-                        <td className="px-4 py-3 text-sm font-bold text-right text-primary">{formatNumber(totalNeeded)}</td>
-                        <td className="px-4 py-3 text-xs text-right font-medium text-gray-700">{formatNumber(item.available || 0)}</td>
+                        <td className="px-4 py-3 text-xs text-right text-gray-600">
+                          {item.quantity_per_unit}
+                        </td>
+                        <td className="px-4 py-3 text-[10px] text-center text-gray-500">
+                          {item.unit}
+                        </td>
+                        <td className="px-4 py-3 text-sm font-bold text-right text-primary">
+                          {formatNumber(totalNeeded)}
+                        </td>
+                        <td className="px-4 py-3 text-xs text-right font-medium text-gray-700">
+                          {formatNumber(item.available || 0)}
+                        </td>
                         <td className="px-4 py-3">
                           <div className="flex justify-center">
                             {isDeficit ? (
@@ -583,7 +703,10 @@ export const ProductionOrderDetail = ({ user, orderId, onBack, addToast }: {
                   })}
                   {bomItems.length === 0 && (
                     <tr>
-                      <td colSpan={6} className="px-4 py-8 text-center text-gray-400 italic text-xs">
+                      <td
+                        colSpan={6}
+                        className="px-4 py-8 text-center text-gray-400 italic text-xs"
+                      >
                         Vui lòng chọn định mức để xem chi tiết vật tư
                       </td>
                     </tr>
@@ -596,7 +719,9 @@ export const ProductionOrderDetail = ({ user, orderId, onBack, addToast }: {
 
         <div className="space-y-6 text-sm font-medium text-gray-800">
           <div className="bg-gradient-to-br from-red-600 to-red-700 rounded-3xl p-6 text-white shadow-xl shadow-red-600/20">
-            <h3 className="text-[10px] font-black uppercase tracking-widest opacity-70 mb-4">Tóm tắt sản xuất</h3>
+            <h3 className="text-[10px] font-black uppercase tracking-widest opacity-70 mb-4">
+              Tóm tắt sản xuất
+            </h3>
             <div className="space-y-4">
               <div className="flex justify-between items-end border-b border-white/20 pb-2">
                 <span className="text-white/80">Số lượng thành phẩm:</span>
@@ -604,21 +729,35 @@ export const ProductionOrderDetail = ({ user, orderId, onBack, addToast }: {
               </div>
               <div className="flex justify-between items-center text-xs">
                 <span className="text-white/60">Đơn vị:</span>
-                <span className="font-bold">{materials.find(m => m.id === boms.find(b => b.id === order.bom_id)?.product_item_id)?.unit || '-'}</span>
+                <span className="font-bold">
+                  {materials.find(
+                    (m) => m.id === boms.find((b) => b.id === order.bom_id)?.product_item_id,
+                  )?.unit || '-'}
+                </span>
               </div>
               <div className="flex justify-between items-center text-xs">
                 <span className="text-white/60">Số loại nguyên liệu:</span>
                 <span className="font-bold">{bomItems.length}</span>
               </div>
             </div>
-            
+
             <div className="mt-8 p-4 bg-white/10 rounded-2xl border border-white/10">
-              <p className="text-[10px] font-bold opacity-70 mb-2 uppercase select-none">Hướng dẫn</p>
+              <p className="text-[10px] font-bold opacity-70 mb-2 uppercase select-none">
+                Hướng dẫn
+              </p>
               <ul className="text-[10px] space-y-2 text-white/90">
-                <li className="flex gap-2"><span>1.</span> Chọn định mức tương ứng với sản phẩm cần đúc.</li>
-                <li className="flex gap-2"><span>2.</span> Nhập số lượng cọc. Hệ thống sẽ tự tính toán vật tư.</li>
-                <li className="flex gap-2"><span>3.</span> Kiểm tra trạng thái "Khả thi" (Đủ hàng).</li>
-                <li className="flex gap-2"><span>4.</span> Bấm Duyệt để trừ kho nguyên liệu và nhập kho thành phẩm.</li>
+                <li className="flex gap-2">
+                  <span>1.</span> Chọn định mức tương ứng với sản phẩm cần đúc.
+                </li>
+                <li className="flex gap-2">
+                  <span>2.</span> Nhập số lượng cọc. Hệ thống sẽ tự tính toán vật tư.
+                </li>
+                <li className="flex gap-2">
+                  <span>3.</span> Kiểm tra trạng thái "Khả thi" (Đủ hàng).
+                </li>
+                <li className="flex gap-2">
+                  <span>4.</span> Bấm Duyệt để trừ kho nguyên liệu và nhập kho thành phẩm.
+                </li>
               </ul>
             </div>
           </div>

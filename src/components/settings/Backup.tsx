@@ -1,5 +1,16 @@
 import { useState, useEffect } from 'react';
-import { Settings, Mail, Info, RefreshCw, Layers, Save, Play, Clock, Check, ChevronDown } from 'lucide-react';
+import {
+  Settings,
+  Mail,
+  Info,
+  RefreshCw,
+  Layers,
+  Save,
+  Play,
+  Clock,
+  Check,
+  ChevronDown,
+} from 'lucide-react';
 import ExcelJS from 'exceljs';
 import { formatDataForExcel } from '@/utils/excelHelper';
 import { supabase } from '@/lib/supabase';
@@ -21,11 +32,19 @@ export const BACKUP_TABLES = [
   { id: 'partners', label: 'Khách hàng & NCC' },
 ];
 
-export const Backup = ({ user, onBack, addToast }: { user?: any, onBack: () => void, addToast: (msg: string, type?: 'success' | 'error' | 'info') => void }) => {
+export const Backup = ({
+  user,
+  onBack,
+  addToast,
+}: {
+  user?: any;
+  onBack: () => void;
+  addToast: (msg: string, type?: 'success' | 'error' | 'info') => void;
+}) => {
   const [email, setEmail] = useState(() => localStorage.getItem(`backup_email_${user?.id}`) || '');
   const [frequency, setFrequency] = useState('Thủ công (không tự động)');
   const [time, setTime] = useState('06:00');
-  const [selectedTables, setSelectedTables] = useState<string[]>(BACKUP_TABLES.map(t => t.id));
+  const [selectedTables, setSelectedTables] = useState<string[]>(BACKUP_TABLES.map((t) => t.id));
   const [isBackingUp, setIsBackingUp] = useState(false);
   const [backupStatus, setBackupStatus] = useState('');
   const [enabled, setEnabled] = useState(false);
@@ -35,7 +54,7 @@ export const Backup = ({ user, onBack, addToast }: { user?: any, onBack: () => v
       if (!user?.id) return;
       try {
         const response = await fetch(`/api/get-backup-config?userId=${user.id}`, {
-          headers: { 'x-api-key': 'cdx-secret-2026' }
+          headers: { 'x-api-key': 'cdx-secret-2026' },
         });
         if (response.ok) {
           const config = await response.json();
@@ -64,30 +83,28 @@ export const Backup = ({ user, onBack, addToast }: { user?: any, onBack: () => v
   }, []);
 
   const toggleTable = (id: string) => {
-    setSelectedTables(prev =>
-      prev.includes(id) ? prev.filter(t => t !== id) : [...prev, id]
-    );
+    setSelectedTables((prev) => (prev.includes(id) ? prev.filter((t) => t !== id) : [...prev, id]));
   };
 
-  const selectAll = () => setSelectedTables(BACKUP_TABLES.map(t => t.id));
+  const selectAll = () => setSelectedTables(BACKUP_TABLES.map((t) => t.id));
   const deselectAll = () => setSelectedTables([]);
 
   const handleSave = async () => {
     localStorage.setItem(`backup_email_${user?.id}`, email);
-    
+
     const [hours, minutes] = time.split(':');
     let cronSchedule = `${minutes} ${hours} * * *`;
-    if (frequency === 'Hàng tuần') cronSchedule = `${minutes} ${hours} * * 0`; 
-    if (frequency === 'Hàng tháng') cronSchedule = `${minutes} ${hours} 1 * *`; 
+    if (frequency === 'Hàng tuần') cronSchedule = `${minutes} ${hours} * * 0`;
+    if (frequency === 'Hàng tháng') cronSchedule = `${minutes} ${hours} 1 * *`;
 
     try {
       const response = await fetch('/api/save-backup-config', {
         method: 'POST',
-        headers: { 
+        headers: {
           'Content-Type': 'application/json',
-          'x-api-key': 'cdx-secret-2026'
+          'x-api-key': 'cdx-secret-2026',
         },
-        body: JSON.stringify({ userId: user?.id, email, schedule: cronSchedule, enabled })
+        body: JSON.stringify({ userId: user?.id, email, schedule: cronSchedule, enabled }),
       });
 
       if (response.ok) {
@@ -116,24 +133,27 @@ export const Backup = ({ user, onBack, addToast }: { user?: any, onBack: () => v
       workbook.created = new Date();
 
       // 1. Tạo trang bìa TỔNG QUAN
-      const summarySheet = workbook.addWorksheet('TỔNG QUAN', { views: [{ showGridLines: false }] });
-      
+      const summarySheet = workbook.addWorksheet('TỔNG QUAN', {
+        views: [{ showGridLines: false }],
+      });
+
       summarySheet.getCell('A1').value = 'HỆ THỐNG QUẢN LÝ KHO & NHÂN SỰ CDX 2026';
       summarySheet.getCell('A1').font = { size: 18, bold: true, color: { argb: 'FF008060' } };
-      
+
       summarySheet.getCell('A3').value = 'BÁO CÁO SAO LƯU DỮ LIỆU ĐỊNH KỲ';
       summarySheet.getCell('A3').font = { size: 14, bold: true };
 
       summarySheet.getCell('A5').value = 'Ngày thực hiện:';
       summarySheet.getCell('B5').value = new Date().toLocaleString('vi-VN');
-      
+
       summarySheet.getCell('A6').value = 'Email nhận:';
       summarySheet.getCell('B6').value = email;
 
       summarySheet.getCell('A7').value = 'Số lượng bảng:';
       summarySheet.getCell('B7').value = selectedTables.length;
 
-      summarySheet.getCell('A9').value = 'Dữ liệu chi tiết được trình bày trong các Tab tương ứng bên dưới.';
+      summarySheet.getCell('A9').value =
+        'Dữ liệu chi tiết được trình bày trong các Tab tương ứng bên dưới.';
       summarySheet.getCell('A9').font = { italic: true };
 
       summarySheet.getColumn(1).width = 25;
@@ -141,12 +161,13 @@ export const Backup = ({ user, onBack, addToast }: { user?: any, onBack: () => v
 
       // 2. Chuẩn bị dữ liệu tra cứu (Lookup Data)
       setBackupStatus('Đang chuẩn bị dữ liệu tra cứu...');
-      const [{ data: users }, { data: warehouses }, { data: materials }, { data: groups }] = await Promise.all([
-        supabase.from('users').select('id, full_name'),
-        supabase.from('warehouses').select('id, name'),
-        supabase.from('materials').select('id, name'),
-        supabase.from('material_groups').select('id, name')
-      ]);
+      const [{ data: users }, { data: warehouses }, { data: materials }, { data: groups }] =
+        await Promise.all([
+          supabase.from('users').select('id, full_name'),
+          supabase.from('warehouses').select('id, name'),
+          supabase.from('materials').select('id, name'),
+          supabase.from('material_groups').select('id, name'),
+        ]);
       const lookupData = { users, warehouses, materials, groups };
 
       // 3. Thêm dữ liệu các bảng
@@ -154,12 +175,12 @@ export const Backup = ({ user, onBack, addToast }: { user?: any, onBack: () => v
       const stats: Record<string, number> = {};
 
       for (const tableId of selectedTables) {
-        const tableDef = BACKUP_TABLES.find(t => t.id === tableId);
+        const tableDef = BACKUP_TABLES.find((t) => t.id === tableId);
         if (!tableDef) continue;
-        
+
         labels.push(tableDef.label);
         setBackupStatus(`Đang trích xuất: ${tableDef.label}...`);
-        
+
         const { data } = await supabase.from(tableId).select('*');
         const rowCount = data?.length || 0;
         stats[tableDef.label] = rowCount;
@@ -176,7 +197,7 @@ export const Backup = ({ user, onBack, addToast }: { user?: any, onBack: () => v
             cell.fill = {
               type: 'pattern',
               pattern: 'solid',
-              fgColor: { argb: 'FF2D5A27' }
+              fgColor: { argb: 'FF2D5A27' },
             };
             cell.font = { bold: true, color: { argb: 'FFFFFFFF' }, size: 11 };
             cell.alignment = { vertical: 'middle', horizontal: 'center' };
@@ -184,7 +205,7 @@ export const Backup = ({ user, onBack, addToast }: { user?: any, onBack: () => v
               top: { style: 'thin' },
               left: { style: 'thin' },
               bottom: { style: 'thin' },
-              right: { style: 'thin' }
+              right: { style: 'thin' },
             };
           });
 
@@ -196,7 +217,7 @@ export const Backup = ({ user, onBack, addToast }: { user?: any, onBack: () => v
                 top: { style: 'thin' },
                 left: { style: 'thin' },
                 bottom: { style: 'thin' },
-                right: { style: 'thin' }
+                right: { style: 'thin' },
               };
               if (typeof cell.value === 'number') {
                 cell.alignment = { horizontal: 'right' };
@@ -220,7 +241,7 @@ export const Backup = ({ user, onBack, addToast }: { user?: any, onBack: () => v
 
       const fileName = `CDX_Professional_Backup_${new Date().toISOString().split('T')[0]}.xlsx`;
       const buffer = await workbook.xlsx.writeBuffer();
-      
+
       // Chuyển Buffer sang Base64 cho API
       const uint8Array = new Uint8Array(buffer);
       let binary = '';
@@ -232,11 +253,11 @@ export const Backup = ({ user, onBack, addToast }: { user?: any, onBack: () => v
       setBackupStatus('Đang gửi báo cáo qua Email...');
       const response = await fetch('/api/send-backup', {
         method: 'POST',
-        headers: { 
+        headers: {
           'Content-Type': 'application/json',
-          'x-api-key': 'cdx-secret-2026'
+          'x-api-key': 'cdx-secret-2026',
         },
-        body: JSON.stringify({ email, fileName, fileData, tableList: labels, tableStats: stats })
+        body: JSON.stringify({ email, fileName, fileData, tableList: labels, tableStats: stats }),
       });
 
       if (!response.ok) {
@@ -269,7 +290,6 @@ export const Backup = ({ user, onBack, addToast }: { user?: any, onBack: () => v
           </div>
         )}
 
-
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           <div className="space-y-6">
             <div>
@@ -279,7 +299,7 @@ export const Backup = ({ user, onBack, addToast }: { user?: any, onBack: () => v
               <input
                 type="email"
                 value={email}
-                onChange={e => setEmail(e.target.value)}
+                onChange={(e) => setEmail(e.target.value)}
                 placeholder="Nhập email nhận file..."
                 className="w-full px-5 py-3.5 rounded-2xl border border-gray-100 bg-gray-50/50 focus:bg-white focus:ring-4 focus:ring-primary/10 focus:border-primary outline-none transition-all text-sm font-medium"
               />
@@ -291,7 +311,8 @@ export const Backup = ({ user, onBack, addToast }: { user?: any, onBack: () => v
             <div className="p-5 bg-blue-50/50 rounded-2xl border border-blue-100 flex items-start gap-3">
               <Info size={18} className="text-blue-600 shrink-0 mt-0.5" />
               <p className="text-[11px] text-blue-700 leading-relaxed italic">
-                <b>Lưu ý:</b> Máy chủ gửi mail (SMTP) đã được thiết lập mặc định. Bạn chỉ cần nhập email người nhận và bắt đầu sao lưu.
+                <b>Lưu ý:</b> Máy chủ gửi mail (SMTP) đã được thiết lập mặc định. Bạn chỉ cần nhập
+                email người nhận và bắt đầu sao lưu.
               </p>
             </div>
 
@@ -303,7 +324,7 @@ export const Backup = ({ user, onBack, addToast }: { user?: any, onBack: () => v
                 <div className="relative">
                   <select
                     value={frequency}
-                    onChange={e => setFrequency(e.target.value)}
+                    onChange={(e) => setFrequency(e.target.value)}
                     className="w-full px-4 py-3.5 rounded-2xl border border-gray-100 bg-gray-50/50 focus:bg-white focus:ring-4 focus:ring-primary/10 focus:border-primary outline-none text-sm font-medium appearance-none"
                   >
                     <option>Thủ công (không tự động)</option>
@@ -311,7 +332,10 @@ export const Backup = ({ user, onBack, addToast }: { user?: any, onBack: () => v
                     <option>Hàng tuần</option>
                     <option>Hàng tháng</option>
                   </select>
-                  <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" size={16} />
+                  <ChevronDown
+                    className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"
+                    size={16}
+                  />
                 </div>
               </div>
               <div>
@@ -321,7 +345,7 @@ export const Backup = ({ user, onBack, addToast }: { user?: any, onBack: () => v
                 <input
                   type="time"
                   value={time}
-                  onChange={e => setTime(e.target.value)}
+                  onChange={(e) => setTime(e.target.value)}
                   className="w-full px-4 py-3.5 rounded-2xl border border-gray-100 bg-gray-50/50 focus:bg-white focus:ring-4 focus:ring-primary/10 focus:border-primary outline-none text-sm font-medium"
                 />
               </div>
@@ -336,7 +360,9 @@ export const Backup = ({ user, onBack, addToast }: { user?: any, onBack: () => v
                 onClick={() => setEnabled(!enabled)}
                 className={`w-14 h-8 rounded-full transition-all relative ${enabled ? 'bg-primary' : 'bg-gray-200'}`}
               >
-                <div className={`absolute top-1 w-6 h-6 bg-white rounded-full transition-all ${enabled ? 'right-1' : 'left-1'}`} />
+                <div
+                  className={`absolute top-1 w-6 h-6 bg-white rounded-full transition-all ${enabled ? 'right-1' : 'left-1'}`}
+                />
               </button>
             </div>
           </div>
@@ -344,18 +370,36 @@ export const Backup = ({ user, onBack, addToast }: { user?: any, onBack: () => v
           <div className="space-y-4">
             <div className="flex items-center justify-between mb-2">
               <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1 flex items-center gap-2">
-                <Layers size={14} className="text-primary" /> Chọn bảng dữ liệu ({selectedTables.length})
+                <Layers size={14} className="text-primary" /> Chọn bảng dữ liệu (
+                {selectedTables.length})
               </label>
               <div className="flex gap-3">
-                <button onClick={selectAll} className="text-[10px] font-bold text-primary hover:underline">Chọn hết</button>
-                <button onClick={deselectAll} className="text-[10px] font-bold text-gray-400 hover:underline">Bỏ hết</button>
+                <button
+                  onClick={selectAll}
+                  className="text-[10px] font-bold text-primary hover:underline"
+                >
+                  Chọn hết
+                </button>
+                <button
+                  onClick={deselectAll}
+                  className="text-[10px] font-bold text-gray-400 hover:underline"
+                >
+                  Bỏ hết
+                </button>
               </div>
             </div>
             <div className="grid grid-cols-1 gap-2 p-4 bg-gray-50/50 rounded-2xl border border-gray-100 max-h-[320px] overflow-y-auto">
-              {BACKUP_TABLES.map(table => (
-                <label key={table.id} className={`flex items-center gap-3 p-3 rounded-xl border transition-all cursor-pointer ${selectedTables.includes(table.id) ? 'bg-white border-primary/20 shadow-sm' : 'bg-transparent border-transparent hover:bg-white/50'}`}>
-                  <div className={`w-5 h-5 rounded-md border-2 flex items-center justify-center transition-all ${selectedTables.includes(table.id) ? 'bg-primary border-primary' : 'bg-white border-gray-200'}`}>
-                    {selectedTables.includes(table.id) && <Check size={12} className="text-white" />}
+              {BACKUP_TABLES.map((table) => (
+                <label
+                  key={table.id}
+                  className={`flex items-center gap-3 p-3 rounded-xl border transition-all cursor-pointer ${selectedTables.includes(table.id) ? 'bg-white border-primary/20 shadow-sm' : 'bg-transparent border-transparent hover:bg-white/50'}`}
+                >
+                  <div
+                    className={`w-5 h-5 rounded-md border-2 flex items-center justify-center transition-all ${selectedTables.includes(table.id) ? 'bg-primary border-primary' : 'bg-white border-gray-200'}`}
+                  >
+                    {selectedTables.includes(table.id) && (
+                      <Check size={12} className="text-white" />
+                    )}
                   </div>
                   <input
                     type="checkbox"
@@ -363,7 +407,11 @@ export const Backup = ({ user, onBack, addToast }: { user?: any, onBack: () => v
                     checked={selectedTables.includes(table.id)}
                     onChange={() => toggleTable(table.id)}
                   />
-                  <span className={`text-xs font-bold ${selectedTables.includes(table.id) ? 'text-gray-800' : 'text-gray-500'}`}>{table.label}</span>
+                  <span
+                    className={`text-xs font-bold ${selectedTables.includes(table.id) ? 'text-gray-800' : 'text-gray-500'}`}
+                  >
+                    {table.label}
+                  </span>
                 </label>
               ))}
             </div>

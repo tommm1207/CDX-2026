@@ -194,7 +194,7 @@ export const MonthlySalary = ({
   return (
     <div className="p-4 md:p-6 space-y-6 pb-44 overflow-x-hidden">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <PageBreadcrumb title="Tổng hợp lương" onBack={onBack} />
+        <PageBreadcrumb title="Bảng lương" onBack={onBack} />
         <div className="flex flex-wrap items-center gap-2">
           <MonthYearPicker
             selectedMonth={selectedMonth}
@@ -325,7 +325,7 @@ export const MonthlySalary = ({
       <AnimatePresence>
         {showDetailModal && selectedSalary && (
           <div
-            className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/50 backdrop-blur-md overflow-hidden no-print"
+            className="fixed inset-0 z-[150] flex items-center justify-center p-4 bg-black/50 backdrop-blur-md overflow-hidden no-print"
             onClick={() => setShowDetailModal(false)}
           >
             <motion.div
@@ -358,141 +358,170 @@ export const MonthlySalary = ({
                 </button>
               </div>
 
-              <div className="max-h-[70dvh] overflow-y-auto">
-                <style>
-                  {`
-                    @media print {
-                      .no-print { display: none !important; }
-                      .print-only { display: block !important; }
-                      body { background: white !important; margin: 0; padding: 0; }
-                      @page { margin: 1cm; }
-                    }
-                  `}
-                </style>
-                <div
-                  ref={billRef}
-                  className="p-8 space-y-8 bg-white rounded-b-[2rem] md:rounded-b-[2.5rem] print-only"
-                >
-                  {/* Bill Header */}
-                  <div className="text-center space-y-4 pt-4">
-                    <div className="w-20 h-20 bg-primary/10 rounded-3xl flex items-center justify-center text-primary font-black text-2xl mx-auto shadow-sm">
-                      {selectedSalary.full_name.charAt(0)}
-                    </div>
-                    <div>
-                      <h4 className="text-2xl font-black text-gray-800">
-                        {selectedSalary.full_name}
-                      </h4>
-                      <p className="text-[11px] text-gray-400 font-black uppercase tracking-[0.2em]">
-                        Mã nhân viên: {selectedSalary.code || selectedSalary.id.slice(0, 8)}
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="w-full h-px bg-gray-100 relative">
-                    <div className="absolute -left-10 -top-2 w-4 h-4 bg-gray-100 rounded-full no-print" />
-                    <div className="absolute -right-10 -top-2 w-4 h-4 bg-gray-100 rounded-full no-print" />
-                  </div>
-
-                  {/* Calculation Details */}
-                  <div className="space-y-6">
-                    <div className="bg-gray-50/50 p-6 rounded-3xl border border-gray-100/50 space-y-3">
-                      <div className="flex justify-between items-center text-xs">
-                        <span className="text-gray-400 font-bold uppercase tracking-wider">
-                          Lương cơ bản (8h)
-                        </span>
-                        <span className="font-black text-gray-800">
-                          {formatCurrency(selectedSalary.dailyRate)}
-                        </span>
+              <div className="max-h-[70dvh] overflow-y-auto overflow-x-hidden custom-scrollbar bg-gray-50/50">
+                <div ref={billRef} className="bg-white mx-auto shadow-sm w-full max-w-[600px]">
+                  <div className="p-4 sm:p-8 space-y-6 sm:space-y-8">
+                    {/* Professional Header for Image/Print */}
+                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center border-b-2 border-primary/10 pb-4 sm:pb-6 gap-4">
+                      <div className="flex items-center gap-3 sm:gap-4 w-full sm:w-auto">
+                        <div className="w-10 h-10 sm:w-12 sm:h-12 bg-white rounded-xl flex items-center justify-center p-1 shadow-sm border border-gray-100 overflow-hidden flex-shrink-0">
+                          <img
+                            src="/logo.png"
+                            alt="Logo"
+                            className="w-full h-full object-contain rounded-lg"
+                          />
+                        </div>
+                        <div className="flex-shrink-0">
+                          <h2 className="text-xs sm:text-sm font-black text-gray-900 uppercase whitespace-nowrap">
+                            CDX - CON ĐƯỜNG XANH
+                          </h2>
+                          <p className="text-[7px] sm:text-[8px] text-gray-400 font-bold uppercase tracking-widest whitespace-nowrap">
+                            Hệ thống quản lý Kho và nhân sự
+                          </p>
+                        </div>
                       </div>
-                      <div className="flex justify-between items-center text-xs">
-                        <span className="text-gray-400 font-bold uppercase tracking-wider">
-                          Lương tăng ca (1h)
-                        </span>
-                        <span className="font-black text-gray-800">
-                          {formatCurrency(selectedSalary.hourlyRate)}
-                        </span>
+                      <div className="flex flex-col items-start sm:items-end w-full sm:w-auto border-t sm:border-t-0 border-gray-100 pt-3 sm:pt-0">
+                        <h1 className="text-lg sm:text-xl font-black text-primary uppercase tracking-tighter whitespace-nowrap">
+                          PHIẾU LƯƠNG
+                        </h1>
+                        <p className="text-[9px] sm:text-[10px] text-gray-400 font-bold tracking-widest whitespace-nowrap">
+                          T{selectedMonth}/{selectedYear}
+                        </p>
                       </div>
                     </div>
 
-                    <div className="space-y-3 px-2">
-                      <div className="flex justify-between items-center text-sm">
-                        <span className="text-gray-500 font-medium text-xs">
-                          Lương ngày công ({selectedSalary.totalDays.toFixed(1)} ngày)
-                        </span>
-                        <span className="font-bold text-gray-800">
-                          {formatCurrency(selectedSalary.earnedSalary)}
-                        </span>
-                      </div>
-                      <div className="flex justify-between items-center text-sm">
-                        <span className="text-gray-500 font-medium text-xs">
-                          Lương tăng ca ({selectedSalary.totalOT.toFixed(1)} giờ)
-                        </span>
-                        <span className="font-bold text-amber-600">
-                          +{formatCurrency(selectedSalary.otSalary)}
-                        </span>
-                      </div>
-                      <div className="flex justify-between items-center text-sm">
-                        <span className="text-gray-500 font-medium text-xs">Các khoản phụ cấp</span>
-                        <span className="font-bold text-green-600">
-                          +{formatCurrency(selectedSalary.totalAll)}
-                        </span>
-                      </div>
-                      <div className="flex justify-between items-center text-sm">
-                        <span className="text-gray-500 font-medium text-xs">
-                          Tạm ứng trong tháng
-                        </span>
-                        <span className="font-bold text-red-500">
-                          -{formatCurrency(selectedSalary.totalAdv)}
-                        </span>
-                      </div>
-                      <div className="flex justify-between items-center text-sm">
-                        <span className="text-gray-500 font-medium text-xs">Khấu trừ bảo hiểm</span>
-                        <span className="font-bold text-red-500">
-                          -{formatCurrency(selectedSalary.insuranceDeduction)}
-                        </span>
-                      </div>
-                    </div>
-
-                    <div className="pt-6 border-t-4 border-double border-gray-100 flex justify-between items-end">
+                    {/* Bill Content Header */}
+                    <div className="flex items-center gap-6 py-4">
                       <div className="space-y-1">
-                        <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest leading-none">
+                        <h4 className="text-2xl font-black text-gray-900 tracking-tight">
+                          {selectedSalary.full_name}
+                        </h4>
+                        <div className="flex items-center gap-3">
+                          <span className="text-[10px] bg-gray-100 text-gray-500 px-2 py-0.5 rounded-md font-bold uppercase tracking-wider">
+                            ID: {selectedSalary.code || selectedSalary.id.slice(0, 8)}
+                          </span>
+                          <span className="text-[10px] bg-blue-50 text-blue-600 px-2 py-0.5 rounded-md font-bold uppercase tracking-wider">
+                            {selectedSalary.role}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="w-full h-px bg-gray-100 relative">
+                      <div className="absolute -left-10 -top-2 w-4 h-4 bg-gray-100 rounded-full no-print" />
+                      <div className="absolute -right-10 -top-2 w-4 h-4 bg-gray-100 rounded-full no-print" />
+                    </div>
+
+                    {/* Calculation Details */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                      <div className="space-y-4">
+                        <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest flex items-center gap-2">
+                          <div className="w-1 h-3 bg-primary rounded-full" /> Chi phí cơ bản
+                        </p>
+                        <div className="bg-gray-50/50 p-5 rounded-2xl border border-gray-100 space-y-3">
+                          <div className="flex justify-between items-center text-xs">
+                            <span className="text-gray-500 font-medium italic">
+                              Đơn giá ngày công (8h)
+                            </span>
+                            <span className="font-bold text-gray-800">
+                              {formatCurrency(selectedSalary.dailyRate)}
+                            </span>
+                          </div>
+                          <div className="flex justify-between items-center text-xs">
+                            <span className="text-gray-500 font-medium italic">
+                              Đơn giá tăng ca (1h)
+                            </span>
+                            <span className="font-bold text-gray-800">
+                              {formatCurrency(selectedSalary.hourlyRate)}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="space-y-4">
+                        <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest flex items-center gap-2">
+                          <div className="w-1 h-3 bg-amber-500 rounded-full" /> Thu nhập & Khấu trừ
+                        </p>
+                        <div className="space-y-3 px-1">
+                          <div className="flex justify-between items-center text-sm">
+                            <span className="text-gray-500 text-xs">
+                              Lương ngày công ({selectedSalary.totalDays.toFixed(1)} ngày)
+                            </span>
+                            <span className="font-bold text-gray-800">
+                              {formatCurrency(selectedSalary.earnedSalary)}
+                            </span>
+                          </div>
+                          <div className="flex justify-between items-center text-sm">
+                            <span className="text-gray-500 text-xs">
+                              Lương tăng ca ({selectedSalary.totalOT.toFixed(1)} giờ)
+                            </span>
+                            <span className="font-bold text-amber-600">
+                              +{formatCurrency(selectedSalary.otSalary)}
+                            </span>
+                          </div>
+                          <div className="flex justify-between items-center text-sm">
+                            <span className="text-gray-500 text-xs">Các khoản phụ cấp</span>
+                            <span className="font-bold text-green-600">
+                              +{formatCurrency(selectedSalary.totalAll)}
+                            </span>
+                          </div>
+                          <div className="flex justify-between items-center text-sm">
+                            <span className="text-gray-500 text-xs">Tạm ứng trong tháng</span>
+                            <span className="font-bold text-red-500">
+                              -{formatCurrency(selectedSalary.totalAdv)}
+                            </span>
+                          </div>
+                          <div className="flex justify-between items-center text-sm">
+                            <span className="text-gray-500 text-xs">Khấu trừ bảo hiểm</span>
+                            <span className="font-bold text-red-500">
+                              -{formatCurrency(selectedSalary.insuranceDeduction)}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="pt-8 border-t-2 border-dashed border-gray-100 flex justify-between items-end">
+                      <div className="space-y-1">
+                        <p className="text-[9px] font-black text-gray-400 uppercase tracking-[0.2em] leading-none mb-1">
                           Tổng thực lĩnh
                         </p>
-                        <h4 className="text-sm font-black text-gray-800 uppercase leading-none">
-                          Net Salary
+                        <h4 className="text-sm font-black text-gray-900 uppercase leading-none">
+                          Net Salary Details
                         </h4>
                       </div>
-                      <span className="text-3xl font-black text-primary leading-none tracking-tight">
-                        {formatCurrency(selectedSalary.netSalary)}
-                      </span>
+                      <div className="text-right flex-shrink-0">
+                        <span className="text-2xl sm:text-3xl font-black text-primary leading-none tracking-tighter whitespace-nowrap">
+                          {formatCurrency(selectedSalary.netSalary)}
+                        </span>
+                        <p className="text-[8px] text-gray-400 font-bold mt-1 italic uppercase underline decoration-primary/30 underline-offset-4 whitespace-nowrap">
+                          Đã bao gồm các khoản thuế phí
+                        </p>
+                      </div>
                     </div>
-                  </div>
 
-                  {/* Footer Notes */}
-                  <div className="p-4 bg-amber-50/50 rounded-2xl border border-amber-100/30">
-                    <p className="text-[9px] text-amber-700/80 leading-relaxed text-center font-medium italic">
-                      * Bảng lương này được tính toán tự động dựa trên dữ liệu chấm công thực tế.
-                      Mọi thắc mắc vui lòng phản hồi bộ phận kế toán trước ngày 05 hàng tháng.
-                    </p>
+                    {/* Footer Notes */}
+                    <div className="p-5 bg-gray-50 rounded-2xl border border-gray-100 border-dashed">
+                      <p className="text-[10px] text-gray-500 leading-relaxed text-center font-medium italic">
+                        "Bảng lương này được tính toán tự động dựa trên dữ liệu chấm công thực tế."
+                      </p>
+                    </div>
+
+                    <div className="flex justify-between text-[8px] text-gray-300 font-bold uppercase tracking-widest pt-4">
+                      <span>CDX ERP SYSTEM © 2026</span>
+                      <span>{new Date().toLocaleString('vi-VN')}</span>
+                    </div>
                   </div>
                 </div>
               </div>
 
               <div className="p-8 pt-0 flex flex-col gap-3 no-print mt-2">
-                <div className="flex gap-3">
-                  <button
-                    onClick={handleSaveImage}
-                    className="flex-1 bg-gray-900 text-white font-black py-3.5 rounded-2xl hover:bg-black transition-all flex items-center justify-center gap-2 shadow-lg active:scale-95"
-                  >
-                    <ImageIcon size={18} /> LƯU ẢNH
-                  </button>
-                  <button
-                    onClick={() => window.print()}
-                    className="flex-1 bg-white text-gray-700 border-2 border-gray-100 font-black py-3.5 rounded-2xl hover:bg-gray-50 transition-all flex items-center justify-center gap-2 active:scale-95"
-                  >
-                    <Printer size={18} /> IN PHIẾU
-                  </button>
-                </div>
+                <button
+                  onClick={handleSaveImage}
+                  className="w-full bg-gray-900 text-white font-black py-3.5 rounded-2xl hover:bg-black transition-all flex items-center justify-center gap-2 shadow-lg active:scale-95"
+                >
+                  <ImageIcon size={18} /> LƯU ẢNH PHIẾU LƯƠNG
+                </button>
                 <button
                   onClick={() => setShowDetailModal(false)}
                   className="w-full bg-primary/5 text-primary font-black py-3.5 rounded-2xl hover:bg-primary/10 transition-all active:scale-95 border border-primary/10"

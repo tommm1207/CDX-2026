@@ -109,7 +109,7 @@ export const Dashboard = ({ user, onNavigate, addToast, pendingApprovals = 0 }: 
       description: 'Kiểm tra số lượng tồn kho',
     },
     {
-      id: 'material-catalog',
+      id: 'materials',
       label: 'Danh mục vật tư',
       icon: Package,
       color: 'bg-cyan-600',
@@ -124,7 +124,7 @@ export const Dashboard = ({ user, onNavigate, addToast, pendingApprovals = 0 }: 
       description: 'Theo dõi chuyên cần hàng ngày',
     },
     {
-      id: 'monthly-salary',
+      id: 'payroll',
       label: 'Bảng lương',
       icon: Wallet,
       color: 'bg-emerald-600',
@@ -148,7 +148,7 @@ export const Dashboard = ({ user, onNavigate, addToast, pendingApprovals = 0 }: 
     },
     {
       id: 'notes',
-      label: 'Nhật ký',
+      label: 'Ghi chú',
       icon: FileText,
       color: 'bg-orange-600',
       description: 'Ghi chép nhật ký công việc',

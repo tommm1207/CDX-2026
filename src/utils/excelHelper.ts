@@ -63,15 +63,18 @@ export const COLUMN_MAP: Record<string, string> = {
   hours_worked: 'Số giờ làm việc',
   overtime_hours: 'Số giờ tăng ca',
 
-  // Others
-  content: 'Nội dung chi tiết',
-  title: 'Tiêu đề',
-  is_done: 'Đã hoàn thành?',
+  // BOM / Production
+  bom_id: 'Định mức sản xuất (BOM)',
+  output_warehouse_id: 'Kho thành phẩm',
+  order_code: 'Mã Lệnh',
+  quantity_per_unit: 'Định lượng/SP',
+  product_item_id: 'Sản phẩm đầu ra',
+  material_item_id: 'Vật tư tiêu hao',
 };
 
 /**
  * Hàm chuyển đổi mảng dữ liệu với các key kỹ thuật sang key tiếng Việt
- * Kết hợp tra cứu ID để hiển thị Tên (Nhân viên, Kho, Vật tư)
+ * Kết hợp tra cứu ID để hiển thị Tên (Nhân viên, Kho, Vật tư, BOM)
  */
 export const formatDataForExcel = (data: any[], lookupData: any = {}) => {
   if (!data || data.length === 0) return [];
@@ -89,6 +92,9 @@ export const formatDataForExcel = (data: any[], lookupData: any = {}) => {
   const groupMap = lookupData.groups
     ? Object.fromEntries(lookupData.groups.map((g: any) => [g.id, g.name]))
     : {};
+  const bomMap = lookupData.boms
+    ? Object.fromEntries(lookupData.boms.map((b: any) => [b.id, b.name]))
+    : {};
 
   return data.map((item) => {
     const newItem: any = {};
@@ -96,14 +102,26 @@ export const formatDataForExcel = (data: any[], lookupData: any = {}) => {
       let value = item[key];
 
       // Tự động chuyển đổi ID sang Tên nếu có trong lookup
-      if (key === 'employee_id' && userMap[value]) value = userMap[value];
       if (
-        (key === 'warehouse_id' || key === 'from_warehouse_id' || key === 'to_warehouse_id') &&
+        (key === 'employee_id' || key === 'created_by' || key === 'approved_by') &&
+        userMap[value]
+      )
+        value = userMap[value];
+      if (
+        (key === 'warehouse_id' ||
+          key === 'from_warehouse_id' ||
+          key === 'to_warehouse_id' ||
+          key === 'output_warehouse_id') &&
         whMap[value]
       )
         value = whMap[value];
-      if (key === 'material_id' && matMap[value]) value = matMap[value];
+      if (
+        (key === 'material_id' || key === 'product_item_id' || key === 'material_item_id') &&
+        matMap[value]
+      )
+        value = matMap[value];
       if (key === 'group_id' && groupMap[value]) value = groupMap[value];
+      if (key === 'bom_id' && bomMap[value]) value = bomMap[value];
 
       const label = COLUMN_MAP[key] || key;
       newItem[label] = value;

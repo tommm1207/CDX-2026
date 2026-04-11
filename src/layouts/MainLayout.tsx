@@ -47,8 +47,8 @@ export const MainLayout = ({
   const [isSearchOpen, setIsSearchOpen] = useState(false);
 
   return (
-    <div className="min-h-screen bg-[#F8F9FA] flex flex-col font-sans overflow-x-hidden">
-      <header className="bg-primary text-white flex items-center justify-between px-4 sticky top-0 z-[50] shadow-md h-[calc(3.5rem+env(safe-area-inset-top))] pt-[env(safe-area-inset-top)]">
+    <div className="h-screen bg-[#F8F9FA] flex flex-col font-sans overflow-hidden">
+      <header className="bg-primary text-white flex items-center justify-between px-4 sticky top-0 z-[100] shadow-md h-[calc(3.5rem+env(safe-area-inset-top))] pt-[env(safe-area-inset-top)] flex-shrink-0">
         <div className="flex items-center gap-2">
           <div className="relative group/logo">
             <button
@@ -121,9 +121,6 @@ export const MainLayout = ({
             onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
             className="flex items-center gap-2 bg-white/10 px-2 sm:px-3 py-1 rounded-full border border-white/20 cursor-pointer hover:bg-white/20 transition-colors"
           >
-            <div className="w-6 h-6 bg-white/20 rounded-full flex items-center justify-center">
-              <UserIcon size={14} />
-            </div>
             <div className="flex flex-col items-start leading-none">
               <span className="text-[10px] sm:text-xs font-semibold truncate max-w-[80px] sm:max-w-none">
                 {user.full_name}

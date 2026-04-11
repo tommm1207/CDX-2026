@@ -272,12 +272,14 @@ export const getTonKhoTable = async (
   warehouseId?: string | string[],
 ): Promise<TonKhoRow[]> => {
   try {
+    if (!startDate || !endDate) return [];
+
     const priorEnd = (() => {
       const d = new Date(startDate);
+      if (isNaN(d.getTime())) return '1999-12-31'; // Safe fallback
       d.setDate(d.getDate() - 1);
       return d.toISOString().split('T')[0];
     })();
-
     const whIds = warehouseId ? (Array.isArray(warehouseId) ? warehouseId : [warehouseId]) : null;
 
     const buildQuery = (

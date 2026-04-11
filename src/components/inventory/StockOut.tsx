@@ -836,41 +836,47 @@ export const StockOut = ({
                       </p>
                     </div>
 
-                    <CreatableSelect
-                      label="Kho xuất *"
-                      value={formData.warehouse_id}
-                      options={warehouses}
-                      onChange={(val) => setFormData({ ...formData, warehouse_id: val })}
-                      onCreate={(val) => setFormData({ ...formData, warehouse_id: val })}
-                      placeholder="Chọn kho..."
-                      required
-                    />
+                    {/* Moved Kho xuất to the right column */}
 
-                    <div className="flex items-end gap-2 relative z-[120]">
-                      <div className="flex-1">
-                        <CreatableSelect
-                          label="Vật tư *"
-                          value={formData.material_id}
-                          options={materials}
-                          onChange={(val) => setFormData({ ...formData, material_id: val })}
-                          onCreate={() =>
-                            addToast?.(
-                              'Vui lòng chọn vật tư có trong Danh mục. Hoặc click nút + bên cạnh để tạo mới.',
-                              'error',
-                            )
-                          }
-                          placeholder="Chọn vật tư..."
-                          required
-                        />
+                    <div className="relative z-[120]">
+                      <div className="flex items-center justify-between mb-1">
+                        <label className="text-[10px] font-bold text-gray-400 uppercase">
+                          Vật tư *
+                        </label>
+                        <button
+                          type="button"
+                          onClick={() => setShowAddMaterial(true)}
+                          className="text-[10px] font-bold text-blue-600 flex items-center gap-1 hover:underline"
+                          title="Thêm vật tư nhanh"
+                        >
+                          <PackagePlus size={12} /> Thêm mới
+                        </button>
                       </div>
-                      <button
-                        type="button"
-                        onClick={() => setShowAddMaterial(true)}
-                        className="h-[42px] px-3 bg-blue-50 text-blue-600 rounded-xl hover:bg-blue-100 transition-colors flex items-center justify-center shrink-0 border border-blue-100"
-                        title="Thêm vật tư nhanh"
-                      >
-                        <PackagePlus size={20} />
-                      </button>
+                      <CreatableSelect
+                        value={formData.material_id}
+                        options={materials}
+                        onChange={(val) => setFormData({ ...formData, material_id: val })}
+                        onCreate={() =>
+                          addToast?.(
+                            'Vui lòng chọn vật tư có trong Danh mục. Hoặc click nút Thêm mới ở trên để tạo.',
+                            'error',
+                          )
+                        }
+                        placeholder="Chọn vật tư..."
+                        required
+                      />
+                    </div>
+
+                    <div className="space-y-1 relative z-[110]">
+                      <label className="text-[10px] font-bold text-gray-400 uppercase">
+                        Ghi chú / Mục đích xuất
+                      </label>
+                      <textarea
+                        rows={3}
+                        value={formData.notes}
+                        onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+                        className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-orange-600/20 resize-none"
+                      />
                     </div>
 
                     {stockLoading && (
@@ -924,11 +930,22 @@ export const StockOut = ({
                   </div>
 
                   <div className="space-y-4">
+                    <CreatableSelect
+                      label="Kho xuất *"
+                      value={formData.warehouse_id}
+                      options={warehouses}
+                      onChange={(val) => setFormData({ ...formData, warehouse_id: val })}
+                      onCreate={(val) => setFormData({ ...formData, warehouse_id: val })}
+                      placeholder="Chọn kho..."
+                      required
+                    />
+
                     <NumericInput
                       label="Số lượng xuất *"
                       required
                       value={formData.quantity}
                       onChange={(val) => setFormData({ ...formData, quantity: val })}
+                      showControls
                     />
 
                     <NumericInput
@@ -937,18 +954,6 @@ export const StockOut = ({
                       onChange={(val) => setFormData({ ...formData, unit_price: val })}
                       step={1000}
                     />
-
-                    <div className="space-y-1">
-                      <label className="text-[10px] font-bold text-gray-400 uppercase">
-                        Ghi chú / Mục đích xuất
-                      </label>
-                      <textarea
-                        rows={4}
-                        value={formData.notes}
-                        onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-                        className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-orange-600/20 resize-none"
-                      />
-                    </div>
                   </div>
 
                   <div className="md:col-span-2 flex justify-end gap-3 mt-4">

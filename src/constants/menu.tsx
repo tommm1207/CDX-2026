@@ -57,7 +57,7 @@ export const getMenuGroups = (pendingCount: number) => [
     items: [
       { id: 'attendance', label: 'Chấm công', icon: CalendarCheck },
       { id: 'advances', label: 'Tạm ứng & phụ cấp', icon: Banknote },
-      { id: 'payroll', label: 'Tổng hợp lương/tháng', icon: Wallet },
+      { id: 'payroll', label: 'Bảng lương', icon: Wallet },
       { id: 'salary-settings', label: 'Cài đặt lương', icon: Settings2 },
     ],
   },
@@ -69,7 +69,7 @@ export const getMenuGroups = (pendingCount: number) => [
     title: 'HỆ THỐNG',
     items: [
       { id: 'hr-records', label: 'Quản lý nhân sự', icon: UserCircle },
-      { id: 'notes', label: 'Nhật ký & Ghi chú', icon: FileText },
+      { id: 'notes', label: 'Ghi chú', icon: FileText },
       { id: 'reminders', label: 'Thiết lập Lịch nhắc', icon: Bell },
       { id: 'database-setup', label: 'Cấu hình Database', icon: Settings2 },
       { id: 'trash', label: 'Thùng rác', icon: Trash2 },

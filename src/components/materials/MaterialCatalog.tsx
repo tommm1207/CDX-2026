@@ -9,6 +9,7 @@ import { CreatableSelect } from '../shared/CreatableSelect';
 import { ToastType } from '../shared/Toast';
 import { Button } from '../shared/Button';
 import { FAB } from '../shared/FAB';
+import { checkUsage } from '@/utils/dataIntegrity';
 
 export const MaterialCatalog = ({ user, onBack, onNavigate, addToast }: { 
   user: Employee, 
@@ -57,6 +58,7 @@ export const MaterialCatalog = ({ user, onBack, onNavigate, addToast }: {
       const { data, error } = await supabase
         .from('materials')
         .select('*, material_groups(name)')
+        .or('status.is.null,status.neq.Đã xóa')
         .order('name', { ascending: true });
 
       if (error) {
@@ -175,7 +177,14 @@ export const MaterialCatalog = ({ user, onBack, onNavigate, addToast }: {
     }
   };
 
-  const handleEdit = (item: any) => {
+  const [editingInUse, setEditingInUse] = useState(false);
+
+  const handleEdit = async (item: any) => {
+    const usage = await checkUsage('material', item.id);
+    setEditingInUse(usage.inUse);
+    if (usage.inUse && addToast) {
+      addToast(`Vật tư đang được sử dụng — một số trường (đơn vị, nhóm, kho) sẽ bị khóa.`, 'info');
+    }
     setFormData(item);
     setIsEditing(true);
     setShowModal(true);
@@ -189,10 +198,18 @@ export const MaterialCatalog = ({ user, onBack, onNavigate, addToast }: {
   const confirmDelete = async () => {
     if (!itemToDelete) return;
     try {
-      const { error } = await supabase.from('materials').delete().eq('id', itemToDelete);
+      // Check usage first
+      const usage = await checkUsage('material', itemToDelete);
+      if (usage.inUse) {
+        if (addToast) addToast(`Không thể xóa vì vật tư đang được dùng trong: ${usage.tables.join(', ')}`, 'error');
+        setShowDeleteModal(false);
+        return;
+      }
+
+      const { error } = await supabase.from('materials').update({ status: 'Đã xóa' }).eq('id', itemToDelete);
       if (error) throw error;
       fetchMaterials();
-      if (addToast) addToast('Xóa vật tư thành công!', 'success');
+      if (addToast) addToast('Đã chuyển vật tư vào thùng rác!', 'success');
     } catch (err: any) {
       if (addToast) addToast('Lỗi: ' + err.message, 'error');
       else alert('Lỗi: ' + err.message);
@@ -423,7 +440,7 @@ export const MaterialCatalog = ({ user, onBack, onNavigate, addToast }: {
                       </div>
 
                       <CreatableSelect
-                        label="Nhóm vật tư *"
+                        label={`Nhóm vật tư *${isEditing && editingInUse ? ' 🔒' : ''}`}
                         value={formData.group_id}
                         options={groups}
                         onChange={async (val) => {
@@ -438,17 +455,19 @@ export const MaterialCatalog = ({ user, onBack, onNavigate, addToast }: {
                         }}
                         placeholder="Chọn nhóm..."
                         required
+                        disabled={isEditing && editingInUse}
                       />
                     </div>
 
                     <div className="space-y-4">
                       <CreatableSelect
-                        label="Đơn vị tính"
+                        label={`Đơn vị tính${isEditing && editingInUse ? ' 🔒' : ''}`}
                         value={formData.unit}
                         options={Array.from(new Set(materials.map(m => m.unit))).filter(Boolean).map((u: any) => ({ id: String(u), name: String(u) }))}
                         onChange={(val) => setFormData({ ...formData, unit: val })}
                         onCreate={(val) => setFormData({ ...formData, unit: val })}
                         placeholder="Chọn hoặc nhập mới..."
+                        disabled={isEditing && editingInUse}
                       />
 
                       <div className="space-y-1">

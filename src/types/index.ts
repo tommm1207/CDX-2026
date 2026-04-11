@@ -51,8 +51,10 @@ export interface Warehouse {
 
 export interface MaterialGroup {
   id: string;
+  code?: string;
   name: string;
   notes?: string;
+  status?: string;
   created_at?: string;
 }
 

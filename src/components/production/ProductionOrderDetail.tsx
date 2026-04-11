@@ -22,6 +22,7 @@ export const ProductionOrderDetail = ({ user, orderId, onBack, addToast }: {
   const [materials, setMaterials] = useState<Material[]>([]);
   const [boms, setBoms] = useState<BOMConfig[]>([]);
   const [warehouses, setWarehouses] = useState<any[]>([]);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
   
   const [order, setOrder] = useState<Partial<ProductionOrder>>({
     order_code: '',
@@ -246,6 +247,63 @@ export const ProductionOrderDetail = ({ user, orderId, onBack, addToast }: {
 
       if (upError) throw new Error(`Lỗi cập nhật lệnh: ${upError.message}`);
 
+      // 4. Tạo chi phí tự động cho lệnh sản xuất
+      try {
+        const { data: existingCost } = await supabase
+          .from('costs')
+          .select('id')
+          .ilike('content', `%${order.order_code}%`)
+          .eq('cost_type', 'Sản xuất')
+          .maybeSingle();
+
+        if (!existingCost) {
+          const dateObj = new Date();
+          const d = String(dateObj.getDate()).padStart(2, '0');
+          const m = String(dateObj.getMonth() + 1).padStart(2, '0');
+          const y = String(dateObj.getFullYear()).slice(-2);
+          const random = Math.floor(1000 + Math.random() * 9000);
+          const userPrefix = user.id?.slice(0, 4) || 'SYS';
+          const costCode = `CP-${userPrefix.toUpperCase()}-${d}${m}${y}-${random}`;
+
+          // Tính tổng giá trị nguyên liệu tiêu thụ (nếu có đơn giá)
+          let totalMaterialCost = 0;
+          for (const it of bomItems) {
+            const qty = calculateTotal(it.quantity_per_unit);
+            // Tra đơn giá nhập gần nhất
+            const { data: lastPrice } = await supabase
+              .from('stock_in')
+              .select('unit_price')
+              .eq('material_id', it.material_item_id)
+              .eq('status', 'Đã duyệt')
+              .order('date', { ascending: false })
+              .limit(1)
+              .maybeSingle();
+            if (lastPrice?.unit_price) {
+              totalMaterialCost += qty * lastPrice.unit_price;
+            }
+          }
+
+          await supabase.from('costs').insert([{
+            transaction_type: 'Chi',
+            cost_code: costCode,
+            date: today,
+            employee_id: user.id,
+            cost_type: 'Sản xuất',
+            content: `Chi phí sản xuất theo lệnh ${order.order_code}`,
+            material_id: product?.id,
+            warehouse_id: order.warehouse_id,
+            quantity: order.quantity,
+            unit: product?.unit,
+            unit_price: totalMaterialCost > 0 ? Math.round(totalMaterialCost / (order.quantity || 1)) : 0,
+            total_amount: totalMaterialCost,
+            notes: `Tự động tạo từ hệ thống Sản xuất — ${bomItems.length} nguyên liệu tiêu thụ`
+          }]);
+        }
+      } catch (costErr) {
+        console.error('Cost creation warning:', costErr);
+        // Không rollback nếu chỉ lỗi tạo chi phí
+      }
+
       if (addToast) addToast('Đã duyệt và thực hiện xuất/nhập kho thành công!', 'success');
       onBack();
     } catch (err: any) {
@@ -261,10 +319,18 @@ export const ProductionOrderDetail = ({ user, orderId, onBack, addToast }: {
     }
   };
 
-  const handleDelete = async () => {
+  const handleDelete = () => {
     if (!orderId) return;
-    if (!window.confirm('Bạn có chắc chắn muốn xóa lệnh sản xuất này?')) return;
+    if (order.status === 'Đã duyệt' || order.status === 'Hoàn thành') {
+      if (addToast) addToast('❌ Không thể xóa lệnh sản xuất đã duyệt/hoàn thành.\n\nCác phiếu xuất nguyên liệu và nhập thành phẩm đã được tạo tự động. Vui lòng xử lý trên các phiếu kho liên quan.', 'error');
+      return;
+    }
+    setShowDeleteModal(true);
+  };
 
+  const confirmDelete = async () => {
+    if (!orderId) return;
+    
     setSubmitting(true);
     try {
       const { error } = await supabase
@@ -273,11 +339,12 @@ export const ProductionOrderDetail = ({ user, orderId, onBack, addToast }: {
         .eq('id', orderId);
 
       if (error) throw error;
-      if (addToast) addToast('Đã xóa lệnh sản xuất', 'success');
+      if (addToast) addToast('Đã đưa lệnh sản xuất vào Thùng rác!', 'success');
       onBack();
     } catch (err: any) {
       if (addToast) addToast('Lỗi xóa lệnh: ' + err.message, 'error');
     } finally {
+      setShowDeleteModal(false);
       setSubmitting(false);
     }
   };
@@ -287,31 +354,50 @@ export const ProductionOrderDetail = ({ user, orderId, onBack, addToast }: {
   const isViewOnly = order.status !== 'Mới';
 
   return (
-    <div className="p-4 md:p-6 space-y-6 pb-44 overflow-y-auto max-h-screen">
+    <div className="p-4 md:p-6 space-y-6 pb-44 overflow-y-auto max-h-screen overflow-x-hidden">
       <PageBreadcrumb title={orderId ? `Chi tiết lệnh ${order.order_code}` : 'Tạo lệnh sản xuất'} onBack={onBack} />
 
-      <div className="flex items-center justify-between">
+      <AnimatePresence>
+        {showDeleteModal && (
+          <div 
+            className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm overflow-hidden"
+            onClick={() => setShowDeleteModal(false)}
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              className="bg-white rounded-[2rem] md:rounded-[2.5rem] shadow-2xl p-8 max-w-sm w-full text-center m-4"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="w-16 h-16 bg-red-50 text-red-600 rounded-2xl flex items-center justify-center mx-auto mb-4 border border-red-100">
+                <Trash2 size={32} />
+              </div>
+              <h3 className="text-xl font-bold text-gray-800 mb-2">Xác nhận xóa lệnh?</h3>
+              <p className="text-sm text-gray-500 mb-6 font-medium">
+                Bạn có chắc muốn xóa lệnh sản xuất <strong>{order.order_code}</strong>?<br/>
+                Dữ liệu sẽ được đưa vào <strong>Thùng rác</strong> và có thể khôi phục sau này.
+              </p>
+              <div className="flex gap-3">
+                <Button variant="ghost" fullWidth onClick={() => setShowDeleteModal(false)} className="bg-gray-100 hover:bg-gray-200">Hủy bỏ</Button>
+                <Button variant="danger" fullWidth onClick={confirmDelete} isLoading={submitting} className="shadow-lg shadow-red-500/20">Xác nhận</Button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white/50 p-4 rounded-3xl border border-gray-100">
         <div className="flex items-center gap-3">
-          <div className="p-3 bg-primary text-white rounded-2xl shadow-lg shadow-primary/20">
-            <ClipboardList size={24} />
+          <div className="px-3 py-1 bg-amber-50 text-amber-600 rounded-lg text-[10px] font-bold border border-amber-100 uppercase tracking-widest uppercase">
+            {order.status === 'Mới' ? 'Dự thảo' : order.status}
           </div>
-          <div>
-            <h2 className="text-xl font-bold text-gray-800">Lệnh sản xuất: {order.order_code} <span className="text-[10px] text-primary/50 font-normal">(Đã lọc kho)</span></h2>
-            <div className="flex items-center gap-2 mt-1">
-              {isViewOnly ? (
-                <span className="px-2 py-0.5 bg-green-50 text-green-600 rounded-md text-[10px] font-bold border border-green-100 uppercase tracking-wider">
-                  Trạng thái: {order.status}
-                </span>
-              ) : (
-                <span className="px-2 py-0.5 bg-amber-50 text-amber-600 rounded-md text-[10px] font-bold border border-amber-100 uppercase tracking-wider">
-                  Trạng thái: Mới (Dự thảo)
-                </span>
-              )}
-            </div>
-          </div>
+          {order.planned_date && (
+            <div className="text-[10px] text-gray-400 font-bold uppercase">Ngày dự kiến: {order.planned_date}</div>
+          )}
         </div>
 
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           {orderId && (
             <Button
               variant="danger"
@@ -319,8 +405,9 @@ export const ProductionOrderDetail = ({ user, orderId, onBack, addToast }: {
               disabled={submitting}
               icon={Trash2}
               title="Xóa lệnh"
+              className="flex-1 sm:flex-initial"
             >
-              <span className="hidden md:inline">Xóa lệnh</span>
+              Xóa lệnh
             </Button>
           )}
           {!isViewOnly && (
@@ -329,6 +416,7 @@ export const ProductionOrderDetail = ({ user, orderId, onBack, addToast }: {
               onClick={handleSave}
               disabled={submitting}
               icon={Save}
+              className="flex-1 sm:flex-initial"
             >
               Lưu dự thảo
             </Button>
@@ -339,6 +427,7 @@ export const ProductionOrderDetail = ({ user, orderId, onBack, addToast }: {
               onClick={handleApprove}
               disabled={submitting}
               icon={CheckCircle2}
+              className="flex-1 sm:flex-initial"
             >
               Duyệt & Hoàn thành
             </Button>

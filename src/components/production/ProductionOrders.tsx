@@ -41,7 +41,8 @@ export const ProductionOrders = ({ user, onBack, addToast, onOpenDetail, setHide
           *,
           bom_configs(name, product_item_id, materials(name, unit)),
           warehouses!warehouse_id(name)
-        `);
+        `)
+        .or('status.is.null,status.neq.Đã xóa');
 
       const allowedWhIds = getAllowedWarehouses(user.data_view_permission);
       if (allowedWhIds) {
@@ -74,7 +75,7 @@ export const ProductionOrders = ({ user, onBack, addToast, onOpenDetail, setHide
   );
 
   return (
-    <div className="p-4 md:p-6 space-y-6 pb-44">
+    <div className="p-4 md:p-6 space-y-6 pb-44 overflow-x-hidden">
       <div className="flex items-center justify-between gap-2">
         <PageBreadcrumb title="Lệnh sản xuất" onBack={onBack} />
         <div className="flex items-center gap-2">

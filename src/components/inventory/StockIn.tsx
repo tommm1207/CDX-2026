@@ -13,7 +13,7 @@ import { FAB } from '../shared/FAB';
 import { useInventoryData } from '@/hooks/useInventoryData';
 import { formatDate, formatCurrency, formatNumber, numberToWords } from '@/utils/format';
 import { isUUID, getAllowedWarehouses } from '@/utils/helpers';
-import { getAvailableStock } from '@/utils/inventory';
+import { getAvailableStock, validateFutureImpact } from '@/utils/inventory';
 import { Button } from '../shared/Button';
 
 export const StockIn = ({ user, onBack, initialStatus, initialAction, addToast, setHideBottomNav }: {
@@ -108,20 +108,16 @@ export const StockIn = ({ user, onBack, initialStatus, initialAction, addToast, 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
 
-    // Explicit validation since custom components don't always trigger HTML5 forms properly
     if (!formData.material_id) {
-      if (addToast) addToast("Vui lòng chọn hoặc nhập Tên vật tư nhập.", "error");
-      else alert("Vui lòng chọn hoặc nhập Tên vật tư nhập.");
+      if (addToast) addToast("Vui lòng chọn Tên vật tư nhập.", "error");
       return;
     }
     if (!formData.warehouse_id) {
-      if (addToast) addToast("Vui lòng chọn hoặc nhập Tên kho nhập.", "error");
-      else alert("Vui lòng chọn hoặc nhập Tên kho nhập.");
+      if (addToast) addToast("Vui lòng chọn Kho nhập.", "error");
       return;
     }
     if (!formData.quantity || formData.quantity <= 0) {
-      if (addToast) addToast("Vui lòng nhập số lượng nhập hợp lệ (lớn hơn 0).", "error");
-      else alert("Vui lòng nhập số lượng nhập hợp lệ (lớn hơn 0).");
+      if (addToast) addToast("Vui lòng nhập số lượng nhập hợp lệ.", "error");
       return;
     }
 
@@ -150,7 +146,7 @@ export const StockIn = ({ user, onBack, initialStatus, initialAction, addToast, 
         if (matByName) {
           finalMaterialId = matByName.id;
         } else {
-          throw new Error('Bạn phải chọn vật tư từ Danh mục, không được tự nhập mới!');
+          throw new Error('Bạn phải chọn vật tư từ Danh mục!');
         }
       }
 
@@ -161,29 +157,61 @@ export const StockIn = ({ user, onBack, initialStatus, initialAction, addToast, 
         employee_id: user.id,
         total_amount: formData.quantity * formData.unit_price,
         unit: formData.unit || materials.find(m => m.id === finalMaterialId)?.unit || '',
-        status: 'Chờ duyệt',
+        status: isEditing && selectedSlip?.status === 'Đã duyệt' ? 'Đã duyệt' : 'Chờ duyệt',
         notes: isEditing
           ? `[SỬA lúc ${new Date().toLocaleString('vi-VN')}] ${formData.notes.replace(/^\[SỬA lúc .*?\]\s*/, '')}`
           : formData.notes
       };
 
       if (isEditing && selectedSlip) {
+        if (selectedSlip.status === 'Đã duyệt') {
+          const matChanged = finalMaterialId !== selectedSlip.material_id;
+          const whChanged = finalWarehouseId !== selectedSlip.warehouse_id;
+          const dateChanged = formData.date !== selectedSlip.date;
+
+          if (matChanged || whChanged || dateChanged) {
+            // Khi đổi các trường cốt lõi của phiếu Đã duyệt, ta cần kiểm tra xem 
+            // nếu "thu hồi" phiếu cũ (giảm tồn cũ) thì có gây âm kho ở tương lai không.
+            const impactOld = await validateFutureImpact(selectedSlip.material_id, selectedSlip.warehouse_id, selectedSlip.date, -selectedSlip.quantity);
+            if (!impactOld.valid) {
+              throw new Error(`Không thể thay đổi vì tồn kho ${selectedSlip.materials?.name} tại kho cũ sẽ bị âm vào ngày ${impactOld.failedDate}`);
+            }
+          } else {
+            // Chỉ đổi số lượng hoặc các trường khác tại cùng vị trí
+            const diff = formData.quantity - selectedSlip.quantity;
+            if (diff < 0) {
+              const impact = await validateFutureImpact(finalMaterialId, finalWarehouseId, formData.date, diff);
+              if (!impact.valid) {
+                 throw new Error(`Không thể giảm số lượng nhập vì sẽ gây âm kho vào ngày ${impact.failedDate}`);
+              }
+            }
+          }
+        }
+
         const { error } = await supabase.from('stock_in').update(payload).eq('id', selectedSlip.id);
         if (error) throw error;
+        
+        await supabase.from('costs')
+          .update({
+            quantity: payload.quantity,
+            unit_price: payload.unit_price,
+            total_amount: payload.total_amount,
+            notes: `Cập nhật từ phiếu ${payload.import_code} (Sửa ngày ${new Date().toLocaleDateString()})`
+          })
+          .ilike('content', `%${payload.import_code}%`);
+
       } else {
         const { error } = await supabase.from('stock_in').insert([payload]);
         if (error) throw error;
-
       }
 
       setShowModal(false);
       fetchSlips();
       setIsEditing(false);
       setSelectedSlip(null);
-      if (addToast) addToast(isEditing ? 'Cập nhật phiếu nhập thành công!' : 'Nhập kho thành công! Tồn kho đã được cập nhật.', 'success');
+      if (addToast) addToast(isEditing ? 'Cập nhật phiếu nhập thành công!' : 'Nhập kho thành công!', 'success');
     } catch (err: any) {
       if (addToast) addToast('Lỗi: ' + err.message, 'error');
-      else alert('Lỗi: ' + err.message);
     } finally {
       setSubmitting(false);
     }
@@ -211,14 +239,6 @@ export const StockIn = ({ user, onBack, initialStatus, initialAction, addToast, 
   };
 
   const handleEdit = () => {
-    // Phiếu Đã duyệt không cho sửa trực tiếp — phải thao tác qua nghiệp vụ xóa/lập mới.
-    if (selectedSlip.status === 'Đã duyệt') {
-      if (addToast) addToast(
-        'Không thể sửa phiếu đã duyệt. Nếu cần điều chỉnh, hãy chuyển phiếu vào Thùng rác rồi lập phiếu mới.',
-        'error'
-      );
-      return;
-    }
     setFormData({
       date: selectedSlip.date,
       warehouse_id: selectedSlip.warehouse_id,
@@ -228,7 +248,7 @@ export const StockIn = ({ user, onBack, initialStatus, initialAction, addToast, 
       unit: selectedSlip.unit,
       notes: selectedSlip.notes?.replace(/^\[SỬA lúc .*?\]\s*/, '') || '',
       import_code: selectedSlip.import_code || formData.import_code,
-      status: 'Chờ duyệt'
+      status: selectedSlip.status
     });
     setIsEditing(true);
     setShowDetailModal(false);
@@ -332,7 +352,7 @@ export const StockIn = ({ user, onBack, initialStatus, initialAction, addToast, 
   };
 
   return (
-    <div className="p-4 md:p-6 space-y-6 pb-44">
+    <div className="p-4 md:p-6 space-y-6 pb-44 overflow-x-hidden">
       <div className="flex items-center justify-between gap-2">
         <PageBreadcrumb title="Nhập kho" onBack={onBack} />
         <div className="flex items-center gap-2">

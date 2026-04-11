@@ -153,10 +153,10 @@ export const MonthlySalary = ({ user, onBack, addToast }: {
   };
 
   return (
-    <div className="p-4 md:p-6 space-y-6 pb-44">
-      <div className="flex items-center justify-between gap-2">
+    <div className="p-4 md:p-6 space-y-6 pb-44 overflow-x-hidden">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <PageBreadcrumb title="Tổng hợp lương" onBack={onBack} />
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <MonthYearPicker
             selectedMonth={selectedMonth}
             selectedYear={selectedYear}

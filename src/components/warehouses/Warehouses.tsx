@@ -7,6 +7,7 @@ import { PageBreadcrumb } from '../shared/PageBreadcrumb';
 import { ToastType } from '../shared/Toast';
 import { Button } from '../shared/Button';
 import { FAB } from '../shared/FAB';
+import { checkUsage } from '@/utils/dataIntegrity';
 
 export const Warehouses = ({ user, onBack, addToast }: { 
   user: Employee, 
@@ -131,7 +132,7 @@ export const Warehouses = ({ user, onBack, addToast }: {
     }
   };
 
-  const handleEdit = (item: any) => {
+  const handleEdit = async (item: any) => {
     setFormData({
       id: item.id,
       code: item.code || '',
@@ -153,6 +154,15 @@ export const Warehouses = ({ user, onBack, addToast }: {
 
   const confirmDelete = async () => {
     if (!itemToDelete) return;
+    
+    // Check usage before soft delete
+    const usage = await checkUsage('warehouse', itemToDelete);
+    if (usage.inUse) {
+      if (addToast) addToast(`Không thể xóa vì kho đang có dữ liệu liên quan: ${usage.tables.join(', ')}`, 'error');
+      setShowDeleteModal(false);
+      return;
+    }
+
     const { error } = await supabase.from('warehouses').update({ status: 'Đã xóa' }).eq('id', itemToDelete);
     if (error) {
       const msg = error.message.includes('foreign key constraint') 

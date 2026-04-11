@@ -213,13 +213,6 @@ export const MaterialGroups = ({ user, onBack, addToast }: {
   const handleEdit = async (e: MouseEvent, item: any) => {
     e.stopPropagation();
     
-    // Check usage for groups
-    const usage = await checkUsage('group', item.id);
-    if (usage.inUse) {
-      if (addToast) addToast(`Nhóm này đang có vật tư thuộc về, không thể sửa thông tin.`, 'warning');
-      return;
-    }
-
     setFormData({
       id: item.id,
       code: item.code || '',
@@ -232,12 +225,11 @@ export const MaterialGroups = ({ user, onBack, addToast }: {
 
   const handleEditMaterial = async (item: any) => {
     const usage = await checkUsage('material', item.id);
-    if (usage.inUse) {
-      if (addToast) addToast(`Vật tư đang được sử dụng, không thể sửa thông tin.`, 'warning');
-      return;
+    if (usage.inUse && addToast) {
+      addToast(`Vật tư đang được sử dụng — một số trường sẽ bị khóa.`, 'info');
     }
 
-    setMaterialFormData(item);
+    setMaterialFormData({ ...item, _inUse: usage.inUse });
     setIsEditingMaterial(true);
     setShowMaterialModal(true);
   };

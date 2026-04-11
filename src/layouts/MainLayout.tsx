@@ -47,18 +47,44 @@ export const MainLayout = ({
   const [isSearchOpen, setIsSearchOpen] = useState(false);
 
   return (
-    <div className="min-h-screen bg-[#F8F9FA] flex flex-col font-sans">
+    <div className="min-h-screen bg-[#F8F9FA] flex flex-col font-sans overflow-x-hidden">
       <header className="bg-primary text-white flex items-center justify-between px-4 sticky top-0 z-[50] shadow-md h-[calc(3.5rem+env(safe-area-inset-top))] pt-[env(safe-area-inset-top)]">
         <div className="flex items-center gap-2">
-          <button
-            onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-            className="flex items-center gap-2 hover:bg-white/10 p-1.5 rounded-xl transition-all active:scale-95"
-          >
-            <div className="w-8 h-8 bg-white rounded-md flex items-center justify-center p-1 shadow-sm">
-              <img src={LOGO_URL} alt="Logo" className="w-full h-full object-contain" referrerPolicy="no-referrer" />
-            </div>
-            <h1 className="font-bold text-sm tracking-wide hidden sm:block">QUẢN LÝ KHO CDX</h1>
-          </button>
+          <div className="relative group/logo">
+            <button
+              onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+              className="flex items-center gap-2 hover:bg-white/10 p-1.5 rounded-xl transition-all active:scale-95 relative z-10"
+            >
+              <div className="w-8 h-8 bg-white rounded-md flex items-center justify-center p-1 shadow-sm">
+                <img src={LOGO_URL} alt="Logo" className="w-full h-full object-contain" referrerPolicy="no-referrer" />
+              </div>
+              <h1 className="font-bold text-sm tracking-wide hidden sm:block">QUẢN LÝ KHO CDX</h1>
+            </button>
+
+            {/* Menu Hint - Pulsating indicator */}
+            <motion.div
+              initial={{ opacity: 0, x: -10 }}
+              animate={{ 
+                opacity: [0.4, 1, 0.4],
+                x: 0,
+                scale: [0.95, 1, 0.95]
+              }}
+              transition={{ 
+                opacity: { duration: 2, repeat: Infinity, ease: "easeInOut" },
+                scale: { duration: 2, repeat: Infinity, ease: "easeInOut" },
+                x: { duration: 0.5 }
+              }}
+              className="absolute -right-12 top-1/2 -translate-y-1/2 bg-white/20 backdrop-blur-md px-2 py-0.5 rounded-full border border-white/30 pointer-events-none hidden xs:flex items-center gap-1"
+            >
+              <span className="text-[8px] font-bold tracking-tighter uppercase whitespace-nowrap">Menu</span>
+              <motion.div 
+                animate={{ x: [0, 2, 0] }}
+                transition={{ duration: 1.5, repeat: Infinity }}
+              >
+                <ChevronDown size={8} className="-rotate-90" />
+              </motion.div>
+            </motion.div>
+          </div>
 
           <div className="h-6 w-px bg-white/20 mx-1 hidden sm:block" />
 

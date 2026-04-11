@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Plus, Edit, Trash2, X, ChevronRight, ArrowLeft, PlusCircle, FileText, Download } from 'lucide-react';
+import { Plus, Edit, Trash2, X, ChevronRight, ArrowLeft, PlusCircle, FileText, Download, Search } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { supabase } from '@/lib/supabase';
 import * as xlsx from 'xlsx';
@@ -398,7 +398,7 @@ export const CostReport = ({ user, onBack, addToast }: {
   };
 
   return (
-    <div className="p-4 md:p-6 space-y-6 pb-44">
+    <div className="p-4 md:p-6 space-y-6 pb-44 overflow-x-hidden">
       <div className="flex items-center justify-between gap-2">
         <PageBreadcrumb title="Báo cáo chi phí" onBack={onBack} />
         <div className="flex items-center gap-2">

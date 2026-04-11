@@ -7,6 +7,8 @@ import { PageBreadcrumb } from '../shared/PageBreadcrumb';
 import { ToastType } from '../shared/Toast';
 import { CustomCombobox } from '../shared/CustomCombobox';
 import { FAB } from '../shared/FAB';
+import { Button } from '../shared/Button';
+import { checkUsage } from '@/utils/dataIntegrity';
 
 export const BOMConfig = ({ user, onBack, addToast }: {
   user: Employee,
@@ -19,6 +21,8 @@ export const BOMConfig = ({ user, onBack, addToast }: {
   const [showModal, setShowModal] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [itemToDelete, setItemToDelete] = useState<string | null>(null);
 
   const [formData, setFormData] = useState<{
     id?: string;
@@ -43,7 +47,7 @@ export const BOMConfig = ({ user, onBack, addToast }: {
     setLoading(true);
     try {
       const [bomRes, matRes] = await Promise.all([
-        supabase.from('bom_configs').select('*').order('created_at', { ascending: false }),
+        supabase.from('bom_configs').select('*').or('status.is.null,status.neq.Đã xóa').order('created_at', { ascending: false }),
         supabase.from('materials').select('*').order('name')
       ]);
 
@@ -162,15 +166,36 @@ export const BOMConfig = ({ user, onBack, addToast }: {
     }
   };
 
-  const handleDelete = async (id: string) => {
-    if (!window.confirm('Bạn có chắc chắn muốn xóa định mức này?')) return;
+  const handleDelete = (id: string) => {
+    setItemToDelete(id);
+    setShowDeleteModal(true);
+  };
+
+  const confirmDelete = async () => {
+    if (!itemToDelete) return;
+    
     try {
-      const { error } = await supabase.from('bom_configs').delete().eq('id', id);
+      setLoading(true);
+      const usage = await checkUsage('bom', itemToDelete);
+      if (usage.inUse) {
+        if (addToast) addToast(`Không thể xóa vì dữ liệu đang được sử dụng ở: ${usage.tables.join(', ')}`, 'warning');
+        setShowDeleteModal(false);
+        return;
+      }
+
+      // For BOM items, we can keep them or hard delete if the BOM itself is soft-deleted.
+      // Most consistent is to soft-delete the config and keep items as-is (hidden by association).
+      const { error } = await supabase.from('bom_configs').update({ status: 'Đã xóa' }).eq('id', itemToDelete);
+      
       if (error) throw error;
-      if (addToast) addToast('Đã xóa định mức', 'success');
+      if (addToast) addToast('Đã đưa định mức vào Thùng rác!', 'success');
       fetchData();
     } catch (err: any) {
       if (addToast) addToast('Lỗi: ' + err.message, 'error');
+    } finally {
+      setShowDeleteModal(false);
+      setItemToDelete(null);
+      setLoading(false);
     }
   };
 
@@ -183,6 +208,36 @@ export const BOMConfig = ({ user, onBack, addToast }: {
         setIsEditing(false);
         setShowModal(true);
       }} />
+
+      <AnimatePresence>
+        {showDeleteModal && (
+          <div 
+            className="fixed inset-0 z-[120] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm overflow-hidden"
+            onClick={() => setShowDeleteModal(false)}
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              className="bg-white rounded-[2rem] md:rounded-[2.5rem] shadow-2xl p-8 max-w-sm w-full text-center m-4"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="w-16 h-16 bg-red-50 text-red-600 rounded-2xl flex items-center justify-center mx-auto mb-4 border border-red-100">
+                <Trash2 size={32} />
+              </div>
+              <h3 className="text-xl font-bold text-gray-800 mb-2">Xác nhận xóa định mức?</h3>
+              <p className="text-sm text-gray-500 mb-6 font-medium">
+                Bạn có chắc muốn xóa định mức <strong>{boms.find(b => b.id === itemToDelete)?.name}</strong>?<br/>
+                Dữ liệu sẽ được đưa vào <strong>Thùng rác</strong> và có thể khôi phục.
+              </p>
+              <div className="flex gap-3">
+                <Button variant="ghost" fullWidth onClick={() => setShowDeleteModal(false)} className="bg-gray-100 hover:bg-gray-200">Hủy bỏ</Button>
+                <Button variant="danger" fullWidth onClick={confirmDelete} isLoading={loading} className="shadow-lg shadow-red-500/20">Xóa ngay</Button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
 
       <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
         <div className="overflow-x-auto">

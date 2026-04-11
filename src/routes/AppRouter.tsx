@@ -24,9 +24,11 @@ import { ProductionOrders } from '@/components/production/ProductionOrders';
 import { ProductionOrderDetail } from '@/components/production/ProductionOrderDetail';
 import { Trash } from '@/components/trash/Trash';
 import { DeletedWarehouses } from '@/components/trash/DeletedWarehouses';
+import { DeletedMaterials } from '@/components/trash/DeletedMaterials';
 import { DeletedSlips } from '@/components/trash/DeletedSlips';
 import { DeletedEmployees } from '@/components/trash/DeletedEmployees';
 import { DeletedCosts } from '@/components/trash/DeletedCosts';
+import { DeletedProductionOrders } from '@/components/trash/DeletedProductionOrders';
 import { Notes } from '@/components/notes/Notes';
 import { Reminders } from '@/components/reminders/Reminders';
 import { Backup } from '@/components/settings/Backup';
@@ -89,9 +91,11 @@ export const AppRouter = ({
 
     case 'trash': return <Trash onNavigate={navigateTo} onBack={goBack} />;
     case 'deleted-warehouses': return <DeletedWarehouses onBack={goBack} addToast={addToast} />;
+    case 'deleted-materials': return <DeletedMaterials onBack={goBack} addToast={addToast} />;
     case 'deleted-slips': return <DeletedSlips onBack={goBack} addToast={addToast} />;
     case 'deleted-employees': return <DeletedEmployees onBack={goBack} addToast={addToast} />;
     case 'deleted-costs': return <DeletedCosts onBack={goBack} addToast={addToast} />;
+    case 'deleted-production-orders': return <DeletedProductionOrders onBack={goBack} addToast={addToast} />;
     case 'material-groups': return <MaterialGroups user={user} onBack={goBack} addToast={addToast} />;
     case 'backup-settings':
       if (user.role !== 'Admin' && user.role !== 'Admin App') return <Dashboard user={user} onNavigate={navigateTo} addToast={addToast} pendingApprovals={pendingCount} />;

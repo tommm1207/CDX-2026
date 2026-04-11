@@ -61,28 +61,16 @@ export const MainLayout = ({
               <h1 className="font-bold text-sm tracking-wide hidden sm:block">QUẢN LÝ KHO CDX</h1>
             </button>
 
-            {/* Menu Hint - Pulsating indicator */}
+            {/* Menu Hint - Subtle Pulsating Dot over logo corner */}
             <motion.div
-              initial={{ opacity: 0, x: -10 }}
-              animate={{ 
-                opacity: [0.4, 1, 0.4],
-                x: 0,
-                scale: [0.95, 1, 0.95]
-              }}
-              transition={{ 
-                opacity: { duration: 2, repeat: Infinity, ease: "easeInOut" },
-                scale: { duration: 2, repeat: Infinity, ease: "easeInOut" },
-                x: { duration: 0.5 }
-              }}
-              className="absolute -right-12 top-1/2 -translate-y-1/2 bg-white/20 backdrop-blur-md px-2 py-0.5 rounded-full border border-white/30 pointer-events-none hidden xs:flex items-center gap-1"
+              initial={{ opacity: 0, scale: 0 }}
+              animate={{ opacity: 1, scale: 1 }}
+              className="absolute -top-1 -right-1 z-20 pointer-events-none"
             >
-              <span className="text-[8px] font-bold tracking-tighter uppercase whitespace-nowrap">Menu</span>
-              <motion.div 
-                animate={{ x: [0, 2, 0] }}
-                transition={{ duration: 1.5, repeat: Infinity }}
-              >
-                <ChevronDown size={8} className="-rotate-90" />
-              </motion.div>
+              <div className="relative flex items-center justify-center">
+                 <div className="absolute inset-0 bg-amber-400 rounded-full animate-ping opacity-75" />
+                 <div className="relative w-2.5 h-2.5 bg-amber-400 rounded-full border-2 border-primary shadow-sm" />
+              </div>
             </motion.div>
           </div>
 

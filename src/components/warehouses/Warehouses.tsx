@@ -99,15 +99,24 @@ export const Warehouses = ({
       const { data } = await supabase
         .from('warehouses')
         .select('code')
-        .like('code', 'KH%')
-        .order('code', { ascending: false })
-        .limit(1);
+        .like('code', 'KH%');
 
-      if (data && data.length > 0 && data[0].code) {
-        const lastCode = data[0].code;
-        const match = lastCode.match(/KH(\d+)$/);
-        if (match) {
-          const nextNumber = parseInt(match[1]) + 1;
+      if (data && data.length > 0) {
+        let maxNumber = 0;
+        data.forEach((item) => {
+          if (item.code) {
+            const match = item.code.match(/KH(\d+)$/);
+            if (match) {
+              const num = parseInt(match[1], 10);
+              if (num > maxNumber) {
+                maxNumber = num;
+              }
+            }
+          }
+        });
+        
+        if (maxNumber > 0) {
+          const nextNumber = maxNumber + 1;
           return `KH${nextNumber.toString().padStart(3, '0')}`;
         }
       }

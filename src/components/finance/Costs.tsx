@@ -152,30 +152,10 @@ export const Costs = ({
     if (data) setEmployees(data);
   };
  
-  const generateNextCostCode = async () => {
-    try {
-      const today = new Date().toISOString().slice(2, 10).replace(/-/g, '');
-      const prefix = `CP-${today}-`;
-      
-      const { data } = await supabase
-        .from('costs')
-        .select('cost_code')
-        .like('cost_code', `${prefix}%`)
-        .order('cost_code', { ascending: false })
-        .limit(1);
-
-      if (data && data.length > 0 && data[0].cost_code) {
-        const lastCode = data[0].cost_code;
-        const lastNumber = parseInt(lastCode.split('-').pop() || '0');
-        if (!isNaN(lastNumber)) {
-          return `${prefix}${(lastNumber + 1).toString().padStart(3, '0')}`;
-        }
-      }
-      return `${prefix}001`;
-    } catch (err) {
-      console.error('Error generating cost code:', err);
-      return `CP-${new Date().toISOString().slice(2, 10).replace(/-/g, '')}-001`;
-    }
+  const generateNextCostCode = () => {
+    const today = new Date().toISOString().slice(2, 10).replace(/-/g, '');
+    const random = Math.floor(1000 + Math.random() * 9000); // 4 digits random
+    return `CP-${today}-${random}`;
   };
 
   const fetchCosts = async () => {
@@ -298,7 +278,7 @@ export const Costs = ({
       const payload = {
       const cost_code = isEditing
         ? formData.cost_code
-        : (await generateNextCostCode());
+        : generateNextCostCode();
 
       const payload = {
         cost_code,
@@ -828,9 +808,9 @@ export const Costs = ({
       </AnimatePresence>
 
       <FAB
-        onClick={async () => {
+        onClick={() => {
           setIsEditing(false);
-          const nextCode = await generateNextCostCode();
+          const nextCode = generateNextCostCode();
           setFormData({ ...initialFormState, cost_code: nextCode });
           setShowModal(true);
         }}

@@ -10,6 +10,9 @@ import {
   FileText,
   Download,
   Search,
+  ArrowUpCircle,
+  ArrowDownCircle,
+  Wallet,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { supabase } from '@/lib/supabase';
@@ -429,6 +432,60 @@ export const CostReport = ({
             />
           )}
         </div>
+      </div>
+
+      {/* Financial Dashboard - Moved from Costs.tsx */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-2">
+        {[
+          {
+            label: 'Tổng Thu',
+            val: formatCurrency(
+              costs
+                .filter((c) => c.transaction_type === 'Thu')
+                .reduce((s, c) => s + Number(c.total_amount), 0),
+            ),
+            color: 'green',
+            icon: ArrowDownCircle,
+          },
+          {
+            label: 'Tổng Chi',
+            val: formatCurrency(
+              costs
+                .filter((c) => c.transaction_type !== 'Thu')
+                .reduce((s, c) => s + Number(c.total_amount), 0),
+            ),
+            color: 'red',
+            icon: ArrowUpCircle,
+          },
+          {
+            label: 'Lợi Nhuận',
+            val: formatCurrency(
+              costs
+                .filter((c) => c.transaction_type === 'Thu')
+                .reduce((s, c) => s + Number(c.total_amount), 0) -
+                costs
+                  .filter((c) => c.transaction_type !== 'Thu')
+                  .reduce((s, c) => s + Number(c.total_amount), 0),
+            ),
+            color: 'blue',
+            icon: Wallet,
+          },
+        ].map((stat) => (
+          <div
+            key={stat.label}
+            className={`bg-white p-4 rounded-2xl shadow-sm border border-${stat.color}-100 flex items-center gap-4`}
+          >
+            <div
+              className={`w-12 h-12 bg-${stat.color}-50 text-${stat.color}-600 rounded-full flex items-center justify-center shrink-0`}
+            >
+              <stat.icon size={24} />
+            </div>
+            <div>
+              <p className="text-xs text-gray-400 font-bold uppercase">{stat.label}</p>
+              <p className={`text-xl font-black text-${stat.color}-600`}>{stat.val}</p>
+            </div>
+          </div>
+        ))}
       </div>
 
       <AnimatePresence>

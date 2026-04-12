@@ -40,14 +40,21 @@ export const Attendance = ({
   const fetchData = async () => {
     setLoading(true);
     try {
-      const { data: empData } = await supabase
+      const isAdmin = ['admin', 'develop'].includes(user.role?.toLowerCase() || '');
+
+      let query = supabase
         .from('users')
         .select('*')
         .neq('status', 'Nghỉ việc')
         .neq('status', 'Đã xóa')
         .neq('role', 'Develop')
-        .eq('has_salary', true)
-        .order('code');
+        .eq('has_salary', true);
+
+      if (!isAdmin) {
+        query = query.eq('id', user.id);
+      }
+
+      const { data: empData } = await query.order('code');
       if (empData) setEmployees(empData);
 
       const startDate = `${selectedYear}-${String(selectedMonth).padStart(2, '0')}-01`;
@@ -81,7 +88,8 @@ export const Attendance = ({
     action?: 'present' | 'half-day' | 'absent' | 'remove',
     otHours: number | '' = 0,
   ) => {
-    if (user.role === 'User') return;
+    const isAdmin = ['admin', 'develop'].includes(user.role?.toLowerCase() || '');
+    if (!isAdmin) return;
     const dateStr = `${selectedYear}-${String(selectedMonth).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
     const current = getStatus(empId, day);
 
@@ -266,7 +274,8 @@ export const Attendance = ({
   const [editFormData, setEditFormData] = useState({ status: 'present', overtime: 0 });
 
   const openEditModal = (empId: string, day: number) => {
-    if (user.role === 'User') return;
+    const isAdmin = ['admin', 'develop'].includes(user.role?.toLowerCase() || '');
+    if (!isAdmin) return;
     const att = getStatus(empId, day);
     const emp = employees.find((e) => e.id === empId);
     const dateStr = `${selectedYear}-${String(selectedMonth).padStart(2, '0')}-${String(day).padStart(2, '0')}`;

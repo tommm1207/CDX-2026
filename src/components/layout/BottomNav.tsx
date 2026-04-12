@@ -7,6 +7,8 @@ import {
   ArrowUpCircle,
   ArrowLeftRight,
   FileText,
+  ClipboardList,
+  Wallet,
 } from 'lucide-react';
 import { motion } from 'motion/react';
 import { Employee } from '@/types';
@@ -24,26 +26,26 @@ export const BottomNav = ({
   pendingCount: number;
   isHidden?: boolean;
 }) => {
-  const navItems =
-    user.role === 'Admin' || user.role === 'Develop'
-      ? [
-          { id: 'dashboard', label: 'Trang chủ', icon: Home },
-          {
-            id: 'pending-approvals',
-            label: 'Phiếu duyệt',
-            icon: ClipboardCheck,
-            badge: pendingCount,
-          },
-          { id: 'attendance', label: 'Chấm công', icon: CalendarCheck },
-          { id: 'hr-records', label: 'Nhân sự', icon: UserCircle },
-        ]
-      : [
-          { id: 'dashboard', label: 'Trang chủ', icon: Home },
-          { id: 'stock-in', label: 'Nhập kho', icon: ArrowDownCircle },
-          { id: 'stock-out', label: 'Xuất kho', icon: ArrowUpCircle },
-          { id: 'transfer', label: 'Luân chuyển', icon: ArrowLeftRight },
-          { id: 'cost-report', label: 'Báo cáo chi phí', icon: FileText },
-        ];
+  const navItems = ['admin', 'develop'].includes(user.role?.toLowerCase() || '')
+    ? [
+        { id: 'dashboard', label: 'Trang chủ', icon: Home },
+        {
+          id: 'pending-approvals',
+          label: 'Phiếu duyệt',
+          icon: ClipboardCheck,
+          badge: pendingCount,
+        },
+        { id: 'attendance', label: 'Chấm công', icon: CalendarCheck },
+        { id: 'hr-records', label: 'Nhân sự', icon: UserCircle },
+        { id: 'costs', label: 'Chi phí', icon: FileText },
+      ]
+    : [
+        { id: 'dashboard', label: 'Trang chủ', icon: Home },
+        { id: 'costs', label: 'Nhập chi phí', icon: FileText },
+        { id: 'construction-diary', label: 'Nhật ký', icon: ClipboardList },
+        { id: 'attendance', label: 'Chấm công', icon: CalendarCheck },
+        { id: 'payroll', label: 'Phiếu lương', icon: Wallet },
+      ];
 
   return (
     <motion.div

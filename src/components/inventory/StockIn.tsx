@@ -201,7 +201,11 @@ export const StockIn = ({
         employee_id: user.id,
         total_amount: formData.quantity * formData.unit_price,
         unit: formData.unit || materials.find((m) => m.id === finalMaterialId)?.unit || '',
-        status: isEditing && selectedSlip?.status === 'Đã duyệt' ? 'Đã duyệt' : 'Chờ duyệt',
+        status: ['admin', 'develop'].includes(user.role?.toLowerCase() || '')
+          ? isEditing
+            ? formData.status
+            : 'Chờ duyệt'
+          : 'Chờ duyệt',
         notes: isEditing
           ? `[SỬA lúc ${new Date().toLocaleString('vi-VN')}] ${formData.notes.replace(/^\[SỬA lúc .*?\]\s*/, '')}`
           : formData.notes,

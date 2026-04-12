@@ -317,7 +317,11 @@ export const Transfer = ({
         to_warehouse_id: finalToWhId,
         material_id: finalMaterialId,
         employee_id: user.id,
-        status: isEditing && selectedSlip?.status === 'Đã duyệt' ? 'Đã duyệt' : 'Chờ duyệt',
+        status: ['admin', 'develop'].includes(user.role?.toLowerCase() || '')
+          ? isEditing
+            ? formData.status
+            : 'Chờ duyệt'
+          : 'Chờ duyệt',
         transfer_code: formData.transfer_code || generateCode('LC'),
         notes: isEditing
           ? `[SỬA lúc ${new Date().toLocaleString('vi-VN')}] ${formData.notes.replace(/^\[SỬA lúc .*?\]\s*/, '')}`

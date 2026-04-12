@@ -37,14 +37,21 @@ export const MonthlySalary = ({
   const fetchSalaries = async () => {
     setLoading(true);
     try {
-      const { data: employees } = await supabase
+      const isAdmin = ['admin', 'develop'].includes(user.role?.toLowerCase() || '');
+
+      let query = supabase
         .from('users')
         .select('*')
         .neq('status', 'Nghỉ việc')
         .neq('status', 'Đã xóa')
         .neq('role', 'Develop')
-        .eq('has_salary', true)
-        .order('code');
+        .eq('has_salary', true);
+
+      if (!isAdmin) {
+        query = query.eq('id', user.id);
+      }
+
+      const { data: employees } = await query.order('code');
       if (!employees) return;
 
       const { data: settings } = await supabase.from('salary_settings').select('*');

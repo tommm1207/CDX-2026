@@ -128,6 +128,9 @@ export const ConstructionDiaryComponent = ({
           .from('construction_diaries')
           .update({
             ...formData,
+            status: ['admin', 'develop'].includes(user.role?.toLowerCase() || '')
+              ? (formData as any).status
+              : 'Chờ duyệt',
             updated_at: new Date().toISOString(),
           })
           .eq('id', editingId);

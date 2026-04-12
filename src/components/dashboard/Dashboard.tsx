@@ -63,7 +63,7 @@ export const Dashboard = ({ user, onNavigate, addToast, pendingApprovals = 0 }: 
     return () => clearInterval(interval);
   }, [user.id]);
 
-  const isAdmin = user.role === 'Admin' || user.role === 'Develop';
+  const isAdmin = ['admin', 'develop'].includes(user.role?.toLowerCase() || '');
 
   const menuActions = [
     {
@@ -88,11 +88,11 @@ export const Dashboard = ({ user, onNavigate, addToast, pendingApprovals = 0 }: 
       description: 'Chuyển vật tư giữa các kho',
     },
     {
-      id: 'cost-report',
-      label: 'Báo cáo chi phí',
+      id: isAdmin ? 'cost-report' : 'costs',
+      label: isAdmin ? 'Báo cáo chi phí' : 'Nhập chi phí',
       icon: FileText,
       color: 'bg-primary',
-      description: 'Ghi chép chi tiêu dự án',
+      description: isAdmin ? 'Phân tích tổng quan tài chính' : 'Ghi chép chi tiêu dự án',
     },
     {
       id: 'inventory-report',

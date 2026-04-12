@@ -137,6 +137,16 @@ export const AppRouter = ({
         />
       );
     case 'cost-report':
+      if (!['admin', 'develop'].includes(user.role?.toLowerCase() || '')) {
+        return (
+          <Dashboard
+            user={user}
+            onNavigate={navigateTo}
+            addToast={addToast}
+            pendingApprovals={pendingCount}
+          />
+        );
+      }
       return <CostReport user={user} onBack={goBack} addToast={addToast} />;
     case 'cost-filter':
       return <CostFilter user={user} onBack={goBack} addToast={addToast} />;
@@ -152,7 +162,7 @@ export const AppRouter = ({
     case 'payroll':
       return <MonthlySalary user={user} onBack={goBack} addToast={addToast} />;
     case 'salary-settings':
-      if (!['Admin', 'Develop'].includes(user.role))
+      if (!['admin', 'develop'].includes(user.role?.toLowerCase() || ''))
         return (
           <Dashboard
             user={user}
@@ -183,6 +193,16 @@ export const AppRouter = ({
     case 'partners':
       return <PlaceholderPage title="Khách hàng & nhà cung cấp" onBack={goBack} />;
     case 'inventory-report':
+      if (!['admin', 'develop'].includes(user.role?.toLowerCase() || '')) {
+        return (
+          <Dashboard
+            user={user}
+            onNavigate={navigateTo}
+            addToast={addToast}
+            pendingApprovals={pendingCount}
+          />
+        );
+      }
       return <InventoryReport user={user} onBack={goBack} addToast={addToast} />;
 
     case 'construction-diary':
@@ -224,6 +244,16 @@ export const AppRouter = ({
       );
 
     case 'trash':
+      if (!['admin', 'develop'].includes(user.role?.toLowerCase() || '')) {
+        return (
+          <Dashboard
+            user={user}
+            onNavigate={navigateTo}
+            addToast={addToast}
+            pendingApprovals={pendingCount}
+          />
+        );
+      }
       return <Trash user={user} onNavigate={navigateTo} onBack={goBack} />;
     case 'deleted-warehouses':
       return <DeletedWarehouses user={user} onBack={goBack} addToast={addToast} />;

@@ -299,9 +299,9 @@ export const Costs = ({
         unit: formData.unit,
         total_amount: formData.total_amount,
         employee_id: user.id,
-        status: isEditing
-          ? formData.status === 'Đã duyệt'
-            ? 'Đã duyệt'
+        status: ['admin', 'develop'].includes(user.role?.toLowerCase() || '')
+          ? isEditing
+            ? formData.status
             : 'Chờ duyệt'
           : 'Chờ duyệt',
       };
@@ -460,58 +460,7 @@ export const Costs = ({
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        {[
-          {
-            label: 'Tổng Thu',
-            val: formatCurrency(
-              filteredCosts
-                .filter((c) => c.transaction_type === 'Thu')
-                .reduce((s, c) => s + Number(c.total_amount), 0),
-            ),
-            color: 'green',
-            icon: ArrowDownCircle,
-          },
-          {
-            label: 'Tổng Chi',
-            val: formatCurrency(
-              filteredCosts
-                .filter((c) => c.transaction_type !== 'Thu')
-                .reduce((s, c) => s + Number(c.total_amount), 0),
-            ),
-            color: 'red',
-            icon: ArrowUpCircle,
-          },
-          {
-            label: 'Lợi Nhuận',
-            val: formatCurrency(
-              filteredCosts
-                .filter((c) => c.transaction_type === 'Thu')
-                .reduce((s, c) => s + Number(c.total_amount), 0) -
-                filteredCosts
-                  .filter((c) => c.transaction_type !== 'Thu')
-                  .reduce((s, c) => s + Number(c.total_amount), 0),
-            ),
-            color: 'blue',
-            icon: Wallet,
-          },
-        ].map((stat) => (
-          <div
-            key={stat.label}
-            className={`bg-white p-4 rounded-2xl shadow-sm border border-${stat.color}-100 flex items-center gap-4`}
-          >
-            <div
-              className={`w-12 h-12 bg-${stat.color}-50 text-${stat.color}-600 rounded-full flex items-center justify-center shrink-0`}
-            >
-              <stat.icon size={24} />
-            </div>
-            <div>
-              <p className="text-xs text-gray-400 font-bold uppercase">{stat.label}</p>
-              <p className={`text-xl font-black text-${stat.color}-600`}>{stat.val}</p>
-            </div>
-          </div>
-        ))}
-      </div>
+      {/* Dashboard cards removed - moved to CostReport for Admin only */}
 
       <AnimatePresence>
         {showFilter && (
@@ -862,6 +811,24 @@ export const Costs = ({
                     onChange={(val) => setFormData({ ...formData, total_amount: val })}
                     required
                   />
+
+                  {/* Admin Status Toggle */}
+                  {['admin', 'develop'].includes(user.role?.toLowerCase() || '') && (
+                    <div className="space-y-1 mb-4">
+                      <label className="text-[10px] font-bold text-gray-400 uppercase">
+                        Trạng thái duyệt
+                      </label>
+                      <select
+                        value={formData.status}
+                        onChange={(e) => setFormData({ ...formData, status: e.target.value })}
+                        className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm font-bold bg-amber-50 text-amber-700 outline-none focus:ring-2 focus:ring-amber-200"
+                      >
+                        <option value="Chờ duyệt">Chờ duyệt</option>
+                        <option value="Đã duyệt">Đã duyệt</option>
+                        <option value="Từ chối">Từ chối</option>
+                      </select>
+                    </div>
+                  )}
 
                   <div className="mt-8 flex justify-end gap-3 flex-shrink-0">
                     <button

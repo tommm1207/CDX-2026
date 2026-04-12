@@ -402,59 +402,68 @@ export const getTonKhoTable = async (
  * Định dạng: [Mã nhóm]-[Số thứ tự 3 chữ số] (VD: VT-001)
  */
 export const generateNextMaterialCode = async (groupId: string): Promise<string> => {
-  if (!groupId) return '';
   try {
-    const { data: groupData } = await supabase
-      .from('material_groups')
-      .select('code')
-      .eq('id', groupId)
-      .single();
-    if (!groupData || !groupData.code) return '';
-    const groupPrefix = groupData.code;
+    const today = new Date().toISOString().slice(2, 10).replace(/-/g, '');
+    let prefix = 'VAT';
+    
+    if (groupId && isUUID(groupId)) {
+      const { data: groupData } = await supabase
+        .from('material_groups')
+        .select('code')
+        .eq('id', groupId)
+        .single();
+      if (groupData?.code) prefix = groupData.code;
+    }
+    
+    const fullPrefix = `${prefix}-${today}-`;
     const { data } = await supabase
       .from('materials')
       .select('code')
-      .eq('group_id', groupId)
+      .like('code', `${fullPrefix}%`)
       .order('code', { ascending: false })
       .limit(1);
+
     if (data && data.length > 0 && data[0].code) {
       const lastCode = data[0].code;
-      const parts = lastCode.split('-');
-      const lastNum = parseInt(parts[parts.length - 1]);
-      if (!isNaN(lastNum)) return `${groupPrefix}-${(lastNum + 1).toString().padStart(3, '0')}`;
+      const lastNumber = parseInt(lastCode.split('-').pop() || '0');
+      if (!isNaN(lastNumber)) {
+        return `${fullPrefix}${(lastNumber + 1).toString().padStart(3, '0')}`;
+      }
     }
-    return `${groupPrefix}-001`;
+    return `${fullPrefix}001`;
   } catch (err) {
     console.error('Error generating material code:', err);
-    return '';
+    return `VAT-${new Date().toISOString().slice(2, 10).replace(/-/g, '')}-001`;
   }
 };
 
 /**
  * Tự động sinh mã nhóm vật tư tiếp theo.
- * Định dạng: VAT[Số thứ tự 3 chữ số] (VD: VAT001)
+ * Định dạng: NH-ngày-xxx (VD: NH-260412-001)
  */
 export const generateNextGroupCode = async (): Promise<string> => {
   try {
+    const today = new Date().toISOString().slice(2, 10).replace(/-/g, '');
+    const prefix = `NH-${today}-`;
+    
     const { data } = await supabase
       .from('material_groups')
       .select('code')
-      .like('code', 'VAT%')
+      .like('code', `${prefix}%`)
       .order('code', { ascending: false })
       .limit(1);
 
     if (data && data.length > 0 && data[0].code) {
       const lastCode = data[0].code;
-      const match = lastCode.match(/VAT(\d+)/);
-      if (match && match[1]) {
-        const nextNumber = parseInt(match[1]) + 1;
-        return `VAT${nextNumber.toString().padStart(3, '0')}`;
+      const lastNumber = parseInt(lastCode.split('-').pop() || '0');
+      if (!isNaN(lastNumber)) {
+        return `${prefix}${(lastNumber + 1).toString().padStart(3, '0')}`;
       }
     }
-    return `VAT001`;
+    return `${prefix}001`;
   } catch (err) {
     console.error('Error generating group code:', err);
-    return `VAT001`;
+    return `NH-001`;
   }
 };
 

@@ -32,7 +32,7 @@ import { formatDate, formatNumber } from '@/utils/format';
 import ExcelJS from 'exceljs';
 import { formatDataForExcel } from '@/utils/excelHelper';
 
-const CODE_PREFIX = 'NKTC-';
+const CODE_PREFIX = 'NK-';
 
 export const ConstructionDiaryComponent = ({
   user,

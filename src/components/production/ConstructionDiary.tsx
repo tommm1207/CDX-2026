@@ -35,7 +35,7 @@ import { formatDate, formatNumber } from '@/utils/format';
 import ExcelJS from 'exceljs';
 import { formatDataForExcel } from '@/utils/excelHelper';
 
-const CODE_PREFIX = 'NK-';
+const CODE_PREFIX = 'NKTC-';
 
 export const ConstructionDiaryComponent = ({
   user,
@@ -712,7 +712,14 @@ export const ConstructionDiaryComponent = ({
       {/* Add/Edit Modal (Sync with other features) */}
       <AnimatePresence>
         {showAddNew && (
-          <div className="fixed inset-0 z-[160] flex items-center justify-center p-2 sm:p-4 bg-black/60 backdrop-blur-md overflow-hidden no-print">
+          <div 
+            className="fixed inset-0 z-[160] flex items-center justify-center p-2 sm:p-4 bg-black/60 backdrop-blur-md overflow-hidden no-print"
+            onClick={() => {
+              setShowAddNew(false);
+              setEditingId(null);
+              resetForm();
+            }}
+          >
             <motion.div
               initial={{ opacity: 0, scale: 0.95, y: 30 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}

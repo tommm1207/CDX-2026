@@ -530,29 +530,8 @@ export const MaterialCatalog = ({
               <div className="flex-1 overflow-y-auto custom-scrollbar">
                 <form onSubmit={handleSubmit} className="p-6">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div className="md:col-span-2 space-y-2 mb-2">
-                      <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">
-                        Mã tham chiếu (Vật tư)
-                      </label>
-                      <div className="bg-primary/5 px-5 py-3.5 rounded-2xl border border-primary/10 text-sm font-black text-primary uppercase shadow-inner italic">
-                        {formData.code || (formData.group_id ? 'VAT-001' : 'VAT-[NHÓM]-001')}
-                      </div>
-                    </div>
-                    <div className="space-y-4">
-                      <div className="space-y-1">
-                        <label className="text-[10px] font-bold text-gray-400 uppercase">
-                          Tên vật tư *
-                        </label>
-                        <input
-                          required
-                          type="text"
-                          placeholder="Ví dụ: Tôn kẽm 0.4mm"
-                          value={formData.name}
-                          onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                          className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20"
-                        />
-                      </div>
-
+                    {/* NHÓM lên đầu — chọn nhóm trước để sinh mã */}
+                    <div className="md:col-span-2">
                       <CreatableSelect
                         label={`Nhóm vật tư *${isEditing && editingInUse ? ' 🔒' : ''}`}
                         value={formData.group_id}
@@ -567,11 +546,36 @@ export const MaterialCatalog = ({
                         onCreate={async (val) => {
                           setFormData({ ...formData, group_id: val });
                         }}
-                        placeholder="Chọn nhóm..."
+                        placeholder="Chọn nhóm trước để sinh mã tự động..."
                         required
                         disabled={isEditing && editingInUse}
                       />
                     </div>
+
+                    {/* Mã tham chiếu — hiện sau khi chọn nhóm */}
+                    <div className="md:col-span-2 space-y-2">
+                      <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">
+                        Mã tham chiếu (Vật tư)
+                      </label>
+                      <div className="bg-primary/5 px-5 py-3.5 rounded-2xl border border-primary/10 text-sm font-black text-primary uppercase shadow-inner italic">
+                        {formData.code || (formData.group_id ? 'Đang tính...' : '← Chọn nhóm vật tư trước')}
+                      </div>
+                    </div>
+
+                    <div className="space-y-4">
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-bold text-gray-400 uppercase">
+                          Tên vật tư *
+                        </label>
+                        <input
+                          required
+                          type="text"
+                          placeholder="Ví dụ: Tôn kẽm 0.4mm"
+                          value={formData.name}
+                          onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                          className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20"
+                        />
+                      </div>
 
                     <div className="space-y-4">
                       <CreatableSelect

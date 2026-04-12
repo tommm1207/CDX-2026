@@ -580,7 +580,7 @@ export const MonthlySalary = ({
                       </div>
                     </div>
                     {/* Title block */}
-                    <h1 className="text-xl font-black text-primary uppercase tracking-tight leading-none">PHIẾU LƯƠNG</h1>
+                    <h1 className="text-xl font-black text-primary uppercase tracking-tight leading-none">BẢNG TÍNH LƯƠNG</h1>
                     <p className="text-[11px] font-bold text-gray-500 mt-0.5">
                       {isCustomRange
                         ? `${customRange.start} — ${customRange.end}`

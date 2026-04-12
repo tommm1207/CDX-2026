@@ -649,23 +649,23 @@ export const MonthlySalary = ({
                       {/* Tạm ứng */}
                       <tr className="border-b border-gray-100">
                         <td className="px-5 py-2.5 text-gray-500 font-medium">Tạm ứng:</td>
-                        <td className="px-5 py-2.5 text-red-600 font-medium">{formatCurrency(selectedSalary.totalAdv)}</td>
+                        <td className="px-5 py-2.5 text-red-600 font-medium">- {formatCurrency(selectedSalary.totalAdv)}</td>
                       </tr>
                       {/* Bảo hiểm */}
                       <tr className="border-b border-gray-100">
                         <td className="px-5 py-2.5 text-gray-500 font-medium">Bảo hiểm:</td>
-                        <td className="px-5 py-2.5 text-red-600 font-medium">{formatCurrency(selectedSalary.insuranceDeduction)}</td>
+                        <td className="px-5 py-2.5 text-red-600 font-medium">- {formatCurrency(selectedSalary.insuranceDeduction)}</td>
                       </tr>
                       {/* Giảm trừ */}
                       <tr className="border-b border-gray-200">
                         <td className="px-5 py-2.5 text-gray-500 font-medium">Giảm trừ khác:</td>
-                        <td className="px-5 py-2.5 text-gray-800">0 đ</td>
+                        <td className="px-5 py-2.5 text-gray-800">- 0 đ</td>
                       </tr>
                       {/* TỔNG GIẢM */}
                       <tr className="border-b-2 border-gray-300 bg-gray-50">
                         <td className="px-5 py-3 font-black text-gray-900 uppercase text-xs tracking-wide">TỔNG GIẢM:</td>
                         <td className="px-5 py-3 font-black text-red-600 text-sm">
-                          {formatCurrency(selectedSalary.totalAdv + selectedSalary.insuranceDeduction)}
+                          - {formatCurrency(selectedSalary.totalAdv + selectedSalary.insuranceDeduction)}
                         </td>
                       </tr>
                       {/* CÒN ĐƯỢC NHẬN */}

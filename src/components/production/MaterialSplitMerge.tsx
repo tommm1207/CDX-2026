@@ -88,6 +88,7 @@ export const MaterialSplitMerge = ({
         .select(
           '*, warehouses(name), users(full_name), xasa_gop_chi_tiet(*, materials(name, code))',
         )
+        .or('status.is.null,status.neq.Đã xóa')
         .order('created_at', { ascending: false });
       if (error) throw error;
       setHistory(data || []);
@@ -189,7 +190,7 @@ export const MaterialSplitMerge = ({
             kho_id,
             nguoi_tao: user.id,
             ghi_chu: ghi_chu || null,
-            trang_thai: 'cho_duyet',
+            status: 'cho_duyet',
           },
         ])
         .select()
@@ -346,7 +347,7 @@ export const MaterialSplitMerge = ({
       // 2. Update phieu status
       const { error } = await supabase
         .from('xasa_gop_phieu')
-        .update({ trang_thai: 'da_duyet' })
+        .update({ status: 'da_duyet' })
         .eq('id', phieu.id);
       if (error) throw error;
 
@@ -374,8 +375,11 @@ export const MaterialSplitMerge = ({
       // Delete phieu chi tiet
       await supabase.from('xasa_gop_chi_tiet').delete().eq('phieu_id', phieu.id);
 
-      // Delete phieu header
-      const { error } = await supabase.from('xasa_gop_phieu').delete().eq('id', phieu.id);
+      // Đưa phieu header vào thùng rác (Soft Delete)
+      const { error } = await supabase
+        .from('xasa_gop_phieu')
+        .update({ status: 'Đã xóa' })
+        .eq('id', phieu.id);
       if (error) throw error;
 
       if (addToast) addToast('Đã từ chối và xóa phiếu', 'info');
@@ -387,8 +391,8 @@ export const MaterialSplitMerge = ({
     }
   };
 
-  const getStatusBadge = (trang_thai: string) => {
-    switch (trang_thai) {
+  const getStatusBadge = (status: string) => {
+    switch (status) {
       case 'cho_duyet':
         return { label: 'Chờ duyệt', bg: 'bg-primary/10', text: 'text-primary' };
       case 'da_duyet':

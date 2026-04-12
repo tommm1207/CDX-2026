@@ -616,7 +616,7 @@ export const MonthlySalary = ({
                     .bill-capture .italic { font-style: italic !important; }
                     .bill-capture .uppercase { text-transform: uppercase !important; }
                     .bill-capture .text-primary { color: #2D5A27 !important; }
-                    .bill-capture .logo-img { width: 36px !important; height: 36px !important; mix-blend-mode: multiply !important; opacity: 1 !important; visibility: visible !important; display: block !important; }
+                    .bill-capture .logo-img { width: 36px !important; height: 36px !important; mix-blend-mode: multiply !important; opacity: 1 !important; visibility: visible !important; display: block !important; background-color: transparent !important; }
                     .bill-capture .main-title { color: #2D5A27 !important; font-weight: 900 !important; letter-spacing: -0.02em !important; text-shadow: none !important; }
                     .bill-capture .text-gray-400 { color: #9CA3AF !important; }
                     .bill-capture .text-gray-500 { color: #6B7280 !important; }
@@ -635,10 +635,14 @@ export const MonthlySalary = ({
                     <div className="px-5 pt-5 pb-4 border-b border-gray-100">
                       {/* Logo row */}
                       <div className="flex items-center gap-2 mb-3">
-                        <img
-                          src={logoBase64}
-                          alt="Logo"
-                          className="logo-img object-contain rounded-lg flex-shrink-0"
+                        <div
+                          className="logo-img rounded-lg flex-shrink-0"
+                          style={{
+                            backgroundImage: `url(${logoBase64})`,
+                            backgroundSize: 'contain',
+                            backgroundRepeat: 'no-repeat',
+                            backgroundPosition: 'center',
+                          }}
                         />
                         <div>
                           <p className="text-[9px] font-black text-gray-700 uppercase tracking-wider">

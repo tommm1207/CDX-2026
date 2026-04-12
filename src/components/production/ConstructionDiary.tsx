@@ -92,7 +92,7 @@ export const ConstructionDiaryComponent = ({
       const { data: diaryData } = await supabase
         .from('construction_diaries')
         .select('*, warehouses(id, name, code)')
-        .or('trang_thai.is.null,trang_thai.neq.Đã xóa')
+        .or('status.is.null,status.neq.Đã xóa')
         .order('date', { ascending: false });
       if (diaryData) setDiaries(diaryData);
 
@@ -169,7 +169,7 @@ export const ConstructionDiaryComponent = ({
     try {
       const { error } = await supabase
         .from('construction_diaries')
-        .update({ trang_thai: 'Đã xóa' })
+        .update({ status: 'Đã xóa' })
         .eq('id', deletingId);
       if (error) throw error;
       if (addToast) addToast('Đã chuyển nhật ký vào thùng rác', 'success');

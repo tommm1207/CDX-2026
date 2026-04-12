@@ -80,14 +80,11 @@ export const DeletedProduction = ({
         data = res.data;
         error = res.error;
       } else if (activeTab === 'split_merge_history') {
-        const res = await supabase.from('xasa_gop_phieu').select('*').eq('trang_thai', 'Đã xóa');
+        const res = await supabase.from('xasa_gop_phieu').select('*').eq('status', 'Đã xóa');
         data = res.data;
         error = res.error;
       } else if (activeTab === 'construction_diaries') {
-        const res = await supabase
-          .from('construction_diaries')
-          .select('*')
-          .eq('trang_thai', 'Đã xóa');
+        const res = await supabase.from('construction_diaries').select('*').eq('status', 'Đã xóa');
         data = res.data;
         error = res.error;
       }
@@ -153,7 +150,7 @@ export const DeletedProduction = ({
               ? 'xasa_gop_phieu'
               : selectedItem.table;
 
-      const updateData = isBom ? { dang_hoat_dong: true } : { trang_thai: 'Chờ duyệt' };
+      const updateData = isBom ? { dang_hoat_dong: true } : { status: 'Chờ duyệt' };
 
       const { error } = await supabase
         .from(actualTable)

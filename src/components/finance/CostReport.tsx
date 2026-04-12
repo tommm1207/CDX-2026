@@ -81,7 +81,7 @@ export const CostReport = ({
   useEffect(() => {
     fetchCosts();
     fetchWarehouses();
-    fetchMaterials();
+    fetchCostItems();
     fetchCostTypes();
     fetchUnits();
   }, []);
@@ -118,12 +118,18 @@ export const CostReport = ({
     }
   };
 
-  const fetchMaterials = async () => {
-    const { data } = await supabase
-      .from('materials')
-      .select('id, name')
-      .or('status.is.null,status.neq.Đã xóa');
-    if (data) setMaterials(data);
+  const fetchCostItems = async (group?: string) => {
+    let query = supabase.from('costs').select('content');
+    if (group) {
+      query = query.eq('cost_type', group);
+    }
+    const { data } = await query;
+    if (data) {
+      const unique = Array.from(new Set(data.map((item) => item.content)))
+        .filter(Boolean)
+        .map((name) => ({ id: name as string, name: name as string }));
+      setMaterials(unique); // Reusing materials state for Item suggestions
+    }
   };
 
   const fetchCostTypes = async () => {
@@ -247,8 +253,7 @@ export const CostReport = ({
           let warehouse_id = null;
           if (item.warehouse_name) {
             if (isUUID(item.warehouse_name)) {
-              const existingWh = warehouses.find((w) => w.id === item.warehouse_name);
-              if (existingWh) warehouse_id = existingWh.id;
+              warehouse_id = item.warehouse_name;
             } else {
               const existingWh = warehouses.find(
                 (w) => w.name.toLowerCase() === item.warehouse_name.toLowerCase(),
@@ -265,45 +270,15 @@ export const CostReport = ({
             }
           }
 
-          let material_id = null;
-          let finalContent = item.content;
-
-          if (item.content) {
-            if (isUUID(item.content)) {
-              const existingMat = materials.find((m) => m.id === item.content);
-              if (existingMat) {
-                material_id = existingMat.id;
-                finalContent = existingMat.name;
-              }
-            } else {
-              const existingMat = materials.find(
-                (m) => m.name.toLowerCase() === item.content.toLowerCase(),
-              );
-              if (existingMat) {
-                material_id = existingMat.id;
-                finalContent = existingMat.name;
-              } else {
-                const { data: newMat } = await supabase
-                  .from('materials')
-                  .insert([{ name: item.content }])
-                  .select();
-                if (newMat) {
-                  material_id = newMat[0].id;
-                  finalContent = newMat[0].name;
-                }
-              }
-            }
-          }
-
           const payload = {
             date: masterForm.date,
             cost_code: costCode,
             employee_id: masterForm.employee_id,
             transaction_type: item.transaction_type || 'Chi',
             cost_type: item.cost_type,
-            content: finalContent,
+            content: item.content,
             warehouse_id,
-            material_id,
+            material_id: null,
             quantity: item.quantity,
             unit: item.unit,
             unit_price: item.unit_price,

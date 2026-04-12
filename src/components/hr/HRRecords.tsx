@@ -122,12 +122,89 @@ export const HRRecords = ({
     setShowModal(true);
   };
 
-  const [showDeleteModal, setShowDeleteModal] = useState(false);
-  const [itemToDelete, setItemToDelete] = useState<string | null>(null);
+  const [usageInfo, setUsageInfo] = useState<{
+    inUse: boolean;
+    tables: string[];
+    details?: any[];
+  }>({ inUse: false, tables: [] });
 
-  const handleDeleteClick = (id: string) => {
+  const handleDeleteClick = async (id: string) => {
     setItemToDelete(id);
+    const usage = await checkUsage('employee', id);
+    setUsageInfo(usage);
     setShowDeleteModal(true);
+  };
+
+  const handlePurgeRelated = async () => {
+    if (!itemToDelete || user.role !== 'Admin App' || !usageInfo.details) return;
+
+    if (
+      !window.confirm(
+        'Bạn có chắc chắn muốn XÓA VĨNH VIỄN toàn bộ các dữ liệu rác liên quan này? Hành động này không thể hoàn tác.',
+      )
+    )
+      return;
+
+    setSubmitting(true);
+    try {
+      for (const detail of usageInfo.details) {
+        if (detail.softDeletedCount > 0) {
+          const { error } = await supabase
+            .from(detail.table)
+            .delete()
+            .eq('employee_id', itemToDelete)
+            .eq('status', 'Đã xóa');
+
+          if (error && (detail.table === 'stock_in' || detail.table === 'stock_out')) {
+            // Some tables might use different field names for relations, though usually it's employee_id or created_by
+            // For now assuming employee_id as standard for many tables
+          }
+          if (error) throw error;
+        }
+      }
+
+      if (addToast) addToast('Đã dọn dẹp các dữ liệu rác liên quan!', 'success');
+      const usage = await checkUsage('employee', itemToDelete);
+      setUsageInfo(usage);
+    } catch (err: any) {
+      if (addToast) addToast('Lỗi khi dọn dẹp: ' + err.message, 'error');
+    } finally {
+      setSubmitting(true);
+      setTimeout(() => setSubmitting(false), 500);
+    }
+  };
+
+  const handlePermanentDelete = async () => {
+    if (!itemToDelete || user.role !== 'Admin App') return;
+
+    if (
+      !window.confirm(
+        'CẢNH BÁO: Hành động này sẽ xóa VĨNH VIỄN nhân sự này khỏi cơ sở dữ liệu. Bạn có chắc chắn muốn tiếp tục?',
+      )
+    ) {
+      return;
+    }
+
+    setSubmitting(true);
+    try {
+      const { error } = await supabase.from('users').delete().eq('id', itemToDelete);
+
+      if (error) {
+        let msg = error.message;
+        if (msg.includes('foreign key constraint')) {
+          msg = `Không thể xóa vĩnh viễn vì vẫn còn dữ liệu liên kết vật lý trong DB. Vui lòng dọn dẹp sạch các mục liên quan trước.`;
+        }
+        throw new Error(msg);
+      }
+
+      if (addToast) addToast('Đã xóa vĩnh viễn nhân sự khỏi hệ thống', 'success');
+      fetchEmployees();
+      setShowDeleteModal(false);
+    } catch (err: any) {
+      if (addToast) addToast('Lỗi xóa vĩnh viễn: ' + err.message, 'error');
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   const confirmDelete = async () => {
@@ -140,18 +217,16 @@ export const HRRecords = ({
       return;
     }
 
-    try {
-      const usage = await checkUsage('employee', itemToDelete);
-      if (usage.inUse) {
-        if (addToast)
-          addToast(
-            `Không thể xóa vì nhân sự này đang được dùng trong: ${usage.tables.join(', ')}`,
-            'error',
-          );
-        setShowDeleteModal(false);
-        return;
-      }
+    if (usageInfo.inUse) {
+      if (addToast)
+        addToast(
+          `Không thể xóa vì nhân sự này đang được dùng trong: ${usageInfo.tables.join(', ')}`,
+          'error',
+        );
+      return;
+    }
 
+    try {
       const { error } = await supabase
         .from('users')
         .update({ status: 'Đã xóa' })
@@ -437,22 +512,95 @@ export const HRRecords = ({
                 <Trash2 size={32} />
               </div>
               <h3 className="text-xl font-bold text-gray-800 mb-2">Xác nhận xóa?</h3>
-              <p className="text-sm text-gray-500 mb-6 font-medium">
-                Bạn có chắc chắn muốn chuyển nhân sự{' '}
-                <strong>
-                  {employees.find((e) => e.id === itemToDelete)?.code || itemToDelete?.slice(0, 8)}
-                </strong>{' '}
-                vào thùng rác?
-                <br />
-                Hành động này có thể hoàn tác trong mục Thùng rác.
-              </p>
-              <div className="flex gap-3">
-                <Button fullWidth variant="outline" onClick={() => setShowDeleteModal(false)}>
-                  Hủy bỏ
-                </Button>
-                <Button fullWidth variant="danger" onClick={confirmDelete}>
-                  Di chuyển
-                </Button>
+              <div className="text-sm text-gray-500 mb-6 space-y-3 text-left bg-gray-50 p-4 rounded-xl border border-gray-100">
+                <p>
+                  Nhân sự:{' '}
+                  <strong>
+                    {employees.find((e) => e.id === itemToDelete)?.full_name || itemToDelete}
+                  </strong>
+                </p>
+
+                {usageInfo.details && usageInfo.details.length > 0 ? (
+                  <div className="space-y-3">
+                    <p className="text-red-600 font-bold flex items-center gap-2 text-[11px] uppercase tracking-wider">
+                      <AlertCircle size={14} /> Dữ liệu liên quan:
+                    </p>
+                    <div className="space-y-2">
+                      {usageInfo.details.map((detail, idx) => (
+                        <div
+                          key={idx}
+                          className="flex items-center justify-between text-[11px] bg-white p-2 rounded-xl border border-gray-100 shadow-sm"
+                        >
+                          <span className="font-medium text-gray-700">{detail.label}</span>
+                          <div className="flex gap-2">
+                            {detail.count > 0 && (
+                              <span className="px-1.5 py-0.5 bg-amber-100 text-amber-700 rounded-md font-bold">
+                                {detail.count} Active
+                              </span>
+                            )}
+                            {detail.softDeletedCount > 0 && (
+                              <span className="px-1.5 py-0.5 bg-gray-100 text-gray-500 rounded-md font-bold">
+                                {detail.softDeletedCount} Trash
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+
+                    {user.role === 'Admin App' &&
+                      usageInfo.details.some((d) => d.softDeletedCount > 0) && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          fullWidth
+                          onClick={handlePurgeRelated}
+                          isLoading={submitting}
+                          className="mt-2 text-[10px] py-1 border-amber-200 text-amber-700 bg-amber-50 hover:bg-amber-100"
+                          icon={Trash2}
+                        >
+                          DỌN DẸP RÁC LIÊN QUAN (ADMIN)
+                        </Button>
+                      )}
+
+                    {usageInfo.inUse && (
+                      <p className="text-[10px] text-red-500 italic mt-1 leading-tight">
+                        * Phải xóa các phiếu/dữ liệu 'Active' trước khi có thể xóa nhân sự này.
+                      </p>
+                    )}
+                  </div>
+                ) : (
+                  <p className="text-green-600 font-bold flex items-center gap-2 justify-center py-2">
+                    <CheckCircle size={18} /> Sẵn sàng để xóa
+                  </p>
+                )}
+              </div>
+              <div className="flex flex-col gap-3">
+                <div className="flex gap-3">
+                  <Button fullWidth variant="outline" onClick={() => setShowDeleteModal(false)}>
+                    Hủy bỏ
+                  </Button>
+                  <Button
+                    fullWidth
+                    variant="danger"
+                    onClick={confirmDelete}
+                    disabled={usageInfo.inUse}
+                  >
+                    Thùng rác
+                  </Button>
+                </div>
+                {user.role === 'Admin App' && (
+                  <Button
+                    variant="ghost"
+                    className="text-red-700 bg-red-50 hover:bg-red-100 border border-red-200"
+                    fullWidth
+                    onClick={handlePermanentDelete}
+                    isLoading={submitting}
+                    disabled={usageInfo.inUse}
+                  >
+                    XÓA VĨNH VIỄN (ADMIN APP)
+                  </Button>
+                )}
               </div>
             </motion.div>
           </div>
@@ -462,25 +610,25 @@ export const HRRecords = ({
       <AnimatePresence>
         {showModal && (
           <div
-            className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/50 backdrop-blur-md overflow-hidden"
+            className="fixed inset-0 z-[100] flex items-center justify-center p-2 sm:p-4 bg-black/50 backdrop-blur-md overflow-hidden"
             onClick={() => setShowModal(false)}
           >
             <motion.div
               initial={{ opacity: 0, scale: 0.95, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 20 }}
-              className="bg-white rounded-[2rem] md:rounded-[2.5rem] shadow-2xl w-full max-w-4xl relative z-10 flex flex-col overflow-hidden max-h-[90vh]"
+              className="bg-white rounded-[1.5rem] md:rounded-[2.5rem] shadow-2xl w-full max-w-4xl relative z-10 flex flex-col overflow-hidden max-h-[96vh] md:max-h-[90vh]"
               onClick={(e) => e.stopPropagation()}
             >
-              <div className="bg-primary p-6 flex items-center justify-between text-white rounded-t-[2rem] md:rounded-t-[2.5rem] flex-shrink-0 transition-colors">
+              <div className="bg-primary p-4 sm:p-6 flex items-center justify-between text-white rounded-t-[1.5rem] md:rounded-t-[2.5rem] flex-shrink-0 transition-colors">
                 <div className="flex items-center gap-3">
                   <div
                     className="p-2 bg-white/20 rounded-xl cursor-pointer hover:bg-white/30 transition-all active:scale-95"
                     onClick={() => setShowModal(false)}
                   >
-                    <UserPlus size={24} />
+                    <UserPlus size={20} className="sm:w-6 sm:h-6" />
                   </div>
-                  <h3 className="font-bold text-lg">
+                  <h3 className="font-bold text-base sm:text-lg truncate">
                     {isEditing ? 'Cập Nhật Nhân Sự' : 'Thêm Mới Nhân Sự'}
                   </h3>
                 </div>
@@ -488,13 +636,12 @@ export const HRRecords = ({
                   onClick={() => setShowModal(false)}
                   className="p-2 hover:bg-white/20 rounded-xl transition-all"
                 >
-                  <X size={24} />
+                  <X size={20} className="sm:w-6 sm:h-6" />
                 </button>
               </div>
 
               <div className="flex-1 overflow-y-auto custom-scrollbar">
-                <form onSubmit={handleSubmit}>
-                  <div className="p-6">
+                <form onSubmit={handleSubmit} className="p-4 sm:p-6">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                       <div className="md:col-span-2 space-y-2 mb-2">
                         <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">
@@ -709,7 +856,6 @@ export const HRRecords = ({
                         </select>
                       </div>
                     </div>
-                  </div>
 
                   <div className="p-6 bg-gray-50 flex justify-end gap-3 flex-shrink-0">
                     <Button variant="ghost" onClick={() => setShowModal(false)}>

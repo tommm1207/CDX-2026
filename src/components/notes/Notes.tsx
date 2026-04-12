@@ -580,17 +580,17 @@ export const Notes = ({
       <AnimatePresence>
         {showAddNew && (
           <div
-            className="fixed inset-0 z-[150] flex items-center justify-center p-4 bg-black/50 backdrop-blur-md overflow-hidden"
+            className="fixed inset-0 z-[150] flex items-center justify-center p-2 sm:p-4 bg-black/50 backdrop-blur-md overflow-hidden"
             onClick={() => setShowAddNew(false)}
           >
             <motion.div
               initial={{ opacity: 0, scale: 0.95, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 20 }}
-              className="bg-white rounded-[2rem] md:rounded-[2.5rem] shadow-2xl w-full max-w-4xl overflow-hidden relative z-10 flex flex-col"
+              className="bg-white rounded-[1.5rem] md:rounded-[2.5rem] shadow-2xl w-full max-w-4xl max-h-[96vh] md:max-h-[90vh] overflow-hidden relative z-10 flex flex-col"
               onClick={(e) => e.stopPropagation()}
             >
-              <div className="p-6 text-white flex items-center justify-between bg-primary rounded-t-[2rem] md:rounded-t-[2.5rem] flex-shrink-0">
+              <div className="p-4 sm:p-6 text-white flex items-center justify-between bg-primary rounded-t-[1.5rem] md:rounded-t-[2.5rem] flex-shrink-0">
                 <div className="flex items-center gap-3">
                   <div
                     className="p-2 bg-white/20 rounded-xl cursor-pointer hover:bg-white/30 transition-all active:scale-95"
@@ -599,10 +599,10 @@ export const Notes = ({
                       setEditingId(null);
                     }}
                   >
-                    <FileText size={24} className="text-white" />
+                    <FileText size={20} className="sm:w-6 sm:h-6" />
                   </div>
-                  <h3 className="text-lg font-bold tracking-wide">
-                    {editingId ? 'Chỉnh sửa ghi chú' : 'Thêm Mới'}
+                  <h3 className="font-bold text-base sm:text-lg">
+                    {editingId ? 'Chỉnh sửa ghi chú' : 'Thêm ghi chú mới'}
                   </h3>
                 </div>
                 <button
@@ -612,127 +612,130 @@ export const Notes = ({
                   }}
                   className="p-2 hover:bg-white/20 rounded-xl transition-all"
                 >
-                  <X size={24} />
+                  <X size={20} className="sm:w-6 sm:h-6" />
                 </button>
               </div>
-              <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-6 max-h-[70vh] overflow-y-auto">
-                <div className="md:col-span-2 space-y-2 mb-2">
-                  <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">
-                    Mã tham chiếu (Ghi chú)
-                  </label>
-                  <div className="bg-primary/5 px-5 py-3.5 rounded-2xl border border-primary/10 text-sm font-black text-primary uppercase shadow-inner italic">
-                    {editingId
-                      ? `GC-${new Date(notes.find((n) => n.id === editingId)?.date).toISOString().slice(2, 10).replace(/-/g, '')}-${editingId.slice(0, 3).toUpperCase()}`
-                      : `GC-${new Date().toISOString().slice(2, 10).replace(/-/g, '')}-001`}
-                  </div>
-                </div>
-                <div className="space-y-4">
-                  <div>
-                    <label className="text-[10px] font-bold text-gray-400 uppercase">Tiêu đề</label>
-                    <input
-                      type="text"
-                      value={formData.title}
-                      onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                      className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm focus:ring-2 focus:ring-primary/20 outline-none mt-1"
-                      placeholder="VD: Ghi chú công việc sáng..."
-                    />
-                  </div>
-                  <div>
-                    <label className="text-[10px] font-bold text-gray-400 uppercase">
-                      Nhân sự liên quan{' '}
-                      <span className="text-gray-400 font-normal italic">- Chọn nhiều</span>
+
+              <div className="flex-1 overflow-y-auto custom-scrollbar p-4 sm:p-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="md:col-span-2 space-y-2 mb-2">
+                    <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">
+                      Mã tham chiếu (Ghi chú)
                     </label>
-                    <div className="mt-1 border border-gray-200 rounded-xl max-h-48 overflow-y-auto bg-white/50">
-                      {employees.map((emp) => (
-                        <label
-                          key={emp.id}
-                          className="flex items-center gap-3 px-4 py-2 hover:bg-gray-50 border-b border-gray-100 last:border-0 cursor-pointer transition-colors"
-                        >
-                          <input
-                            type="checkbox"
-                            checked={formData.related_personnel.includes(emp.id)}
-                            onChange={(e) => {
-                              const newPersonnel = e.target.checked
-                                ? [...formData.related_personnel, emp.id]
-                                : formData.related_personnel.filter((id) => id !== emp.id);
-                              setFormData({ ...formData, related_personnel: newPersonnel });
-                            }}
-                            className="w-4 h-4 rounded border-gray-300 text-primary focus:ring-primary flex-shrink-0"
-                          />
-                          <span className="text-sm text-gray-700 font-medium truncate">
-                            {emp.full_name}{' '}
-                            <span className="text-gray-400 text-xs font-normal">({emp.code})</span>
-                          </span>
-                        </label>
-                      ))}
+                    <div className="bg-primary/5 px-5 py-3.5 rounded-2xl border border-primary/10 text-sm font-black text-primary uppercase shadow-inner italic">
+                      {editingId
+                        ? `GC-${new Date(notes.find((n) => n.id === editingId)?.date).toISOString().slice(2, 10).replace(/-/g, '')}-${editingId.slice(0, 3).toUpperCase()}`
+                        : `GC-${new Date().toISOString().slice(2, 10).replace(/-/g, '')}-001`}
                     </div>
                   </div>
-                  <div>
-                    <label className="text-[10px] font-bold text-gray-400 uppercase">
-                      Ngày tạo
-                    </label>
-                    <input
-                      type="date"
-                      value={formData.date}
-                      onChange={(e) => setFormData({ ...formData, date: e.target.value })}
-                      className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm focus:ring-2 focus:ring-primary/20 outline-none mt-1"
-                    />
+                  <div className="space-y-4">
+                    <div>
+                      <label className="text-[10px] font-bold text-gray-400 uppercase">Tiêu đề</label>
+                      <input
+                        type="text"
+                        value={formData.title}
+                        onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                        className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm focus:ring-2 focus:ring-primary/20 outline-none mt-1"
+                        placeholder="VD: Ghi chú công việc sáng..."
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[10px] font-bold text-gray-400 uppercase">
+                        Nhân sự liên quan{' '}
+                        <span className="text-gray-400 font-normal italic">- Chọn nhiều</span>
+                      </label>
+                      <div className="mt-1 border border-gray-200 rounded-xl max-h-48 overflow-y-auto bg-white/50">
+                        {employees.map((emp) => (
+                          <label
+                            key={emp.id}
+                            className="flex items-center gap-3 px-4 py-2 hover:bg-gray-50 border-b border-gray-100 last:border-0 cursor-pointer transition-colors"
+                          >
+                            <input
+                              type="checkbox"
+                              checked={formData.related_personnel.includes(emp.id)}
+                              onChange={(e) => {
+                                const newPersonnel = e.target.checked
+                                  ? [...formData.related_personnel, emp.id]
+                                  : formData.related_personnel.filter((id) => id !== emp.id);
+                                setFormData({ ...formData, related_personnel: newPersonnel });
+                              }}
+                              className="w-4 h-4 rounded border-gray-300 text-primary focus:ring-primary flex-shrink-0"
+                            />
+                            <span className="text-sm text-gray-700 font-medium truncate">
+                              {emp.full_name}{' '}
+                              <span className="text-gray-400 text-xs font-normal">({emp.code})</span>
+                            </span>
+                          </label>
+                        ))}
+                      </div>
+                    </div>
+                    <div>
+                      <label className="text-[10px] font-bold text-gray-400 uppercase">
+                        Ngày tạo
+                      </label>
+                      <input
+                        type="date"
+                        value={formData.date}
+                        onChange={(e) => setFormData({ ...formData, date: e.target.value })}
+                        className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm focus:ring-2 focus:ring-primary/20 outline-none mt-1"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[10px] font-bold text-gray-400 uppercase">
+                        Nội dung
+                      </label>
+                      <textarea
+                        value={formData.content}
+                        onChange={(e) => setFormData({ ...formData, content: e.target.value })}
+                        className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm focus:ring-2 focus:ring-primary/20 outline-none mt-1 min-h-[80px]"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[10px] font-bold text-gray-400 uppercase">
+                        Thời tiết
+                      </label>
+                      <select
+                        value={formData.weather}
+                        onChange={(e) => setFormData({ ...formData, weather: e.target.value })}
+                        className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm focus:ring-2 focus:ring-primary/20 outline-none mt-1"
+                      >
+                        <option value="">-- Chọn --</option>
+                        {WEATHER_OPTIONS.map((o) => (
+                          <option key={o.value} value={o.value}>
+                            {o.label}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
                   </div>
-                  <div>
-                    <label className="text-[10px] font-bold text-gray-400 uppercase">
-                      Nội dung
-                    </label>
-                    <textarea
-                      value={formData.content}
-                      onChange={(e) => setFormData({ ...formData, content: e.target.value })}
-                      className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm focus:ring-2 focus:ring-primary/20 outline-none mt-1 min-h-[80px]"
-                    />
+                  <div className="space-y-4">
+                    <div>
+                      <label className="text-[10px] font-bold text-gray-400 uppercase">
+                        Vị trí / Tọa độ
+                      </label>
+                      <input
+                        type="text"
+                        value={formData.location}
+                        onChange={(e) => setFormData({ ...formData, location: e.target.value })}
+                        className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm focus:ring-2 focus:ring-primary/20 outline-none mt-1"
+                        placeholder="0.000000, 0.000000"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[10px] font-bold text-gray-400 uppercase">
+                        Người tạo
+                      </label>
+                      <input
+                        type="text"
+                        value={user.full_name}
+                        disabled
+                        className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm bg-gray-50 mt-1"
+                      />
+                    </div>
                   </div>
-                  <div>
-                    <label className="text-[10px] font-bold text-gray-400 uppercase">
-                      Thời tiết
-                    </label>
-                    <select
-                      value={formData.weather}
-                      onChange={(e) => setFormData({ ...formData, weather: e.target.value })}
-                      className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm focus:ring-2 focus:ring-primary/20 outline-none mt-1"
-                    >
-                      <option value="">-- Chọn --</option>
-                      {WEATHER_OPTIONS.map((o) => (
-                        <option key={o.value} value={o.value}>
-                          {o.label}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                </div>
-                <div className="space-y-4">
-                  <div>
-                    <label className="text-[10px] font-bold text-gray-400 uppercase">
-                      Vị trí / Tọa độ
-                    </label>
-                    <input
-                      type="text"
-                      value={formData.location}
-                      onChange={(e) => setFormData({ ...formData, location: e.target.value })}
-                      className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm focus:ring-2 focus:ring-primary/20 outline-none mt-1"
-                      placeholder="0.000000, 0.000000"
-                    />
-                  </div>
-                  <div>
-                    <label className="text-[10px] font-bold text-gray-400 uppercase">
-                      Người tạo
-                    </label>
-                    <input
-                      type="text"
-                      value={user.full_name}
-                      disabled
-                      className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm bg-gray-50 mt-1"
-                    />
-                  </div>
-                  <div className="flex-1" />
                 </div>
               </div>
+
               <div className="p-6 bg-gray-50 flex justify-end gap-3 flex-shrink-0">
                 <Button
                   variant="ghost"

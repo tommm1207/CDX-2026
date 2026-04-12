@@ -5,6 +5,12 @@ export type UsageType = 'material' | 'group' | 'warehouse' | 'employee' | 'bom';
 export interface UsageResult {
   inUse: boolean;
   tables: string[];
+  details: {
+    table: string;
+    label: string;
+    count: number;
+    softDeletedCount: number;
+  }[];
 }
 
 const TABLE_LABELS: Record<string, string> = {
@@ -16,13 +22,14 @@ const TABLE_LABELS: Record<string, string> = {
   costs: 'Báo cáo chi phí',
   production_orders: 'Lệnh sản xuất',
   materials: 'Danh mục vật tư',
-  users: 'Nhân sự phụ trách',
+  users: 'Phân quyền kho (Nhân sự)',
   inventory: 'Tồn kho thực tế',
 };
 
 export const checkUsage = async (type: UsageType, id: string): Promise<UsageResult> => {
   const tablesToCheck: string[] = [];
   const results: string[] = [];
+  const details: UsageResult['details'] = [];
 
   if (type === 'material') {
     tablesToCheck.push(
@@ -44,51 +51,65 @@ export const checkUsage = async (type: UsageType, id: string): Promise<UsageResu
     tablesToCheck.push('production_orders');
   }
 
-  const queries = tablesToCheck.map((table) => {
-    let query = supabase.from(table).select('*', { count: 'exact', head: true });
+  const queries = await Promise.all(
+    tablesToCheck.map(async (table) => {
+      let queryBase = supabase.from(table).select('*', { count: 'exact', head: false });
 
-    if (table === 'transfers') {
-      if (type === 'material') query = query.eq('material_id', id);
-      if (type === 'warehouse')
-        query = query.or(`from_warehouse_id.eq.${id},to_warehouse_id.eq.${id}`);
-      if (type === 'employee') query = query.eq('employee_id', id);
-    } else if (table === 'users') {
-      query = query.eq('warehouse_id', id);
-    } else if (table === 'materials') {
-      if (type === 'group') query = query.eq('group_id', id);
-      if (type === 'warehouse') query = query.eq('warehouse_id', id);
-    } else if (table === 'production_orders') {
-      if (type === 'bom') query = query.eq('bom_id', id);
-      if (type === 'employee') query = query.eq('created_by', id);
-      if (type === 'warehouse')
-        query = query.or(`warehouse_id.eq.${id},output_warehouse_id.eq.${id}`);
-    } else if (table === 'bom_items') {
-      if (type === 'material') query = query.eq('material_item_id', id);
-    } else if (table === 'bom_configs') {
-      if (type === 'material') query = query.eq('product_item_id', id);
-    } else {
-      let field = 'material_id';
-      if (type === 'warehouse') field = 'warehouse_id';
-      if (type === 'employee') field = 'employee_id';
-      query = query.eq(field, id);
-    }
+      if (table === 'transfers') {
+        if (type === 'material') queryBase = queryBase.eq('material_id', id);
+        if (type === 'warehouse')
+          queryBase = queryBase.or(`from_warehouse_id.eq.${id},to_warehouse_id.eq.${id}`);
+        if (type === 'employee') queryBase = queryBase.eq('employee_id', id);
+      } else if (table === 'users') {
+        queryBase = queryBase.eq('warehouse_id', id);
+      } else if (table === 'materials') {
+        if (type === 'group') queryBase = queryBase.eq('group_id', id);
+        if (type === 'warehouse') queryBase = queryBase.eq('warehouse_id', id);
+      } else if (table === 'production_orders') {
+        if (type === 'bom') queryBase = queryBase.eq('bom_id', id);
+        if (type === 'employee') queryBase = queryBase.eq('created_by', id);
+        if (type === 'warehouse')
+          queryBase = queryBase.or(`warehouse_id.eq.${id},output_warehouse_id.eq.${id}`);
+      } else if (table === 'bom_items') {
+        if (type === 'material') queryBase = queryBase.eq('material_item_id', id);
+      } else if (table === 'bom_configs') {
+        if (type === 'material') queryBase = queryBase.eq('product_item_id', id);
+      } else {
+        let field = 'material_id';
+        if (type === 'warehouse') field = 'warehouse_id';
+        if (type === 'employee') field = 'employee_id';
+        queryBase = queryBase.eq(field, id);
+      }
 
-    // Always ignore records in Trash (Soft-deleted)
-    query = query.or('status.is.null,status.neq.Đã xóa');
+      // Execute twice: once for active, once for deleted
+      const [activeRes, deletedRes] = await Promise.all([
+        queryBase.clone().or('status.is.null,status.neq.Đã xóa'),
+        queryBase.clone().eq('status', 'Đã xóa'),
+      ]);
 
-    return { table, query };
-  });
+      return {
+        table,
+        activeCount: activeRes.count || 0,
+        deletedCount: deletedRes.count || 0,
+      };
+    }),
+  );
 
-  const resolved = await Promise.all(queries.map((q) => q.query));
-
-  resolved.forEach((res, index) => {
-    if (res.count && res.count > 0) {
-      results.push(TABLE_LABELS[queries[index].table] || queries[index].table);
+  queries.forEach((q) => {
+    if (q.activeCount > 0 || q.deletedCount > 0) {
+      if (q.activeCount > 0) results.push(TABLE_LABELS[q.table] || q.table);
+      details.push({
+        table: q.table,
+        label: TABLE_LABELS[q.table] || q.table,
+        count: q.activeCount,
+        softDeletedCount: q.deletedCount,
+      });
     }
   });
 
   return {
-    inUse: results.length > 0,
+    inUse: results.length > 0 || details.some((d) => d.softDeletedCount > 0),
     tables: results,
+    details,
   };
 };

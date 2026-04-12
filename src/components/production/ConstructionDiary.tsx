@@ -709,21 +709,21 @@ export const ConstructionDiaryComponent = ({
       {/* Add/Edit Modal (Sync with other features) */}
       <AnimatePresence>
         {showAddNew && (
-          <div className="fixed inset-0 z-[160] flex items-center justify-center p-4 bg-black/60 backdrop-blur-md overflow-hidden no-print">
+          <div className="fixed inset-0 z-[160] flex items-center justify-center p-2 sm:p-4 bg-black/60 backdrop-blur-md overflow-hidden no-print">
             <motion.div
               initial={{ opacity: 0, scale: 0.95, y: 30 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 30 }}
-              className="bg-white rounded-[2.5rem] shadow-2xl w-full max-w-3xl overflow-hidden flex flex-col max-h-[95dvh]"
+              className="bg-white rounded-[1.5rem] md:rounded-[2.5rem] shadow-2xl w-full max-w-3xl overflow-hidden flex flex-col max-h-[96dvh] md:max-h-[90dvh]"
               onClick={(e) => e.stopPropagation()}
             >
-              <div className="bg-primary p-6 text-white flex items-center justify-between flex-shrink-0 transition-colors">
+              <div className="bg-primary p-4 sm:p-6 text-white flex items-center justify-between flex-shrink-0 transition-colors">
                 <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 bg-white/20 rounded-2xl flex items-center justify-center shadow-lg">
-                    {editingId ? <Edit size={28} /> : <Plus size={28} />}
+                  <div className="w-10 h-10 sm:w-12 sm:h-12 bg-white/20 rounded-2xl flex items-center justify-center shadow-lg">
+                    {editingId ? <Edit size={24} /> : <Plus size={24} />}
                   </div>
                   <div>
-                    <h3 className="font-black text-xl leading-tight">
+                    <h3 className="font-black text-lg sm:text-xl leading-tight">
                       {editingId ? 'Sửa Nhật ký' : 'Nhật ký Thi công Mới'}
                     </h3>
                     <p className="text-[10px] font-bold uppercase tracking-widest text-white/70">
@@ -739,11 +739,11 @@ export const ConstructionDiaryComponent = ({
                   }}
                   className="p-2 hover:bg-white/20 rounded-xl transition-all"
                 >
-                  <X size={24} />
+                  <X size={20} className="sm:w-6 sm:h-6" />
                 </button>
               </div>
 
-              <div className="p-8 overflow-y-auto custom-scrollbar space-y-8 bg-gray-50/50">
+              <div className="p-4 sm:p-8 overflow-y-auto custom-scrollbar space-y-8 bg-gray-50/50 flex-1">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                   <div className="space-y-2">
                     <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">

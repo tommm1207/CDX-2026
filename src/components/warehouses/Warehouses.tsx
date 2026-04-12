@@ -99,7 +99,7 @@ export const Warehouses = ({
       const { data } = await supabase
         .from('warehouses')
         .select('code')
-        .like('code', 'WH%')
+        .like('code', 'KH%')
         .order('code', { ascending: false })
         .limit(1);
 
@@ -169,34 +169,60 @@ export const Warehouses = ({
     setShowDeleteModal(true);
   };
 
-  const confirmDelete = async () => {
-    if (!itemToDelete) return;
+  const handlePurgeRelated = async () => {
+    if (!itemToDelete || user.role !== 'Admin App' || !usageInfo.details) return;
 
-    // Check usage before soft delete
-    if (usageInfo.inUse) {
-      if (addToast)
-        addToast(
-          `Không thể xóa vì kho đang có dữ liệu liên quan: ${usageInfo.tables.join(', ')}`,
-          'error',
-        );
+    if (
+      !window.confirm(
+        'Bạn có chắc chắn muốn XÓA VĨNH VIỄN toàn bộ các dữ liệu rác liên quan này? Hành động này không thể hoàn tác.',
+      )
+    )
       return;
-    }
 
-    const { error } = await supabase
-      .from('warehouses')
-      .update({ status: 'Đã xóa' })
-      .eq('id', itemToDelete);
-    if (error) {
-      const msg = error.message.includes('foreign key constraint')
-        ? 'Không thể xóa kho này vì đang có dữ liệu liên quan khác.'
-        : error.message;
-      if (addToast) addToast('Lỗi: ' + msg, 'error');
-      else alert('Lỗi: ' + msg);
-    } else {
-      if (addToast) addToast('Đã chuyển kho vào thùng rác', 'success');
-      fetchWarehouses();
+    setSubmitting(true);
+    try {
+      for (const detail of usageInfo.details) {
+        if (detail.softDeletedCount > 0) {
+          let field = 'warehouse_id';
+          if (detail.table === 'transfers') {
+            const { error } = await supabase
+              .from('transfers')
+              .delete()
+              .or(`from_warehouse_id.eq.${itemToDelete},to_warehouse_id.eq.${itemToDelete}`)
+              .eq('status', 'Đã xóa');
+            if (error) throw error;
+            continue;
+          }
+          if (detail.table === 'production_orders') {
+            const { error } = await supabase
+              .from('production_orders')
+              .delete()
+              .or(`warehouse_id.eq.${itemToDelete},output_warehouse_id.eq.${itemToDelete}`)
+              .eq('status', 'Đã xóa');
+            if (error) throw error;
+            continue;
+          }
+          if (detail.table === 'materials') field = 'warehouse_id';
+          if (detail.table === 'users') field = 'warehouse_id';
+
+          const { error } = await supabase
+            .from(detail.table)
+            .delete()
+            .eq(field, itemToDelete)
+            .eq('status', 'Đã xóa');
+          if (error) throw error;
+        }
+      }
+
+      if (addToast) addToast('Đã dọn dẹp các dữ liệu rác liên quan!', 'success');
+      const usage = await checkUsage('warehouse', itemToDelete);
+      setUsageInfo(usage);
+    } catch (err: any) {
+      if (addToast) addToast('Lỗi khi dọn dẹp: ' + err.message, 'error');
+    } finally {
+      setSubmitting(true);
+      setTimeout(() => setSubmitting(false), 500);
     }
-    setShowDeleteModal(false);
   };
 
   const handlePermanentDelete = async () => {
@@ -217,7 +243,7 @@ export const Warehouses = ({
       if (error) {
         let msg = error.message;
         if (msg.includes('foreign key constraint')) {
-          msg = `Không thể xóa vĩnh viễn vì vẫn còn dữ liệu liên kết vật lý trong DB (${usageInfo.tables.join(', ')}). Vui lòng xóa các dữ liệu này trước.`;
+          msg = `Không thể xóa vĩnh viễn vì vẫn còn dữ liệu liên kết vật lý trong DB. Vui lòng dọn dẹp sạch các mục liên quan trước.`;
         }
         throw new Error(msg);
       }
@@ -473,16 +499,60 @@ export const Warehouses = ({
                 <p>
                   Kho: <strong>{warehouses.find((w) => w.id === itemToDelete)?.name}</strong>
                 </p>
-                {usageInfo.inUse ? (
-                  <p className="text-red-500 font-bold">
-                    ⚠️ KHÔNG THỂ XÓA MỀM vì đang có: {usageInfo.tables.join(', ')}
-                  </p>
+                {usageInfo.details && usageInfo.details.length > 0 ? (
+                  <div className="space-y-3">
+                    <p className="text-red-600 font-black flex items-center gap-2">
+                      <AlertCircle size={14} /> DỮ LIỆU LIÊN QUAN:
+                    </p>
+                    <div className="space-y-2">
+                      {usageInfo.details.map((detail, idx) => (
+                        <div
+                          key={idx}
+                          className="flex items-center justify-between text-[11px] bg-white p-2 rounded-lg border border-gray-100"
+                        >
+                          <span className="font-medium text-gray-700">{detail.label}</span>
+                          <div className="flex gap-2">
+                            {detail.count > 0 && (
+                              <span className="px-1.5 py-0.5 bg-amber-100 text-amber-700 rounded-md font-bold">
+                                {detail.count} hoạt động
+                              </span>
+                            )}
+                            {detail.softDeletedCount > 0 && (
+                              <span className="px-1.5 py-0.5 bg-gray-100 text-gray-500 rounded-md font-bold">
+                                {detail.softDeletedCount} trong rác
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+
+                    {user.role === 'Admin App' &&
+                      usageInfo.details.some((d) => d.softDeletedCount > 0) && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          fullWidth
+                          onClick={handlePurgeRelated}
+                          isLoading={submitting}
+                          className="mt-2 text-[10px] py-2 border-amber-200 text-amber-700 bg-amber-50 hover:bg-amber-100"
+                          icon={Trash2}
+                        >
+                          DỌN DẸP RÁC LIÊN QUAN (ADMIN)
+                        </Button>
+                      )}
+
+                    {usageInfo.inUse && (
+                      <p className="text-[10px] text-red-500 italic mt-2">
+                        * Bạn phải xóa các dữ liệu 'hoạt động' trước khi có thể xóa kho này.
+                      </p>
+                    )}
+                  </div>
                 ) : (
-                  <p className="text-green-600">✅ Có thể chuyển vào thùng rác.</p>
+                  <p className="text-green-600 font-bold flex items-center gap-2 justify-center py-4">
+                    <CheckCircle size={18} /> Sẵn sàng để xóa
+                  </p>
                 )}
-                <p className="text-[10px] italic">
-                  * Dữ liệu trong thùng rác có thể khôi phục, xóa vĩnh viễn sẽ mất hoàn toàn.
-                </p>
               </div>
               <div className="flex flex-col gap-2">
                 <div className="grid grid-cols-2 gap-2">
@@ -505,6 +575,7 @@ export const Warehouses = ({
                     fullWidth
                     onClick={handlePermanentDelete}
                     isLoading={submitting}
+                    disabled={usageInfo.inUse}
                   >
                     XÓA VĨNH VIỄN (ADMIN APP)
                   </Button>

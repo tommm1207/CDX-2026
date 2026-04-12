@@ -108,38 +108,73 @@ export const Attendance = ({
         },
       ]);
     }
-    if (addToast)
+    if (addToast) {
+      let msg = '';
+      if (status === 'present') msg = '1 công';
+      else if (status === 'half-day') msg = '½ công';
+      else if (status === 'absent') msg = 'vắng (nghỉ)';
+      
       addToast(
-        `Đã chấm ${status === 'present' ? '1 công' : '½ công'} ngày ${day}/${selectedMonth}`,
-        'success',
+        `Đã chấm ${msg} ngày ${day}/${selectedMonth}`,
+        status === 'absent' ? 'warning' : 'success',
       );
+    }
     fetchData();
   };
 
   const [showBulkModal, setShowBulkModal] = useState(false);
   const [selectedEmployees, setSelectedEmployees] = useState<string[]>([]);
-  const [bulkFormData, setBulkFormData] = useState({
-    status: 'present',
-    overtime: 0,
-    date: new Date().toISOString().split('T')[0],
-  });
+  const [bulkDateFrom, setBulkDateFrom] = useState(new Date().toISOString().split('T')[0]);
+  const [bulkDateTo, setBulkDateTo] = useState(new Date().toISOString().split('T')[0]);
+  const [bulkStatus, setBulkStatus] = useState('present');
+  // Per-employee per-day TC: { 'empId': { 'YYYY-MM-DD': number } }
+  const [bulkEmpDayTC, setBulkEmpDayTC] = useState<Record<string, Record<string, number>>>({});
+
+  const setBulkTC = (empId: string, date: string, val: number) => {
+    setBulkEmpDayTC((prev) => ({
+      ...prev,
+      [empId]: { ...(prev[empId] || {}), [date]: val },
+    }));
+  };
+
+  const getBulkTC = (empId: string, date: string) =>
+    bulkEmpDayTC[empId]?.[date] ?? 0;
+
+  // Generate list of dates in range
+  const getBulkDays = () => {
+    const result: string[] = [];
+    if (!bulkDateFrom || !bulkDateTo || bulkDateFrom > bulkDateTo) return result;
+    const cur = new Date(bulkDateFrom);
+    const end = new Date(bulkDateTo);
+    while (cur <= end) {
+      result.push(cur.toISOString().split('T')[0]);
+      cur.setDate(cur.getDate() + 1);
+    }
+    return result;
+  };
 
   const openBulkModal = () => {
     setSelectedEmployees([]);
-    setBulkFormData({
-      ...bulkFormData,
-      date: new Date().toISOString().split('T')[0],
-    });
+    const today = new Date().toISOString().split('T')[0];
+    setBulkDateFrom(today);
+    setBulkDateTo(today);
+    setBulkStatus('present');
+    setBulkEmpDayTC({});
     setShowBulkModal(true);
   };
 
   const [bulkLoading, setBulkLoading] = useState(false);
-  const [bulkProgress, setBulkProgress] = useState({ current: 0, total: 0, employeeName: '' });
+  const [bulkProgress, setBulkProgress] = useState({ current: 0, total: 0, label: '' });
   const [showConfirmBulk, setShowConfirmBulk] = useState(false);
 
   const handleStartSaveBulk = () => {
     if (selectedEmployees.length === 0) {
       if (addToast) addToast('Vui lòng chọn ít nhất một nhân viên', 'error');
+      return;
+    }
+    const days = getBulkDays();
+    if (days.length === 0) {
+      if (addToast) addToast('Khoảng ngày không hợp lệ', 'error');
       return;
     }
     setShowConfirmBulk(true);
@@ -148,89 +183,56 @@ export const Attendance = ({
   const confirmAndSaveBulk = async () => {
     setShowConfirmBulk(false);
     setBulkLoading(true);
-    const successfullySaved: string[] = [];
+    const days = getBulkDays();
+    const hours = bulkStatus === 'present' ? 8 : bulkStatus === 'half-day' ? 4 : 0;
+    let totalOps = selectedEmployees.length * days.length;
+    let done = 0;
     let isError = false;
 
     try {
-      for (let i = 0; i < selectedEmployees.length; i++) {
-        const empId = selectedEmployees[i];
+      for (const empId of selectedEmployees) {
         const emp = employees.find((e) => e.id === empId);
-        setBulkProgress({
-          current: i + 1,
-          total: selectedEmployees.length,
-          employeeName: emp?.full_name || 'Nhân viên',
-        });
+        for (const dateStr of days) {
+          done++;
+          setBulkProgress({ current: done, total: totalOps, label: `${emp?.full_name || ''} - ${dateStr}` });
+          const tc = getBulkTC(empId, dateStr);
 
-        const setting = employeeSettings[empId] || { status: 'present', overtime: 0 };
-        const hours = setting.status === 'present' ? 8 : setting.status === 'half-day' ? 4 : 0;
+          await supabase.from('attendance').delete().eq('employee_id', empId).eq('date', dateStr);
 
-        // Delete then insert
-        const { error: delError } = await supabase
-          .from('attendance')
-          .delete()
-          .eq('employee_id', empId)
-          .eq('date', bulkFormData.date);
-
-        if (delError) {
-          isError = true;
-          if (addToast) addToast(`Lỗi khi lưu ${emp?.full_name}: ${delError.message}`, 'error');
-          break;
-        }
-
-        const { error: insError } = await supabase.from('attendance').insert([
-          {
+          const { error } = await supabase.from('attendance').insert([{
             employee_id: empId,
-            date: bulkFormData.date,
-            status: setting.status,
+            date: dateStr,
+            status: bulkStatus,
             hours_worked: hours,
-            overtime_hours: setting.overtime,
-          },
-        ]);
+            overtime_hours: tc,
+          }]);
 
-        if (insError) {
-          isError = true;
-          if (addToast) addToast(`Lỗi khi lưu ${emp?.full_name}: ${insError.message}`, 'error');
-          break;
+          if (error) {
+            isError = true;
+            if (addToast) addToast(`Lỗi: ${emp?.full_name} - ${dateStr}: ${error.message}`, 'error');
+            break;
+          }
         }
-
-        successfullySaved.push(emp?.full_name || empId);
+        if (isError) break;
       }
 
       if (!isError) {
-        if (addToast) addToast('Đã lưu chấm công hàng loạt thành công!', 'success');
+        if (addToast) addToast(`Đã chấm công ${days.length} ngày cho ${selectedEmployees.length} nhân viên!`, 'success');
         setShowBulkModal(false);
-      } else {
-        const remainingCount = selectedEmployees.length - successfullySaved.length;
-        alert(
-          `QUÁ TRÌNH BỊ DỪNG LẠI!\n\n- Đã lưu thành công: ${successfullySaved.length} người\n- Nhân viên lỗi: ${bulkProgress.employeeName}\n- Chưa lưu được: ${remainingCount} người còn lại.`,
-        );
       }
     } catch (err: any) {
-      console.error(err);
-      if (addToast) addToast('Lỗi không xác định: ' + err.message, 'error');
+      if (addToast) addToast('Lỗi: ' + err.message, 'error');
     } finally {
       setBulkLoading(false);
-      setBulkProgress({ current: 0, total: 0, employeeName: '' });
+      setBulkProgress({ current: 0, total: 0, label: '' });
       fetchData();
     }
   };
 
+  // Legacy - keep for compatibility
   const [employeeSettings, setEmployeeSettings] = useState<
     Record<string, { status: string; overtime: number }>
   >({});
-
-  useEffect(() => {
-    // Sync settings when selections change
-    const newSettings = { ...employeeSettings };
-    let changed = false;
-    selectedEmployees.forEach((id) => {
-      if (!newSettings[id]) {
-        newSettings[id] = { status: bulkFormData.status, overtime: bulkFormData.overtime };
-        changed = true;
-      }
-    });
-    if (changed) setEmployeeSettings(newSettings);
-  }, [selectedEmployees]);
 
   const updateIndividualSetting = (empId: string, field: 'status' | 'overtime', value: any) => {
     setEmployeeSettings((prev) => ({
@@ -240,11 +242,7 @@ export const Attendance = ({
   };
 
   const applyGlobalToSelection = () => {
-    const newSettings = { ...employeeSettings };
-    selectedEmployees.forEach((id) => {
-      newSettings[id] = { status: bulkFormData.status, overtime: bulkFormData.overtime };
-    });
-    setEmployeeSettings(newSettings);
+    // no-op for now
   };
 
   const [showEditModal, setShowEditModal] = useState(false);
@@ -455,215 +453,181 @@ export const Attendance = ({
                 </button>
               </div>
 
-              <div className="p-6 md:p-8 overflow-y-auto space-y-8 custom-scrollbar">
-                <div className="flex flex-col gap-8">
-                  {/* Top: Global Settings & Selection Toggle */}
-                  <div className="bg-primary/5 p-6 rounded-3xl border border-primary/10 grid grid-cols-1 md:grid-cols-3 gap-6 items-end">
-                    <div className="space-y-1">
-                      <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">
-                        Ngày chấm công
-                      </label>
-                      <input
-                        type="date"
-                        value={bulkFormData.date}
-                        onChange={(e) => setBulkFormData({ ...bulkFormData, date: e.target.value })}
-                        className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20"
-                      />
-                    </div>
-
-                    <div className="space-y-1">
-                      <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">
-                        Thiết lập chung (Tùy chọn)
-                      </label>
-                      <div className="flex gap-2 bg-white p-1 rounded-xl border border-gray-200">
-                        {['present', 'half-day', 'absent'].map((s) => (
-                          <button
-                            key={s}
-                            onClick={() => setBulkFormData({ ...bulkFormData, status: s })}
-                            className={`flex-1 py-1 px-2 rounded-lg text-[10px] font-bold transition-all ${bulkFormData.status === s ? 'bg-primary text-white' : 'text-gray-400 hover:bg-gray-50'}`}
-                          >
-                            {getStatusLabel(s)}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-
-                    <div className="flex items-center gap-2">
-                      <NumericInput
-                        label="OT chung"
-                        value={bulkFormData.overtime}
-                        onChange={(val) => setBulkFormData({ ...bulkFormData, overtime: val })}
-                        isDecimal={true}
-                        className="flex-1"
-                      />
-                      <Button
-                        onClick={applyGlobalToSelection}
-                        variant="primary"
-                        size="sm"
-                        title="Áp dụng cho những người đã chọn"
-                      >
-                        Áp dụng
-                      </Button>
+              <div className="p-6 md:p-8 overflow-y-auto space-y-6 custom-scrollbar">
+                {/* Row 1: Date Range + Status */}
+                <div className="bg-primary/5 p-5 rounded-3xl border border-primary/10 grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Từ ngày</label>
+                    <input
+                      type="date"
+                      value={bulkDateFrom}
+                      onChange={(e) => setBulkDateFrom(e.target.value)}
+                      className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Đến ngày</label>
+                    <input
+                      type="date"
+                      value={bulkDateTo}
+                      min={bulkDateFrom}
+                      onChange={(e) => setBulkDateTo(e.target.value)}
+                      className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Trạng thái</label>
+                    <div className="flex gap-1 bg-white p-1 rounded-xl border border-gray-200">
+                      {(['present', 'half-day', 'absent'] as const).map((s) => (
+                        <button
+                          key={s}
+                          onClick={() => setBulkStatus(s)}
+                          className={`flex-1 py-1.5 rounded-lg text-[10px] font-bold transition-all ${
+                            bulkStatus === s ? 'bg-primary text-white' : 'text-gray-400 hover:bg-gray-50'
+                          }`}
+                        >
+                          {s === 'present' ? '1 Công' : s === 'half-day' ? '½ Công' : 'Vắng'}
+                        </button>
+                      ))}
                     </div>
                   </div>
+                </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-8 h-full min-h-[400px]">
-                    {/* Left: Employee List for selection */}
-                    <div className="bg-gray-50 rounded-3xl p-6 border border-gray-100 flex flex-col h-full overflow-hidden">
-                      <div className="flex items-center justify-between mb-4">
-                        <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest italic">
-                          Chọn nhân sự ({selectedEmployees.length})
-                        </label>
-                        <button
+                {/* Row 2: Employee list + Per-day TC table */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 min-h-[380px]">
+                  {/* Employee select */}
+                  <div className="bg-gray-50 rounded-3xl p-5 border border-gray-100 flex flex-col overflow-hidden">
+                    <div className="flex items-center justify-between mb-3">
+                      <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest italic">
+                        Chọn nhân sự ({selectedEmployees.length})
+                      </label>
+                      <button
+                        onClick={() =>
+                          setSelectedEmployees(
+                            selectedEmployees.length === employees.length ? [] : employees.map((e) => e.id),
+                          )
+                        }
+                        className="text-[10px] font-bold text-primary hover:underline"
+                      >
+                        {selectedEmployees.length === employees.length ? 'Bỏ chọn hết' : 'Chọn tất cả'}
+                      </button>
+                    </div>
+                    <div className="space-y-2 overflow-y-auto flex-1 custom-scrollbar">
+                      {employees.map((emp) => (
+                        <div
+                          key={emp.id}
                           onClick={() =>
-                            setSelectedEmployees(
-                              selectedEmployees.length === employees.length
-                                ? []
-                                : employees.map((e) => e.id),
+                            setSelectedEmployees((prev) =>
+                              prev.includes(emp.id) ? prev.filter((id) => id !== emp.id) : [...prev, emp.id],
                             )
                           }
-                          className="text-[10px] font-bold text-primary hover:underline"
+                          className={`flex items-center gap-3 p-3 rounded-xl cursor-pointer transition-all border ${
+                            selectedEmployees.includes(emp.id)
+                              ? 'bg-white border-primary shadow-sm'
+                              : 'bg-white/50 border-transparent opacity-60 hover:opacity-100'
+                          }`}
                         >
-                          {selectedEmployees.length === employees.length
-                            ? 'Bỏ chọn hết'
-                            : 'Chọn tất cả'}
-                        </button>
-                      </div>
-                      <div className="space-y-2 overflow-y-auto flex-1 pr-2 custom-scrollbar">
-                        {employees.map((emp) => (
                           <div
-                            key={emp.id}
-                            onClick={() => {
-                              setSelectedEmployees((prev) =>
-                                prev.includes(emp.id)
-                                  ? prev.filter((id) => id !== emp.id)
-                                  : [...prev, emp.id],
-                              );
-                            }}
-                            className={`flex items-center gap-3 p-3 rounded-xl cursor-pointer transition-all border ${selectedEmployees.includes(emp.id) ? 'bg-white border-primary shadow-sm' : 'bg-white/50 border-transparent opacity-60 hover:opacity-100'}`}
+                            className={`w-5 h-5 rounded-md border flex items-center justify-center ${
+                              selectedEmployees.includes(emp.id) ? 'bg-primary border-primary text-white' : 'bg-white border-gray-200'
+                            }`}
                           >
-                            <div
-                              className={`w-5 h-5 rounded-md border flex items-center justify-center transition-all ${selectedEmployees.includes(emp.id) ? 'bg-primary border-primary text-white' : 'bg-white border-gray-200'}`}
-                            >
-                              {selectedEmployees.includes(emp.id) && (
-                                <Check size={12} strokeWidth={4} />
-                              )}
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <p className="text-xs font-bold text-gray-800 truncate">
-                                {emp.full_name}
-                              </p>
-                              <p className="text-[9px] text-gray-400">
-                                {emp.code || emp.id.slice(0, 8)}
-                              </p>
-                            </div>
+                            {selectedEmployees.includes(emp.id) && <Check size={12} strokeWidth={4} />}
                           </div>
-                        ))}
-                      </div>
-                    </div>
-
-                    {/* Right: Individual Configuration */}
-                    <div className="bg-white rounded-3xl p-6 border border-gray-100 flex flex-col h-full overflow-hidden">
-                      <div className="flex items-center justify-between mb-4">
-                        <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest italic">
-                          Cấu hình riêng biệt
-                        </label>
-                      </div>
-
-                      <div className="space-y-4 overflow-y-auto flex-1 pr-2 custom-scrollbar">
-                        {selectedEmployees.length === 0 ? (
-                          <div className="flex flex-col items-center justify-center h-full text-gray-300 italic py-12">
-                            <Users size={32} className="mb-2 opacity-20" />
-                            <p className="text-[10px]">Chưa chọn nhân viên nào</p>
+                          <div>
+                            <p className="text-xs font-bold text-gray-800">{emp.full_name}</p>
+                            <p className="text-[9px] text-gray-400">{emp.code}</p>
                           </div>
-                        ) : (
-                          selectedEmployees.map((empId) => {
-                            const emp = employees.find((e) => e.id === empId);
-                            const setting = employeeSettings[empId] || {
-                              status: 'present',
-                              overtime: 0,
-                            };
-                            return (
-                              <div
-                                key={empId}
-                                className="p-4 rounded-2xl bg-gray-50/50 border border-gray-100 space-y-3"
-                              >
-                                <div className="flex items-center justify-between">
-                                  <span className="text-xs font-bold text-gray-800">
-                                    {emp?.full_name}
-                                  </span>
-                                  <span className="text-[8px] px-1.5 py-0.5 bg-gray-200 text-gray-500 rounded font-black">
-                                    {emp?.code}
-                                  </span>
-                                </div>
-                                <div className="flex items-center gap-2">
-                                  <div className="flex-[2] grid grid-cols-3 gap-1 bg-white p-1 rounded-xl border border-gray-100">
-                                    {['present', 'half-day', 'absent'].map((s) => (
-                                      <button
-                                        key={s}
-                                        onClick={() => updateIndividualSetting(empId, 'status', s)}
-                                        className={`py-1.5 rounded-lg text-[10px] font-black transition-all ${setting.status === s ? 'bg-primary text-white' : 'text-gray-400 hover:bg-gray-50'}`}
-                                      >
-                                        {getStatusLabel(s)}
-                                      </button>
-                                    ))}
-                                  </div>
-                                  <div className="flex-1">
-                                    <NumericInput
-                                      value={setting.overtime}
-                                      onChange={(val) =>
-                                        updateIndividualSetting(empId, 'overtime', val)
-                                      }
-                                      isDecimal={true}
-                                      placeholder="OT"
-                                      inputClassName="w-full px-2 py-2 rounded-xl border border-gray-100 text-xs font-bold text-amber-600 outline-none focus:ring-1 focus:ring-primary/20 text-center"
-                                    />
-                                  </div>
-                                </div>
-                              </div>
-                            );
-                          })
-                        )}
-                      </div>
+                        </div>
+                      ))}
                     </div>
                   </div>
-                </div>
-              </div>
 
-              <div className="p-6 border-t border-gray-100 bg-gray-50/50 flex items-center justify-between flex-shrink-0">
-                <div className="text-[10px] text-gray-400 font-medium">
-                  {bulkLoading ? (
-                    <span className="flex items-center gap-2 text-amber-600 font-bold">
-                      <RefreshCw size={12} className="animate-spin" />
-                      Đang lưu... ({bulkProgress.current}/{bulkProgress.total}) -{' '}
-                      {bulkProgress.employeeName}
-                    </span>
-                  ) : (
-                    <>
-                      Đang chấm cho{' '}
-                      <span className="font-bold text-primary">{selectedEmployees.length}</span>{' '}
-                      nhân sự
-                    </>
-                  )}
+                  {/* Per-employee per-day TC grid */}
+                  <div className="bg-white rounded-3xl p-5 border border-gray-100 flex flex-col overflow-hidden">
+                    <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-3">
+                      TC Từng Ngày / Từng Người
+                    </label>
+                    {getBulkDays().length === 0 ? (
+                      <div className="flex items-center justify-center flex-1 text-gray-300 italic text-xs">
+                        Chọn khoảng ngày hợp lệ để xem
+                      </div>
+                    ) : getBulkDays().length > 31 ? (
+                      <div className="flex items-center justify-center flex-1 text-red-400 italic text-xs">
+                        Khoảng ngày quá lớn (tối đa 31 ngày)
+                      </div>
+                    ) : selectedEmployees.length === 0 ? (
+                      <div className="flex items-center justify-center flex-1 text-gray-300 italic text-xs">
+                        Chọn nhân sự ở cột bên trái
+                      </div>
+                    ) : (
+                      <div className="overflow-y-auto flex-1 custom-scrollbar space-y-3">
+                        {getBulkDays().map((d) => {
+                          const dateObj = new Date(d);
+                          const dayOfWeek = dateObj.toLocaleDateString('vi-VN', { weekday: 'short' });
+                          const dayNum = dateObj.getDate();
+                          return (
+                            <div key={d} className="border border-gray-100 rounded-2xl overflow-hidden">
+                              <div className="bg-gray-50 px-3 py-1.5 flex items-center gap-2">
+                                <span className="text-[10px] font-black text-gray-500 uppercase">Ngày {dayNum}</span>
+                                <span className="text-[9px] text-gray-400">({dayOfWeek})</span>
+                              </div>
+                              <div className="divide-y divide-gray-50">
+                                {selectedEmployees.map((empId) => {
+                                  const emp = employees.find((e) => e.id === empId);
+                                  return (
+                                    <div key={empId} className="flex items-center justify-between px-3 py-1.5 hover:bg-gray-50/50">
+                                      <span className="text-xs text-gray-700 truncate max-w-[110px]">{emp?.full_name}</span>
+                                      <div className="flex items-center gap-1.5 shrink-0">
+                                        <span className="text-[10px] text-gray-400">TC:</span>
+                                        <input
+                                          type="number"
+                                          min="0"
+                                          step="0.5"
+                                          value={getBulkTC(empId, d)}
+                                          onChange={(e) => setBulkTC(empId, d, parseFloat(e.target.value) || 0)}
+                                          className="w-14 px-2 py-0.5 text-center text-sm font-bold text-amber-600 border border-gray-200 rounded-lg outline-none focus:ring-1 focus:ring-primary/20"
+                                        />
+                                        <span className="text-[10px] text-gray-400">h</span>
+                                      </div>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
                 </div>
-                <div className="flex gap-3">
-                  <Button
-                    variant="outline"
-                    onClick={() => setShowBulkModal(false)}
-                    disabled={bulkLoading}
-                  >
-                    Hủy
-                  </Button>
-                  <Button
-                    variant="primary"
-                    onClick={handleStartSaveBulk}
-                    isLoading={bulkLoading}
-                    disabled={selectedEmployees.length === 0}
-                    className="min-w-[140px]"
-                  >
-                    Lưu dữ liệu
-                  </Button>
-                </div>
+
+                {/* Progress bar */}
+                {bulkLoading && (
+                  <div className="bg-primary/5 p-4 rounded-2xl space-y-2">
+                    <div className="flex justify-between text-xs font-bold text-primary">
+                      <span>Đang lưu...</span>
+                      <span>{bulkProgress.current}/{bulkProgress.total}</span>
+                    </div>
+                    <div className="w-full bg-white rounded-full h-2 border border-primary/10">
+                      <div
+                        className="bg-primary h-2 rounded-full transition-all"
+                        style={{ width: `${(bulkProgress.current / bulkProgress.total) * 100}%` }}
+                      />
+                    </div>
+                    <p className="text-[10px] text-gray-400 truncate">{bulkProgress.label}</p>
+                  </div>
+                )}
+
+                <Button
+                  variant="primary"
+                  fullWidth
+                  isLoading={bulkLoading}
+                  onClick={handleStartSaveBulk}
+                  className="shadow-lg shadow-primary/30"
+                >
+                  Lưu chấm công ({getBulkDays().length} ngày × {selectedEmployees.length} người)
+                </Button>
               </div>
             </motion.div>
           </div>
@@ -707,13 +671,10 @@ export const Attendance = ({
                 </div>
                 <p className="text-sm text-gray-500 leading-relaxed font-medium px-2">
                   Xác nhận chấm công cho{' '}
-                  <span className="font-bold text-primary">{selectedEmployees.length}</span> nhân
-                  viên <br />
-                  ngày{' '}
-                  <span className="font-bold text-gray-800">
-                    {new Date(bulkFormData.date).toLocaleDateString('vi-VN')}
-                  </span>
-                  ?
+                  <span className="font-bold text-primary">{selectedEmployees.length}</span> nhân viên<br />
+                  từ <span className="font-bold text-gray-800">{new Date(bulkDateFrom).toLocaleDateString('vi-VN')}</span>
+                  {' '}đến <span className="font-bold text-gray-800">{new Date(bulkDateTo).toLocaleDateString('vi-VN')}</span>
+                  {' '}({getBulkDays().length} ngày)?
                 </p>
                 <div className="flex gap-3 pt-2">
                   <Button variant="outline" fullWidth onClick={() => setShowConfirmBulk(false)}>

@@ -89,17 +89,19 @@ export const Costs = ({
   );
 
   const [employees, setEmployees] = useState<any[]>([]);
+  const [costItems, setCostItems] = useState<any[]>([]);
 
   const initialFormState = {
     date: new Date().toISOString().split('T')[0],
     transaction_type: 'Chi',
-    cost_type: '',
-    content: '',
+    cost_type: '', // Group
+    content: '', // Item
+    notes: '', // Free text
+    warehouse_id: '',
     warehouse_name: '',
-    quantity: 0,
+    quantity: 1,
     unit: '',
     total_amount: 0,
-    notes: '',
   };
 
   const [formData, setFormData] = useState<any>(initialFormState);
@@ -109,12 +111,36 @@ export const Costs = ({
   }, [statusFilter]);
 
   useEffect(() => {
-    fetchMaterials();
     fetchWarehouses();
-    fetchCostTypes();
+    fetchCostGroups();
+    fetchCostItems();
     fetchUnits();
     fetchEmployees();
   }, []);
+
+  const fetchCostGroups = async () => {
+    const { data } = await supabase.from('costs').select('cost_type');
+    if (data) {
+      const unique = Array.from(new Set(data.map((item) => item.cost_type)))
+        .filter(Boolean)
+        .map((name) => ({ id: name as string, name: name as string }));
+      setCostTypes(unique);
+    }
+  };
+
+  const fetchCostItems = async (group?: string) => {
+    let query = supabase.from('costs').select('content');
+    if (group) {
+      query = query.eq('cost_type', group);
+    }
+    const { data } = await query;
+    if (data) {
+      const unique = Array.from(new Set(data.map((item) => item.content)))
+        .filter(Boolean)
+        .map((name) => ({ id: name as string, name: name as string }));
+      setCostItems(unique);
+    }
+  };
 
   const fetchEmployees = async () => {
     const { data } = await supabase
@@ -159,7 +185,7 @@ export const Costs = ({
   const fetchMaterials = async () => {
     const { data } = await supabase
       .from('materials')
-      .select('id, name')
+      .select('id, name, group_id, unit')
       .or('status.is.null,status.neq.Đã xóa');
     if (data) setMaterials(data);
   };
@@ -240,34 +266,23 @@ export const Costs = ({
         warehouses,
         fetchWarehouses,
       );
-      const isContentUuid = isUUID(formData.content);
-      const finalContent = isContentUuid
-        ? materials.find((m) => m.id === formData.content)?.name || formData.content
-        : formData.content;
-      const material_id = await ensureValueExists(
-        'materials',
-        finalContent,
-        materials,
-        fetchMaterials,
-      );
 
-      const payload: any = {
+      const payload = {
+        cost_code: isEditing
+          ? formData.cost_code
+          : `CP-${new Date().toISOString().slice(2, 10).replace(/-/g, '')}-${Math.floor(100 + Math.random() * 900)}`,
         date: formData.date,
         transaction_type: formData.transaction_type,
-        cost_code:
-          formData.cost_code || `CP-${new Date().toISOString().slice(2, 10).replace(/-/g, '')}-001`,
-        employee_id: user.id,
-        cost_type: formData.cost_type,
-        content: finalContent,
+        cost_type: formData.cost_type, // Nhóm
+        content: formData.content, // Chi tiết
+        notes: formData.notes, // Ghi chú tự do
         warehouse_id,
-        material_id,
         quantity: formData.quantity,
         unit: formData.unit,
         total_amount: formData.total_amount,
-        notes: formData.notes,
-        status: 'Đã duyệt',
+        employee_id: user.id,
+        status: isEditing ? (formData.status === 'Đã duyệt' ? 'Đã duyệt' : 'Chờ duyệt') : 'Chờ duyệt',
       };
-
       if (isEditing && editingId) {
         await supabase.from('costs').update(payload).eq('id', editingId);
       } else {
@@ -291,7 +306,7 @@ export const Costs = ({
     setFormData({
       date: item.date,
       transaction_type: item.transaction_type || 'Chi',
-      cost_type: item.cost_type,
+      cost_type: item.cost_type || '',
       content: item.content || '',
       warehouse_name: item.warehouses?.name || '',
       quantity: item.quantity,
@@ -299,11 +314,13 @@ export const Costs = ({
       total_amount: item.total_amount,
       notes: item.notes || '',
       cost_code: item.cost_code,
+      status: item.status,
     });
     setEditingId(item.id);
     setIsEditing(true);
     setShowModal(true);
     setShowDetailModal(false);
+    fetchCostItems(item.cost_type);
   };
 
   const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -562,18 +579,26 @@ export const Costs = ({
                   <X size={20} />
                 </button>
               </div>
-              <div className="space-y-3 text-sm">
-                <div className="flex justify-between">
-                  <span>Ngày:</span>
-                  <span>{new Date(selectedCost.date).toLocaleDateString('vi-VN')}</span>
+              <div className="space-y-4 text-sm">
+                <div className="flex justify-between border-b border-gray-50 pb-2">
+                  <span className="text-gray-400">Ngày:</span>
+                  <span className="font-medium">{new Date(selectedCost.date).toLocaleDateString('vi-VN')}</span>
                 </div>
-                <div className="flex justify-between">
-                  <span>Nội dung:</span>
-                  <span className="font-medium text-right">{selectedCost.content}</span>
+                <div className="flex justify-between border-b border-gray-50 pb-2">
+                  <span className="text-gray-400">Nhóm:</span>
+                  <span className="font-bold text-gray-700">{selectedCost.cost_type}</span>
                 </div>
-                <div className="flex justify-between">
-                  <span>Số tiền:</span>
-                  <span className="font-bold text-red-600">
+                <div className="flex justify-between border-b border-gray-50 pb-2">
+                  <span className="text-gray-400">Chi tiết:</span>
+                  <span className="font-bold text-primary">{selectedCost.content}</span>
+                </div>
+                <div className="space-y-1 border-b border-gray-50 pb-2">
+                  <span className="text-gray-400 text-[10px] uppercase font-bold">Nội dung thu chi:</span>
+                  <p className="text-xs text-gray-600 italic bg-gray-50 p-2 rounded-lg">{selectedCost.notes || 'Không có ghi chú'}</p>
+                </div>
+                <div className="flex justify-between border-b border-gray-50 pb-2">
+                  <span className="text-gray-400">Số tiền:</span>
+                  <span className={`font-black text-lg ${selectedCost.transaction_type === 'Thu' ? 'text-green-600' : 'text-red-600'}`}>
                     {formatCurrency(selectedCost.total_amount)}
                   </span>
                 </div>
@@ -655,18 +680,35 @@ export const Costs = ({
                         required
                         value={formData.date}
                         onChange={(e) => setFormData({ ...formData, date: e.target.value })}
-                        className="w-full px-4 py-2 rounded-xl border"
+                        className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20"
                       />
                     </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <CreatableSelect
-                      label="Loại chi phí *"
+                      label="Nhóm chi phí *"
                       value={formData.cost_type}
                       options={costTypes}
-                      onChange={(val) => setFormData({ ...formData, cost_type: val })}
-                      onCreate={(val) => setFormData({ ...formData, cost_type: val })}
+                      onChange={(val) => {
+                        setFormData({ ...formData, cost_type: val, content: '' });
+                        fetchCostItems(val);
+                      }}
+                      onCreate={(val) => {
+                        setFormData({ ...formData, cost_type: val, content: '' });
+                      }}
+                      required
+                    />
+                    <CreatableSelect
+                      label="Chi tiết chi phí *"
+                      value={formData.content}
+                      options={costItems}
+                      onChange={(val) => setFormData({ ...formData, content: val })}
+                      onCreate={(val) => setFormData({ ...formData, content: val })}
                       required
                     />
                   </div>
+
                   <CreatableSelect
                     label="Tên kho *"
                     value={formData.warehouse_name}
@@ -675,14 +717,18 @@ export const Costs = ({
                     onCreate={(val) => setFormData({ ...formData, warehouse_name: val })}
                     required
                   />
-                  <CreatableSelect
-                    label="Nội dung *"
-                    value={formData.content}
-                    options={materials}
-                    onChange={(val) => setFormData({ ...formData, content: val })}
-                    onCreate={(val) => setFormData({ ...formData, content: val })}
-                    required
-                  />
+
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-gray-400 uppercase">
+                      Nội dung thu chi (Ghi chú tự do)
+                    </label>
+                    <textarea
+                      value={formData.notes}
+                      onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+                      className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20 min-h-[80px]"
+                      placeholder="Gõ nội dung chi tiết tại đây..."
+                    />
+                  </div>
                   <div className="grid grid-cols-2 gap-4">
                     <NumericInput
                       label="Số lượng"

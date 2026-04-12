@@ -67,10 +67,21 @@ export const MonthlySalary = ({
         .lte('date', endDate);
 
       const calculated = employees.map((emp) => {
-        const set = settings?.find((s) => s.employee_id === emp.id) || {
-          base_salary: 0,
-          daily_rate: 0,
-        };
+        const set = settings
+          ?.filter((s) => s.employee_id === emp.id)
+          .sort((a, b) => new Date(b.valid_from || 0).getTime() - new Date(a.valid_from || 0).getTime())
+          .find((s) => {
+            const start = s.valid_from || '1900-01-01';
+            const end = s.valid_to || '2099-12-31';
+            const currentMonthDate = `${selectedYear}-${String(selectedMonth).padStart(2, '0')}-15`;
+            return currentMonthDate >= start && currentMonthDate <= end;
+          }) ||
+          settings?.find((s) => s.employee_id === emp.id) || {
+            base_salary: 0,
+            daily_rate: 0,
+            monthly_ot_coeff: 1.0,
+          };
+
         const empAtt = att?.filter((a) => a.employee_id === emp.id) || [];
         const empAdv = adv?.filter((a) => a.employee_id === emp.id) || [];
         const empAll = all?.filter((a) => a.employee_id === emp.id) || [];
@@ -81,23 +92,31 @@ export const MonthlySalary = ({
         const totalAll = empAll.reduce((sum, a) => sum + Number(a.amount || 0), 0);
 
         const insuranceDeduction = Number(set.insurance_deduction || 0);
+        const monthlyCoeff = Number(set.monthly_ot_coeff || 1.0);
 
-        const hourlyRate = Number(set.daily_rate || 0) / 8;
-        const earnedSalary = totalDays * Number(set.daily_rate || 0);
-        const otSalary = totalOT * hourlyRate;
-        const netSalary = earnedSalary + otSalary + totalAll - totalAdv - insuranceDeduction;
+        const dailyRate = Number(set.daily_rate || 0);
+        // OT ngày: tính theo giờ thực tế, đơn giá giờ gốc (không nhân thêm hệ số)
+        const hourlyRate = dailyRate / 8;
+
+        // Lương công: nhân hệ số OT tháng cho 8 tiếng chuẩn mỗi ngày đi làm
+        const earnedSalary = totalDays * dailyRate;                        // Lương công gốc
+        const monthOTSalary = totalDays * dailyRate * (monthlyCoeff - 1);   // TC tháng (phần thưởng từ hệ số)
+        const dayOTSalary = totalOT * hourlyRate;                           // TC ngày (giờ thực tế)
+        const netSalary = earnedSalary + monthOTSalary + dayOTSalary + totalAll - totalAdv - insuranceDeduction;
 
         return {
           ...emp,
           totalDays,
           totalOT,
           earnedSalary,
-          otSalary,
+          monthOTSalary,
+          dayOTSalary,
           totalAdv,
           totalAll,
           insuranceDeduction,
           netSalary,
-          dailyRate: Number(set.daily_rate || 0),
+          dailyRate,
+          monthlyCoeff,
           hourlyRate,
           attendanceDetails: empAtt,
           advancesDetails: empAdv,
@@ -116,7 +135,91 @@ export const MonthlySalary = ({
 
   const [selectedSalary, setSelectedSalary] = useState<any>(null);
   const [showDetailModal, setShowDetailModal] = useState(false);
+  const [isCustomRange, setIsCustomRange] = useState(false);
+  const [customRange, setCustomRange] = useState({
+    start: '',
+    end: '',
+  });
   const billRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (showDetailModal && selectedSalary && isCustomRange) {
+      recalculateIndividual();
+    }
+  }, [customRange, isCustomRange]);
+
+  const recalculateIndividual = async () => {
+    if (!selectedSalary || !customRange.start || !customRange.end) return;
+
+    try {
+      const { data: settings } = await supabase.from('salary_settings').select('*');
+      const { data: att } = await supabase
+        .from('attendance')
+        .select('*')
+        .eq('employee_id', selectedSalary.id)
+        .gte('date', customRange.start)
+        .lte('date', customRange.end);
+      const { data: adv } = await supabase
+        .from('advances')
+        .select('*')
+        .eq('employee_id', selectedSalary.id)
+        .gte('date', customRange.start)
+        .lte('date', customRange.end);
+      const { data: all } = await supabase
+        .from('allowances')
+        .select('*')
+        .eq('employee_id', selectedSalary.id)
+        .gte('date', customRange.start)
+        .lte('date', customRange.end);
+
+      const set =
+        settings?.find((s) => {
+          if (s.employee_id !== selectedSalary.id) return false;
+          const start = s.valid_from || '1900-01-01';
+          const end = s.valid_to || '2099-12-31';
+          return customRange.start >= start && customRange.start <= end;
+        }) ||
+        settings?.find((s) => s.employee_id === selectedSalary.id) ||
+        {
+          base_salary: 0,
+          daily_rate: 0,
+          monthly_ot_coeff: 1.0,
+        };
+
+      const totalDays = (att || []).reduce((sum, a) => sum + Number(a.hours_worked || 0), 0) / 8;
+      const totalOT = (att || []).reduce((sum, a) => sum + Number(a.overtime_hours || 0), 0);
+      const totalAdv = (adv || []).reduce((sum, a) => sum + Number(a.amount || 0), 0);
+      const totalAll = (all || []).reduce((sum, a) => sum + Number(a.amount || 0), 0);
+
+      const insuranceDeduction = Number(set.insurance_deduction || 0);
+      const monthlyCoeff = Number(set.monthly_ot_coeff || 1.0);
+      const dailyRate = Number(set.daily_rate || 0);
+      const hourlyRate = dailyRate / 8;
+
+      const earnedSalary = totalDays * dailyRate;
+      const monthOTSalary = totalDays * dailyRate * (monthlyCoeff - 1);
+      const dayOTSalary = totalOT * hourlyRate;
+      const netSalary = earnedSalary + monthOTSalary + dayOTSalary + totalAll - totalAdv - insuranceDeduction;
+
+      setSelectedSalary({
+        ...selectedSalary,
+        totalDays,
+        totalOT,
+        earnedSalary,
+        monthOTSalary,
+        dayOTSalary,
+        totalAdv,
+        totalAll,
+        insuranceDeduction,
+        netSalary,
+        dailyRate,
+        monthlyCoeff,
+        hourlyRate,
+      });
+    } catch (err) {
+      console.error('Error recalculating:', err);
+    }
+  };
 
   const handleSaveImage = async () => {
     if (billRef.current === null) return;
@@ -140,7 +243,8 @@ export const MonthlySalary = ({
 
   const totalDaysAll = salaries.reduce((sum, s) => sum + s.totalDays, 0);
   const totalOTAll = salaries.reduce((sum, s) => sum + s.totalOT, 0);
-  const earnedSalaryAll = salaries.reduce((sum, s) => sum + s.earnedSalary + s.otSalary, 0);
+  const totalMonthOTAll = salaries.reduce((sum, s) => sum + s.monthOTSalary, 0);
+  const earnedSalaryAll = salaries.reduce((sum, s) => sum + s.earnedSalary + s.dayOTSalary + s.monthOTSalary, 0);
   const totalAllAll = salaries.reduce((sum, s) => sum + s.totalAll, 0);
   const totalAdvAll = salaries.reduce((sum, s) => sum + s.totalAdv, 0);
   const insuranceDeductionAll = salaries.reduce((sum, s) => sum + s.insuranceDeduction, 0);
@@ -152,8 +256,11 @@ export const MonthlySalary = ({
         'Mã NV',
         'Họ tên',
         'Công',
-        'Tăng ca',
-        'Lương công',
+        'TC Ngày (h)',
+        'Lương/Ngày',
+        'Hệ số',
+        'TC Tháng',
+        'Tổng Lương',
         'Phụ cấp',
         'Tạm ứng',
         'Bảo hiểm',
@@ -167,7 +274,10 @@ export const MonthlySalary = ({
         s.full_name,
         Number(s.totalDays.toFixed(1)),
         `${s.totalOT.toFixed(1)}h`,
-        s.earnedSalary + s.otSalary,
+        s.dailyRate,
+        s.monthlyCoeff,
+        s.monthOTSalary,
+        s.earnedSalary + s.monthOTSalary + s.dayOTSalary,
         s.totalAll,
         s.totalAdv,
         s.insuranceDeduction,
@@ -180,7 +290,10 @@ export const MonthlySalary = ({
       'TỔNG CỘNG',
       Number(totalDaysAll.toFixed(1)),
       `${totalOTAll.toFixed(1)}h`,
-      earnedSalaryAll,
+      '',
+      '',
+      salaries.reduce((sum, s) => sum + s.monthOTSalary, 0),
+      salaries.reduce((sum, s) => sum + s.earnedSalary + s.dayOTSalary, 0),
       totalAllAll,
       totalAdvAll,
       insuranceDeductionAll,
@@ -211,7 +324,7 @@ export const MonthlySalary = ({
       </div>
 
       <div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden overflow-x-auto custom-scrollbar pb-2">
-        <table className="w-full text-left border-collapse min-w-[800px] whitespace-nowrap">
+        <table className="w-full text-left border-collapse min-w-[1100px] whitespace-nowrap">
           <thead>
             <tr className="bg-primary text-white">
               <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider">
@@ -224,10 +337,22 @@ export const MonthlySalary = ({
                 Công
               </th>
               <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-center">
-                Tăng ca
+                TC h
               </th>
               <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-right">
-                Lương công
+                Lương/Ngày
+              </th>
+              <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-right">
+                Hệ số
+              </th>
+              <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-right">
+                TC Tháng
+              </th>
+              <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-right">
+                TC Ngày
+              </th>
+              <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-right">
+                Lương Công
               </th>
               <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-right">
                 Phụ cấp
@@ -265,6 +390,10 @@ export const MonthlySalary = ({
                   key={s.id}
                   onClick={() => {
                     setSelectedSalary(s);
+                    const firstDay = `${selectedYear}-${String(selectedMonth).padStart(2, '0')}-01`;
+                    const lastDay = new Date(selectedYear, selectedMonth, 0).toISOString().split('T')[0];
+                    setCustomRange({ start: firstDay, end: lastDay });
+                    setIsCustomRange(false);
                     setShowDetailModal(true);
                   }}
                   className="hover:bg-gray-50 transition-colors cursor-pointer"
@@ -285,8 +414,20 @@ export const MonthlySalary = ({
                   <td className="px-4 py-3 text-center text-xs font-bold text-amber-600">
                     {s.totalOT.toFixed(1)}h
                   </td>
+                  <td className="px-4 py-3 text-right text-xs font-medium text-gray-500 italic">
+                    {formatCurrency(s.dailyRate)}
+                  </td>
+                  <td className="px-4 py-3 text-right text-xs font-bold text-amber-600">
+                    x{s.monthlyCoeff}
+                  </td>
+                  <td className="px-4 py-3 text-right text-xs font-black text-amber-600">
+                    {formatCurrency(s.monthOTSalary)}
+                  </td>
+                  <td className="px-4 py-3 text-right text-xs font-bold text-amber-600">
+                    {formatCurrency(s.dayOTSalary)}
+                  </td>
                   <td className="px-4 py-3 text-right text-xs font-medium text-gray-600">
-                    {formatCurrency(s.earnedSalary + s.otSalary)}
+                    {formatCurrency(s.earnedSalary + s.monthOTSalary + s.dayOTSalary)}
                   </td>
                   <td className="px-4 py-3 text-right text-xs font-medium text-green-600">
                     +{formatCurrency(s.totalAll)}
@@ -316,8 +457,20 @@ export const MonthlySalary = ({
                 <td className="px-4 py-4 text-center text-xs font-black text-amber-600">
                   {totalOTAll.toFixed(1)}h
                 </td>
+                <td className="px-4 py-4 text-right text-xs font-black text-gray-400">
+                  -
+                </td>
+                <td className="px-4 py-4 text-right text-xs font-black text-gray-400">
+                  -
+                </td>
+                <td className="px-4 py-4 text-right text-xs font-black text-amber-600">
+                  {formatCurrency(salaries.reduce((sum, s) => sum + s.monthOTSalary, 0))}
+                </td>
+                <td className="px-4 py-4 text-right text-xs font-black text-amber-600">
+                  {formatCurrency(salaries.reduce((sum, s) => sum + s.dayOTSalary, 0))}
+                </td>
                 <td className="px-4 py-4 text-right text-xs font-black text-gray-800">
-                  {formatCurrency(earnedSalaryAll)}
+                  {formatCurrency(salaries.reduce((sum, s) => sum + s.earnedSalary + s.monthOTSalary + s.dayOTSalary, 0))}
                 </td>
                 <td className="px-4 py-4 text-right text-xs font-black text-green-600">
                   +{formatCurrency(totalAllAll)}
@@ -354,19 +507,27 @@ export const MonthlySalary = ({
                 <div className="flex items-center gap-3">
                   <div
                     className="p-2 bg-white/20 rounded-xl cursor-pointer hover:bg-white/30 transition-all active:scale-95"
-                    onClick={() => setShowDetailModal(false)}
+                    onClick={() => {
+                      setShowDetailModal(false);
+                      setIsCustomRange(false);
+                    }}
                   >
                     <Wallet size={24} />
                   </div>
                   <div>
                     <h3 className="font-bold text-lg leading-tight">Phiếu lương chi tiết</h3>
                     <p className="text-[10px] text-white/70 font-bold uppercase tracking-widest">
-                      Tháng {selectedMonth}/{selectedYear}
+                      {isCustomRange
+                        ? `${formatDate(customRange.start)} - ${formatDate(customRange.end)}`
+                        : `Tháng ${selectedMonth}/${selectedYear}`}
                     </p>
                   </div>
                 </div>
                 <button
-                  onClick={() => setShowDetailModal(false)}
+                  onClick={() => {
+                    setShowDetailModal(false);
+                    setIsCustomRange(false);
+                  }}
                   className="p-2 hover:bg-white/20 rounded-xl transition-all"
                 >
                   <X size={24} />
@@ -396,13 +557,15 @@ export const MonthlySalary = ({
                         </div>
                       </div>
                       <div className="flex flex-col items-start sm:items-end w-full sm:w-auto border-t sm:border-t-0 border-gray-100 pt-3 sm:pt-0">
-                        <h1 className="text-lg sm:text-xl font-black text-primary uppercase tracking-tighter whitespace-nowrap">
-                          PHIẾU LƯƠNG
-                        </h1>
-                        <p className="text-[9px] sm:text-[10px] text-gray-400 font-bold tracking-widest whitespace-nowrap">
-                          T{selectedMonth}/{selectedYear}
-                        </p>
-                      </div>
+                          <h1 className="text-lg sm:text-xl font-black text-primary uppercase tracking-tighter whitespace-nowrap text-right">
+                            PHIẾU LƯƠNG
+                          </h1>
+                          <p className="text-[10px] sm:text-xs text-gray-500 font-black tracking-widest whitespace-nowrap text-right">
+                            {isCustomRange
+                              ? `${formatDate(customRange.start)} — ${formatDate(customRange.end)}`
+                              : `Tháng ${selectedMonth}/${selectedYear}`}
+                          </p>
+                        </div>
                     </div>
 
                     {/* Bill Content Header */}
@@ -468,10 +631,18 @@ export const MonthlySalary = ({
                           </div>
                           <div className="flex justify-between items-center text-sm">
                             <span className="text-gray-500 text-xs">
-                              Lương tăng ca ({selectedSalary.totalOT.toFixed(1)} giờ)
+                              TC Ngày ({selectedSalary.totalOT.toFixed(1)} giờ)
                             </span>
                             <span className="font-bold text-amber-600">
-                              +{formatCurrency(selectedSalary.otSalary)}
+                              +{formatCurrency(selectedSalary.dayOTSalary)}
+                            </span>
+                          </div>
+                          <div className="flex justify-between items-center text-sm">
+                            <span className="text-gray-500 text-xs">
+                              TC Tháng (Hệ số x{selectedSalary.monthlyCoeff})
+                            </span>
+                            <span className="font-bold text-amber-600">
+                              +{formatCurrency(selectedSalary.monthOTSalary)}
                             </span>
                           </div>
                           <div className="flex justify-between items-center text-sm">
@@ -530,19 +701,61 @@ export const MonthlySalary = ({
                 </div>
               </div>
 
-              <div className="p-8 pt-0 flex flex-col gap-3 no-print mt-2">
-                <button
-                  onClick={handleSaveImage}
-                  className="w-full bg-gray-900 text-white font-black py-3.5 rounded-2xl hover:bg-black transition-all flex items-center justify-center gap-2 shadow-lg active:scale-95"
-                >
-                  <ImageIcon size={18} /> LƯU ẢNH PHIẾU LƯƠNG
-                </button>
-                <button
-                  onClick={() => setShowDetailModal(false)}
-                  className="w-full bg-primary/5 text-primary font-black py-3.5 rounded-2xl hover:bg-primary/10 transition-all active:scale-95 border border-primary/10"
-                >
-                  <X size={18} className="inline mr-2" /> ĐÓNG CỬA SỔ
-                </button>
+              <div className="p-6 pt-0 flex flex-col gap-4 no-print mt-2">
+                <div className="bg-gray-50 p-4 rounded-2xl border border-gray-100 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <label className="text-[10px] font-bold text-gray-400 uppercase">Tùy chỉnh khoảng ngày</label>
+                    <button
+                      onClick={() => setIsCustomRange(!isCustomRange)}
+                      className={`relative inline-flex items-center w-11 h-6 rounded-full transition-colors duration-200 focus:outline-none ${isCustomRange ? 'bg-primary' : 'bg-gray-300'}`}
+                    >
+                      <span
+                        className={`inline-block w-4 h-4 bg-white rounded-full shadow transform transition-transform duration-200 ${isCustomRange ? 'translate-x-6' : 'translate-x-1'}`}
+                      />
+                    </button>
+                  </div>
+                  
+                  {isCustomRange && (
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="space-y-1">
+                        <label className="text-[8px] font-bold text-gray-400 uppercase">Từ ngày</label>
+                        <input
+                          type="date"
+                          value={customRange.start}
+                          onChange={(e) => setCustomRange({ ...customRange, start: e.target.value })}
+                          className="w-full px-3 py-1.5 rounded-xl border border-gray-200 text-xs outline-none focus:ring-1 focus:ring-primary/20"
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[8px] font-bold text-gray-400 uppercase">Đến ngày</label>
+                        <input
+                          type="date"
+                          value={customRange.end}
+                          onChange={(e) => setCustomRange({ ...customRange, end: e.target.value })}
+                          className="w-full px-3 py-1.5 rounded-xl border border-gray-200 text-xs outline-none focus:ring-1 focus:ring-primary/20"
+                        />
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                <div className="flex gap-3">
+                  <button
+                    onClick={handleSaveImage}
+                    className="flex-1 bg-gray-900 text-white font-black py-3 rounded-xl hover:bg-black transition-all flex items-center justify-center gap-2 shadow-lg active:scale-95 text-xs"
+                  >
+                    <ImageIcon size={16} /> LƯU ẢNH
+                  </button>
+                  <button
+                    onClick={() => {
+                      setShowDetailModal(false);
+                      setIsCustomRange(false);
+                    }}
+                    className="flex-1 bg-primary/5 text-primary font-black py-3 rounded-xl hover:bg-primary/10 transition-all active:scale-95 border border-primary/10 text-xs"
+                  >
+                    ĐÓNG
+                  </button>
+                </div>
               </div>
             </motion.div>
           </div>

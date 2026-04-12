@@ -443,7 +443,8 @@ export const CostReport = ({
     <div className="p-4 md:p-6 space-y-6 pb-24 overflow-x-hidden">
       <div className="flex items-center justify-between gap-2">
         <PageBreadcrumb title="Báo cáo chi phí" onBack={onBack} />
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 justify-end flex-1">
+          <ExcelButton onClick={handleExportExcel} />
           {groupedData.length > 0 && (
             <Button
               size="icon"
@@ -452,7 +453,6 @@ export const CostReport = ({
               icon={Search}
             />
           )}
-          <ExcelButton onClick={handleExportExcel} />
         </div>
       </div>
 

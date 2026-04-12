@@ -206,18 +206,14 @@ export const InventoryReport = ({
     <div className="p-4 md:p-6 space-y-6 pb-24">
       <div className="flex items-center justify-between gap-2">
         <PageBreadcrumb title="Kiểm tra tồn kho" onBack={onBack} />
-        <div className="flex items-center gap-2 flex-shrink-0">
-          <button
-            onClick={() => setShowFilter((f) => !f)}
-            className={`p-2.5 rounded-xl border transition-colors ${
-              showFilter
-                ? 'bg-primary text-white border-primary'
-                : 'bg-white text-gray-500 border-gray-200 hover:border-primary/40'
-            }`}
-          >
-            <Search size={16} />
-          </button>
+        <div className="flex items-center gap-2 justify-end flex-1">
           <ExcelButton onClick={handleExportExcel} />
+          <Button
+            size="icon"
+            variant={showFilter ? 'primary' : 'outline'}
+            onClick={() => setShowFilter((f) => !f)}
+            icon={Search}
+          />
         </div>
       </div>
 

@@ -922,8 +922,24 @@ export const MonthlySalary = ({
                           </span>
                           <span className="text-[11px] font-bold text-gray-800 whitespace-nowrap">
                             {isCustomRange
-                              ? `${customRange.start} đến ${customRange.end}`
-                              : `Tháng ${selectedMonth}/${selectedYear}`}
+                              ? `${customRange.start} — ${customRange.end}`
+                              : (() => {
+                                  const dates = (selectedSalary.attendanceDetails || [])
+                                    .map((a: any) => a.date)
+                                    .filter(Boolean)
+                                    .sort();
+                                  const firstDate = dates[0];
+                                  const lastDate = dates[dates.length - 1];
+                                  const fmt = (d: string) => {
+                                    const [y, m, day] = d.split('-');
+                                    return `${parseInt(day)}/${parseInt(m)}`;
+                                  };
+                                  const range =
+                                    firstDate && lastDate
+                                      ? ` (${fmt(firstDate)} - ${fmt(lastDate)})`
+                                      : '';
+                                  return `Tháng ${selectedMonth}/${selectedYear}${range}`;
+                                })()}
                           </span>
                         </div>
                       </div>

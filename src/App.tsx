@@ -257,13 +257,22 @@ export default function App() {
         ...group,
         items: group.items
           .filter((item) => {
-            if (user.role === 'User') {
-              return ['stock-in', 'stock-out', 'transfer', 'attendance', 'cost-report'].includes(
-                item.id,
-              );
+            const isAdmin = ['admin', 'develop'].includes(user.role?.toLowerCase() || '');
+            if (!isAdmin) {
+              return [
+                'stock-in',
+                'stock-out',
+                'transfer',
+                'costs',
+                'construction-diary',
+                'attendance',
+                'payroll',
+                'hr-records',
+                'notes',
+                'reminders',
+              ].includes(item.id);
             }
-            if (user.role === 'Admin') return item.id !== 'database-setup';
-            if (user.role === 'Develop') return item.id !== 'database-setup';
+            if (user.role?.toLowerCase() === 'admin') return item.id !== 'database-setup';
             return true;
           })
           .map((item) =>

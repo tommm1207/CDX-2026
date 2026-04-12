@@ -667,15 +667,15 @@ export const MonthlySalary = ({
                           ({selectedSalary.totalDays.toFixed(1)} công)
                         </span>
                       </div>
-                      <div className="bg-amber-50/50 rounded-xl p-2.5 border border-amber-100 flex flex-col items-center justify-center space-y-0.5">
-                        <span className="text-[8px] font-black text-amber-500/70 uppercase tracking-widest">
+                      <div className="bg-gray-50/50 rounded-xl p-2.5 border border-gray-100 flex flex-col items-center justify-center space-y-0.5">
+                        <span className="text-[8px] font-black text-gray-400 uppercase tracking-widest">
                           Tăng ca
                         </span>
                         <div className="flex items-baseline gap-1">
-                          <span className="text-base font-black text-amber-600">
+                          <span className="text-base font-black text-gray-800">
                             {selectedSalary.totalOT.toFixed(1)}
                           </span>
-                          <span className="text-[9px] font-bold text-amber-500">giờ</span>
+                          <span className="text-[9px] font-bold text-gray-400">giờ</span>
                         </div>
                       </div>
                     </div>
@@ -697,7 +697,7 @@ export const MonthlySalary = ({
                         </div>
                         <div className="flex justify-between text-xs items-center gap-2">
                           <span className="font-bold text-gray-500 whitespace-nowrap">Tiền tăng ca</span>
-                          <span className="font-bold text-amber-600 whitespace-nowrap">
+                          <span className="font-bold text-gray-800 whitespace-nowrap">
                             {formatCurrency(
                               selectedSalary.dayOTSalary + selectedSalary.monthOTSalary,
                             )}
@@ -705,7 +705,7 @@ export const MonthlySalary = ({
                         </div>
                         <div className="flex justify-between text-xs items-center gap-2">
                           <span className="font-bold text-gray-500 whitespace-nowrap">Phụ cấp</span>
-                          <span className="font-bold text-green-600 whitespace-nowrap">
+                          <span className="font-bold text-gray-800 whitespace-nowrap">
                             +{formatCurrency(selectedSalary.totalAll)}
                           </span>
                         </div>
@@ -730,7 +730,7 @@ export const MonthlySalary = ({
                     {/* Deductions */}
                     <div className="space-y-3">
                       <div className="flex items-center gap-2 mb-1">
-                        <div className="h-4 w-1 bg-red-400 rounded-full" />
+                        <div className="h-4 w-1 bg-gray-300 rounded-full" />
                         <h3 className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">
                           CÁC KHOẢN KHẤU TRỪ
                         </h3>
@@ -738,13 +738,13 @@ export const MonthlySalary = ({
                       <div className="space-y-2">
                         <div className="flex justify-between text-xs items-center gap-2">
                           <span className="font-bold text-gray-500 whitespace-nowrap">Tạm ứng</span>
-                          <span className="font-bold text-red-500 whitespace-nowrap">
+                          <span className="font-bold text-gray-800 whitespace-nowrap">
                             -{formatCurrency(selectedSalary.totalAdv)}
                           </span>
                         </div>
                         <div className="flex justify-between text-xs items-center gap-2">
                           <span className="font-bold text-gray-500 whitespace-nowrap">Bảo hiểm</span>
-                          <span className="font-bold text-red-500 whitespace-nowrap">
+                          <span className="font-bold text-gray-800 whitespace-nowrap">
                             -{formatCurrency(selectedSalary.insuranceDeduction)}
                           </span>
                         </div>
@@ -753,7 +753,7 @@ export const MonthlySalary = ({
                             <span className="text-xs font-black text-gray-800 uppercase tracking-wide whitespace-nowrap">
                               TỔNG GIẢM TRỪ
                             </span>
-                            <span className="text-base font-black tracking-tight text-red-600 whitespace-nowrap">
+                            <span className="text-base font-black tracking-tight text-gray-900 whitespace-nowrap">
                               -{formatCurrency(
                                 selectedSalary.totalAdv + selectedSalary.insuranceDeduction,
                               )}

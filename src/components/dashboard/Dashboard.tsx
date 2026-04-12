@@ -100,6 +100,7 @@ export const Dashboard = ({ user, onNavigate, addToast, pendingApprovals = 0 }: 
       icon: BarChart3,
       color: 'bg-teal-600',
       description: 'Kiểm tra số lượng tồn kho',
+      adminOnly: true,
     },
     {
       id: 'materials',
@@ -114,15 +115,14 @@ export const Dashboard = ({ user, onNavigate, addToast, pendingApprovals = 0 }: 
       label: 'Chấm công',
       icon: CalendarCheck,
       color: 'bg-violet-600',
-      description: 'Theo dõi chuyên cần hàng ngày',
+      description: isAdmin ? 'Theo dõi chuyên cần hàng ngày' : 'Xem lịch chấm công của tôi',
     },
     {
       id: 'payroll',
-      label: 'Bảng lương',
+      label: isAdmin ? 'Bảng lương' : 'Phiếu lương của tôi',
       icon: Wallet,
       color: 'bg-emerald-600',
-      description: 'Tổng hợp lương tháng',
-      adminOnly: true,
+      description: isAdmin ? 'Tổng hợp lương toàn công ty' : 'Xem lương tháng của bạn',
     },
     {
       id: 'pending-approvals',
@@ -151,7 +151,7 @@ export const Dashboard = ({ user, onNavigate, addToast, pendingApprovals = 0 }: 
       label: 'Nhật ký thi công',
       icon: ClipboardList,
       color: 'bg-primary',
-      description: 'Ghi chép diễn biến công trường',
+      description: isAdmin ? 'Xem & duyệt nhật ký công trường' : 'Nhập nhật ký thi công',
     },
   ];
 

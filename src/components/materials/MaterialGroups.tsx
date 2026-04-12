@@ -19,6 +19,8 @@ import { isActiveWarehouse } from '@/utils/inventory';
 import { ToastType } from '../shared/Toast';
 import { FAB } from '../shared/FAB';
 import { checkUsage } from '@/utils/dataIntegrity';
+import { generateNextGroupCode, generateNextMaterialCode } from '@/utils/inventory';
+import { SortButton, SortOption } from '../shared/SortButton';
 
 export const MaterialGroups = ({
   user,
@@ -47,6 +49,9 @@ export const MaterialGroups = ({
   const [isEditingMaterial, setIsEditingMaterial] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [showFilter, setShowFilter] = useState(false);
+  const [sortBy, setSortBy] = useState<SortOption>(
+    (localStorage.getItem(`sort_pref_mat_groups_${user.id}`) as SortOption) || 'newest',
+  );
 
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [itemToDelete, setItemToDelete] = useState<string | null>(null);
@@ -62,6 +67,7 @@ export const MaterialGroups = ({
     unit: '',
     description: '',
     image_url: '',
+    code: '',
   };
 
   const [formData, setFormData] = useState(initialFormState);
@@ -78,7 +84,7 @@ export const MaterialGroups = ({
       .from('material_groups')
       .select('*')
       .or('status.is.null,status.neq.Đã xóa')
-      .order('id', { ascending: true });
+      .order('code', { ascending: true });
     if (data) setGroups(data);
     setLoading(false);
   };
@@ -97,71 +103,57 @@ export const MaterialGroups = ({
   // Nhận group object trực tiếp để tránh lỗi stale state (selectedGroup chưa cập nhật kịp)
   const fetchMaterialsByGroup = async (groupId: string, groupObj?: any) => {
     setMaterialsLoading(true);
+    setMaterials([]); // Reset previous results to avoid stale data
+
     try {
       // 1. Fetch theo group_id (UUID)
+      // Không join warehouses(name) để tránh lỗi schema cache (thiếu quan hệ FK)
       const { data, error } = await supabase
         .from('materials')
-        .select('*, warehouses(name), material_groups(name)')
+        .select(
+          `
+          *,
+          material_groups (name)
+        `,
+        )
         .eq('group_id', groupId)
         .or('status.is.null,status.neq.Đã xóa')
         .order('created_at', { ascending: false });
 
       if (error) throw error;
 
-      // 2. Fallback: Nếu không có kết quả, lọc theo tên nhóm
-      // groupObj được truyền trực tiếp để đảm bảo dùng đúng giá trị mới nhất
+      let finalMaterials = data || [];
       const groupName = groupObj?.name ?? selectedGroup?.name;
-      if ((!data || data.length === 0) && groupName) {
+
+      // 2. Fallback: Nếu không tìm thấy bằng ID, thử tìm theo tên nhóm
+      if (finalMaterials.length === 0 && groupName) {
         const { data: allMats, error: allError } = await supabase
           .from('materials')
-          .select('*, warehouses(name), material_groups(name)')
+          .select(
+            `
+            *,
+            material_groups (name)
+          `,
+          )
+          .or('status.is.null,status.neq.Đã xóa')
           .order('created_at', { ascending: false });
 
         if (!allError && allMats) {
-          const filtered = allMats.filter(
-            (m) =>
-              m.group_id === groupId ||
-              m.material_groups?.name?.toLowerCase() === groupName.toLowerCase(),
-          );
-
-          if (filtered.length > 0) {
-            setMaterials(filtered);
-            setMaterialsLoading(false);
-            return;
-          }
+          finalMaterials = allMats.filter((m) => {
+            const matchesId = m.group_id === groupId;
+            const matGroupName = m.material_groups?.name || '';
+            const matchesName = matGroupName.toLowerCase() === groupName.toLowerCase();
+            return matchesId || matchesName;
+          });
         }
       }
 
-      setMaterials(data || []);
+      setMaterials(finalMaterials);
     } catch (err: any) {
       console.error('Error fetching materials:', err);
+      if (addToast) addToast('Lỗi tải danh sách vật tư trong nhóm: ' + err.message, 'error');
     } finally {
       setMaterialsLoading(false);
-    }
-  };
-
-  const generateNextGroupCode = async () => {
-    const random = Math.floor(100 + Math.random() * 900);
-    try {
-      const { data } = await supabase
-        .from('material_groups')
-        .select('code')
-        .like('code', 'VAT%')
-        .order('code', { ascending: false })
-        .limit(1);
-
-      if (data && data.length > 0 && data[0].code) {
-        const lastCode = data[0].code;
-        const match = lastCode.match(/VAT(\d+)/);
-        if (match && match[1]) {
-          const nextNumber = parseInt(match[1]) + 1;
-          return `VAT${nextNumber.toString().padStart(3, '0')}`;
-        }
-      }
-      return `VAT001`;
-    } catch (err) {
-      console.error('Error generating group code:', err);
-      return `VAT001`;
     }
   };
 
@@ -351,26 +343,46 @@ export const MaterialGroups = ({
 
   const uniqueMaterialIds = Array.from(new Set(materials.map((m) => m.id)));
 
-  const filteredGroups = groups.filter(
-    (g) =>
-      g.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      g.id.toLowerCase().includes(searchTerm.toLowerCase()),
-  );
+  const filteredGroups = groups
+    .filter(
+      (g) =>
+        g.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (g.code && g.code.toLowerCase().includes(searchTerm.toLowerCase())),
+    )
+    .sort((a, b) => {
+      if (sortBy === 'newest')
+        return new Date(b.created_at || '').getTime() - new Date(a.created_at || '').getTime();
+      if (sortBy === 'code') return (a.code || '').localeCompare(b.code || '');
+      return 0;
+    });
 
   return (
-    <div className="p-4 md:p-6 space-y-6 pb-44">
+    <div className="p-4 md:p-6 space-y-6 pb-24">
       <div className="flex items-center justify-between gap-2">
         <PageBreadcrumb title="Nhóm vật tư" onBack={onBack} />
-        <button
-          onClick={() => setShowFilter((f) => !f)}
-          className={`p-2.5 rounded-xl border transition-colors ${
-            showFilter
-              ? 'bg-primary text-white border-primary'
-              : 'bg-white text-gray-500 border-gray-200 hover:border-primary/40'
-          }`}
-        >
-          <Search size={16} />
-        </button>
+        <div className="flex items-center gap-2">
+          <SortButton
+            currentSort={sortBy}
+            onSortChange={(val) => {
+              setSortBy(val);
+              localStorage.setItem(`sort_pref_mat_groups_${user.id}`, val);
+            }}
+            options={[
+              { value: 'code', label: 'Mã hiệu' },
+              { value: 'newest', label: 'Mới nhất' },
+            ]}
+          />
+          <button
+            onClick={() => setShowFilter((f) => !f)}
+            className={`p-2.5 rounded-xl border transition-colors ${
+              showFilter
+                ? 'bg-primary text-white border-primary'
+                : 'bg-white text-gray-500 border-gray-200 hover:border-primary/40'
+            }`}
+          >
+            <Search size={16} />
+          </button>
+        </div>
       </div>
 
       <AnimatePresence>
@@ -528,7 +540,7 @@ export const MaterialGroups = ({
               initial={{ opacity: 0, scale: 0.95, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 20 }}
-              className="bg-white rounded-[2rem] md:rounded-[2.5rem] shadow-2xl w-full max-w-md max-h-[90vh] flex flex-col my-8 m-4 overflow-hidden relative z-10"
+              className="bg-white rounded-[2rem] md:rounded-[2.5rem] shadow-2xl w-full max-w-md max-h-[90vh] flex flex-col overflow-hidden relative z-10"
               onClick={(e) => e.stopPropagation()}
             >
               <div className="bg-primary p-6 text-white flex items-center justify-between rounded-t-[2rem] md:rounded-t-[2.5rem] flex-shrink-0">
@@ -555,59 +567,59 @@ export const MaterialGroups = ({
               </div>
 
               <div className="flex-1 overflow-y-auto custom-scrollbar">
-                <form onSubmit={handleSubmit} className="p-6 space-y-4">
-                  <div className="space-y-1">
-                    <label className="text-[10px] font-bold text-gray-400 uppercase">
-                      Mã nhóm vật tư
-                    </label>
-                    <input
-                      required
-                      disabled
-                      type="text"
-                      placeholder="Hệ thống tự động sinh..."
-                      value={formData.code}
-                      className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20 bg-gray-50"
-                    />
-                  </div>
-                  <div className="space-y-1">
-                    <label className="text-[10px] font-bold text-gray-400 uppercase">
-                      Tên nhóm vật tư *
-                    </label>
-                    <input
-                      required
-                      type="text"
-                      placeholder="Ví dụ: Tôn, sắt, thép..."
-                      value={formData.name}
-                      onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                      className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20"
-                    />
-                  </div>
-                  <div className="space-y-1">
-                    <label className="text-[10px] font-bold text-gray-400 uppercase">Ghi chú</label>
-                    <textarea
-                      rows={3}
-                      placeholder="Thông tin thêm về nhóm này..."
-                      value={formData.notes}
-                      onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-                      className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20 resize-none"
-                    />
-                  </div>
+                <form onSubmit={handleSubmit} className="p-6">
+                  <div className="space-y-4">
+                    <div className="space-y-2 mb-2">
+                      <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">
+                        Mã tham chiếu (Nhóm vật tư)
+                      </label>
+                      <div className="bg-indigo-50/50 px-5 py-3.5 rounded-2xl border border-indigo-100 text-sm font-black text-indigo-600 uppercase shadow-inner italic">
+                        {formData.code ||
+                          `GR-${new Date().toISOString().slice(2, 10).replace(/-/g, '')}-001`}
+                      </div>
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-bold text-gray-400 uppercase">
+                        Tên nhóm vật tư *
+                      </label>
+                      <input
+                        required
+                        type="text"
+                        placeholder="Ví dụ: Tôn, sắt, thép..."
+                        value={formData.name}
+                        onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                        className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-bold text-gray-400 uppercase">
+                        Ghi chú
+                      </label>
+                      <textarea
+                        rows={3}
+                        placeholder="Thông tin thêm về nhóm này..."
+                        value={formData.notes}
+                        onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+                        className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20 resize-none"
+                      />
+                    </div>
 
-                  <div className="mt-8 flex justify-end gap-3 flex-shrink-0">
-                    <button
-                      type="button"
-                      onClick={() => setShowModal(false)}
-                      className="px-6 py-2 rounded-xl text-sm font-bold text-gray-500 hover:bg-gray-100 transition-colors"
-                    >
-                      Hủy
-                    </button>
-                    <button
-                      type="submit"
-                      disabled={submitting}
-                      className="px-6 py-2 rounded-xl text-sm font-bold bg-primary text-white hover:bg-primary-hover transition-colors shadow-lg shadow-primary/20 disabled:opacity-50"
-                    >
-                      {submitting ? 'Đang lưu...' : 'Lưu dữ liệu'}
-                    </button>
+                    <div className="mt-8 flex justify-end gap-3 flex-shrink-0">
+                      <button
+                        type="button"
+                        onClick={() => setShowModal(false)}
+                        className="px-6 py-2 rounded-xl text-sm font-bold text-gray-500 hover:bg-gray-100 transition-colors"
+                      >
+                        Hủy
+                      </button>
+                      <button
+                        type="submit"
+                        disabled={submitting}
+                        className="px-6 py-2 rounded-xl text-sm font-bold bg-primary text-white hover:bg-primary-hover transition-colors shadow-lg shadow-primary/20 disabled:opacity-50"
+                      >
+                        {submitting ? 'Đang lưu...' : 'Lưu dữ liệu'}
+                      </button>
+                    </div>
                   </div>
                 </form>
               </div>
@@ -626,7 +638,7 @@ export const MaterialGroups = ({
               initial={{ opacity: 0, scale: 0.95, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 20 }}
-              className="bg-white rounded-[2rem] md:rounded-[2.5rem] shadow-2xl w-full max-w-5xl max-h-[95vh] flex flex-col my-8 m-4 overflow-hidden relative z-10"
+              className="bg-white rounded-[2rem] md:rounded-[2.5rem] shadow-2xl w-full max-w-5xl max-h-[95vh] flex flex-col overflow-hidden relative z-10"
               onClick={(e) => e.stopPropagation()}
             >
               <div className="bg-primary p-6 text-white flex items-center justify-between rounded-t-[2rem] md:rounded-t-[2.5rem] flex-shrink-0">
@@ -683,10 +695,13 @@ export const MaterialGroups = ({
                       </span>
                     </div>
                     <button
-                      onClick={() => {
+                      onClick={async () => {
                         setMaterialFormData(initialMaterialFormState);
                         setIsEditingMaterial(false);
                         setShowMaterialModal(true);
+                        // Generate code immediately for new material
+                        const nextCode = await generateNextMaterialCode(selectedGroup.id);
+                        setMaterialFormData((prev) => ({ ...prev, code: nextCode }));
                       }}
                       className="flex items-center gap-2 px-3 py-1.5 bg-blue-600 text-white rounded-lg text-xs font-bold hover:bg-blue-700 transition-colors"
                     >
@@ -733,7 +748,7 @@ export const MaterialGroups = ({
                               </td>
                               <td className="px-4 py-2 text-xs text-gray-600">{mat.name}</td>
                               <td className="px-4 py-2 text-xs text-gray-500">
-                                {mat.warehouses?.name || '-'}
+                                {warehouses.find((w) => w.id === mat.warehouse_id)?.name || '-'}
                               </td>
                               <td className="px-4 py-2 text-xs text-gray-500">
                                 {mat.specification || '-'}
@@ -847,31 +862,12 @@ export const MaterialGroups = ({
                   onSubmit={handleMaterialSubmit}
                   className="p-6 grid grid-cols-1 md:grid-cols-2 gap-4"
                 >
-                  <div className="space-y-1">
-                    <label className="text-[10px] font-bold text-gray-400 uppercase">
-                      Mã vật tư *
+                  <div className="col-span-1 md:col-span-2 space-y-2 mb-2">
+                    <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">
+                      Mã tham chiếu (Vật tư)
                     </label>
-                    <div className="relative">
-                      <input
-                        list="material-ids-group"
-                        required
-                        type="text"
-                        value={materialFormData.code || ''}
-                        onChange={(e) => {
-                          const val = e.target.value;
-                          setMaterialFormData({ ...materialFormData, code: val });
-                          const existing = materials.find((m) => m.code === val);
-                          if (existing) {
-                            setMaterialFormData({ ...existing, code: val });
-                          }
-                        }}
-                        className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-blue-500/20"
-                      />
-                      <datalist id="material-ids-group">
-                        {uniqueMaterialIds.map((code) => (
-                          <option key={code} value={code} />
-                        ))}
-                      </datalist>
+                    <div className="bg-primary/5 px-5 py-3.5 rounded-2xl border border-primary/10 text-sm font-black text-primary uppercase shadow-inner italic">
+                      {materialFormData.code || 'VAT-001'}
                     </div>
                   </div>
                   <div className="space-y-1">

@@ -431,6 +431,34 @@ export const generateNextMaterialCode = async (groupId: string): Promise<string>
 };
 
 /**
+ * Tự động sinh mã nhóm vật tư tiếp theo.
+ * Định dạng: VAT[Số thứ tự 3 chữ số] (VD: VAT001)
+ */
+export const generateNextGroupCode = async (): Promise<string> => {
+  try {
+    const { data } = await supabase
+      .from('material_groups')
+      .select('code')
+      .like('code', 'VAT%')
+      .order('code', { ascending: false })
+      .limit(1);
+
+    if (data && data.length > 0 && data[0].code) {
+      const lastCode = data[0].code;
+      const match = lastCode.match(/VAT(\d+)/);
+      if (match && match[1]) {
+        const nextNumber = parseInt(match[1]) + 1;
+        return `VAT${nextNumber.toString().padStart(3, '0')}`;
+      }
+    }
+    return `VAT001`;
+  } catch (err) {
+    console.error('Error generating group code:', err);
+    return `VAT001`;
+  }
+};
+
+/**
  * Kiểm tra xem một kho có đang hoạt động hay không.
  * Loại bỏ các kho có trạng thái liên quan đến "đã xóa" hoặc "thùng rác".
  */

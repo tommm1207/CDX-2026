@@ -38,6 +38,7 @@ export const Attendance = ({
         .from('users')
         .select('*')
         .neq('status', 'Nghỉ việc')
+        .neq('status', 'Đã xóa')
         .neq('role', 'Admin App')
         .eq('has_salary', true)
         .order('code');
@@ -71,7 +72,8 @@ export const Attendance = ({
   const toggleAttendance = async (
     empId: string,
     day: number,
-    action?: 'present' | 'half-day' | 'remove',
+    action?: 'present' | 'half-day' | 'absent' | 'remove',
+    otHours: number | '' = 0,
   ) => {
     if (user.role === 'User') return;
     const dateStr = `${selectedYear}-${String(selectedMonth).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
@@ -87,12 +89,13 @@ export const Attendance = ({
     }
 
     const status = action || 'present';
-    const hours = status === 'present' ? 8 : 4;
+    const hours = status === 'present' ? 8 : status === 'half-day' ? 4 : 0;
+    const saveOt = status === 'absent' ? 0 : otHours === '' ? 0 : otHours;
 
     if (current) {
       await supabase
         .from('attendance')
-        .update({ status, hours_worked: hours, overtime_hours: current.overtime_hours || 0 })
+        .update({ status, hours_worked: hours, overtime_hours: saveOt })
         .eq('id', current.id);
     } else {
       await supabase.from('attendance').insert([
@@ -101,7 +104,7 @@ export const Attendance = ({
           date: dateStr,
           status,
           hours_worked: hours,
-          overtime_hours: 0,
+          overtime_hours: saveOt,
         },
       ]);
     }
@@ -251,8 +254,9 @@ export const Attendance = ({
   const openEditModal = (empId: string, day: number) => {
     if (user.role === 'User') return;
     const att = getStatus(empId, day);
+    const emp = employees.find((e) => e.id === empId);
     const dateStr = `${selectedYear}-${String(selectedMonth).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-    setEditingAtt({ empId, day, dateStr, id: att?.id });
+    setEditingAtt({ empId, day, dateStr, id: att?.id, empName: emp?.full_name || 'Nhân viên' });
     setEditFormData({
       status: att?.status || 'present',
       overtime: att?.overtime_hours || 0,
@@ -303,7 +307,7 @@ export const Attendance = ({
   };
 
   return (
-    <div className="p-4 md:p-6 space-y-6 pb-44 overflow-x-hidden">
+    <div className="p-4 md:p-6 space-y-6 pb-24 overflow-x-hidden">
       <div className="flex items-center justify-between gap-2">
         <PageBreadcrumb title="Chấm công" onBack={onBack} />
         <div className="flex items-center gap-2">
@@ -339,7 +343,7 @@ export const Attendance = ({
               initial={{ opacity: 0, scale: 0.95, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 20 }}
-              className="bg-white rounded-[2rem] md:rounded-[2.5rem] shadow-2xl w-full max-w-sm overflow-hidden m-4"
+              className="bg-white rounded-[2rem] md:rounded-[2.5rem] shadow-2xl w-full max-w-sm overflow-hidden"
               onClick={(e) => e.stopPropagation()}
             >
               <div className="bg-primary p-6 text-white flex items-center justify-between transition-colors">
@@ -350,7 +354,9 @@ export const Attendance = ({
                   >
                     <CalendarCheck size={20} />
                   </div>
-                  <h3 className="font-bold text-lg">Ngày {editingAtt.day}</h3>
+                  <h3 className="font-bold text-lg">
+                    Ngày {editingAtt.day} - {editingAtt.empName}
+                  </h3>
                 </div>
                 <button
                   onClick={() => setShowEditModal(false)}
@@ -364,16 +370,37 @@ export const Attendance = ({
                   <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1 mb-2 block">
                     Trạng thái công
                   </label>
-                  <div className="grid grid-cols-3 gap-2">
-                    {['present', 'half-day', 'absent'].map((s) => (
-                      <button
-                        key={s}
-                        onClick={() => setEditFormData({ ...editFormData, status: s })}
-                        className={`py-3 rounded-2xl text-xs font-bold border transition-all active:scale-95 ${editFormData.status === s ? 'bg-primary text-white border-primary shadow-lg shadow-primary/20' : 'bg-gray-50 text-gray-400 border-gray-100 hover:bg-gray-100'}`}
-                      >
-                        {getStatusLabel(s)}
-                      </button>
-                    ))}
+                  <div className="grid grid-cols-1 gap-3">
+                    <button
+                      onClick={() => setEditFormData({ ...editFormData, status: 'present' })}
+                      className={`py-4 rounded-2xl text-sm font-bold border transition-all active:scale-95 flex items-center justify-center gap-2 ${editFormData.status === 'present' ? 'bg-green-500 text-white border-green-500 shadow-lg shadow-green-200' : 'bg-gray-50 text-gray-400 border-gray-100 hover:bg-gray-100'}`}
+                    >
+                      <Check size={18} /> ✓ 1 công
+                    </button>
+                    <button
+                      onClick={() => setEditFormData({ ...editFormData, status: 'half-day' })}
+                      className={`py-4 rounded-2xl text-sm font-bold border transition-all active:scale-95 ${editFormData.status === 'half-day' ? 'bg-amber-500 text-white border-amber-500 shadow-lg shadow-amber-200' : 'bg-gray-50 text-gray-400 border-gray-100 hover:bg-gray-100'}`}
+                    >
+                      ½ công
+                    </button>
+                    <button
+                      onClick={() => setEditFormData({ ...editFormData, status: 'absent' })}
+                      className={`py-4 rounded-2xl text-sm font-bold border transition-all active:scale-95 ${editFormData.status === 'absent' ? 'bg-red-500 text-white border-red-500 shadow-lg shadow-red-200' : 'bg-gray-50 text-gray-400 border-gray-100 hover:bg-gray-100'}`}
+                    >
+                      Vắng (Nghỉ)
+                    </button>
+                    <button
+                      onClick={async () => {
+                        if (editingAtt?.id) {
+                          await supabase.from('attendance').delete().eq('id', editingAtt.id);
+                          fetchData();
+                        }
+                        setShowEditModal(false);
+                      }}
+                      className="py-4 rounded-2xl text-sm font-bold bg-gray-100 text-gray-500 border border-gray-200 hover:bg-gray-200 transition-all active:scale-95"
+                    >
+                      Xóa chấm công
+                    </button>
                   </div>
                 </div>
                 <NumericInput
@@ -407,7 +434,7 @@ export const Attendance = ({
               initial={{ opacity: 0, scale: 0.95, y: 30 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 30 }}
-              className="bg-white rounded-[2rem] md:rounded-[2.5rem] shadow-2xl w-full max-w-4xl overflow-hidden flex flex-col max-h-[90dvh] m-4"
+              className="bg-white rounded-[2rem] md:rounded-[2.5rem] shadow-2xl w-full max-w-4xl overflow-hidden flex flex-col max-h-[90dvh]"
               onClick={(e) => e.stopPropagation()}
             >
               <div className="bg-primary p-6 text-white flex items-center justify-between flex-shrink-0 transition-colors">
@@ -654,7 +681,7 @@ export const Attendance = ({
               initial={{ opacity: 0, scale: 0.95, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 20 }}
-              className="bg-white rounded-[2rem] md:rounded-[2.5rem] shadow-2xl max-w-sm w-full overflow-hidden m-4"
+              className="bg-white rounded-[2rem] md:rounded-[2.5rem] shadow-2xl max-w-sm w-full overflow-hidden"
               onClick={(e) => e.stopPropagation()}
             >
               <div className="p-6 bg-amber-500 text-white flex items-center justify-between transition-colors">

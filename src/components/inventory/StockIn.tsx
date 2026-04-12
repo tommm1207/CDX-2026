@@ -11,12 +11,17 @@ import {
   PackagePlus,
   ChevronDown,
   Check,
+  Image as ImageIcon,
+  RefreshCw,
+  Camera,
 } from 'lucide-react';
+import { ChangeEvent } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { supabase } from '@/lib/supabase';
 import { Employee } from '@/types';
 import { PageBreadcrumb } from '../shared/PageBreadcrumb';
 import { NumericInput } from '../shared/NumericInput';
+import { ImageCapture } from '../shared/ImageCapture';
 import { CreatableSelect } from '../shared/CreatableSelect';
 import { ToastType } from '../shared/Toast';
 import { ConfirmModal } from '../shared/ConfirmModal';
@@ -27,6 +32,7 @@ import { formatDate, formatCurrency, formatNumber, numberToWords } from '@/utils
 import { isUUID, getAllowedWarehouses } from '@/utils/helpers';
 import { getAvailableStock, validateFutureImpact } from '@/utils/inventory';
 import { Button } from '../shared/Button';
+import { SortButton, SortOption } from '../shared/SortButton';
 
 export const StockIn = ({
   user,
@@ -66,6 +72,9 @@ export const StockIn = ({
   const [isEditing, setIsEditing] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showAddMaterial, setShowAddMaterial] = useState(false);
+  const [sortBy, setSortBy] = useState<SortOption>(
+    (localStorage.getItem(`sort_pref_stockin_${user.id}`) as SortOption) || 'newest',
+  );
 
   const { warehouses, materials, groups, refreshAll, fetchWarehouses } = useInventoryData(
     user.data_view_permission,
@@ -81,6 +90,7 @@ export const StockIn = ({
     notes: '',
     import_code: `NK-${new Date().getFullYear().toString().slice(-2)}${(new Date().getMonth() + 1).toString().padStart(2, '0')}${new Date().getDate().toString().padStart(2, '0')}-${Math.floor(1000 + Math.random() * 9000)}`,
     status: 'Chờ duyệt',
+    image_url: '',
   };
 
   const [formData, setFormData] = useState(initialFormState);
@@ -95,7 +105,7 @@ export const StockIn = ({
       let query = supabase
         .from('stock_in')
         .select('*, warehouses(name, code), materials(name, code, unit)')
-        .order('created_at', { ascending: false });
+        .order('import_code', { ascending: false });
 
       if (statusFilter === 'Tất cả') {
         query = query.neq('status', 'Đã xóa');
@@ -114,7 +124,7 @@ export const StockIn = ({
         const { data: fallbackData, error: fallbackError } = await supabase
           .from('stock_in')
           .select('*')
-          .order('created_at', { ascending: false });
+          .order('import_code', { ascending: false });
         if (fallbackError) throw fallbackError;
         setSlips(fallbackData || []);
       } else {
@@ -204,8 +214,6 @@ export const StockIn = ({
           const dateChanged = formData.date !== selectedSlip.date;
 
           if (matChanged || whChanged || dateChanged) {
-            // Khi đổi các trường cốt lõi của phiếu Đã duyệt, ta cần kiểm tra xem
-            // nếu "thu hồi" phiếu cũ (giảm tồn cũ) thì có gây âm kho ở tương lai không.
             const impactOld = await validateFutureImpact(
               selectedSlip.material_id,
               selectedSlip.warehouse_id,
@@ -218,7 +226,6 @@ export const StockIn = ({
               );
             }
           } else {
-            // Chỉ đổi số lượng hoặc các trường khác tại cùng vị trí
             const diff = formData.quantity - selectedSlip.quantity;
             if (diff < 0) {
               const impact = await validateFutureImpact(
@@ -274,10 +281,17 @@ export const StockIn = ({
     try {
       const { data } = await supabase
         .from('stock_in')
-        .select('*, warehouses(name)')
+        .select(
+          `
+          *,
+          materials(name, unit),
+          warehouses(name),
+          users(full_name)
+        `,
+        )
         .eq('material_id', slip.material_id)
         .eq('status', 'Đã duyệt')
-        .order('date', { ascending: false })
+        .order('import_code', { ascending: false })
         .limit(5);
       setMaterialHistory(data || []);
     } catch (err) {
@@ -298,6 +312,7 @@ export const StockIn = ({
       notes: selectedSlip.notes?.replace(/^\[SỬA lúc .*?\]\s*/, '') || '',
       import_code: selectedSlip.import_code || formData.import_code,
       status: selectedSlip.status,
+      image_url: selectedSlip.image_url || '',
     });
     setIsEditing(true);
     setShowDetailModal(false);
@@ -316,7 +331,6 @@ export const StockIn = ({
           .eq('id', id)
           .maybeSingle();
         if (slip && slip.total_amount > 0) {
-          // Check if cost already exists to prevent duplicates
           const { data: existingCost } = await supabase
             .from('costs')
             .select('id')
@@ -370,8 +384,6 @@ export const StockIn = ({
   const confirmDelete = async () => {
     try {
       if (selectedSlip.status === 'Đã duyệt') {
-        // Kiểm tra toàn bộ timeline (đến '9999-12-31') để đảm bảo xóa phiếu nhập này
-        // không gây âm kho tại bất kỳ thời điểm nào sau ngày nhập.
         const stockFull = await getAvailableStock(
           selectedSlip.material_id,
           selectedSlip.warehouse_id,
@@ -395,7 +407,6 @@ export const StockIn = ({
         .eq('id', selectedSlip.id);
       if (error) throw error;
 
-      // Also void associated cost
       await supabase
         .from('costs')
         .update({ status: 'Đã xóa' })
@@ -415,10 +426,23 @@ export const StockIn = ({
   };
 
   return (
-    <div className="p-4 md:p-6 space-y-6 pb-44 overflow-x-hidden">
+    <div className="p-4 md:p-6 space-y-6 pb-24 overflow-x-hidden">
       <div className="flex items-center justify-between gap-2">
         <PageBreadcrumb title="Nhập kho" onBack={onBack} />
         <div className="flex items-center gap-2">
+          <SortButton
+            currentSort={sortBy}
+            onSortChange={(val) => {
+              setSortBy(val);
+              localStorage.setItem(`sort_pref_stockin_${user.id}`, val);
+            }}
+            options={[
+              { value: 'code', label: 'Mã chứng từ' },
+              { value: 'newest', label: 'Mới nhất' },
+              { value: 'price', label: 'Thành tiền' },
+              { value: 'date', label: 'Ngày tạo' },
+            ]}
+          />
           <Button
             size="icon"
             variant={showFilter ? 'primary' : 'outline'}
@@ -505,20 +529,29 @@ export const StockIn = ({
       </AnimatePresence>
 
       {(() => {
-        const filteredSlips = slips.filter((item) => {
-          let match = true;
-          if (filterStartDate && item.date < filterStartDate) match = false;
-          if (filterEndDate && item.date > filterEndDate) match = false;
-          if (filterWarehouseId && item.warehouse_id !== filterWarehouseId) match = false;
-          if (searchTerm) {
-            const s = searchTerm.toLowerCase();
-            const nameMatch = (item.materials?.name || '').toLowerCase().includes(s);
-            const codeMatch = (item.import_code || '').toLowerCase().includes(s);
-            const noteMatch = (item.notes || '').toLowerCase().includes(s);
-            if (!nameMatch && !codeMatch && !noteMatch) match = false;
-          }
-          return match;
-        });
+        const filteredSlips = slips
+          .filter((item) => {
+            let match = true;
+            if (filterStartDate && item.date < filterStartDate) match = false;
+            if (filterEndDate && item.date > filterEndDate) match = false;
+            if (filterWarehouseId && item.warehouse_id !== filterWarehouseId) match = false;
+            if (searchTerm) {
+              const s = searchTerm.toLowerCase();
+              const nameMatch = (item.materials?.name || '').toLowerCase().includes(s);
+              const codeMatch = (item.import_code || '').toLowerCase().includes(s);
+              const noteMatch = (item.notes || '').toLowerCase().includes(s);
+              if (!nameMatch && !codeMatch && !noteMatch) match = false;
+            }
+            return match;
+          })
+          .sort((a, b) => {
+            if (sortBy === 'newest')
+              return (b.import_code || '').localeCompare(a.import_code || '');
+            if (sortBy === 'code') return (a.import_code || '').localeCompare(b.import_code || '');
+            if (sortBy === 'price') return (b.total_amount || 0) - (a.total_amount || 0);
+            if (sortBy === 'date') return new Date(b.date).getTime() - new Date(a.date).getTime();
+            return 0;
+          });
         return (
           <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
             <div className="overflow-x-auto">
@@ -608,11 +641,9 @@ export const StockIn = ({
         );
       })()}
 
-      {/* Detail Panel — slide-up mobile, side panel desktop */}
       <AnimatePresence>
         {showDetailModal && selectedSlip && (
           <>
-            {/* Backdrop */}
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
@@ -620,7 +651,6 @@ export const StockIn = ({
               onClick={() => setShowDetailModal(false)}
               className="fixed inset-0 z-[110] bg-black/40 backdrop-blur-sm"
             />
-            {/* Panel — slide-up mobile / slide-in right desktop */}
             <motion.div
               initial={{ y: '100%', x: 0 }}
               animate={{ y: 0, x: 0 }}
@@ -631,7 +661,6 @@ export const StockIn = ({
                          md:inset-x-auto md:inset-y-0 md:right-0 md:w-[420px] md:rounded-t-none md:rounded-l-3xl md:max-h-full"
               transition={{ type: 'spring', damping: 28, stiffness: 240 }}
             >
-              {/* Drag handle (mobile only) */}
               <div className="flex justify-center pt-3 pb-1 md:hidden">
                 <div className="w-10 h-1 bg-gray-200 rounded-full" />
               </div>
@@ -690,7 +719,19 @@ export const StockIn = ({
                   </div>
                 ))}
 
-                {/* Thành tiền bằng chữ */}
+                {selectedSlip.image_url && (
+                  <div className="space-y-2">
+                    <p className="text-[10px] text-gray-400 font-bold uppercase">Ảnh minh chứng</p>
+                    <div className="rounded-2xl overflow-hidden border border-gray-100 shadow-sm bg-gray-50">
+                      <img
+                        src={selectedSlip.image_url}
+                        alt="Proof"
+                        className="w-full h-auto object-contain max-h-[300px]"
+                      />
+                    </div>
+                  </div>
+                )}
+
                 <div className="bg-blue-50 rounded-xl p-3">
                   <p className="text-[10px] text-blue-400 font-bold uppercase mb-1">
                     Thành tiền bằng chữ
@@ -700,7 +741,6 @@ export const StockIn = ({
                   </p>
                 </div>
 
-                {/* Lịch sử nhập */}
                 {materialHistory.length > 0 && (
                   <div className="space-y-2">
                     <p className="text-[10px] text-gray-400 font-bold uppercase">
@@ -722,7 +762,6 @@ export const StockIn = ({
                 )}
               </div>
 
-              {/* Action buttons */}
               <div className="p-4 border-t border-gray-100 bg-gray-50 rounded-b-3xl md:rounded-b-none space-y-2">
                 {selectedSlip.status !== 'Đã xóa' &&
                   (user.role === 'Admin' || user.role === 'Admin App') &&
@@ -783,7 +822,6 @@ export const StockIn = ({
         )}
       </AnimatePresence>
 
-      {/* Add Item Modal */}
       <AnimatePresence>
         {showModal && (
           <div
@@ -795,7 +833,7 @@ export const StockIn = ({
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.9, y: 20 }}
               transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-              className="bg-white rounded-[2rem] md:rounded-[2.5rem] shadow-2xl w-[calc(100%-32px)] md:w-full max-w-2xl max-h-[calc(100vh-40px)] flex flex-col overflow-hidden m-4"
+              className="bg-white rounded-[2rem] md:rounded-[2.5rem] shadow-2xl w-full max-w-2xl max-h-[calc(100vh-40px)] flex flex-col overflow-hidden"
               onClick={(e) => e.stopPropagation()}
             >
               <div className="bg-blue-500 p-6 text-white flex items-center justify-between rounded-t-[2rem] md:rounded-t-[2.5rem] flex-shrink-0 relative">
@@ -824,32 +862,41 @@ export const StockIn = ({
                   onSubmit={handleSubmit}
                   className="grid grid-cols-1 md:grid-cols-2 gap-6 pb-32"
                 >
+                  <div className="md:col-span-2 space-y-2 mb-2">
+                    <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">
+                      Mã tham chiếu (Phiếu nhập)
+                    </label>
+                    <div className="bg-blue-50/50 px-5 py-3.5 rounded-2xl border border-blue-100 text-sm font-black text-blue-600 uppercase shadow-inner italic">
+                      {formData.import_code ||
+                        `NK-${new Date().toISOString().slice(2, 10).replace(/-/g, '')}-001`}
+                    </div>
+                  </div>
+
                   <div className="space-y-4">
                     <div className="space-y-1">
                       <label className="text-[10px] font-bold text-gray-400 uppercase">
-                        Ngày nhập *
+                        Ngày nhập kho *
                       </label>
                       <input
                         type="date"
                         required
                         value={formData.date}
                         onChange={(e) => setFormData({ ...formData, date: e.target.value })}
-                        className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-blue-500/20"
+                        className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-blue-600/20"
                       />
                     </div>
 
                     <div className="relative z-[120]">
                       <div className="flex items-center justify-between mb-1">
-                        <label className="text-[10px] font-bold text-gray-400 uppercase">
-                          Tên vật tư nhập *
+                        <label className="text-[10px] font-bold text-gray-400 uppercase font-black">
+                          Vật tư cần nhập *
                         </label>
                         <button
                           type="button"
                           onClick={() => setShowAddMaterial(true)}
                           className="text-[10px] font-bold text-blue-600 flex items-center gap-1 hover:underline"
-                          title="Thêm vật tư nhanh"
                         >
-                          <PackagePlus size={12} /> Thêm mới
+                          <Plus size={12} /> Thêm vật tư mới
                         </button>
                       </div>
                       <CreatableSelect
@@ -869,10 +916,6 @@ export const StockIn = ({
                               'Vui lòng chọn vật tư có trong Danh mục. Hoặc click nút Thêm mới ở trên để tạo.',
                               'info',
                             );
-                          else
-                            alert(
-                              'Vui lòng chọn vật tư có trong Danh mục. Hoặc click nút Thêm mới ở trên để tạo.',
-                            );
                         }}
                         placeholder="Chọn vật tư..."
                         required
@@ -890,8 +933,6 @@ export const StockIn = ({
                         className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-blue-500/20 resize-none"
                       />
                     </div>
-
-                    {/* Moved Quantity and Total Amount to the right column */}
                   </div>
 
                   <div className="space-y-4">
@@ -905,47 +946,65 @@ export const StockIn = ({
                       required
                     />
 
-                    <NumericInput
-                      label="Số lượng nhập *"
-                      required
-                      value={formData.quantity}
-                      onChange={(val) => setFormData({ ...formData, quantity: val })}
-                      showControls
-                    />
-
                     <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-bold text-gray-400 uppercase">
+                          Số lượng
+                        </label>
+                        <NumericInput
+                          value={formData.quantity}
+                          onChange={(val) => setFormData({ ...formData, quantity: val })}
+                          placeholder="Nhập SL..."
+                        />
+                      </div>
                       <div className="space-y-1">
                         <label className="text-[10px] font-bold text-gray-400 uppercase">
                           Đơn vị tính
                         </label>
-                        <input
-                          type="text"
+                        <CreatableSelect
+                          options={Array.from(new Set(materials.map((m) => m.unit))).map((u) => ({
+                            id: String(u),
+                            name: String(u),
+                          }))}
                           value={formData.unit}
-                          onChange={(e) => setFormData({ ...formData, unit: e.target.value })}
-                          className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-blue-500/20"
+                          onChange={(val) => setFormData({ ...formData, unit: val })}
+                          placeholder="ĐVT..."
                         />
                       </div>
-
-                      <NumericInput
-                        label="Đơn giá"
-                        value={formData.unit_price}
-                        onChange={(val) => setFormData({ ...formData, unit_price: val })}
-                        showControls={false}
-                        step={1000}
-                      />
                     </div>
 
-                    <div className="space-y-1">
-                      <label className="text-[10px] font-bold text-gray-400 uppercase">
-                        Thành tiền
-                      </label>
-                      <div className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm text-center bg-gray-50 outline-none font-bold text-blue-600">
-                        {formatCurrency(formData.quantity * formData.unit_price)}
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-bold text-gray-400 uppercase">
+                          Đơn giá nhập
+                        </label>
+                        <NumericInput
+                          value={formData.unit_price}
+                          onChange={(val) => setFormData({ ...formData, unit_price: val })}
+                          placeholder="Đơn giá..."
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-bold text-gray-400 uppercase">
+                          Thành tiền
+                        </label>
+                        <div className="w-full px-4 py-2.5 rounded-xl bg-gray-50 border border-gray-100 text-sm font-bold text-primary shadow-inner text-center">
+                          {formatCurrency(formData.quantity * formData.unit_price)}
+                        </div>
                       </div>
                     </div>
                   </div>
 
-                  <div className="md:col-span-2 flex justify-end gap-3 mt-4">
+                  <div className="md:col-span-2 pt-4 border-t border-gray-100">
+                    <ImageCapture
+                      maxImages={1}
+                      existingImages={formData.image_url ? [formData.image_url] : []}
+                      onUpload={(urls) => setFormData({ ...formData, image_url: urls[0] || '' })}
+                      label="Ảnh minh chứng (Hóa đơn, Vật tư thực tế...)"
+                    />
+                  </div>
+
+                  <div className="md:col-span-2 flex justify-end gap-3 mt-4 pt-6 border-t border-gray-100">
                     <Button variant="outline" onClick={() => setShowModal(false)}>
                       Hủy
                     </Button>

@@ -13,6 +13,7 @@ import {
   Package,
   Layers,
   ClipboardCheck,
+  ClipboardList,
   BarChart3,
 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
@@ -152,6 +153,13 @@ export const Dashboard = ({ user, onNavigate, addToast, pendingApprovals = 0 }: 
       icon: FileText,
       color: 'bg-orange-600',
       description: 'Ghi chép nhật ký công việc',
+    },
+    {
+      id: 'construction-diary',
+      label: 'Nhật ký thi công',
+      icon: ClipboardList,
+      color: 'bg-primary',
+      description: 'Ghi chép diễn biến công trường',
     },
   ];
 
@@ -304,6 +312,13 @@ const RadialMenu = ({ onNavigate }: { onNavigate: (page: string, params?: any) =
       icon: Bell,
       color: 'bg-primary',
       action: () => onNavigate('reminders', { action: 'add' }),
+    },
+    {
+      id: 'construction-diary',
+      label: 'Nhật ký',
+      icon: ClipboardList,
+      color: 'bg-primary',
+      action: () => onNavigate('construction-diary'),
     },
   ];
 

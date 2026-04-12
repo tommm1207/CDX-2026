@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import {
   Filter,
   RotateCcw,
@@ -19,7 +19,7 @@ import { CustomCombobox } from '../shared/CustomCombobox';
 import { DetailItem } from '../shared/DetailItem';
 import { ToastType } from '../shared/Toast';
 import { formatCurrency, formatDate, numberToWords } from '@/utils/format';
-import { isUUID } from '@/utils/helpers';
+import { isUUID, getAllowedWarehouses } from '@/utils/helpers';
 
 export const CostFilter = ({
   user,
@@ -58,8 +58,11 @@ export const CostFilter = ({
   }, []);
 
   const fetchFilterOptions = async () => {
-    // Fetch unique categories
-    const { data: catData } = await supabase.from('costs').select('cost_type');
+    // Fetch unique categories (exclude deleted)
+    const { data: catData } = await supabase
+      .from('costs')
+      .select('cost_type')
+      .neq('status', 'Đã xóa');
     if (catData) {
       const unique = Array.from(new Set(catData.map((i) => i.cost_type).filter(Boolean))).map(
         (name, id) => ({ id, name }),
@@ -83,8 +86,11 @@ export const CostFilter = ({
     const { data: empData } = await empQuery;
     if (empData) setEmployees(empData.map((e) => ({ id: e.id, name: e.full_name })));
 
-    // Fetch unique contents
-    const { data: contentData } = await supabase.from('costs').select('content');
+    // Fetch unique contents (exclude deleted)
+    const { data: contentData } = await supabase
+      .from('costs')
+      .select('content')
+      .neq('status', 'Đã xóa');
     if (contentData) {
       const unique = Array.from(new Set(contentData.map((i) => i.content).filter(Boolean))).map(
         (name, id) => ({ id, name }),
@@ -93,14 +99,20 @@ export const CostFilter = ({
     }
   };
 
-  const handleFilter = async () => {
+  const handleFilter = useCallback(async () => {
     setLoading(true);
     try {
       let query = supabase
         .from('costs')
         .select('*, users(full_name), warehouses(name), materials(name)')
+        .neq('status', 'Đã xóa')
         .gte('date', filters.fromDate)
         .lte('date', filters.toDate);
+
+      const allowedWhIds = getAllowedWarehouses(user.data_view_permission);
+      if (allowedWhIds) {
+        query = query.in('warehouse_id', allowedWhIds);
+      }
 
       if (filters.category) {
         const cat = categories.find(
@@ -138,7 +150,14 @@ export const CostFilter = ({
     } finally {
       setLoading(false);
     }
-  };
+  }, [filters, user.data_view_permission, categories, warehouses, employees, contents, addToast]);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      handleFilter();
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [handleFilter]);
 
   const resetFilters = () => {
     setIsResetting(true);
@@ -259,14 +278,9 @@ export const CostFilter = ({
                 </div>
               </div>
 
-              <button
-                onClick={handleFilter}
-                disabled={loading}
-                className="w-full py-3 rounded-xl bg-primary text-white font-bold text-sm shadow-lg shadow-primary/20 hover:bg-primary-hover transition-all flex items-center justify-center gap-2"
-              >
-                {loading ? <RotateCcw size={18} className="animate-spin" /> : <Search size={18} />}
-                Tìm kiếm
-              </button>
+              <div className="pt-2 italic text-[10px] text-gray-400 text-center">
+                * Kết quả tự động cập nhật khi thay đổi bộ lọc
+              </div>
             </div>
           </div>
         </div>

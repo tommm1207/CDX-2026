@@ -371,21 +371,13 @@ app.use(bodyParser.urlencoded({ limit: '50mb', extended: true }));
 async function initBackupScheduler() {
   console.log("[BACKUP] Initializing Backup Scheduler...");
 
-  const { data: configs } = await supabase
-    .from('system_configs')
-    .select('value')
-    .like('key', 'backup_settings_%');
-
-  if (configs && configs.length > 0) {
-    // For local Express server, we currently only support one cron job in this simple implementation.
-    // However, the auto-cron serverless function handles multiple users by iterating.
-    // For local dev, let's just pick the first one or logic that covers all.
-    // A better approach is multiple jobs or a single minute-by-minute job.
-
-    // To keep it simple and consistent with serverless, we'll run a job every minute that checks all configs.
-    cron.schedule("* * * * *", runAutoBackup);
-    console.log("[BACKUP] Global scheduler started (checks all user configs every minute).");
-  }
+  // We run a global scheduler every minute that checks all configs in the background.
+  // This is more robust as it handles dynamic config changes without requiring a server restart.
+  cron.schedule("* * * * *", () => {
+    runAutoBackup();
+  });
+  
+  console.log("[BACKUP] Global minute-by-minute scheduler started.");
 }
 
 // Gọi khởi tạo lần đầu (Khi server start)

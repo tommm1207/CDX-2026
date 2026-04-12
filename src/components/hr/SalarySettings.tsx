@@ -40,6 +40,7 @@ export const SalarySettings = ({
       .from('users')
       .select('*')
       .neq('status', 'Nghỉ việc')
+      .neq('status', 'Đã xóa')
       .eq('has_salary', true);
     if (user.role !== 'Admin App') {
       empQuery = empQuery.neq('role', 'Admin App');
@@ -94,7 +95,7 @@ export const SalarySettings = ({
   };
 
   return (
-    <div className="p-4 md:p-6 space-y-6 pb-44">
+    <div className="p-4 md:p-6 space-y-6 pb-24">
       <PageBreadcrumb title="Cài đặt lương" onBack={onBack} />
 
       <div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
@@ -158,7 +159,7 @@ export const SalarySettings = ({
               initial={{ opacity: 0, scale: 0.95, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 20 }}
-              className="bg-white rounded-[2rem] md:rounded-[2.5rem] shadow-2xl w-full max-w-md overflow-hidden m-4"
+              className="bg-white rounded-[2rem] md:rounded-[2.5rem] shadow-2xl w-full max-w-md overflow-hidden"
               onClick={(e) => e.stopPropagation()}
             >
               <div className="bg-primary p-6 text-white flex items-center justify-between transition-colors">

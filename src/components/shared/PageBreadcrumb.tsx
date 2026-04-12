@@ -21,7 +21,9 @@ export const PageBreadcrumb = ({ title, onBack }: { title: string; onBack?: () =
           <span>Hệ thống</span>
           <ChevronRight size={10} />
         </div>
-        <h2 className="text-lg font-bold text-gray-800 leading-none">{title}</h2>
+        <h2 className="text-lg font-bold text-gray-800 leading-tight truncate max-w-[calc(100vw-120px)] sm:max-w-none">
+          {title}
+        </h2>
       </div>
     </motion.div>
   );

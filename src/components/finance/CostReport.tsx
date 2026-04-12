@@ -22,7 +22,7 @@ import { NumericInput } from '../shared/NumericInput';
 import { CreatableSelect } from '../shared/CreatableSelect';
 import { ToastType } from '../shared/Toast';
 import { formatCurrency, formatDate, numberToWords } from '@/utils/format';
-import { isUUID } from '@/utils/helpers';
+import { isUUID, getAllowedWarehouses } from '@/utils/helpers';
 import { Button } from '../shared/Button';
 import { FAB } from '../shared/FAB';
 import { ExcelButton } from '../shared/ExcelButton';
@@ -88,11 +88,17 @@ export const CostReport = ({
 
   const fetchCosts = async () => {
     setLoading(true);
-    const { data, error } = await supabase
+    let query = supabase
       .from('costs')
       .select('*, users(full_name), warehouses(name), materials(name)')
-      .or('status.is.null,status.neq.Đã xóa')
-      .order('date', { ascending: false });
+      .or('status.is.null,status.neq.Đã xóa');
+
+    const allowedWhIds = getAllowedWarehouses(user.data_view_permission);
+    if (allowedWhIds) {
+      query = query.in('warehouse_id', allowedWhIds);
+    }
+
+    const { data, error } = await query.order('date', { ascending: false });
 
     if (error) {
       console.error('Error fetching costs:', error);
@@ -434,7 +440,7 @@ export const CostReport = ({
   };
 
   return (
-    <div className="p-4 md:p-6 space-y-6 pb-44 overflow-x-hidden">
+    <div className="p-4 md:p-6 space-y-6 pb-24 overflow-x-hidden">
       <div className="flex items-center justify-between gap-2">
         <PageBreadcrumb title="Báo cáo chi phí" onBack={onBack} />
         <div className="flex items-center gap-2">

@@ -175,10 +175,12 @@ export interface Reminder {
 
 export interface BOMConfig {
   id: string;
+  bom_code: string;
   product_item_id: string;
   name: string;
   is_two_stage?: boolean;
   notes?: string;
+  status?: string;
   created_at?: string;
 }
 
@@ -203,4 +205,23 @@ export interface ProductionOrder {
   approved_by?: string;
   notes?: string;
   created_at?: string;
+}
+
+export interface ConstructionDiary {
+  id: string;
+  diary_code?: string;
+  date: string;
+  weather?: string;
+  temperature?: string;
+  labor_info?: string;
+  equipment_info?: string;
+  work_progress: string;
+  quality_issues?: string;
+  supervision_comments?: string;
+  image_urls?: string[];
+  warehouse_id?: string;
+  created_by: string;
+  status?: string;
+  created_at?: string;
+  updated_at?: string;
 }

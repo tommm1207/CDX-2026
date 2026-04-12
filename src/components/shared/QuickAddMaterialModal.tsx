@@ -2,7 +2,9 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { X, PackagePlus } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
-import { generateNextMaterialCode } from '@/utils/inventory';
+import { generateNextMaterialCode, generateNextGroupCode } from '@/utils/inventory';
+import { isUUID } from '@/utils/helpers';
+import { CreatableSelect } from './CreatableSelect';
 
 interface QuickAddMaterialModalProps {
   show: boolean;
@@ -29,7 +31,7 @@ export const QuickAddMaterialModal = ({
 
   const handleGroupChange = async (val: string) => {
     setGroupId(val);
-    if (val) {
+    if (val && isUUID(val)) {
       const nextCode = await generateNextMaterialCode(val);
       setCode(nextCode);
     } else {
@@ -50,12 +52,30 @@ export const QuickAddMaterialModal = ({
 
     setLoading(true);
     try {
-      const finalCode = code || (await generateNextMaterialCode(groupId));
+      let finalGroupId = groupId;
+      if (groupId && !isUUID(groupId)) {
+        const groupByName = groups.find((g) => g.name.toLowerCase() === groupId.toLowerCase());
+        if (groupByName) {
+          finalGroupId = groupByName.id;
+        } else {
+          const generatedGroupCode = await generateNextGroupCode();
+          const { data: newGroup, error: groupErr } = await supabase
+            .from('material_groups')
+            .insert([{ name: groupId, code: generatedGroupCode }])
+            .select();
+          if (groupErr) throw groupErr;
+          if (newGroup) {
+            finalGroupId = newGroup[0].id;
+          }
+        }
+      }
+
+      const finalCode = code || (await generateNextMaterialCode(finalGroupId));
       const payload = {
         name,
         code: finalCode,
         unit: unit || 'Cái',
-        group_id: groupId,
+        group_id: finalGroupId,
         specification: spec,
         description: desc,
         status: 'Đang sử dụng',
@@ -118,31 +138,22 @@ export const QuickAddMaterialModal = ({
                   <label className="text-[10px] font-bold text-gray-400 uppercase">
                     Nhóm vật tư *
                   </label>
-                  <select
-                    required
+                  <CreatableSelect
                     value={groupId}
-                    onChange={(e) => handleGroupChange(e.target.value)}
-                    className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-blue-600/20"
-                  >
-                    <option value="">-- Chọn nhóm --</option>
-                    {groups.map((g) => (
-                      <option key={g.id} value={g.id}>
-                        {g.name} ({g.code})
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div className="md:col-span-2 space-y-1">
-                  <label className="text-[10px] font-bold text-gray-400 uppercase">
-                    Mã vật tư (Tự động)
-                  </label>
-                  <input
-                    type="text"
-                    value={code}
-                    onChange={(e) => setCode(e.target.value)}
-                    placeholder="Chọn nhóm để sinh mã..."
-                    className="w-full px-4 py-2 rounded-xl border border-gray-100 bg-gray-50 text-sm outline-none font-mono"
+                    options={groups}
+                    onChange={(val) => handleGroupChange(val)}
+                    onCreate={(val) => handleGroupChange(val)}
+                    placeholder="Chọn hoặc nhập tên nhóm mới..."
+                    required
                   />
+                </div>
+                <div className="md:col-span-2 space-y-2 mb-2">
+                  <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">
+                    Mã tham chiếu (Vật tư)
+                  </label>
+                  <div className="bg-primary/5 px-5 py-3.5 rounded-2xl border border-primary/10 text-sm font-black text-primary uppercase shadow-inner italic">
+                    {code || (groupId ? 'VAT-001' : 'VAT-[NHÓM]-001')}
+                  </div>
                 </div>
                 <div className="md:col-span-2 space-y-1">
                   <label className="text-[10px] font-bold text-gray-400 uppercase">

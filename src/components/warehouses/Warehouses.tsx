@@ -7,6 +7,7 @@ import { PageBreadcrumb } from '../shared/PageBreadcrumb';
 import { ToastType } from '../shared/Toast';
 import { Button } from '../shared/Button';
 import { FAB } from '../shared/FAB';
+import { SortButton, SortOption } from '../shared/SortButton';
 import { checkUsage } from '@/utils/dataIntegrity';
 
 export const Warehouses = ({
@@ -25,8 +26,15 @@ export const Warehouses = ({
   const [showFilter, setShowFilter] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
+  const [sortBy, setSortBy] = useState<SortOption>(
+    (localStorage.getItem(`sort_pref_warehouses_${user.id}`) as SortOption) || 'newest',
+  );
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [itemToDelete, setItemToDelete] = useState<string | null>(null);
+  const [usageInfo, setUsageInfo] = useState<{ inUse: boolean; tables: string[] }>({
+    inUse: false,
+    tables: [],
+  });
 
   const initialFormState = {
     id: '',
@@ -53,7 +61,7 @@ export const Warehouses = ({
         .from('warehouses')
         .select('*, users(full_name)')
         .or('status.is.null,status.neq.Đã xóa')
-        .order('created_at', { ascending: false });
+        .order('code', { ascending: true });
 
       if (error) {
         console.error('Error fetching warehouses with join:', error);
@@ -61,7 +69,7 @@ export const Warehouses = ({
           .from('warehouses')
           .select('*')
           .or('status.is.null,status.neq.Đã xóa')
-          .order('created_at', { ascending: false });
+          .order('code', { ascending: true });
 
         if (simpleError) throw simpleError;
         setWarehouses(simpleData || []);
@@ -97,16 +105,16 @@ export const Warehouses = ({
 
       if (data && data.length > 0 && data[0].code) {
         const lastCode = data[0].code;
-        const lastNumber = parseInt(lastCode.replace('WH', ''));
+        const lastNumber = parseInt(lastCode.replace('KH', ''));
         if (!isNaN(lastNumber)) {
           const nextNumber = lastNumber + 1;
-          return `WH${nextNumber.toString().padStart(3, '0')}`;
+          return `KH${nextNumber.toString().padStart(3, '0')}`;
         }
       }
-      return 'WH001';
+      return 'KH001';
     } catch (err) {
       console.error('Error generating warehouse code:', err);
-      return 'WH001';
+      return 'KH001';
     }
   };
 
@@ -154,8 +162,10 @@ export const Warehouses = ({
     setShowModal(true);
   };
 
-  const handleDeleteClick = (id: string) => {
+  const handleDeleteClick = async (id: string) => {
     setItemToDelete(id);
+    const usage = await checkUsage('warehouse', id);
+    setUsageInfo(usage);
     setShowDeleteModal(true);
   };
 
@@ -163,14 +173,12 @@ export const Warehouses = ({
     if (!itemToDelete) return;
 
     // Check usage before soft delete
-    const usage = await checkUsage('warehouse', itemToDelete);
-    if (usage.inUse) {
+    if (usageInfo.inUse) {
       if (addToast)
         addToast(
-          `Không thể xóa vì kho đang có dữ liệu liên quan: ${usage.tables.join(', ')}`,
+          `Không thể xóa vì kho đang có dữ liệu liên quan: ${usageInfo.tables.join(', ')}`,
           'error',
         );
-      setShowDeleteModal(false);
       return;
     }
 
@@ -191,6 +199,39 @@ export const Warehouses = ({
     setShowDeleteModal(false);
   };
 
+  const handlePermanentDelete = async () => {
+    if (!itemToDelete || user.role !== 'Admin App') return;
+
+    if (
+      !window.confirm(
+        'CẢNH BÁO: Hành động này sẽ xóa VĨNH VIỄN kho này khỏi cơ sở dữ liệu. Bạn có chắc chắn muốn tiếp tục?',
+      )
+    ) {
+      return;
+    }
+
+    setSubmitting(true);
+    try {
+      const { error } = await supabase.from('warehouses').delete().eq('id', itemToDelete);
+
+      if (error) {
+        let msg = error.message;
+        if (msg.includes('foreign key constraint')) {
+          msg = `Không thể xóa vĩnh viễn vì vẫn còn dữ liệu liên kết vật lý trong DB (${usageInfo.tables.join(', ')}). Vui lòng xóa các dữ liệu này trước.`;
+        }
+        throw new Error(msg);
+      }
+
+      if (addToast) addToast('Đã xóa vĩnh viễn kho khỏi hệ thống', 'success');
+      fetchWarehouses();
+      setShowDeleteModal(false);
+    } catch (err: any) {
+      if (addToast) addToast('Lỗi xóa vĩnh viễn: ' + err.message, 'error');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   const openInGoogleMaps = (coords: string) => {
     if (!coords) return;
     if (coords.startsWith('http')) {
@@ -204,19 +245,32 @@ export const Warehouses = ({
   };
 
   return (
-    <div className="p-4 md:p-6 space-y-6 pb-44">
+    <div className="p-4 md:p-6 space-y-6 pb-24">
       <div className="flex items-center justify-between gap-2">
         <PageBreadcrumb title="Danh sách Kho" onBack={onBack} />
-        <button
-          onClick={() => setShowFilter((f) => !f)}
-          className={`p-2.5 rounded-xl border transition-colors ${
-            showFilter
-              ? 'bg-primary text-white border-primary'
-              : 'bg-white text-gray-500 border-gray-200 hover:border-primary/40'
-          }`}
-        >
-          <Search size={16} />
-        </button>
+        <div className="flex items-center gap-2">
+          <SortButton
+            currentSort={sortBy}
+            onSortChange={(val) => {
+              setSortBy(val);
+              localStorage.setItem(`sort_pref_warehouses_${user.id}`, val);
+            }}
+            options={[
+              { value: 'code', label: 'Mã hiệu' },
+              { value: 'newest', label: 'Mới nhất' },
+            ]}
+          />
+          <button
+            onClick={() => setShowFilter((f) => !f)}
+            className={`p-2.5 rounded-xl border transition-colors ${
+              showFilter
+                ? 'bg-primary text-white border-primary'
+                : 'bg-white text-gray-500 border-gray-200 hover:border-primary/40'
+            }`}
+          >
+            <Search size={16} />
+          </button>
+        </div>
       </div>
 
       <AnimatePresence>
@@ -327,60 +381,70 @@ export const Warehouses = ({
                   </td>
                 </tr>
               ) : (
-                warehouses.map((item) => (
-                  <tr
-                    key={item.id}
-                    className="hover:bg-gray-50 transition-colors group cursor-pointer"
-                    onClick={() => handleEdit(item)}
-                  >
-                    <td className="px-4 py-3 text-xs text-gray-600">{item.name}</td>
-                    <td className="px-4 py-3 text-xs text-gray-600">{item.address}</td>
-                    <td className="px-4 py-3 text-xs text-gray-600">
-                      {item.users?.full_name || item.manager_id}
-                    </td>
-                    <td className="px-4 py-3 text-xs text-gray-600">
-                      <div className="flex items-center gap-2">
-                        <span className="truncate max-w-[100px]">{item.coordinates}</span>
-                        {item.coordinates && (
+                warehouses
+                  .sort((a, b) => {
+                    if (sortBy === 'newest')
+                      return (
+                        new Date(b.created_at || '').getTime() -
+                        new Date(a.created_at || '').getTime()
+                      );
+                    if (sortBy === 'code') return (a.code || '').localeCompare(b.code || '');
+                    return 0;
+                  })
+                  .map((item) => (
+                    <tr
+                      key={item.id}
+                      className="hover:bg-gray-50 transition-colors group cursor-pointer"
+                      onClick={() => handleEdit(item)}
+                    >
+                      <td className="px-4 py-3 text-xs text-gray-600">{item.name}</td>
+                      <td className="px-4 py-3 text-xs text-gray-600">{item.address}</td>
+                      <td className="px-4 py-3 text-xs text-gray-600">
+                        {item.users?.full_name || item.manager_id}
+                      </td>
+                      <td className="px-4 py-3 text-xs text-gray-600">
+                        <div className="flex items-center gap-2">
+                          <span className="truncate max-w-[100px]">{item.coordinates}</span>
+                          {item.coordinates && (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                openInGoogleMaps(item.coordinates);
+                              }}
+                              className="p-1 text-primary hover:bg-primary/10 rounded transition-colors"
+                              title="Chỉ đường Google Maps"
+                            >
+                              <Navigation size={12} />
+                            </button>
+                          )}
+                        </div>
+                      </td>
+                      <td className="px-4 py-3 text-xs text-gray-600">{item.notes}</td>
+                      <td className="px-4 py-3 text-xs text-gray-600">{item.capacity}</td>
+                      <td className="px-4 py-3 text-center">
+                        <div className="flex items-center justify-center gap-1 transition-opacity">
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
-                              openInGoogleMaps(item.coordinates);
+                              handleEdit(item);
                             }}
-                            className="p-1 text-primary hover:bg-primary/10 rounded transition-colors"
-                            title="Chỉ đường Google Maps"
+                            className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
                           >
-                            <Navigation size={12} />
+                            <Edit size={14} />
                           </button>
-                        )}
-                      </div>
-                    </td>
-                    <td className="px-4 py-3 text-xs text-gray-600">{item.notes}</td>
-                    <td className="px-4 py-3 text-xs text-gray-600">{item.capacity}</td>
-                    <td className="px-4 py-3 text-center">
-                      <div className="flex items-center justify-center gap-1 transition-opacity">
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleEdit(item);
-                          }}
-                          className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                        >
-                          <Edit size={14} />
-                        </button>
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleDeleteClick(item.id);
-                          }}
-                          className="p-1.5 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                        >
-                          <Trash2 size={14} />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDeleteClick(item.id);
+                            }}
+                            className="p-1.5 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))
               )}
             </tbody>
           </table>
@@ -404,21 +468,47 @@ export const Warehouses = ({
               <div className="w-16 h-16 bg-red-50 text-red-600 rounded-full flex items-center justify-center mx-auto mb-4">
                 <Trash2 size={32} />
               </div>
-              <h3 className="text-lg font-bold text-gray-800 mb-2">Chuyển vào thùng rác?</h3>
-              <p className="text-sm text-gray-500 mb-6">
-                Bạn có chắc chắn muốn chuyển kho{' '}
-                <strong>
-                  {warehouses.find((w) => w.id === itemToDelete)?.code || itemToDelete?.slice(0, 8)}
-                </strong>{' '}
-                vào thùng rác?
-              </p>
-              <div className="flex gap-3">
-                <Button variant="outline" fullWidth onClick={() => setShowDeleteModal(false)}>
-                  Hủy bỏ
-                </Button>
-                <Button variant="danger" fullWidth onClick={confirmDelete}>
-                  Di chuyển
-                </Button>
+              <h3 className="text-lg font-bold text-gray-800 mb-2">Xóa thông tin kho?</h3>
+              <div className="text-sm text-gray-500 mb-6 space-y-2 text-left bg-gray-50 p-4 rounded-xl border border-gray-100">
+                <p>
+                  Kho: <strong>{warehouses.find((w) => w.id === itemToDelete)?.name}</strong>
+                </p>
+                {usageInfo.inUse ? (
+                  <p className="text-red-500 font-bold">
+                    ⚠️ KHÔNG THỂ XÓA MỀM vì đang có: {usageInfo.tables.join(', ')}
+                  </p>
+                ) : (
+                  <p className="text-green-600">✅ Có thể chuyển vào thùng rác.</p>
+                )}
+                <p className="text-[10px] italic">
+                  * Dữ liệu trong thùng rác có thể khôi phục, xóa vĩnh viễn sẽ mất hoàn toàn.
+                </p>
+              </div>
+              <div className="flex flex-col gap-2">
+                <div className="grid grid-cols-2 gap-2">
+                  <Button variant="outline" fullWidth onClick={() => setShowDeleteModal(false)}>
+                    Hủy bỏ
+                  </Button>
+                  <Button
+                    variant="danger"
+                    fullWidth
+                    onClick={confirmDelete}
+                    disabled={usageInfo.inUse}
+                  >
+                    Thùng rác
+                  </Button>
+                </div>
+                {user.role === 'Admin App' && (
+                  <Button
+                    variant="ghost"
+                    className="text-red-700 bg-red-50 hover:bg-red-100 border border-red-200"
+                    fullWidth
+                    onClick={handlePermanentDelete}
+                    isLoading={submitting}
+                  >
+                    XÓA VĨNH VIỄN (ADMIN APP)
+                  </Button>
+                )}
               </div>
             </motion.div>
           </div>
@@ -435,7 +525,7 @@ export const Warehouses = ({
               initial={{ opacity: 0, scale: 0.95, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 20 }}
-              className="bg-white rounded-3xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col my-8"
+              className="bg-white rounded-3xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col"
               onClick={(e) => e.stopPropagation()}
             >
               <div className="bg-primary p-6 text-white flex items-center justify-between rounded-t-3xl flex-shrink-0">
@@ -459,19 +549,13 @@ export const Warehouses = ({
                 <form onSubmit={handleSubmit} className="p-6">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div className="space-y-4">
-                      <div className="space-y-1">
-                        <label className="text-[10px] font-bold text-gray-400 uppercase">
-                          Mã kho
+                      <div className="md:col-span-2 space-y-2 mb-2">
+                        <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">
+                          Mã tham chiếu (Kho vật tư)
                         </label>
-                        <input
-                          required
-                          type="text"
-                          disabled={isEditing}
-                          placeholder="Ví dụ: WH001"
-                          value={formData.code}
-                          onChange={(e) => setFormData({ ...formData, code: e.target.value })}
-                          className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20 disabled:bg-gray-50"
-                        />
+                        <div className="bg-primary/5 px-5 py-3.5 rounded-2xl border border-primary/10 text-sm font-black text-primary uppercase shadow-inner italic">
+                          {formData.code || 'KH-001'}
+                        </div>
                       </div>
                       <div className="space-y-1">
                         <label className="text-[10px] font-bold text-gray-400 uppercase">

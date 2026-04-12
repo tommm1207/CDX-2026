@@ -141,12 +141,26 @@ export const BackupNow = ({
 
       setStatus('Đang tạo file Excel...');
       const fileName = `CDX_Full_Backup_${new Date().toISOString().split('T')[0]}.xlsx`;
+      const buffer = await workbook.xlsx.writeBuffer();
+
+      // --- NEW: Trực tiếp tải về máy local ---
+      const blob = new Blob([buffer], {
+        type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', fileName);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+      // ----------------------------------------
 
       const email = localStorage.getItem('backup_email');
 
       if (email) {
         setStatus(`Đang gửi email tới ${email}...`);
-        const buffer = await workbook.xlsx.writeBuffer();
 
         // Chuyển Buffer sang Base64
         const uint8Array = new Uint8Array(buffer);
@@ -179,7 +193,8 @@ export const BackupNow = ({
 
       setStatus('Hoàn tất!');
       addToast(
-        'Sao lưu toàn bộ dữ liệu thành công!' + (email ? ` Đã gửi tới email ${email}.` : ''),
+        'Sao lưu toàn bộ dữ liệu thành công! File đã được tải về máy.' +
+          (email ? ` Đồng thời đã gửi tới email ${email}.` : ''),
         'success',
       );
     } catch (err: any) {

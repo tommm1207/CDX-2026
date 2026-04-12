@@ -132,7 +132,7 @@ export const Reminders = ({
           })
           .catch((e) => console.warn('[CDX Push] Edge function error:', e));
 
-        if (addToast) addToast('Đã thêm mới lịch nhắc thành công', 'success');
+        if (addToast) addToast('Đã thêm mới thông báo thành công', 'success');
       }
 
       setShowSetReminder(false);
@@ -185,7 +185,7 @@ export const Reminders = ({
         .update({ status: 'Đã xóa' })
         .eq('id', deletingId);
       if (error) throw error;
-      if (addToast) addToast('Đã chuyển lịch nhắc vào thùng rác', 'success');
+      if (addToast) addToast('Đã chuyển thông báo vào thùng rác', 'success');
       setDeletingId(null);
       fetchData();
     } catch (err: any) {
@@ -207,7 +207,7 @@ export const Reminders = ({
       const { error } = await supabase.from('reminders').delete().in('id', idsToDelete);
       if (error) throw error;
 
-      if (addToast) addToast(`Đã xóa vĩnh viễn ${idsToDelete.length} lịch nhắc`, 'success');
+      if (addToast) addToast(`Đã xóa vĩnh viễn ${idsToDelete.length} thông báo`, 'success');
       setShowDeleteAllConfirm(false);
       fetchData();
     } catch (err: any) {
@@ -230,7 +230,7 @@ export const Reminders = ({
   return (
     <div className="p-4 md:p-6 space-y-6">
       <div className="flex items-center justify-between gap-2">
-        <PageBreadcrumb title="Thiết lập Lịch nhắc" onBack={onBack} />
+        <PageBreadcrumb title="Thiết lập Thông báo" onBack={onBack} />
         <div className="flex items-center gap-2">
           {filteredReminders.length > 0 && (
             <Button
@@ -326,7 +326,7 @@ export const Reminders = ({
       <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
         <div className="p-4 border-b border-gray-50 flex items-center justify-between bg-primary/5">
           <h3 className="text-sm font-bold text-primary flex items-center gap-2 uppercase tracking-wider">
-            <Bell size={18} /> Danh sách lịch nhắc tháng {new Date().getMonth() + 1}/
+            <Bell size={18} /> Danh sách thông báo tháng {new Date().getMonth() + 1}/
             {new Date().getFullYear()}
           </h3>
         </div>
@@ -364,7 +364,7 @@ export const Reminders = ({
               ) : filteredReminders.length === 0 ? (
                 <tr>
                   <td colSpan={7} className="px-4 py-8 text-center text-gray-400 italic">
-                    Không có lịch nhắc nào
+                    Không có thông báo nào
                   </td>
                 </tr>
               ) : (
@@ -480,7 +480,7 @@ export const Reminders = ({
               initial={{ opacity: 0, scale: 0.95, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 20 }}
-              className="bg-white rounded-[2rem] md:rounded-[2.5rem] shadow-2xl w-[calc(100%-32px)] md:w-full max-w-lg overflow-hidden relative z-10 m-4 flex flex-col max-h-[calc(100vh-40px)]"
+              className="bg-white rounded-[2rem] md:rounded-[2.5rem] shadow-2xl w-full max-w-lg overflow-hidden relative z-10 flex flex-col max-h-[calc(100vh-40px)]"
               onClick={(e) => e.stopPropagation()}
             >
               <div className="p-6 text-white flex items-center justify-between bg-primary rounded-t-[2rem] md:rounded-t-[2.5rem] flex-shrink-0">
@@ -492,7 +492,7 @@ export const Reminders = ({
                     <Bell size={20} />
                   </div>
                   <h3 className="text-lg font-bold uppercase tracking-wide">
-                    {editingId ? 'Sửa lịch nhắc' : 'Đặt lịch nhắc'}
+                    {editingId ? 'Sửa thông báo' : 'Tạo thông báo'}
                   </h3>
                 </div>
                 <button
@@ -503,6 +503,16 @@ export const Reminders = ({
                 </button>
               </div>
               <div className="p-6 space-y-4 overflow-y-auto overflow-x-hidden flex-1 custom-scrollbar">
+                <div className="space-y-2 mb-2">
+                  <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">
+                    Mã tham chiếu (Thông báo)
+                  </label>
+                  <div className="bg-primary/5 px-5 py-3.5 rounded-2xl border border-primary/10 text-sm font-black text-primary uppercase shadow-inner italic">
+                    {editingId
+                      ? `TB-${new Date(reminders.find((r) => r.id === editingId)?.created_at).toISOString().slice(2, 10).replace(/-/g, '')}-${editingId.slice(0, 3).toUpperCase()}`
+                      : `TB-${new Date().toISOString().slice(2, 10).replace(/-/g, '')}-001`}
+                  </div>
+                </div>
                 <div>
                   <label className="text-[10px] font-bold text-gray-400 uppercase">
                     Tiêu đề <span className="text-red-500">*</span>
@@ -631,7 +641,7 @@ export const Reminders = ({
               initial={{ opacity: 0, scale: 0.95, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 20 }}
-              className="bg-white rounded-[2rem] md:rounded-[2.5rem] shadow-2xl w-full max-w-4xl overflow-hidden relative z-10 m-4 flex flex-col"
+              className="bg-white rounded-[2rem] md:rounded-[2.5rem] shadow-2xl w-full max-w-4xl overflow-hidden relative z-10 flex flex-col"
               onClick={(e) => e.stopPropagation()}
             >
               <div className="p-6 text-white flex items-center justify-between bg-primary rounded-t-[2rem] md:rounded-t-[2.5rem] flex-shrink-0">
@@ -765,7 +775,7 @@ export const Reminders = ({
                 </div>
                 <h3 className="text-xl font-bold text-gray-900">Chuyển vào thùng rác?</h3>
                 <p className="text-gray-500 text-sm">
-                  Bạn có chắc chắn muốn chuyển lịch nhắc này vào thùng rác?
+                  Bạn có chắc chắn muốn chuyển thông báo này vào thùng rác?
                 </p>
                 <div className="flex gap-3 pt-4">
                   <Button fullWidth variant="outline" onClick={() => setDeletingId(null)}>
@@ -784,7 +794,7 @@ export const Reminders = ({
       <ConfirmModal
         show={showDeleteAllConfirm}
         title="Xác nhận xóa danh sách"
-        message={`Bạn có chắc chắn muốn chuyển tất cả ${filteredReminders.length} lịch nhắc trong danh sách hiện tại vào thùng rác không?`}
+        message={`Bạn có chắc chắn muốn chuyển tất cả ${filteredReminders.length} thông báo trong danh sách hiện tại vào thùng rác không?`}
         onConfirm={executeDeleteAll}
         onCancel={() => setShowDeleteAllConfirm(false)}
       />
@@ -802,7 +812,7 @@ export const Reminders = ({
           });
           setShowSetReminder(true);
         }}
-        label="Đặt lịch nhắc mới"
+        label="Tạo thông báo mới"
         color="bg-primary"
       />
     </div>

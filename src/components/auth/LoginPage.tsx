@@ -52,9 +52,9 @@ export const LoginPage = ({ onLogin }: { onLogin: (user: Employee) => void }) =>
       let query = supabase.from('users').select('*');
 
       if (isUUID(employeeId)) {
-        query = query.or(`id.eq."${employeeId}",code.eq."${employeeId}"`);
+        query = query.or(`id.eq.${employeeId},code.ilike.${employeeId}`);
       } else {
-        query = query.eq('code', employeeId);
+        query = query.ilike('code', employeeId);
       }
 
       const { data, error: fetchError } = await query.eq('app_pass', password).maybeSingle();

@@ -457,7 +457,7 @@ export const Notes = ({
               initial={{ opacity: 0, scale: 0.95, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 20 }}
-              className="bg-white rounded-[2rem] md:rounded-[2.5rem] shadow-2xl w-[calc(100%-32px)] md:w-full max-w-lg overflow-hidden relative z-10 m-4 flex flex-col max-h-[calc(100vh-40px)]"
+              className="bg-white rounded-[2rem] md:rounded-[2.5rem] shadow-2xl w-full max-w-lg overflow-hidden relative z-10 flex flex-col max-h-[calc(100vh-40px)]"
               onClick={(e) => e.stopPropagation()}
             >
               <div className="p-6 text-white flex items-center justify-between bg-amber-500 rounded-t-[2rem] md:rounded-t-[2.5rem]">
@@ -587,7 +587,7 @@ export const Notes = ({
               initial={{ opacity: 0, scale: 0.95, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 20 }}
-              className="bg-white rounded-[2rem] md:rounded-[2.5rem] shadow-2xl w-full max-w-4xl overflow-hidden relative z-10 m-4 flex flex-col"
+              className="bg-white rounded-[2rem] md:rounded-[2.5rem] shadow-2xl w-full max-w-4xl overflow-hidden relative z-10 flex flex-col"
               onClick={(e) => e.stopPropagation()}
             >
               <div className="p-6 text-white flex items-center justify-between bg-primary rounded-t-[2rem] md:rounded-t-[2.5rem] flex-shrink-0">
@@ -616,6 +616,16 @@ export const Notes = ({
                 </button>
               </div>
               <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-6 max-h-[70vh] overflow-y-auto">
+                <div className="md:col-span-2 space-y-2 mb-2">
+                  <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">
+                    Mã tham chiếu (Ghi chú)
+                  </label>
+                  <div className="bg-primary/5 px-5 py-3.5 rounded-2xl border border-primary/10 text-sm font-black text-primary uppercase shadow-inner italic">
+                    {editingId
+                      ? `GC-${new Date(notes.find((n) => n.id === editingId)?.date).toISOString().slice(2, 10).replace(/-/g, '')}-${editingId.slice(0, 3).toUpperCase()}`
+                      : `GC-${new Date().toISOString().slice(2, 10).replace(/-/g, '')}-001`}
+                  </div>
+                </div>
                 <div className="space-y-4">
                   <div>
                     <label className="text-[10px] font-bold text-gray-400 uppercase">Tiêu đề</label>

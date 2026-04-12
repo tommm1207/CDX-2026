@@ -7,6 +7,7 @@ import { PageBreadcrumb } from '../shared/PageBreadcrumb';
 import { ToastType } from '../shared/Toast';
 import { FAB } from '../shared/FAB';
 import { Button } from '../shared/Button';
+import { SortButton, SortOption } from '../shared/SortButton';
 import { checkUsage } from '@/utils/dataIntegrity';
 
 export const HRRecords = ({
@@ -25,6 +26,13 @@ export const HRRecords = ({
   const [submitting, setSubmitting] = useState(false);
   const [showFilter, setShowFilter] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
+  const [sortBy, setSortBy] = useState<SortOption>(
+    (localStorage.getItem(`sort_pref_hr_${user.id}`) as SortOption) || 'newest',
+  );
+
+  useEffect(() => {
+    localStorage.setItem(`sort_pref_hr_${user.id}`, sortBy);
+  }, [sortBy]);
 
   const initialFormState = {
     id: '',
@@ -71,19 +79,19 @@ export const HRRecords = ({
       const { data } = await supabase
         .from('users')
         .select('code')
-        .like('code', 'cdx%')
+        .like('code', 'CDX%')
         .order('code', { ascending: false })
         .limit(1);
 
       if (data && data.length > 0) {
         const lastCode = data[0].code;
-        const lastNumber = parseInt(lastCode.replace('cdx', ''));
+        const lastNumber = parseInt(lastCode.replace('CDX', ''));
         if (!isNaN(lastNumber)) {
           const nextNumber = lastNumber + 1;
-          return `cdx${nextNumber.toString().padStart(3, '0')}`;
+          return `CDX${nextNumber.toString().padStart(3, '0')}`;
         }
       }
-      return 'cdx001';
+      return 'CDX001';
     } catch (err) {
       console.error('Error generating code:', err);
       return 'cdx001';
@@ -203,30 +211,54 @@ export const HRRecords = ({
     }
   };
 
-  const filteredEmployees = employees.filter((emp) => {
-    const matchesSearch =
-      emp.full_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (emp.code && emp.code.toLowerCase().includes(searchTerm.toLowerCase()));
+  const filteredEmployees = employees
+    .filter((emp) => {
+      const matchesSearch =
+        emp.full_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (emp.code && emp.code.toLowerCase().includes(searchTerm.toLowerCase()));
 
-    if (user.role !== 'Admin App' && emp.role === 'Admin App') {
-      return false;
-    }
-    return matchesSearch;
-  });
+      if (user.role !== 'Admin App' && emp.role === 'Admin App') {
+        return false;
+      }
+      return matchesSearch;
+    })
+    .sort((a, b) => {
+      if (sortBy === 'newest')
+        return new Date(b.created_at || '').getTime() - new Date(a.created_at || '').getTime();
+      if (sortBy === 'code') return (a.code || '').localeCompare(b.code || '');
+      if (sortBy === 'date')
+        return new Date(b.join_date || '').getTime() - new Date(a.join_date || '').getTime();
+      return 0;
+    });
 
   return (
-    <div className="p-4 md:p-6 space-y-6 pb-44 overflow-x-hidden">
+    <div className="p-4 md:p-6 space-y-6 pb-24 overflow-x-hidden">
       <PageBreadcrumb title="Hồ sơ Nhân sự" onBack={onBack} />
       <div className="flex items-center justify-between">
-        <h2 className="text-lg font-bold text-gray-800 flex items-center gap-2">
-          <Users size={20} className="text-primary" /> Hồ sơ Nhân sự
+        <h2 className="text-lg font-bold text-gray-800 flex items-center gap-2 truncate">
+          <Users size={20} className="text-primary flex-shrink-0" />{' '}
+          <span className="truncate">Hồ sơ Nhân sự</span>
         </h2>
-        <Button
-          size="icon"
-          variant={showFilter ? 'primary' : 'outline'}
-          onClick={() => setShowFilter((f) => !f)}
-          icon={Search}
-        />
+        <div className="flex items-center gap-2">
+          <SortButton
+            currentSort={sortBy}
+            onSortChange={(val) => {
+              setSortBy(val);
+              localStorage.setItem(`sort_pref_hr_${user.id}`, val);
+            }}
+            options={[
+              { value: 'code', label: 'Mã hiệu' },
+              { value: 'newest', label: 'Mới nhất' },
+              { value: 'date', label: 'Ngày vào làm' },
+            ]}
+          />
+          <Button
+            size="icon"
+            variant={showFilter ? 'primary' : 'outline'}
+            onClick={() => setShowFilter((f) => !f)}
+            icon={Search}
+          />
+        </div>
       </div>
 
       <div className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 space-y-4">
@@ -398,7 +430,7 @@ export const HRRecords = ({
               initial={{ opacity: 0, scale: 0.95, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 20 }}
-              className="bg-white rounded-[2rem] md:rounded-[2.5rem] shadow-2xl p-8 max-w-sm w-full text-center m-4 relative z-10"
+              className="bg-white rounded-[2rem] md:rounded-[2.5rem] shadow-2xl p-8 max-w-sm w-full text-center relative z-10"
               onClick={(e) => e.stopPropagation()}
             >
               <div className="w-16 h-16 bg-red-50 text-red-600 rounded-2xl flex items-center justify-center mx-auto mb-4 border border-red-100">
@@ -437,7 +469,7 @@ export const HRRecords = ({
               initial={{ opacity: 0, scale: 0.95, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 20 }}
-              className="bg-white rounded-[2rem] md:rounded-[2.5rem] shadow-2xl w-full max-w-4xl relative z-10 my-8 m-4 max-h-[90vh] flex flex-col overflow-hidden"
+              className="bg-white rounded-[2rem] md:rounded-[2.5rem] shadow-2xl w-full max-w-4xl relative z-10 flex flex-col overflow-hidden max-h-[90vh]"
               onClick={(e) => e.stopPropagation()}
             >
               <div className="bg-primary p-6 flex items-center justify-between text-white rounded-t-[2rem] md:rounded-t-[2.5rem] flex-shrink-0 transition-colors">
@@ -464,18 +496,14 @@ export const HRRecords = ({
                 <form onSubmit={handleSubmit}>
                   <div className="p-6">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      <div className="space-y-1">
-                        <label className="text-[10px] font-bold text-gray-400 uppercase">
-                          Mã nhân viên
+                      <div className="md:col-span-2 space-y-2 mb-2">
+                        <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">
+                          Mã tham chiếu (Nhân viên)
                         </label>
-                        <input
-                          required
-                          type="text"
-                          disabled={isEditing}
-                          value={formData.code}
-                          onChange={(e) => setFormData({ ...formData, code: e.target.value })}
-                          className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20 disabled:bg-gray-50"
-                        />
+                        <div className="bg-primary/5 px-5 py-3.5 rounded-2xl border border-primary/10 text-sm font-black text-primary uppercase shadow-inner italic">
+                          {formData.code ||
+                            `NV-${new Date().toISOString().slice(2, 10).replace(/-/g, '')}-001`}
+                        </div>
                       </div>
                       <div className="space-y-1">
                         <label className="text-[10px] font-bold text-gray-400 uppercase">

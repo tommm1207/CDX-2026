@@ -41,6 +41,7 @@ import { formatCurrency, formatNumber, formatDate } from '@/utils/format';
 import { isUUID, getAllowedWarehouses } from '@/utils/helpers';
 import { isActiveWarehouse } from '@/utils/inventory';
 import { Button } from '../shared/Button';
+import { SortButton, SortOption } from '../shared/SortButton';
 
 export const Costs = ({
   user,
@@ -63,6 +64,7 @@ export const Costs = ({
       setHideBottomNav(showModal || showDetailModal);
     }
   }, [showModal, showDetailModal, setHideBottomNav]);
+
   const [selectedCost, setSelectedCost] = useState<any>(null);
   const [costs, setCosts] = useState<any[]>([]);
   const [materials, setMaterials] = useState<any[]>([]);
@@ -82,6 +84,9 @@ export const Costs = ({
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('Tất cả');
   const [showFilter, setShowFilter] = useState(false);
+  const [sortBy, setSortBy] = useState<SortOption>(
+    (localStorage.getItem(`sort_pref_costs_${user.id}`) as SortOption) || 'newest',
+  );
 
   const [employees, setEmployees] = useState<any[]>([]);
 
@@ -97,7 +102,7 @@ export const Costs = ({
     notes: '',
   };
 
-  const [formData, setFormData] = useState(initialFormState);
+  const [formData, setFormData] = useState<any>(initialFormState);
 
   useEffect(() => {
     fetchCosts();
@@ -137,23 +142,15 @@ export const Costs = ({
         query = query.in('warehouse_id', allowedWhIds);
       }
 
-      const { data, error } = await query.order('date', { ascending: false });
+      const { data, error } = await query.order('cost_code', { ascending: false });
 
       if (error) {
-        console.error('Error fetching costs:', error);
-        const { data: fallbackData, error: fallbackError } = await supabase
-          .from('costs')
-          .select('*')
-          .neq('status', 'Đã xóa')
-          .order('date', { ascending: false });
-        if (fallbackError) throw fallbackError;
-        setCosts(fallbackData || []);
+        setCosts([]);
       } else {
         setCosts(data || []);
       }
     } catch (err: any) {
       if (addToast) addToast('Lỗi tải danh sách chi phí: ' + err.message, 'error');
-      else alert('Lỗi tải danh sách chi phí: ' + err.message);
     } finally {
       setLoading(false);
     }
@@ -212,7 +209,6 @@ export const Costs = ({
   ) => {
     if (!name) return null;
     if (isUUID(name)) return name;
-
     if (table === 'costs') return null;
 
     const existing = currentList.find((item) => item.name.toLowerCase() === name.toLowerCase());
@@ -221,9 +217,9 @@ export const Costs = ({
     let code = '';
     const random = Math.floor(100 + Math.random() * 900);
     if (table === 'warehouses') {
-      code = `K${(currentList.length + 1).toString().padStart(2, '0')}-${random}`;
+      code = `KH${(currentList.length + 1).toString().padStart(2, '0')}-${random}`;
     } else if (table === 'materials') {
-      code = `VT${(currentList.length + 1).toString().padStart(3, '0')}-${random}`;
+      code = `VAT${(currentList.length + 1).toString().padStart(3, '0')}-${random}`;
     }
 
     const { data, error } = await supabase.from(table).insert([{ name, code }]).select();
@@ -237,7 +233,6 @@ export const Costs = ({
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setSubmitting(true);
-
     try {
       const warehouse_id = await ensureValueExists(
         'warehouses',
@@ -245,7 +240,6 @@ export const Costs = ({
         warehouses,
         fetchWarehouses,
       );
-
       const isContentUuid = isUUID(formData.content);
       const finalContent = isContentUuid
         ? materials.find((m) => m.id === formData.content)?.name || formData.content
@@ -257,23 +251,16 @@ export const Costs = ({
         fetchMaterials,
       );
 
-      const dateObj = new Date(formData.date);
-      const d = String(dateObj.getDate()).padStart(2, '0');
-      const m = String(dateObj.getMonth() + 1).padStart(2, '0');
-      const y = String(dateObj.getFullYear()).slice(-2);
-      const random = Math.floor(1000 + Math.random() * 9000);
-      const userPrefix = user.code || user.id.slice(0, 4);
-      const finalCode = `CP-${userPrefix.toUpperCase()}-${d}${m}${y}-${random}`;
-
       const payload: any = {
         date: formData.date,
         transaction_type: formData.transaction_type,
-        cost_code: finalCode,
+        cost_code:
+          formData.cost_code || `CP-${new Date().toISOString().slice(2, 10).replace(/-/g, '')}-001`,
         employee_id: user.id,
         cost_type: formData.cost_type,
         content: finalContent,
-        warehouse_id: warehouse_id,
-        material_id: material_id,
+        warehouse_id,
+        material_id,
         quantity: formData.quantity,
         unit: formData.unit,
         total_amount: formData.total_amount,
@@ -281,39 +268,26 @@ export const Costs = ({
         status: 'Đã duyệt',
       };
 
-      let error;
       if (isEditing && editingId) {
-        const { error: err } = await supabase.from('costs').update(payload).eq('id', editingId);
-        error = err;
+        await supabase.from('costs').update(payload).eq('id', editingId);
       } else {
-        const { error: err } = await supabase.from('costs').insert([payload]);
-        error = err;
+        await supabase.from('costs').insert([payload]);
       }
-
-      if (error) throw error;
 
       setShowModal(false);
       setFormData(initialFormState);
       setIsEditing(false);
       setEditingId(null);
       fetchCosts();
-      fetchCostTypes();
-      fetchUnits();
-      if (addToast)
-        addToast(isEditing ? 'Cập nhật thành công!' : 'Nhập chi phí thành công!', 'success');
+      if (addToast) addToast(isEditing ? 'Cập nhật thành công!' : 'Lưu thành công!', 'success');
     } catch (err: any) {
       if (addToast) addToast('Lỗi: ' + err.message, 'error');
-      else alert('Lỗi: ' + err.message);
     } finally {
       setSubmitting(false);
     }
   };
 
   const handleEdit = (item: any) => {
-    if (item.notes?.includes('Tự động tạo từ hệ thống')) {
-      if (addToast) addToast('Bút toán tự động từ hệ thống không được phép thay đổi.', 'error');
-      return;
-    }
     setFormData({
       date: item.date,
       transaction_type: item.transaction_type || 'Chi',
@@ -324,6 +298,7 @@ export const Costs = ({
       unit: item.unit || '',
       total_amount: item.total_amount,
       notes: item.notes || '',
+      cost_code: item.cost_code,
     });
     setEditingId(item.id);
     setIsEditing(true);
@@ -335,14 +310,6 @@ export const Costs = ({
   const [itemToDelete, setItemToDelete] = useState<string | null>(null);
 
   const handleDeleteClick = (item: any) => {
-    if (item.notes?.includes('Tự động tạo từ hệ thống')) {
-      if (addToast)
-        addToast(
-          'Bút toán hệ thống không được phép xóa tay. Vui lòng thao tác trên chứng từ gốc.',
-          'error',
-        );
-      return;
-    }
     setItemToDelete(item.id);
     setShowDeleteModal(true);
   };
@@ -350,74 +317,72 @@ export const Costs = ({
   const confirmDelete = async () => {
     if (!itemToDelete) return;
     try {
-      const { error } = await supabase
-        .from('costs')
-        .update({ status: 'Đã xóa' })
-        .eq('id', itemToDelete);
-      if (error) throw error;
+      await supabase.from('costs').update({ status: 'Đã xóa' }).eq('id', itemToDelete);
       fetchCosts();
       if (addToast) addToast('Đã chuyển vào thùng rác', 'success');
       setShowDeleteModal(false);
-      setItemToDelete(null);
     } catch (err: any) {
-      const msg = err.message.includes('foreign key constraint')
-        ? 'Không thể xóa vì đang có dữ liệu liên quan khác.'
-        : err.message;
-      if (addToast) addToast('Lỗi: ' + msg, 'error');
-      else alert('Lỗi khi xóa chi phí: ' + msg);
+      if (addToast) addToast('Lỗi: ' + err.message, 'error');
     }
   };
 
   const exportToExcel = () => {
     const data = costs.map((item) => ({
-      'Mã chứng từ': item.cost_code,
+      Mã: item.cost_code,
       Ngày: item.date,
-      'Loại giao dịch': item.transaction_type || 'Chi',
-      'Người lập': item.users?.full_name || item.employee_id,
+      Loại: item.transaction_type,
+      'Người lập': item.users?.full_name,
       'Hạng mục': item.cost_type,
       'Nội dung': item.content,
-      'Vật tư': item.materials?.name || '',
-      Kho: item.warehouses?.name || '',
+      Kho: item.warehouses?.name,
       'Số lượng': item.quantity,
       ĐVT: item.unit,
       'Thành tiền': item.total_amount,
-      'Ghi chú': item.notes,
     }));
-    const ws = utils.json_to_sheet(data);
-    const wb = utils.book_new();
-    utils.book_append_sheet(wb, ws, 'Chi phí');
-    writeFile(wb, `QuanLyChiPhi_${new Date().toISOString().split('T')[0]}.xlsx`);
+    utils.book_append_sheet(utils.book_new(), utils.json_to_sheet(data), 'Chi phí');
+    writeFile(utils.book_new(), `Costs_${new Date().toISOString().slice(0, 10)}.xlsx`);
   };
 
-  const filteredCosts = costs.filter((item) => {
-    let match = true;
-    if (filterStartDate && item.date < filterStartDate) match = false;
-    if (filterEndDate && item.date > filterEndDate) match = false;
-    if (filterEmployeeId && item.employee_id !== filterEmployeeId) match = false;
-    if (filterWarehouseId && item.warehouse_id !== filterWarehouseId) match = false;
-    if (searchTerm) {
-      const lowerSearch = searchTerm.toLowerCase();
-      const contentMatched = (item.content || '').toLowerCase().includes(lowerSearch);
-      const codeMatched = (item.cost_code || '').toLowerCase().includes(lowerSearch);
-      const notesMatched = (item.notes || '').toLowerCase().includes(lowerSearch);
-      const matMatched = (item.materials?.name || '').toLowerCase().includes(lowerSearch);
-      const typeMatched = (item.cost_type || '').toLowerCase().includes(lowerSearch);
-      if (!contentMatched && !codeMatched && !notesMatched && !matMatched && !typeMatched) {
-        match = false;
+  const filteredCosts = costs
+    .filter((item) => {
+      let match = true;
+      if (filterStartDate && item.date < filterStartDate) match = false;
+      if (filterEndDate && item.date > filterEndDate) match = false;
+      if (filterEmployeeId && item.employee_id !== filterEmployeeId) match = false;
+      if (filterWarehouseId && item.warehouse_id !== filterWarehouseId) match = false;
+      if (searchTerm) {
+        const s = searchTerm.toLowerCase();
+        match =
+          (item.content || '').toLowerCase().includes(s) ||
+          (item.cost_code || '').toLowerCase().includes(s);
       }
-    }
-    return match;
-  });
+      return match;
+    })
+    .sort((a, b) => {
+      if (sortBy === 'newest') return (b.cost_code || '').localeCompare(a.cost_code || '');
+      if (sortBy === 'price') return (b.total_amount || 0) - (a.total_amount || 0);
+      if (sortBy === 'date') return new Date(b.date).getTime() - new Date(a.date).getTime();
+      return 0;
+    });
 
   return (
-    <div className="p-4 md:p-6 space-y-6 pb-44">
+    <div className="p-4 md:p-6 space-y-6 pb-24">
       <div className="flex items-center justify-between gap-2">
         <PageBreadcrumb title="Quản lý Chi phí" onBack={onBack} />
         <div className="flex items-center gap-2">
+          <SortButton
+            currentSort={sortBy}
+            onSortChange={(val) => setSortBy(val)}
+            options={[
+              { value: 'newest', label: 'Mới nhất' },
+              { value: 'price', label: 'Thành tiền' },
+              { value: 'date', label: 'Ngày chi' },
+            ]}
+          />
           <Button
             size="icon"
             variant={showFilter ? 'primary' : 'outline'}
-            onClick={() => setShowFilter((f) => !f)}
+            onClick={() => setShowFilter(!showFilter)}
             icon={Search}
           />
           <ExcelButton onClick={exportToExcel} />
@@ -425,54 +390,56 @@ export const Costs = ({
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="bg-white p-4 rounded-2xl shadow-sm border border-green-100 flex items-center gap-4">
-          <div className="w-12 h-12 bg-green-50 text-green-600 rounded-full flex items-center justify-center shrink-0">
-            <ArrowDownCircle size={24} />
-          </div>
-          <div>
-            <p className="text-xs text-gray-500 font-bold uppercase">Tổng Thu</p>
-            <p className="text-xl font-black text-green-600">
-              {formatCurrency(
-                filteredCosts
-                  .filter((c) => c.transaction_type === 'Thu')
-                  .reduce((sum, c) => sum + Number(c.total_amount || 0), 0),
-              )}
-            </p>
-          </div>
-        </div>
-        <div className="bg-white p-4 rounded-2xl shadow-sm border border-red-100 flex items-center gap-4">
-          <div className="w-12 h-12 bg-red-50 text-red-600 rounded-full flex items-center justify-center shrink-0">
-            <ArrowUpCircle size={24} />
-          </div>
-          <div>
-            <p className="text-xs text-gray-500 font-bold uppercase">Tổng Chi</p>
-            <p className="text-xl font-black text-red-600">
-              {formatCurrency(
+        {[
+          {
+            label: 'Tổng Thu',
+            val: formatCurrency(
+              filteredCosts
+                .filter((c) => c.transaction_type === 'Thu')
+                .reduce((s, c) => s + Number(c.total_amount), 0),
+            ),
+            color: 'green',
+            icon: ArrowDownCircle,
+          },
+          {
+            label: 'Tổng Chi',
+            val: formatCurrency(
+              filteredCosts
+                .filter((c) => c.transaction_type !== 'Thu')
+                .reduce((s, c) => s + Number(c.total_amount), 0),
+            ),
+            color: 'red',
+            icon: ArrowUpCircle,
+          },
+          {
+            label: 'Lợi Nhuận',
+            val: formatCurrency(
+              filteredCosts
+                .filter((c) => c.transaction_type === 'Thu')
+                .reduce((s, c) => s + Number(c.total_amount), 0) -
                 filteredCosts
                   .filter((c) => c.transaction_type !== 'Thu')
-                  .reduce((sum, c) => sum + Number(c.total_amount || 0), 0),
-              )}
-            </p>
+                  .reduce((s, c) => s + Number(c.total_amount), 0),
+            ),
+            color: 'blue',
+            icon: Wallet,
+          },
+        ].map((stat) => (
+          <div
+            key={stat.label}
+            className={`bg-white p-4 rounded-2xl shadow-sm border border-${stat.color}-100 flex items-center gap-4`}
+          >
+            <div
+              className={`w-12 h-12 bg-${stat.color}-50 text-${stat.color}-600 rounded-full flex items-center justify-center shrink-0`}
+            >
+              <stat.icon size={24} />
+            </div>
+            <div>
+              <p className="text-xs text-gray-400 font-bold uppercase">{stat.label}</p>
+              <p className={`text-xl font-black text-${stat.color}-600`}>{stat.val}</p>
+            </div>
           </div>
-        </div>
-        <div className="bg-white p-4 rounded-2xl shadow-sm border border-blue-100 flex items-center gap-4">
-          <div className="w-12 h-12 bg-blue-50 text-blue-600 rounded-full flex items-center justify-center shrink-0">
-            <Wallet size={24} />
-          </div>
-          <div>
-            <p className="text-xs text-gray-500 font-bold uppercase">Lợi Nhuận Gộp</p>
-            <p className="text-xl font-black text-blue-600">
-              {formatCurrency(
-                filteredCosts
-                  .filter((c) => c.transaction_type === 'Thu')
-                  .reduce((sum, c) => sum + Number(c.total_amount || 0), 0) -
-                  filteredCosts
-                    .filter((c) => c.transaction_type !== 'Thu')
-                    .reduce((sum, c) => sum + Number(c.total_amount || 0), 0),
-              )}
-            </p>
-          </div>
-        </div>
+        ))}
       </div>
 
       <AnimatePresence>
@@ -483,90 +450,37 @@ export const Costs = ({
             exit={{ opacity: 0, height: 0 }}
             className="overflow-hidden"
           >
-            <div className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-4">
-              <div className="space-y-1">
-                <label className="text-[10px] font-bold text-gray-400 uppercase">Từ ngày</label>
-                <input
-                  type="date"
-                  value={filterStartDate}
-                  onChange={(e) => setFilterStartDate(e.target.value)}
-                  className="w-full px-3 py-2 rounded-lg border border-gray-200 text-xs outline-none focus:ring-2 focus:ring-primary/20"
-                />
-              </div>
-              <div className="space-y-1">
-                <label className="text-[10px] font-bold text-gray-400 uppercase">Đến ngày</label>
-                <input
-                  type="date"
-                  value={filterEndDate}
-                  onChange={(e) => setFilterEndDate(e.target.value)}
-                  className="w-full px-3 py-2 rounded-lg border border-gray-200 text-xs outline-none focus:ring-2 focus:ring-primary/20"
-                />
-              </div>
-              <div className="space-y-1">
-                <label className="text-[10px] font-bold text-gray-400 uppercase">Nhân sự</label>
-                <select
-                  value={filterEmployeeId}
-                  onChange={(e) => setFilterEmployeeId(e.target.value)}
-                  className="w-full px-3 py-2 rounded-lg border border-gray-200 text-xs outline-none focus:ring-2 focus:ring-primary/20"
-                >
-                  <option value="">-- Tất cả --</option>
-                  {employees.map((emp) => (
-                    <option key={emp.id} value={emp.id}>
-                      {emp.full_name} ({emp.code})
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div className="space-y-1">
-                <label className="text-[10px] font-bold text-gray-400 uppercase">Kho</label>
-                <select
-                  value={filterWarehouseId}
-                  onChange={(e) => setFilterWarehouseId(e.target.value)}
-                  className="w-full px-3 py-2 rounded-lg border border-gray-200 text-xs outline-none focus:ring-2 focus:ring-primary/20"
-                >
-                  <option value="">-- Tất cả kho --</option>
-                  {warehouses.map((w) => (
-                    <option key={w.id} value={w.id}>
-                      {w.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div className="space-y-1">
-                <label className="text-[10px] font-bold text-gray-400 uppercase">
-                  Tìm kiếm nhanh
-                </label>
-                <div className="relative">
-                  <Search
-                    size={14}
-                    className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
-                  />
-                  <input
-                    type="text"
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    placeholder="Gõ để tìm..."
-                    className="w-full pl-9 pr-3 py-2 rounded-lg border border-gray-200 text-xs outline-none focus:ring-2 focus:ring-primary/20"
-                  />
-                </div>
-              </div>
-            </div>
-            <div className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 mt-4">
-              <label className="text-[10px] font-bold text-gray-400 uppercase block mb-2">
-                Lọc theo trạng thái
-              </label>
-              <div className="flex items-center gap-2 overflow-x-auto pb-2 no-scrollbar">
-                {['Tất cả', 'Chờ duyệt', 'Đã duyệt', 'Từ chối', 'Đã xóa'].map((status) => (
-                  <Button
-                    key={status}
-                    size="sm"
-                    variant={statusFilter === status ? 'primary' : 'outline'}
-                    onClick={() => setStatusFilter(status)}
-                  >
-                    {status === 'Đã xóa' ? 'Thùng rác' : status}
-                  </Button>
+            <div className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 grid grid-cols-1 md:grid-cols-4 gap-4">
+              <input
+                type="date"
+                value={filterStartDate}
+                onChange={(e) => setFilterStartDate(e.target.value)}
+                className="px-3 py-2 rounded-lg border text-xs"
+              />
+              <input
+                type="date"
+                value={filterEndDate}
+                onChange={(e) => setFilterEndDate(e.target.value)}
+                className="px-3 py-2 rounded-lg border text-xs"
+              />
+              <select
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value)}
+                className="px-3 py-2 rounded-lg border text-xs"
+              >
+                {['Tất cả', 'Chờ duyệt', 'Đã duyệt', 'Từ chối', 'Đã xóa'].map((s) => (
+                  <option key={s} value={s}>
+                    {s}
+                  </option>
                 ))}
-              </div>
+              </select>
+              <input
+                type="text"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                placeholder="Tìm kiếm..."
+                className="px-3 py-2 rounded-lg border text-xs"
+              />
             </div>
           </motion.div>
         )}
@@ -576,271 +490,125 @@ export const Costs = ({
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse whitespace-nowrap">
             <thead>
-              <tr className="bg-primary text-white">
-                <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider border-r border-white/10">
-                  Ngày
-                </th>
-                <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider border-r border-white/10">
-                  Loại GD
-                </th>
-                <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider border-r border-white/10">
-                  Tên kho
-                </th>
-                <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider border-r border-white/10">
-                  Hạng mục
-                </th>
-                <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider border-r border-white/10">
-                  Nội dung
-                </th>
-                <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider border-r border-white/10 text-center">
-                  SL
-                </th>
-                <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider border-r border-white/10 text-center">
-                  ĐVT
-                </th>
-                <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider border-r border-white/10 text-right">
-                  Số tiền
-                </th>
-                <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider border-r border-white/10 text-center">
-                  Trạng thái
-                </th>
-                <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider">
-                  Người lập
-                </th>
+              <tr className="bg-primary text-white text-[10px] font-bold uppercase">
+                <th className="px-4 py-3">Ngày</th>
+                <th className="px-4 py-3">Mã</th>
+                <th className="px-4 py-3">Loại</th>
+                <th className="px-4 py-3">Hạng mục</th>
+                <th className="px-4 py-3">Nội dung</th>
+                <th className="px-4 py-3 text-right">Số tiền</th>
+                <th className="px-4 py-3 text-center">Trạng thái</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
-              {loading ? (
-                <tr>
-                  <td colSpan={10} className="px-4 py-8 text-center text-gray-400 italic">
-                    Đang tải dữ liệu...
-                  </td>
-                </tr>
-              ) : filteredCosts.length === 0 ? (
-                <tr>
-                  <td colSpan={10} className="px-4 py-8 text-center text-gray-400 italic">
-                    Không tìm thấy chi phí phù hợp với bộ lọc
-                  </td>
-                </tr>
-              ) : (
-                filteredCosts.map((item) => (
-                  <tr
-                    key={item.id}
-                    onClick={() => {
-                      setSelectedCost(item);
-                      setShowDetailModal(true);
-                    }}
-                    className="hover:bg-gray-50 transition-colors cursor-pointer group"
-                  >
-                    <td className="px-4 py-3">
-                      <div className="text-[10px] text-gray-500">
-                        {new Date(item.date).toLocaleDateString('vi-VN')}
-                      </div>
-                    </td>
-                    <td className="px-4 py-3 text-xs font-bold">
-                      <span
-                        className={`px-2 py-0.5 rounded-full ${item.transaction_type === 'Thu' ? 'bg-green-100 text-green-600' : 'bg-red-100 text-red-600'}`}
-                      >
-                        {item.transaction_type || 'Chi'}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3 text-xs text-gray-600 font-medium">
-                      {item.warehouses?.name || 'N/A'}
-                    </td>
-                    <td className="px-4 py-3 text-xs text-gray-600">{item.cost_type}</td>
-                    <td className="px-4 py-3 text-xs text-gray-600">
-                      {item.materials?.name || item.content}
-                    </td>
-                    <td className="px-4 py-3 text-xs text-gray-600 text-center">{item.quantity}</td>
-                    <td className="px-4 py-3 text-xs text-gray-600 text-center">{item.unit}</td>
-                    <td
-                      className={`px-4 py-3 text-xs font-bold text-right ${item.transaction_type === 'Thu' ? 'text-green-600' : 'text-red-600'}`}
+              {filteredCosts.map((item) => (
+                <tr
+                  key={item.id}
+                  onClick={() => {
+                    setSelectedCost(item);
+                    setShowDetailModal(true);
+                  }}
+                  className="hover:bg-gray-50 cursor-pointer text-xs"
+                >
+                  <td className="px-4 py-3">{new Date(item.date).toLocaleDateString('vi-VN')}</td>
+                  <td className="px-4 py-3 font-bold text-primary">{item.cost_code}</td>
+                  <td className="px-4 py-3">
+                    <span
+                      className={`px-2 py-0.5 rounded-full ${item.transaction_type === 'Thu' ? 'bg-green-100 text-green-600' : 'bg-red-100 text-red-600'}`}
                     >
-                      {item.transaction_type === 'Thu' ? '+' : '-'}
-                      {formatCurrency(item.total_amount)}
-                    </td>
-                    <td className="px-4 py-3 text-center">
-                      <span
-                        className={`px-2 py-1 rounded-lg text-[10px] font-bold ${
-                          item.status === 'Đã duyệt'
-                            ? 'bg-green-100 text-green-700'
-                            : item.status === 'Từ chối'
-                              ? 'bg-red-100 text-red-700'
-                              : item.status === 'Đã hoàn thành'
-                                ? 'bg-blue-100 text-blue-700'
-                                : 'bg-amber-100 text-amber-700'
-                        }`}
-                      >
-                        {item.status || 'Chờ duyệt'}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3 text-xs text-gray-600">{item.users?.full_name}</td>
-                  </tr>
-                ))
-              )}
+                      {item.transaction_type}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3">{item.cost_type}</td>
+                  <td className="px-4 py-3">{item.content}</td>
+                  <td
+                    className={`px-4 py-3 font-bold text-right ${item.transaction_type === 'Thu' ? 'text-green-600' : 'text-red-600'}`}
+                  >
+                    {formatCurrency(item.total_amount)}
+                  </td>
+                  <td className="px-4 py-3 text-center">
+                    <span
+                      className={`px-2 py-1 rounded-lg text-[10px] font-bold ${item.status === 'Đã duyệt' ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'}`}
+                    >
+                      {item.status || 'Chờ duyệt'}
+                    </span>
+                  </td>
+                </tr>
+              ))}
             </tbody>
           </table>
         </div>
       </div>
 
-      {/* Detail Panel — slide-up mobile, side panel desktop */}
       <AnimatePresence>
         {showDetailModal && selectedCost && (
-          <>
+          <div className="fixed inset-0 z-[120] flex items-center justify-center p-4">
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               onClick={() => setShowDetailModal(false)}
-              className="fixed inset-0 z-[120] bg-black/40 backdrop-blur-sm"
+              className="fixed inset-0 bg-black/40 backdrop-blur-sm"
             />
             <motion.div
-              initial={{ y: '100%' }}
-              animate={{ y: 0 }}
-              exit={{ y: '100%' }}
-              className="fixed inset-x-0 bottom-0 z-[121] bg-white rounded-t-3xl shadow-2xl flex flex-col max-h-[90dvh]
-                         md:inset-x-auto md:inset-y-0 md:right-0 md:w-[420px] md:rounded-t-none md:rounded-l-3xl md:max-h-full"
-              transition={{ type: 'spring', damping: 28, stiffness: 240 }}
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              className="bg-white rounded-3xl p-6 shadow-2xl z-10 w-full max-w-sm"
             >
-              <div className="flex justify-center pt-3 pb-1 md:hidden">
-                <div className="w-10 h-1 bg-gray-200 rounded-full" />
-              </div>
-              <div className="p-5 border-b border-gray-100 flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div
-                    className="w-10 h-10 bg-primary/10 text-primary rounded-xl flex items-center justify-center hover:bg-primary/20 transition-all active:scale-95 cursor-pointer shadow-sm border border-primary/10"
-                    onClick={() => setShowDetailModal(false)}
-                  >
-                    <Wallet size={20} />
-                  </div>
-                  <div>
-                    <p className="text-sm font-black text-primary">{selectedCost.cost_code}</p>
-                    <p className="text-[10px] text-gray-400 uppercase font-bold tracking-widest">
-                      Chi tiết chứng từ
-                    </p>
-                  </div>
-                </div>
-                <button
-                  onClick={() => setShowDetailModal(false)}
-                  className="p-2 hover:bg-gray-100 rounded-xl transition-all active:scale-95 text-gray-400"
-                >
-                  <X size={24} />
+              <div className="flex justify-between items-center mb-6">
+                <h3 className="font-bold text-lg text-primary">{selectedCost.cost_code}</h3>
+                <button onClick={() => setShowDetailModal(false)}>
+                  <X size={20} />
                 </button>
               </div>
-              <div className="flex-1 overflow-y-auto p-5 space-y-3">
-                {[
-                  { label: 'Ngày', value: new Date(selectedCost.date).toLocaleDateString('vi-VN') },
-                  { label: 'Loại GD', value: selectedCost.transaction_type || 'Chi' },
-                  { label: 'Người lập', value: selectedCost.users?.full_name },
-                  { label: 'Kho', value: selectedCost.warehouses?.name || '—' },
-                  { label: 'Loại chi phí', value: selectedCost.cost_type },
-                  { label: 'Nội dung', value: selectedCost.content },
-                  { label: 'Số lượng', value: `${selectedCost.quantity} ${selectedCost.unit}` },
-                  {
-                    label: 'Số tiền',
-                    value: `${selectedCost.transaction_type === 'Thu' ? '+' : '-'}${formatCurrency(selectedCost.total_amount)}`,
-                    highlight: true,
-                  },
-                  { label: 'Ghi chú', value: selectedCost.notes || '—' },
-                ].map(({ label, value, highlight }) => (
-                  <div
-                    key={label}
-                    className="flex justify-between items-start border-b border-gray-50 pb-3 gap-4"
-                  >
-                    <span className="text-[10px] text-gray-400 font-bold uppercase shrink-0">
-                      {label}
-                    </span>
-                    <p
-                      className={`text-sm font-medium text-right ${highlight ? (selectedCost.transaction_type === 'Thu' ? 'text-green-600 font-bold' : 'text-red-600 font-bold') : 'text-gray-800'}`}
-                    >
-                      {value || '—'}
-                    </p>
-                  </div>
-                ))}
-              </div>
-              <div className="p-4 border-t border-gray-100 bg-gray-50 space-y-2">
-                <div
-                  className={`grid gap-2 ${selectedCost.status !== 'Đã duyệt' && selectedCost.status !== 'Từ chối' ? 'grid-cols-2' : 'grid-cols-1'}`}
-                >
-                  <Button
-                    fullWidth
-                    variant="outline"
-                    icon={Trash2}
-                    onClick={() => {
-                      setShowDetailModal(false);
-                      handleDeleteClick(selectedCost);
-                    }}
-                    className="text-red-600 border-red-200 hover:bg-red-50"
-                  >
-                    Thùng rác
-                  </Button>
-                  {selectedCost.status !== 'Đã duyệt' &&
-                    selectedCost.status !== 'Từ chối' &&
-                    selectedCost.status !== 'Đã hoàn thành' && (
-                      <Button
-                        fullWidth
-                        variant="outline"
-                        icon={Edit}
-                        onClick={() => handleEdit(selectedCost)}
-                        className="text-gray-700 hover:bg-gray-50"
-                      >
-                        Sửa
-                      </Button>
-                    )}
+              <div className="space-y-3 text-sm">
+                <div className="flex justify-between">
+                  <span>Ngày:</span>
+                  <span>{new Date(selectedCost.date).toLocaleDateString('vi-VN')}</span>
                 </div>
-                <Button
-                  fullWidth
-                  variant="outline"
-                  icon={X}
-                  onClick={() => setShowDetailModal(false)}
-                  className="text-gray-600 hover:bg-gray-50 border-gray-200"
-                >
-                  Đóng cửa sổ
+                <div className="flex justify-between">
+                  <span>Nội dung:</span>
+                  <span className="font-medium text-right">{selectedCost.content}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Số tiền:</span>
+                  <span className="font-bold text-red-600">
+                    {formatCurrency(selectedCost.total_amount)}
+                  </span>
+                </div>
+              </div>
+              <div className="mt-6 flex gap-2">
+                <Button fullWidth variant="danger" onClick={() => handleDeleteClick(selectedCost)}>
+                  Xóa
+                </Button>
+                <Button fullWidth variant="primary" onClick={() => handleEdit(selectedCost)}>
+                  Sửa
                 </Button>
               </div>
             </motion.div>
-          </>
+          </div>
         )}
       </AnimatePresence>
 
       <AnimatePresence>
         {showDeleteModal && (
-          <div
-            className="fixed inset-0 z-[120] flex items-center justify-center p-4 bg-black/50 backdrop-blur-md overflow-hidden"
-            onClick={() => setShowDeleteModal(false)}
-          >
+          <div className="fixed inset-0 z-[130] flex items-center justify-center p-4">
+            <div
+              className="fixed inset-0 bg-black/40 backdrop-blur-sm"
+              onClick={() => setShowDeleteModal(false)}
+            />
             <motion.div
-              initial={{ opacity: 0, scale: 0.95, y: 20 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.95, y: 20 }}
-              className="bg-white rounded-[2rem] md:rounded-[2.5rem] shadow-2xl p-8 max-w-sm w-full text-center m-4 relative z-10"
-              onClick={(e) => e.stopPropagation()}
+              initial={{ scale: 0.9 }}
+              animate={{ scale: 1 }}
+              className="bg-white rounded-3xl p-6 shadow-2xl z-10 text-center"
             >
-              <div className="w-16 h-16 bg-red-50 text-red-600 rounded-2xl flex items-center justify-center mx-auto mb-4 border border-red-100">
-                <Trash2 size={32} />
-              </div>
-              <h3 className="text-xl font-bold text-gray-800 mb-2">Xác nhận xóa?</h3>
-              <p className="text-sm text-gray-500 mb-6 font-medium">
-                Bạn có chắc chắn muốn chuyển chứng từ này vào thùng rác?
-                <br />
-                Hành động này có thể hoàn tác trong mục Thùng rác.
-              </p>
+              <h3 className="font-bold text-lg mb-2">Xác nhận xóa?</h3>
+              <p className="text-sm text-gray-500 mb-6">Hành động này không thể hoàn tác.</p>
               <div className="flex gap-3">
-                <Button
-                  variant="ghost"
-                  fullWidth
-                  onClick={() => setShowDeleteModal(false)}
-                  className="bg-gray-100 hover:bg-gray-200"
-                >
-                  Hủy bỏ
-                </Button>
-                <Button
-                  variant="danger"
-                  fullWidth
-                  onClick={confirmDelete}
-                  className="shadow-lg shadow-red-500/20"
-                >
-                  Xác nhận
+                <Button onClick={() => setShowDeleteModal(false)}>Hủy</Button>
+                <Button variant="danger" onClick={confirmDelete}>
+                  Xóa
                 </Button>
               </div>
             </motion.div>
@@ -850,191 +618,103 @@ export const Costs = ({
 
       <AnimatePresence>
         {showModal && (
-          <div
-            className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/50 backdrop-blur-md"
-            onClick={() => setShowModal(false)}
-          >
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+            <div
+              className="fixed inset-0 bg-black/40 backdrop-blur-md"
+              onClick={() => setShowModal(false)}
+            />
             <motion.div
-              initial={{ opacity: 0, scale: 0.9, y: 20 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.9, y: 20 }}
-              transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-              className="bg-white rounded-[2rem] md:rounded-[2.5rem] shadow-2xl w-[calc(100%-32px)] md:w-full max-w-2xl max-h-[calc(100vh-40px)] flex flex-col overflow-hidden m-4"
-              onClick={(e) => e.stopPropagation()}
+              initial={{ y: 20, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              className="bg-white rounded-[2rem] shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col z-10"
             >
-              <div className="bg-primary p-6 text-white flex items-center justify-between rounded-t-[2rem] md:rounded-t-[2.5rem] flex-shrink-0 relative">
-                <div className="flex items-center gap-3">
-                  <div
-                    className="p-2 bg-white/20 rounded-xl cursor-pointer hover:bg-white/30 transition-all active:scale-95"
-                    onClick={() => setShowModal(false)}
-                    title="Đóng"
-                  >
-                    <Wallet size={24} />
-                  </div>
-                  <div>
-                    <h3 className="font-bold text-lg">
-                      {isEditing ? 'Cập nhật chi phí' : 'Nhập chi phí'}
-                    </h3>
-                    <p className="text-xs text-white/70">Vui lòng điền đầy đủ thông tin chi phí</p>
-                  </div>
-                </div>
-                <button
-                  onClick={() => setShowModal(false)}
-                  className="p-2 hover:bg-white/20 rounded-xl transition-all"
-                >
+              <div className="bg-primary p-6 text-white flex justify-between items-center">
+                <h3 className="font-bold text-lg">{isEditing ? 'Sửa chi phí' : 'Nhập chi phí'}</h3>
+                <button onClick={() => setShowModal(false)}>
                   <X size={24} />
                 </button>
               </div>
-
-              <div className="flex-1 overflow-y-auto overflow-x-hidden p-6 custom-scrollbar">
-                <form onSubmit={handleSubmit}>
-                  <div className="bg-blue-50 p-4 rounded-2xl mb-6 flex items-start gap-3 border border-blue-100">
-                    <Info size={18} className="text-blue-600 mt-0.5 shrink-0" />
-                    <p className="text-xs text-blue-700 leading-relaxed">
-                      Sử dụng form này để nhập tay các khoản <strong>Thu</strong> (doanh thu, thanh
-                      lý) hoặc khoản <strong>Chi</strong> (mua sắm ngoài hệ thống kho).
+              <div className="flex-1 overflow-y-auto p-6 scrollbar-hide">
+                <form onSubmit={handleSubmit} className="space-y-6">
+                  <div className="bg-primary/5 p-4 rounded-2xl border border-primary/10">
+                    <p className="text-[10px] font-bold text-primary uppercase mb-1">
+                      Mã tham chiếu
+                    </p>
+                    <p className="font-black text-primary uppercase italic">
+                      {(formData as any).cost_code ||
+                        `CP-${new Date().toISOString().slice(2, 10).replace(/-/g, '')}-001`}
                     </p>
                   </div>
-
-                  <div className="mb-6">
-                    <label className="text-[10px] font-bold text-gray-400 uppercase block mb-2">
-                      Loại giao dịch *
-                    </label>
-                    <div className="flex gap-4">
-                      <label className="flex items-center gap-2 cursor-pointer bg-green-50 px-4 py-2 rounded-xl text-sm font-bold text-green-700 border border-green-200">
-                        <input
-                          type="radio"
-                          name="transType"
-                          checked={formData.transaction_type === 'Thu'}
-                          onChange={() => setFormData({ ...formData, transaction_type: 'Thu' })}
-                          className="accent-green-600 w-4 h-4 cursor-pointer"
-                        />
-                        Khoản Thu (Tiền vào)
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-bold text-gray-400 uppercase">
+                        Ngày *
                       </label>
-                      <label className="flex items-center gap-2 cursor-pointer bg-red-50 px-4 py-2 rounded-xl text-sm font-bold text-red-700 border border-red-200">
-                        <input
-                          type="radio"
-                          name="transType"
-                          checked={formData.transaction_type === 'Chi'}
-                          onChange={() => setFormData({ ...formData, transaction_type: 'Chi' })}
-                          className="accent-red-600 w-4 h-4 cursor-pointer"
-                        />
-                        Khoản Chi (Tiền ra)
-                      </label>
+                      <input
+                        type="date"
+                        required
+                        value={formData.date}
+                        onChange={(e) => setFormData({ ...formData, date: e.target.value })}
+                        className="w-full px-4 py-2 rounded-xl border"
+                      />
                     </div>
+                    <CreatableSelect
+                      label="Loại chi phí *"
+                      value={formData.cost_type}
+                      options={costTypes}
+                      onChange={(val) => setFormData({ ...formData, cost_type: val })}
+                      onCreate={(val) => setFormData({ ...formData, cost_type: val })}
+                      required
+                    />
                   </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div className="space-y-4">
-                      <div className="grid grid-cols-2 gap-4">
-                        <div className="space-y-1">
-                          <label className="text-[10px] font-bold text-gray-400 uppercase">
-                            Ngày chi *
-                          </label>
-                          <input
-                            type="date"
-                            required
-                            value={formData.date}
-                            onChange={(e) => setFormData({ ...formData, date: e.target.value })}
-                            className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20"
-                          />
-                        </div>
-                        <div className="space-y-1">
-                          <label className="text-[10px] font-bold text-gray-400 uppercase">
-                            Người lập
-                          </label>
-                          <input
-                            type="text"
-                            readOnly
-                            value={user.full_name}
-                            className="w-full px-4 py-2 rounded-xl border border-gray-100 bg-gray-50 text-sm text-gray-500 outline-none"
-                          />
-                        </div>
-                      </div>
-
-                      <CreatableSelect
-                        label="Loại chi phí *"
-                        value={formData.cost_type}
-                        options={costTypes}
-                        onChange={(val) => setFormData({ ...formData, cost_type: val })}
-                        onCreate={(val) => setFormData({ ...formData, cost_type: val })}
-                        placeholder="Chọn loại chi phí..."
-                        required
-                      />
-
-                      <CreatableSelect
-                        label="Tên kho *"
-                        value={formData.warehouse_name}
-                        options={warehouses}
-                        onChange={(val) => setFormData({ ...formData, warehouse_name: val })}
-                        onCreate={(val) => setFormData({ ...formData, warehouse_name: val })}
-                        placeholder="Chọn kho..."
-                        required
-                      />
-
-                      <CreatableSelect
-                        label={
-                          formData.transaction_type === 'Thu' ? 'Nội dung thu *' : 'Nội dung chi *'
-                        }
-                        value={formData.content}
-                        options={materials}
-                        onChange={(val) => setFormData({ ...formData, content: val })}
-                        onCreate={(val) => setFormData({ ...formData, content: val })}
-                        placeholder="Chọn nội dung..."
-                        required
-                      />
-                    </div>
-
-                    <div className="space-y-4">
-                      <div className="grid grid-cols-2 gap-4">
-                        <NumericInput
-                          label="Số lượng"
-                          value={formData.quantity}
-                          onChange={(val) => setFormData({ ...formData, quantity: val })}
-                        />
-                        <CreatableSelect
-                          label="Đơn vị tính"
-                          value={formData.unit}
-                          options={units}
-                          onChange={(val) => setFormData({ ...formData, unit: val })}
-                          onCreate={(val) => setFormData({ ...formData, unit: val })}
-                          placeholder="Chọn/Nhập..."
-                        />
-                      </div>
-
-                      <NumericInput
-                        label="Số tiền *"
-                        required
-                        value={formData.total_amount}
-                        onChange={(val) => setFormData({ ...formData, total_amount: val })}
-                        inputClassName="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20 font-bold text-red-600"
-                      />
-
-                      <div className="space-y-1">
-                        <label className="text-[10px] font-bold text-gray-400 uppercase">
-                          Ghi chú
-                        </label>
-                        <textarea
-                          rows={3}
-                          placeholder="Ghi chú thêm..."
-                          value={formData.notes}
-                          onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-                          className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20 resize-none"
-                        />
-                      </div>
-                    </div>
+                  <CreatableSelect
+                    label="Tên kho *"
+                    value={formData.warehouse_name}
+                    options={warehouses}
+                    onChange={(val) => setFormData({ ...formData, warehouse_name: val })}
+                    onCreate={(val) => setFormData({ ...formData, warehouse_name: val })}
+                    required
+                  />
+                  <CreatableSelect
+                    label="Nội dung *"
+                    value={formData.content}
+                    options={materials}
+                    onChange={(val) => setFormData({ ...formData, content: val })}
+                    onCreate={(val) => setFormData({ ...formData, content: val })}
+                    required
+                  />
+                  <div className="grid grid-cols-2 gap-4">
+                    <NumericInput
+                      label="Số lượng"
+                      value={formData.quantity}
+                      onChange={(val) => setFormData({ ...formData, quantity: val })}
+                    />
+                    <CreatableSelect
+                      label="Đơn vị tính"
+                      value={formData.unit}
+                      options={units}
+                      onChange={(val) => setFormData({ ...formData, unit: val })}
+                      onCreate={(val) => setFormData({ ...formData, unit: val })}
+                    />
                   </div>
-
-                  <div className="mt-8 flex justify-end gap-3">
+                  <NumericInput
+                    label="Số tiền *"
+                    required
+                    value={formData.total_amount}
+                    onChange={(val) => setFormData({ ...formData, total_amount: val })}
+                  />
+                  <textarea
+                    rows={3}
+                    placeholder="Ghi chú..."
+                    value={formData.notes}
+                    onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+                    className="w-full px-4 py-2 rounded-xl border resize-none"
+                  ></textarea>
+                  <div className="flex justify-end gap-3 pt-4">
                     <Button variant="outline" onClick={() => setShowModal(false)}>
                       Hủy
                     </Button>
-                    <Button
-                      type="submit"
-                      variant="primary"
-                      className="min-w-[120px]"
-                      isLoading={submitting}
-                    >
+                    <Button type="submit" variant="primary" isLoading={submitting}>
                       Lưu bản ghi
                     </Button>
                   </div>
@@ -1044,14 +724,14 @@ export const Costs = ({
           </div>
         )}
       </AnimatePresence>
-      {/* FAB — Nhập giao dịch */}
+
       <FAB
         onClick={() => {
           setIsEditing(false);
           setFormData(initialFormState);
           setShowModal(true);
         }}
-        label="Nhập giao dịch"
+        label="Thêm chi phí"
         color="bg-primary"
       />
     </div>

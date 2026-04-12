@@ -56,12 +56,7 @@ export const MainLayout = ({
               className="flex items-center gap-2 hover:bg-white/10 p-1.5 rounded-xl transition-all active:scale-95 relative z-10"
             >
               <div className="w-8 h-8 bg-white rounded-md flex items-center justify-center p-1 shadow-sm">
-                <img
-                  src={LOGO_URL}
-                  alt="Logo"
-                  className="w-full h-full object-contain"
-                  referrerPolicy="no-referrer"
-                />
+                <img src={LOGO_URL} alt="Logo" className="w-full h-full object-contain" />
               </div>
               <h1 className="font-bold text-sm tracking-wide hidden sm:block">QUẢN LÝ KHO CDX</h1>
             </button>
@@ -211,7 +206,7 @@ export const MainLayout = ({
                   window.innerWidth < 1024 ? 'calc(3.5rem + env(safe-area-inset-top))' : undefined,
               }}
             >
-              <div className="p-4 space-y-6 pb-44 lg:pb-4">
+              <div className="p-4 space-y-6 pb-24 lg:pb-4">
                 <div className="flex items-center justify-between px-2">
                   <h2 className="text-xs font-bold text-gray-400 tracking-widest uppercase">
                     Menu
@@ -257,7 +252,7 @@ export const MainLayout = ({
 
         <main
           key={refreshKey}
-          className="flex-1 overflow-y-auto overflow-x-hidden relative bg-[#F8F9FA] pb-44 lg:pb-0"
+          className="flex-1 overflow-y-auto overflow-x-hidden relative bg-[#F8F9FA] pb-24 lg:pb-0"
         >
           {children}
 

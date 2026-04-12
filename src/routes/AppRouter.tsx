@@ -18,10 +18,10 @@ import { InventoryReport } from '@/components/inventory/InventoryReport';
 import { Warehouses } from '@/components/warehouses/Warehouses';
 import { MaterialGroups } from '@/components/materials/MaterialGroups';
 import { MaterialCatalog } from '@/components/materials/MaterialCatalog';
-import { PlaceholderPage } from '@/components/materials/PlaceholderPage';
-import { BOMConfig } from '@/components/production/BOMConfig';
 import { ProductionOrders } from '@/components/production/ProductionOrders';
+import { BOMConfig } from '@/components/production/BOMConfig';
 import { ProductionOrderDetail } from '@/components/production/ProductionOrderDetail';
+import { ConstructionDiaryComponent } from '@/components/production/ConstructionDiary';
 import { Trash } from '@/components/trash/Trash';
 import { DeletedWarehouses } from '@/components/trash/DeletedWarehouses';
 import { DeletedMaterials } from '@/components/trash/DeletedMaterials';
@@ -197,6 +197,15 @@ export const AppRouter = ({
       );
     case 'production-bom':
       return <BOMConfig user={user} onBack={goBack} addToast={addToast} />;
+    case 'construction-diary':
+      return (
+        <ConstructionDiaryComponent
+          user={user}
+          onBack={goBack}
+          addToast={addToast}
+          setHideBottomNav={setHideBottomNav}
+        />
+      );
 
     case 'trash':
       return <Trash onNavigate={navigateTo} onBack={goBack} />;

@@ -81,6 +81,7 @@ CREATE TABLE IF NOT EXISTS stock_in (
   notes TEXT,
   employee_id UUID REFERENCES users(id),
   status TEXT DEFAULT 'Chờ duyệt',
+  image_url TEXT,
   created_at TIMESTAMPTZ DEFAULT now()
 );
 
@@ -97,6 +98,7 @@ CREATE TABLE IF NOT EXISTS stock_out (
   notes TEXT,
   employee_id UUID REFERENCES users(id),
   status TEXT DEFAULT 'Chờ duyệt',
+  image_url TEXT,
   created_at TIMESTAMPTZ DEFAULT now()
 );
 
@@ -112,6 +114,7 @@ CREATE TABLE IF NOT EXISTS transfers (
   notes TEXT,
   employee_id UUID REFERENCES users(id),
   status TEXT DEFAULT 'Chờ duyệt',
+  image_url TEXT,
   created_at TIMESTAMPTZ DEFAULT now()
 );
 
@@ -197,7 +200,27 @@ CREATE TABLE IF NOT EXISTS inventory (
   UNIQUE(warehouse_id, material_id)
 );
 
--- 14. Salary Settings table
+-- 14. Construction Diaries table
+CREATE TABLE IF NOT EXISTS construction_diaries (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  diary_code TEXT UNIQUE,
+  date DATE NOT NULL DEFAULT CURRENT_DATE,
+  weather TEXT,
+  temperature TEXT,
+  labor_info TEXT,
+  equipment_info TEXT,
+  work_progress TEXT,
+  quality_issues TEXT,
+  supervision_comments TEXT,
+  image_urls JSONB DEFAULT '[]',
+  warehouse_id UUID REFERENCES warehouses(id),
+  created_by UUID REFERENCES users(id),
+  status TEXT DEFAULT 'Mới',
+  created_at TIMESTAMPTZ DEFAULT now(),
+  updated_at TIMESTAMPTZ DEFAULT now()
+);
+
+-- 15. Salary Settings table
 CREATE TABLE IF NOT EXISTS salary_settings (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   employee_id UUID REFERENCES users(id) UNIQUE,
@@ -265,6 +288,7 @@ CREATE TABLE IF NOT EXISTS production_orders (
   created_by UUID REFERENCES users(id),
   approved_by UUID REFERENCES users(id),
   notes TEXT,
+  image_url TEXT,
   created_at TIMESTAMPTZ DEFAULT now()
 );
 
@@ -289,6 +313,7 @@ ALTER TABLE inventory ENABLE ROW LEVEL SECURITY;
 ALTER TABLE salary_settings ENABLE ROW LEVEL SECURITY;
 ALTER TABLE partners ENABLE ROW LEVEL SECURITY;
 ALTER TABLE allowances ENABLE ROW LEVEL SECURITY;
+ALTER TABLE construction_diaries ENABLE ROW LEVEL SECURITY;
 
 -- Helper function to get user role
 CREATE OR REPLACE FUNCTION public.get_user_role()
@@ -374,6 +399,10 @@ CREATE POLICY "Admins can manage bom items" ON bom_items FOR ALL USING (get_user
 -- 19. Production Orders Policies
 CREATE POLICY "Everyone can view production orders" ON production_orders FOR SELECT USING (true);
 CREATE POLICY "Admins can manage production orders" ON production_orders FOR ALL USING (get_user_role() IN ('Admin', 'Admin App'));
+
+-- 20. Construction Diaries Policies
+CREATE POLICY "Everyone can view diaries" ON construction_diaries FOR SELECT USING (true);
+CREATE POLICY "Users can manage their own diaries" ON construction_diaries FOR ALL USING (auth.uid() = created_by OR get_user_role() IN ('Admin', 'Admin App'));
 `;
 
   const copyToClipboard = () => {
@@ -382,7 +411,7 @@ CREATE POLICY "Admins can manage production orders" ON production_orders FOR ALL
   };
 
   return (
-    <div className="p-4 md:p-6 space-y-6 pb-44">
+    <div className="p-4 md:p-6 space-y-6 pb-24">
       <PageBreadcrumb title="Cấu hình Database" onBack={onBack} />
 
       <div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden">

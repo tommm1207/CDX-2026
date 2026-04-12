@@ -10,13 +10,20 @@ import {
   PackagePlus,
   ArrowDownCircle,
   Check,
+  Image as ImageIcon,
+  RefreshCw,
+  Camera,
+  ChevronRight,
 } from 'lucide-react';
+import { ChangeEvent } from 'react';
+import { compressImage, uploadToImgBB } from '@/utils/imageUpload';
 import { motion, AnimatePresence } from 'motion/react';
 import { supabase } from '@/lib/supabase';
 import { Employee } from '@/types';
 import { PageBreadcrumb } from '../shared/PageBreadcrumb';
 import { NumericInput } from '../shared/NumericInput';
 import { CreatableSelect } from '../shared/CreatableSelect';
+import { ImageCapture } from '../shared/ImageCapture';
 import { ToastType } from '../shared/Toast';
 import { ConfirmModal } from '../shared/ConfirmModal';
 import { QuickAddMaterialModal } from '../shared/QuickAddMaterialModal';
@@ -26,6 +33,7 @@ import { formatDate, formatNumber } from '@/utils/format';
 import { isUUID, generateCode, getAllowedWarehouses } from '@/utils/helpers';
 import { getAvailableStock, validateFutureImpact } from '@/utils/inventory';
 import { Button } from '../shared/Button';
+import { SortButton, SortOption } from '../shared/SortButton';
 
 export const Transfer = ({
   user,
@@ -68,6 +76,9 @@ export const Transfer = ({
   const [filterEndDate, setFilterEndDate] = useState('');
   const [filterWarehouseId, setFilterWarehouseId] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
+  const [sortBy, setSortBy] = useState<SortOption>(
+    (localStorage.getItem(`sort_pref_transfer_${user.id}`) as SortOption) || 'newest',
+  );
 
   const initialFormState = {
     date: new Date().toISOString().split('T')[0],
@@ -78,6 +89,7 @@ export const Transfer = ({
     notes: '',
     status: 'Chờ duyệt',
     transfer_code: generateCode('LC'),
+    image_url: '',
   };
 
   const [formData, setFormData] = useState(initialFormState);
@@ -142,13 +154,13 @@ export const Transfer = ({
         );
       }
 
-      const { data, error } = await query.order('created_at', { ascending: false });
+      const { data, error } = await query.order('transfer_code', { ascending: false });
       if (error) {
         console.error('Error fetching transfers:', error);
         const { data: fallbackData, error: fallbackError } = await supabase
           .from('transfers')
           .select('*')
-          .order('created_at', { ascending: false });
+          .order('transfer_code', { ascending: false });
         if (fallbackError) throw fallbackError;
         setSlips(fallbackData || []);
       } else {
@@ -354,9 +366,10 @@ export const Transfer = ({
       to_warehouse_id: selectedSlip.to_warehouse_id,
       material_id: selectedSlip.material_id,
       quantity: selectedSlip.quantity,
-      notes: selectedSlip.notes?.replace(/^\[SỬA lúc .*?\]\s*/, '') || '',
+      notes: selectedSlip.notes || '',
       status: selectedSlip.status,
       transfer_code: selectedSlip.transfer_code || formData.transfer_code,
+      image_url: selectedSlip.image_url || '',
     });
     setIsEditing(true);
     setEditingId(selectedSlip.id);
@@ -506,10 +519,22 @@ export const Transfer = ({
   };
 
   return (
-    <div className="p-4 md:p-6 space-y-6 pb-44 overflow-x-hidden">
+    <div className="p-4 md:p-6 space-y-6 pb-24 overflow-x-hidden">
       <div className="flex items-center justify-between gap-2">
         <PageBreadcrumb title="Luân chuyển kho" onBack={onBack} />
         <div className="flex items-center gap-2">
+          <SortButton
+            currentSort={sortBy}
+            onSortChange={(val) => {
+              setSortBy(val);
+              localStorage.setItem(`sort_pref_transfer_${user.id}`, val);
+            }}
+            options={[
+              { value: 'code', label: 'Mã chứng từ' },
+              { value: 'newest', label: 'Mới nhất' },
+              { value: 'date', label: 'Ngày tạo' },
+            ]}
+          />
           <Button
             size="icon"
             variant={showFilter ? 'primary' : 'outline'}
@@ -596,25 +621,34 @@ export const Transfer = ({
       </AnimatePresence>
 
       {(() => {
-        const filteredSlips = slips.filter((item) => {
-          let match = true;
-          if (filterStartDate && item.date < filterStartDate) match = false;
-          if (filterEndDate && item.date > filterEndDate) match = false;
-          if (
-            filterWarehouseId &&
-            item.from_warehouse_id !== filterWarehouseId &&
-            item.to_warehouse_id !== filterWarehouseId
-          )
-            match = false;
-          if (searchTerm) {
-            const s = searchTerm.toLowerCase();
-            const nameMatch = (item.materials?.name || '').toLowerCase().includes(s);
-            const codeMatch = (item.transfer_code || '').toLowerCase().includes(s);
-            const noteMatch = (item.notes || '').toLowerCase().includes(s);
-            if (!nameMatch && !codeMatch && !noteMatch) match = false;
-          }
-          return match;
-        });
+        const filteredSlips = slips
+          .filter((item) => {
+            let match = true;
+            if (filterStartDate && item.date < filterStartDate) match = false;
+            if (filterEndDate && item.date > filterEndDate) match = false;
+            if (
+              filterWarehouseId &&
+              item.from_warehouse_id !== filterWarehouseId &&
+              item.to_warehouse_id !== filterWarehouseId
+            )
+              match = false;
+            if (searchTerm) {
+              const s = searchTerm.toLowerCase();
+              const nameMatch = (item.materials?.name || '').toLowerCase().includes(s);
+              const codeMatch = (item.transfer_code || '').toLowerCase().includes(s);
+              const noteMatch = (item.notes || '').toLowerCase().includes(s);
+              if (!nameMatch && !codeMatch && !noteMatch) match = false;
+            }
+            return match;
+          })
+          .sort((a, b) => {
+            if (sortBy === 'newest')
+              return (b.transfer_code || '').localeCompare(a.transfer_code || '');
+            if (sortBy === 'code')
+              return (a.transfer_code || '').localeCompare(b.transfer_code || '');
+            if (sortBy === 'date') return new Date(b.date).getTime() - new Date(a.date).getTime();
+            return 0;
+          });
         return (
           <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
             <div className="overflow-x-auto">
@@ -768,6 +802,21 @@ export const Transfer = ({
                     </p>
                   </div>
                 ))}
+                {/* Proof Image display */}
+                {selectedSlip.image_url && (
+                  <div className="space-y-3 pt-2">
+                    <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">
+                      Ảnh minh chứng điều chuyển
+                    </p>
+                    <div className="rounded-2xl overflow-hidden border border-gray-100 shadow-sm bg-gray-50">
+                      <img
+                        src={selectedSlip.image_url}
+                        alt="Proof"
+                        className="w-full h-auto object-contain max-h-[300px]"
+                      />
+                    </div>
+                  </div>
+                )}
               </div>
               <div className="p-4 border-t border-gray-100 bg-gray-50 space-y-2">
                 {selectedSlip.status !== 'Đã xóa' &&
@@ -840,7 +889,7 @@ export const Transfer = ({
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.9, y: 20 }}
               transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-              className="bg-white rounded-[2rem] md:rounded-[2.5rem] shadow-2xl w-[calc(100%-32px)] md:w-full max-w-2xl max-h-[calc(100vh-40px)] flex flex-col overflow-hidden m-4"
+              className="bg-white rounded-[2rem] md:rounded-[2.5rem] shadow-2xl w-full max-w-2xl max-h-[calc(100vh-40px)] flex flex-col overflow-hidden"
               onClick={(e) => e.stopPropagation()}
             >
               <div className="bg-orange-500 p-6 text-white flex items-center justify-between rounded-t-[2rem] md:rounded-t-[2.5rem] flex-shrink-0 relative">
@@ -869,54 +918,41 @@ export const Transfer = ({
                   onSubmit={handleSubmit}
                   className="grid grid-cols-1 md:grid-cols-2 gap-6 pb-12"
                 >
+                  <div className="md:col-span-2 space-y-2 mb-2">
+                    <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">
+                      Mã tham chiếu (Phiếu điều chuyển)
+                    </label>
+                    <div className="bg-orange-50/50 px-5 py-3.5 rounded-2xl border border-orange-100 text-sm font-black text-orange-600 uppercase shadow-inner italic">
+                      {formData.transfer_code ||
+                        `LC-${new Date().toISOString().slice(2, 10).replace(/-/g, '')}-001`}
+                    </div>
+                  </div>
+
                   <div className="space-y-4">
                     <div className="space-y-1">
                       <label className="text-[10px] font-bold text-gray-400 uppercase">
-                        Ngày chuyển *
+                        Ngày điều chuyển *
                       </label>
                       <input
                         type="date"
                         required
                         value={formData.date}
                         onChange={(e) => setFormData({ ...formData, date: e.target.value })}
-                        className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-orange-500/20"
+                        className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-orange-600/20"
                       />
-                      <p className="text-[10px] text-gray-400">
-                        Tồn kho sẽ được kiểm tra tại ngày này
-                      </p>
                     </div>
-                    <CreatableSelect
-                      label="Từ kho *"
-                      value={formData.from_warehouse_id}
-                      options={warehouses}
-                      onChange={(val) => setFormData({ ...formData, from_warehouse_id: val })}
-                      onCreate={(val) => setFormData({ ...formData, from_warehouse_id: val })}
-                      placeholder="Chọn kho nguồn..."
-                      required
-                    />
-                    <CreatableSelect
-                      label="Đến kho *"
-                      value={formData.to_warehouse_id}
-                      options={warehouses}
-                      onChange={(val) => setFormData({ ...formData, to_warehouse_id: val })}
-                      onCreate={(val) => setFormData({ ...formData, to_warehouse_id: val })}
-                      placeholder="Chọn kho đích..."
-                      required
-                    />
-                  </div>
-                  <div className="space-y-4">
+
                     <div className="relative z-[120]">
                       <div className="flex items-center justify-between mb-1">
-                        <label className="text-[10px] font-bold text-gray-400 uppercase">
+                        <label className="text-[10px] font-bold text-gray-400 uppercase font-black">
                           Vật tư luân chuyển *
                         </label>
                         <button
                           type="button"
                           onClick={() => setShowAddMaterial(true)}
                           className="text-[10px] font-bold text-blue-600 flex items-center gap-1 hover:underline"
-                          title="Thêm vật tư nhanh"
                         >
-                          <PackagePlus size={12} /> Thêm mới
+                          <Plus size={12} /> Thêm mới
                         </button>
                       </div>
                       <CreatableSelect
@@ -937,73 +973,90 @@ export const Transfer = ({
 
                     <div className="space-y-1 relative z-[110]">
                       <label className="text-[10px] font-bold text-gray-400 uppercase">
-                        Ghi chú
+                        Diễn giải
                       </label>
                       <textarea
                         rows={2}
                         value={formData.notes}
                         onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-                        className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-green-600/20 resize-none"
+                        className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-blue-500/20 resize-none"
+                        placeholder="Ghi chú thêm..."
                       />
-                    </div>
-                    <div>
-                      <NumericInput
-                        label="Số lượng chuyển *"
-                        required
-                        value={formData.quantity}
-                        onChange={(val) => setFormData({ ...formData, quantity: val })}
-                      />
-                      {stockLoading && (
-                        <div className="p-3 bg-gray-50 rounded-xl border border-gray-100 mt-1">
-                          <p className="text-[10px] font-bold text-gray-400 uppercase animate-pulse">
-                            Đang kiểm tra tồn kho...
-                          </p>
-                        </div>
-                      )}
-                      {!stockLoading && availableStock !== null && (
-                        <div
-                          className={`p-3 rounded-xl border mt-1 ${
-                            availableStock <= 0
-                              ? 'bg-red-50 border-red-100'
-                              : availableStock <= 5
-                                ? 'bg-amber-50 border-amber-100'
-                                : 'bg-blue-50 border-blue-100'
-                          }`}
-                        >
-                          <p
-                            className={`text-[10px] font-bold uppercase ${
-                              availableStock <= 0
-                                ? 'text-red-400'
-                                : availableStock <= 5
-                                  ? 'text-amber-400'
-                                  : 'text-blue-400'
-                            }`}
-                          >
-                            Tồn kho tại ngày {formData.date}
-                          </p>
-                          <p
-                            className={`text-sm font-bold ${
-                              availableStock <= 0
-                                ? 'text-red-600'
-                                : availableStock <= 5
-                                  ? 'text-amber-600'
-                                  : 'text-blue-600'
-                            }`}
-                          >
-                            {formatNumber(availableStock)}{' '}
-                            {
-                              materials.find(
-                                (m) =>
-                                  m.id === formData.material_id || m.name === formData.material_id,
-                              )?.unit
-                            }
-                            {availableStock <= 0 && ' ⚠ Không đủ tồn kho!'}
-                          </p>
-                        </div>
-                      )}
                     </div>
                   </div>
-                  <div className="md:col-span-2 flex justify-end gap-3 mt-4">
+
+                  <div className="space-y-4">
+                    <CreatableSelect
+                      label="Kho nguồn (Xuất đi) *"
+                      value={formData.from_warehouse_id}
+                      options={warehouses}
+                      onChange={(val) => setFormData({ ...formData, from_warehouse_id: val })}
+                      onCreate={(val) => setFormData({ ...formData, from_warehouse_id: val })}
+                      placeholder="Chọn kho nguồn..."
+                      required
+                    />
+
+                    <CreatableSelect
+                      label="Kho đích (Nhập đến) *"
+                      value={formData.to_warehouse_id}
+                      options={warehouses}
+                      onChange={(val) => setFormData({ ...formData, to_warehouse_id: val })}
+                      onCreate={(val) => setFormData({ ...formData, to_warehouse_id: val })}
+                      placeholder="Chọn kho đích..."
+                      required
+                    />
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-bold text-gray-400 uppercase">
+                          Số lượng
+                        </label>
+                        <NumericInput
+                          value={formData.quantity}
+                          onChange={(val) => setFormData({ ...formData, quantity: val })}
+                          placeholder="Nhập SL..."
+                        />
+                      </div>
+                    </div>
+
+                    {stockLoading && (
+                      <div className="p-3 bg-gray-50 rounded-xl border border-gray-100 flex items-center gap-2">
+                        <RefreshCw size={14} className="animate-spin text-primary" />
+                        <p className="text-[10px] font-bold text-gray-400 uppercase">
+                          Đang kiểm tra tồn...
+                        </p>
+                      </div>
+                    )}
+                    {!stockLoading && availableStock !== null && (
+                      <div
+                        className={`p-3 rounded-xl border ${availableStock <= 0 ? 'bg-red-50 border-red-100' : 'bg-green-50 border-green-100'}`}
+                      >
+                        <p
+                          className={`text-[10px] font-bold uppercase ${availableStock <= 0 ? 'text-red-400' : 'text-green-400'}`}
+                        >
+                          Tồn tại kho nguồn:
+                        </p>
+                        <p
+                          className={`text-sm font-black ${availableStock <= 0 ? 'text-red-600' : 'text-green-600'}`}
+                        >
+                          {formatNumber(availableStock)}{' '}
+                          {materials.find((m) => m.id === formData.material_id)?.unit || ''}
+                          {availableStock <= 0 && ' ⚠️ Tồn kho không đủ!'}
+                        </p>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="md:col-span-2 pt-4 border-t border-gray-100">
+                    <ImageCapture
+                      maxImages={1}
+                      existingImages={formData.image_url ? [formData.image_url] : []}
+                      onUpload={(urls) => setFormData({ ...formData, image_url: urls[0] || '' })}
+                      label="Ảnh minh chứng (Phiếu điều chuyển, Hình ảnh bốc xếp...)"
+                    />
+                  </div>
+
+                  <div className="md:col-span-2 flex justify-end gap-3 mt-4 pt-6 border-t border-gray-100">
                     <Button variant="outline" onClick={() => setShowModal(false)}>
                       Hủy
                     </Button>
@@ -1015,13 +1068,8 @@ export const Transfer = ({
                       disabled={
                         availableStock !== null && Number(formData.quantity) > availableStock
                       }
-                      title={
-                        availableStock !== null && Number(formData.quantity) > availableStock
-                          ? `Không đủ tồn kho (tồn: ${availableStock})`
-                          : undefined
-                      }
                     >
-                      {isEditing ? 'Cập nhật' : 'Lưu phiếu chuyển'}
+                      Lưu phiếu điều chuyển
                     </Button>
                   </div>
                 </form>

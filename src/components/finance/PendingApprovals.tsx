@@ -178,7 +178,7 @@ export const PendingApprovals = ({
   const isAdmin = user.role === 'Admin' || user.role === 'Admin App';
 
   return (
-    <div className="p-4 md:p-6 space-y-4 pb-44">
+    <div className="p-4 md:p-6 space-y-4 pb-24">
       <div className="flex items-center justify-between gap-2">
         <PageBreadcrumb title="Phê duyệt phiếu" onBack={onBack} />
         <Button

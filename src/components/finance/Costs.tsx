@@ -99,7 +99,7 @@ export const Costs = ({
     notes: '', // Free text
     warehouse_id: '',
     warehouse_name: '',
-    quantity: 1,
+    quantity: 0,
     unit: '',
     total_amount: 0,
   };
@@ -129,6 +129,8 @@ export const Costs = ({
   };
 
   const fetchCostItems = async (group?: string) => {
+    // We still fetch unique values from existing records to suggest, 
+    // but the UI will treat them as non-binding suggestions.
     let query = supabase.from('costs').select('content');
     if (group) {
       query = query.eq('cost_type', group);
@@ -507,13 +509,13 @@ export const Costs = ({
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse whitespace-nowrap">
             <thead>
-              <tr className="bg-primary text-white text-[10px] font-bold uppercase">
-                <th className="px-4 py-3">Ngày</th>
-                <th className="px-4 py-3">Mã</th>
-                <th className="px-4 py-3">Loại</th>
-                <th className="px-4 py-3">Hạng mục</th>
-                <th className="px-4 py-3">Nội dung</th>
-                <th className="px-4 py-3 text-right">Số tiền</th>
+              <tr className="bg-primary text-white text-[10px] font-bold uppercase tracking-wider">
+                <th className="px-4 py-3 border-r border-white/10">Ngày</th>
+                <th className="px-4 py-3 border-r border-white/10">Mã</th>
+                <th className="px-4 py-3 border-r border-white/10 text-center">Loại</th>
+                <th className="px-4 py-3 border-r border-white/10">Kho</th>
+                <th className="px-4 py-3 border-r border-white/10">Hạng mục / Nội dung</th>
+                <th className="px-4 py-3 border-r border-white/10 text-right">Số tiền</th>
                 <th className="px-4 py-3 text-center">Trạng thái</th>
               </tr>
             </thead>
@@ -529,17 +531,22 @@ export const Costs = ({
                 >
                   <td className="px-4 py-3">{new Date(item.date).toLocaleDateString('vi-VN')}</td>
                   <td className="px-4 py-3 font-bold text-primary">{item.cost_code}</td>
-                  <td className="px-4 py-3">
+                  <td className="px-4 py-3 text-center">
                     <span
-                      className={`px-2 py-0.5 rounded-full ${item.transaction_type === 'Thu' ? 'bg-green-100 text-green-600' : 'bg-red-100 text-red-600'}`}
+                      className={`px-3 py-1 rounded-full font-bold text-[10px] ${item.transaction_type === 'Thu' ? 'bg-green-100 text-green-700 border border-green-200' : 'bg-red-100 text-red-700 border border-red-200'}`}
                     >
                       {item.transaction_type}
                     </span>
                   </td>
-                  <td className="px-4 py-3">{item.cost_type}</td>
-                  <td className="px-4 py-3">{item.content}</td>
+                  <td className="px-4 py-3 text-gray-500 font-medium">
+                    {item.warehouses?.name || '---'}
+                  </td>
+                  <td className="px-4 py-3 max-w-[200px]">
+                    <p className="font-bold text-gray-700 truncate">{item.cost_type}</p>
+                    <p className="text-[10px] text-gray-400 truncate italic">{item.content}</p>
+                  </td>
                   <td
-                    className={`px-4 py-3 font-bold text-right ${item.transaction_type === 'Thu' ? 'text-green-600' : 'text-red-600'}`}
+                    className={`px-4 py-3 font-black text-right ${item.transaction_type === 'Thu' ? 'text-green-600' : 'text-red-600'}`}
                   >
                     {formatCurrency(item.total_amount)}
                   </td>
@@ -673,6 +680,29 @@ export const Costs = ({
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-1">
                       <label className="text-[10px] font-bold text-gray-400 uppercase">
+                        Loại giao dịch *
+                      </label>
+                      <div className="flex bg-gray-100 p-1 rounded-xl gap-1">
+                        {(['Thu', 'Chi'] as const).map((type) => (
+                          <button
+                            key={type}
+                            type="button"
+                            onClick={() => setFormData({ ...formData, transaction_type: type })}
+                            className={`flex-1 py-1.5 text-xs font-bold rounded-lg transition-all ${
+                              formData.transaction_type === type
+                                ? type === 'Thu'
+                                  ? 'bg-green-500 text-white shadow-sm'
+                                  : 'bg-red-500 text-white shadow-sm'
+                                : 'text-gray-400 hover:text-gray-600'
+                            }`}
+                          >
+                            {type === 'Thu' ? '↓ THU' : '↑ CHI'}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-bold text-gray-400 uppercase">
                         Ngày *
                       </label>
                       <input
@@ -749,13 +779,6 @@ export const Costs = ({
                     value={formData.total_amount}
                     onChange={(val) => setFormData({ ...formData, total_amount: val })}
                   />
-                  <textarea
-                    rows={3}
-                    placeholder="Ghi chú..."
-                    value={formData.notes}
-                    onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-                    className="w-full px-4 py-2 rounded-xl border resize-none"
-                  ></textarea>
                   <div className="flex justify-end gap-3 pt-4">
                     <Button variant="outline" onClick={() => setShowModal(false)}>
                       Hủy

@@ -1,4 +1,7 @@
-import { useState, useEffect, FormEvent } from 'react';
+import { 
+  useState,
+  useEffect,
+  FormEvent } from 'react';
 import {
   ClipboardList,
   Plus,
@@ -16,6 +19,8 @@ import {
   Image as ImageIcon,
   RefreshCw,
   Camera,
+  AlertCircle,
+  CheckCircle
 } from 'lucide-react';
 import { ChangeEvent } from 'react';
 import { compressImage, uploadToImgBB } from '@/utils/imageUpload';

@@ -1,5 +1,5 @@
 import { useState, useEffect, FormEvent } from 'react';
-import { Warehouse, Plus, Search, Edit, Trash2, X, Navigation, MapPin } from 'lucide-react';
+import { Warehouse, Plus, Search, Edit, Trash2, X, Navigation, MapPin, AlertCircle, CheckCircle } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { supabase } from '@/lib/supabase';
 import { Employee } from '@/types';

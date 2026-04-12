@@ -1,4 +1,6 @@
-import { useState, useEffect } from 'react';
+import { 
+  useState,
+  useEffect } from 'react';
 import {
   ClipboardList,
   Plus,
@@ -15,6 +17,7 @@ import {
   MapPin,
   ChevronRight,
   ImageIcon,
+  CheckCircle
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { supabase } from '@/lib/supabase';

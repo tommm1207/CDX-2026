@@ -1,5 +1,9 @@
-import { useState, useEffect, FormEvent } from 'react';
-import { motion, AnimatePresence } from 'motion/react';
+import { 
+  useState,
+  useEffect,
+  FormEvent } from 'react';
+import { motion,
+  AnimatePresence } from 'motion/react';
 import {
   User as UserIcon,
   Lock,
@@ -10,6 +14,7 @@ import {
   X,
   ArrowUpCircle,
   Menu as MenuIcon,
+  CheckCircle
 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { Employee } from '@/types';

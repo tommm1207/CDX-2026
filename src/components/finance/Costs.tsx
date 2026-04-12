@@ -1,4 +1,9 @@
-import { useState, useEffect, FormEvent, useRef, useMemo } from 'react';
+import { 
+  useState,
+  useEffect,
+  FormEvent,
+  useRef,
+  useMemo } from 'react';
 import {
   Search,
   Plus,
@@ -25,7 +30,7 @@ import {
   FileSpreadsheet,
   ArrowDownCircle,
   ArrowUpCircle,
-  Info,
+  Info
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { utils, writeFile } from 'xlsx';

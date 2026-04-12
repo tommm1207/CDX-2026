@@ -53,39 +53,45 @@ export const checkUsage = async (type: UsageType, id: string): Promise<UsageResu
 
   const queries = await Promise.all(
     tablesToCheck.map(async (table) => {
-      let queryBase = supabase.from(table).select('*', { count: 'exact', head: false });
+      const buildQuery = () => {
+        let queryBase = supabase.from(table).select('*', { count: 'exact', head: false });
 
-      if (table === 'transfers') {
-        if (type === 'material') queryBase = queryBase.eq('material_id', id);
-        if (type === 'warehouse')
-          queryBase = queryBase.or(`from_warehouse_id.eq.${id},to_warehouse_id.eq.${id}`);
-        if (type === 'employee') queryBase = queryBase.eq('employee_id', id);
-      } else if (table === 'users') {
-        queryBase = queryBase.eq('warehouse_id', id);
-      } else if (table === 'materials') {
-        if (type === 'group') queryBase = queryBase.eq('group_id', id);
-        if (type === 'warehouse') queryBase = queryBase.eq('warehouse_id', id);
-      } else if (table === 'production_orders') {
-        if (type === 'bom') queryBase = queryBase.eq('bom_id', id);
-        if (type === 'employee') queryBase = queryBase.eq('created_by', id);
-        if (type === 'warehouse')
-          queryBase = queryBase.or(`warehouse_id.eq.${id},output_warehouse_id.eq.${id}`);
-      } else if (table === 'bom_items') {
-        if (type === 'material') queryBase = queryBase.eq('material_item_id', id);
-      } else if (table === 'bom_configs') {
-        if (type === 'material') queryBase = queryBase.eq('product_item_id', id);
-      } else {
-        let field = 'material_id';
-        if (type === 'warehouse') field = 'warehouse_id';
-        if (type === 'employee') field = 'employee_id';
-        queryBase = queryBase.eq(field, id);
-      }
+        if (table === 'transfers') {
+          if (type === 'material') queryBase = queryBase.eq('material_id', id);
+          if (type === 'warehouse')
+            queryBase = queryBase.or(`from_warehouse_id.eq.${id},to_warehouse_id.eq.${id}`);
+          if (type === 'employee') queryBase = queryBase.eq('employee_id', id);
+        } else if (table === 'users') {
+          queryBase = queryBase.eq('warehouse_id', id);
+        } else if (table === 'materials') {
+          if (type === 'group') queryBase = queryBase.eq('group_id', id);
+          if (type === 'warehouse') queryBase = queryBase.eq('warehouse_id', id);
+        } else if (table === 'production_orders') {
+          if (type === 'bom') queryBase = queryBase.eq('bom_id', id);
+          if (type === 'employee') queryBase = queryBase.eq('created_by', id);
+          if (type === 'warehouse')
+            queryBase = queryBase.or(`warehouse_id.eq.${id},output_warehouse_id.eq.${id}`);
+        } else if (table === 'bom_items') {
+          if (type === 'material') queryBase = queryBase.eq('material_item_id', id);
+        } else if (table === 'bom_configs') {
+          if (type === 'material') queryBase = queryBase.eq('product_item_id', id);
+        } else {
+          let field = 'material_id';
+          if (type === 'warehouse') field = 'warehouse_id';
+          if (type === 'employee') field = 'employee_id';
+          queryBase = queryBase.eq(field, id);
+        }
+        return queryBase;
+      };
 
-      // Execute twice: once for active, once for deleted
-      const [activeRes, deletedRes] = await Promise.all([
-        queryBase.clone().or('status.is.null,status.neq.Đã xóa'),
-        queryBase.clone().eq('status', 'Đã xóa'),
-      ]);
+      // Execute twice without clone
+      const activeQuery = buildQuery();
+      const deletedQuery = buildQuery();
+      
+      const pActive = activeQuery.or('status.is.null,status.neq.Đã xóa').then(res => res).catch(() => ({ count: 0 }));
+      const pDeleted = deletedQuery.eq('status', 'Đã xóa').then(res => res).catch(() => ({ count: 0 }));
+
+      const [activeRes, deletedRes] = await Promise.all([pActive, pDeleted]);
 
       return {
         table,

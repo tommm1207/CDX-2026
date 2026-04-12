@@ -439,12 +439,12 @@ export const generateNextMaterialCode = async (groupId: string): Promise<string>
 
 /**
  * Tự động sinh mã nhóm vật tư tiếp theo.
- * Định dạng: NH-ngày-xxx (VD: NH-260412-001)
+ * Định dạng: NVT-ngày-xxx (VD: NVT-260412-001)
  */
 export const generateNextGroupCode = async (): Promise<string> => {
   try {
     const today = new Date().toISOString().slice(2, 10).replace(/-/g, '');
-    const prefix = `NH-${today}-`;
+    const prefix = `NVT-${today}-`;
     
     const { data } = await supabase
       .from('material_groups')
@@ -463,7 +463,7 @@ export const generateNextGroupCode = async (): Promise<string> => {
     return `${prefix}001`;
   } catch (err) {
     console.error('Error generating group code:', err);
-    return `NH-001`;
+    return `NVT-001`;
   }
 };
 

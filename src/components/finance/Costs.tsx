@@ -275,7 +275,6 @@ export const Costs = ({
         fetchWarehouses,
       );
 
-      const payload = {
       const cost_code = isEditing
         ? formData.cost_code
         : generateNextCostCode();
@@ -283,9 +282,9 @@ export const Costs = ({
       const payload = {
         cost_code,
         transaction_type: formData.transaction_type,
-        cost_type: formData.cost_type, // Nhóm
-        content: formData.content, // Chi tiết
-        notes: formData.notes, // Ghi chú tự do
+        cost_type: formData.cost_type,
+        content: formData.content,
+        notes: formData.notes,
         warehouse_id,
         quantity: formData.quantity,
         unit: formData.unit,
@@ -633,27 +632,38 @@ export const Costs = ({
 
       <AnimatePresence>
         {showDeleteModal && (
-          <div className="fixed inset-0 z-[130] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm" onClick={() => setShowDeleteModal(false)}>
+          <div
+            className="fixed inset-0 z-[130] flex items-center justify-center p-4 bg-black/50 backdrop-blur-md overflow-hidden"
+            onClick={() => setShowDeleteModal(false)}
+          >
             <motion.div
-              initial={{ scale: 0.9, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.9, opacity: 0 }}
-              className="bg-white rounded-[2rem] p-8 shadow-2xl z-10 text-center max-w-sm w-full"
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              className="bg-white rounded-[2rem] md:rounded-[2.5rem] shadow-2xl p-8 max-w-sm w-full text-center relative z-10"
               onClick={(e) => e.stopPropagation()}
             >
-              <div className="w-20 h-20 bg-red-50 text-red-600 rounded-full flex items-center justify-center mx-auto mb-6">
-                <Trash2 size={40} />
+              <div className="w-16 h-16 bg-red-50 text-red-600 rounded-2xl flex items-center justify-center mx-auto mb-4 border border-red-100">
+                <Trash2 size={32} />
               </div>
-              <h3 className="font-black text-xl mb-2 text-gray-800">Xác nhận xóa?</h3>
-              <p className="text-sm text-gray-500 mb-8 px-4">
-                Bản ghi <span className="font-bold text-primary">{costs.find(c => c.id === itemToDelete)?.cost_code}</span> sẽ được đưa vào <span className="font-bold text-red-500">thùng rác</span>.
-              </p>
-              <div className="grid grid-cols-2 gap-3">
-                <Button variant="outline" fullWidth onClick={() => setShowDeleteModal(false)}>
+              <h3 className="text-xl font-bold text-gray-800 mb-2">Xác nhận xóa?</h3>
+              <div className="text-sm text-gray-500 mb-6 text-left bg-gray-50 p-4 rounded-xl border border-gray-100">
+                <p>
+                  Mã phiếu:{' '}
+                  <strong className="text-primary">
+                    {costs.find((c) => c.id === itemToDelete)?.cost_code}
+                  </strong>
+                </p>
+                <p className="text-xs text-amber-600 mt-2 flex items-center gap-1">
+                  Phiếu sẽ được chuyển vào <strong>Thùng rác</strong>.
+                </p>
+              </div>
+              <div className="flex gap-3">
+                <Button fullWidth variant="outline" onClick={() => setShowDeleteModal(false)}>
                   Hủy bỏ
                 </Button>
-                <Button variant="danger" fullWidth onClick={confirmDelete} icon={Trash2}>
-                  Xác nhận
+                <Button fullWidth variant="danger" onClick={confirmDelete} icon={Trash2}>
+                  Thùng rác
                 </Button>
               </div>
             </motion.div>
@@ -686,8 +696,7 @@ export const Costs = ({
                       Mã tham chiếu
                     </p>
                     <p className="font-black text-primary uppercase italic">
-                      {(formData as any).cost_code ||
-                        `CP-${new Date().toISOString().slice(2, 10).replace(/-/g, '')}-001`}
+                      {(formData as any).cost_code || generateNextCostCode()}
                     </p>
                   </div>
                   <div className="grid grid-cols-2 gap-4">

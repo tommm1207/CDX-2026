@@ -118,11 +118,21 @@ export const BOMConfig = ({
     setFormData({ ...formData, items: newItems });
   };
 
-  const generateBOMCode = () => {
+  const generateBOMCode = async (): Promise<string> => {
     const d = new Date();
-    const dateStr = d.toISOString().slice(2, 10).replace(/-/g, '');
-    const random = Math.floor(100 + Math.random() * 900);
-    return `ĐMSX-${dateStr}-${random}`;
+    const today = `${d.getFullYear().toString().slice(-2)}${String(d.getMonth() + 1).padStart(2, '0')}${String(d.getDate()).padStart(2, '0')}`;
+    const prefix = `DM-${today}-`;
+    const { data } = await supabase
+      .from('bom_configs')
+      .select('bom_code')
+      .like('bom_code', `${prefix}%`)
+      .order('bom_code', { ascending: false })
+      .limit(1);
+    if (data && data.length > 0 && data[0].bom_code) {
+      const lastNum = parseInt(data[0].bom_code.split('-').pop() || '0');
+      if (!isNaN(lastNum)) return `${prefix}${(lastNum + 1).toString().padStart(3, '0')}`;
+    }
+    return `${prefix}001`;
   };
 
   const handleSubmit = async (e: FormEvent) => {
@@ -153,7 +163,7 @@ export const BOMConfig = ({
         await supabase.from('bom_items').delete().eq('bom_id', bomId);
       } else {
         // Insert header
-        const code = formData.bom_code || generateBOMCode();
+        const code = formData.bom_code || (await generateBOMCode());
         const { data: newBom, error: headError } = await supabase
           .from('bom_configs')
           .insert([
@@ -241,8 +251,9 @@ export const BOMConfig = ({
       <PageBreadcrumb title="Định mức sản xuất" onBack={onBack} />
 
       <FAB
-        onClick={() => {
-          setFormData({ bom_code: '', product_item_id: '', name: '', notes: '', items: [] });
+        onClick={async () => {
+          const newCode = await generateBOMCode();
+          setFormData({ bom_code: newCode, product_item_id: '', name: '', notes: '', items: [] });
           setIsEditing(false);
           setShowModal(true);
         }}

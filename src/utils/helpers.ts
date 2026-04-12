@@ -17,11 +17,11 @@ export const generateCostCode = (date: string, employeeId: string): string => {
 
 export const generateCode = (prefix: string): string => {
   const d = new Date();
-  const year = d.getFullYear().toString().slice(-2);
-  const month = String(d.getMonth() + 1).padStart(2, '0');
-  const date = String(d.getDate()).padStart(2, '0');
+  const yy = d.getFullYear().toString().slice(-2);
+  const mm = String(d.getMonth() + 1).padStart(2, '0');
+  const dd = String(d.getDate()).padStart(2, '0');
   const random = Math.floor(1000 + Math.random() * 9000);
-  return `${prefix}-${year}${month}${date}-${random}`;
+  return `${prefix}-${yy}${mm}${dd}-${random}`;
 };
 
 /**

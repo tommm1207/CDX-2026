@@ -130,7 +130,7 @@ export const ProductionOrderDetail = ({
           }
         }
       } else {
-        const nextCode = await generateOrderCode();
+        const nextCode = generateOrderCode();
         setOrder((prev) => ({ ...prev, order_code: nextCode }));
       }
     } catch (err: any) {
@@ -140,19 +140,13 @@ export const ProductionOrderDetail = ({
     }
   };
 
-  const generateOrderCode = async () => {
-    const { data } = await supabase
-      .from('production_orders')
-      .select('order_code')
-      .order('order_code', { ascending: false })
-      .limit(1);
-
-    if (data && data.length > 0) {
-      const lastCode = data[0].order_code;
-      const num = parseInt(lastCode.split('-')[1]) + 1;
-      return `LSX-${num.toString().padStart(3, '0')}`;
-    }
-    return 'LSX-001';
+  const generateOrderCode = (): string => {
+    const d = new Date();
+    const yy = d.getFullYear().toString().slice(-2);
+    const mm = String(d.getMonth() + 1).padStart(2, '0');
+    const dd = String(d.getDate()).padStart(2, '0');
+    const random = Math.floor(1000 + Math.random() * 9000);
+    return `LSX-${yy}${mm}${dd}-${random}`;
   };
 
   const fetchBomItems = async (bomId: string, quantity: number, warehouseId?: string) => {
@@ -557,8 +551,7 @@ export const ProductionOrderDetail = ({
                 Mã tham chiếu (Lệnh sản xuất)
               </label>
               <div className="bg-indigo-50/50 px-5 py-3.5 rounded-2xl border border-indigo-100 text-sm font-black text-indigo-600 uppercase shadow-inner italic">
-                {order.order_code ||
-                  `LSX-${new Date().toISOString().slice(2, 10).replace(/-/g, '')}-001`}
+                {order.order_code || generateOrderCode()}
               </div>
             </div>
 

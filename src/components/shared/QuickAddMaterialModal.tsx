@@ -152,7 +152,7 @@ export const QuickAddMaterialModal = ({
                     Mã tham chiếu (Vật tư)
                   </label>
                   <div className="bg-primary/5 px-5 py-3.5 rounded-2xl border border-primary/10 text-sm font-black text-primary uppercase shadow-inner italic">
-                    {code || (groupId ? 'VAT-001' : 'VAT-[NHÓM]-001')}
+                    {code || (groupId ? 'Đang tính...' : '← Chọn nhóm vật tư trước')}
                   </div>
                 </div>
                 <div className="md:col-span-2 space-y-1">

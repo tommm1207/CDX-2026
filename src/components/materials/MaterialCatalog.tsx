@@ -8,16 +8,14 @@ import {
   X,
   Image as ImageIcon,
   RefreshCw,
+  AlertCircle,
+  CheckCircle,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { supabase } from '@/lib/supabase';
 import { Employee } from '@/types';
 import { PageBreadcrumb } from '../shared/PageBreadcrumb';
-import {
-  isActiveWarehouse,
-  generateNextMaterialCode,
-  generateNextGroupCode,
-} from '@/utils/inventory';
+import { isActiveWarehouse, generateNextGroupCode } from '@/utils/inventory';
 import { isUUID } from '@/utils/helpers';
 import { CreatableSelect } from '../shared/CreatableSelect';
 import { ImageCapture } from '../shared/ImageCapture';
@@ -26,6 +24,7 @@ import { Button } from '../shared/Button';
 import { FAB } from '../shared/FAB';
 import { SortButton, SortOption } from '../shared/SortButton';
 import { checkUsage } from '@/utils/dataIntegrity';
+import { generateSmartCode } from '@/utils/codeGenerator';
 
 export const MaterialCatalog = ({
   user,
@@ -56,6 +55,7 @@ export const MaterialCatalog = ({
 
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [itemToDelete, setItemToDelete] = useState<string | null>(null);
+  const [usageInfo, setUsageInfo] = useState<any>({ inUse: false, details: [] });
 
   const initialFormState = {
     id: '',
@@ -96,6 +96,17 @@ export const MaterialCatalog = ({
       else alert('Lỗi tải danh mục vật tư: ' + err.message);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const generateNextMaterialCode = async () => {
+    try {
+      const { data } = await supabase.from('materials').select('code').like('code', 'VT%');
+      const codes = data?.map((m) => m.code) || [];
+      return generateSmartCode(codes, 'VT', 3);
+    } catch (err) {
+      console.error('Error generating material code:', err);
+      return 'VT001';
     }
   };
 
@@ -210,25 +221,22 @@ export const MaterialCatalog = ({
     setShowModal(true);
   };
 
-  const handleDeleteClick = (id: string) => {
+  const handleDeleteClick = async (id: string) => {
     setItemToDelete(id);
     setShowDeleteModal(true);
+    try {
+      const usage = await checkUsage('material', id);
+      setUsageInfo(usage);
+    } catch (err) {
+      console.error(err);
+    }
   };
 
   const confirmDelete = async () => {
     if (!itemToDelete) return;
+    setSubmitting(true);
     try {
-      // Check usage first
-      const usage = await checkUsage('material', itemToDelete);
-      if (usage.inUse) {
-        if (addToast)
-          addToast(
-            `Không thể xóa vì vật tư đang được dùng trong: ${usage.tables.join(', ')}`,
-            'error',
-          );
-        setShowDeleteModal(false);
-        return;
-      }
+      // Always allow moving to Trash (soft delete)
 
       const { error } = await supabase
         .from('materials')
@@ -237,11 +245,31 @@ export const MaterialCatalog = ({
       if (error) throw error;
       fetchMaterials();
       if (addToast) addToast('Đã chuyển vật tư vào thùng rác!', 'success');
+      setShowDeleteModal(false);
     } catch (err: any) {
       if (addToast) addToast('Lỗi: ' + err.message, 'error');
-      else alert('Lỗi: ' + err.message);
+    } finally {
+      setSubmitting(false);
     }
-    setShowDeleteModal(false);
+  };
+
+  const handlePurgeRelated = async () => {
+    if (!itemToDelete || user.role !== 'Develop' || !usageInfo.details) return;
+    if (!window.confirm('CẢNH BÁO: Hành động này sẽ xóa VĨNH VIỄN vật tư này. Bạn có chắc chắn?'))
+      return;
+
+    setSubmitting(true);
+    try {
+      const { error } = await supabase.from('materials').delete().eq('id', itemToDelete);
+      if (error) throw error;
+      if (addToast) addToast('Đã xóa vĩnh viễn vật tư', 'success');
+      fetchMaterials();
+      setShowDeleteModal(false);
+    } catch (err: any) {
+      if (addToast) addToast('Lỗi xóa vĩnh viễn: ' + err.message, 'error');
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   const filteredMaterials = materials
@@ -460,31 +488,34 @@ export const MaterialCatalog = ({
                 <Trash2 size={32} />
               </div>
               <h3 className="text-xl font-bold text-gray-800 mb-2">Xác nhận xóa?</h3>
-              <p className="text-sm text-gray-500 mb-6 font-medium">
-                Bạn có chắc chắn muốn xóa vật tư{' '}
-                <strong>
-                  {materials.find((m) => m.id === itemToDelete)?.code || itemToDelete?.slice(0, 8)}
-                </strong>
-                ?<br />
-                Hành động này không thể hoàn tác.
-              </p>
-              <div className="flex gap-3">
-                <Button
-                  variant="ghost"
-                  fullWidth
-                  onClick={() => setShowDeleteModal(false)}
-                  className="bg-gray-100 hover:bg-gray-200"
-                >
-                  Hủy bỏ
-                </Button>
-                <Button
-                  variant="danger"
-                  fullWidth
-                  onClick={confirmDelete}
-                  className="shadow-lg shadow-red-500/20"
-                >
-                  Xóa ngay
-                </Button>
+              <div className="text-sm text-gray-500 mb-6 text-left bg-gray-50 p-4 rounded-xl border border-gray-100 space-y-2">
+                <p>
+                  Vật tư:{' '}
+                  <strong className="text-primary uppercase">
+                    {materials.find((m) => m.id === itemToDelete)?.code ||
+                      itemToDelete?.slice(0, 8)}
+                  </strong>
+                </p>
+                {usageInfo.inUse ? (
+                  <p className="text-[10px] text-red-500 font-bold flex items-center gap-1 uppercase tracking-tighter">
+                    <AlertCircle size={12} /> Có dữ liệu liên quan - Cân nhắc kỹ
+                  </p>
+                ) : (
+                  <p className="text-[10px] text-green-600 font-bold flex items-center gap-1 uppercase tracking-widest">
+                    <CheckCircle size={12} /> Sẵn sàng để xóa
+                  </p>
+                )}
+              </div>
+              <div className="flex flex-col gap-3">
+                <div className="flex gap-3">
+                  <Button fullWidth variant="outline" onClick={() => setShowDeleteModal(false)}>
+                    Hủy bỏ
+                  </Button>
+                  <Button fullWidth variant="danger" onClick={confirmDelete} isLoading={submitting}>
+                    Thùng rác
+                  </Button>
+                </div>
+                {/* XÓA VĨNH VIỄN removed from main list - use Trash module instead */}
               </div>
             </motion.div>
           </div>
@@ -530,29 +561,8 @@ export const MaterialCatalog = ({
               <div className="flex-1 overflow-y-auto custom-scrollbar">
                 <form onSubmit={handleSubmit} className="p-6">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div className="md:col-span-2 space-y-2 mb-2">
-                      <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">
-                        Mã tham chiếu (Vật tư)
-                      </label>
-                      <div className="bg-primary/5 px-5 py-3.5 rounded-2xl border border-primary/10 text-sm font-black text-primary uppercase shadow-inner italic">
-                        {formData.code || (formData.group_id ? 'VAT-001' : 'VAT-[NHÓM]-001')}
-                      </div>
-                    </div>
-                    <div className="space-y-4">
-                      <div className="space-y-1">
-                        <label className="text-[10px] font-bold text-gray-400 uppercase">
-                          Tên vật tư *
-                        </label>
-                        <input
-                          required
-                          type="text"
-                          placeholder="Ví dụ: Tôn kẽm 0.4mm"
-                          value={formData.name}
-                          onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                          className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20"
-                        />
-                      </div>
-
+                    {/* 1. NHÓM — chọn đầu tiên để sinh mã */}
+                    <div className="md:col-span-2">
                       <CreatableSelect
                         label={`Nhóm vật tư *${isEditing && editingInUse ? ' 🔒' : ''}`}
                         value={formData.group_id}
@@ -567,13 +577,40 @@ export const MaterialCatalog = ({
                         onCreate={async (val) => {
                           setFormData({ ...formData, group_id: val });
                         }}
-                        placeholder="Chọn nhóm..."
+                        placeholder="Chọn nhóm trước để sinh mã tự động..."
                         required
                         disabled={isEditing && editingInUse}
                       />
                     </div>
 
-                    <div className="space-y-4">
+                    {/* 2. MÃ — hiện sau khi chọn nhóm */}
+                    <div className="md:col-span-2 space-y-2">
+                      <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">
+                        Mã tham chiếu (Vật tư)
+                      </label>
+                      <div className="bg-primary/5 px-5 py-3.5 rounded-2xl border border-primary/10 text-sm font-black text-primary uppercase shadow-inner italic">
+                        {formData.code ||
+                          (formData.group_id ? 'Đang tính...' : '← Chọn nhóm vật tư trước')}
+                      </div>
+                    </div>
+
+                    {/* 3. Left column: Tên */}
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-bold text-gray-400 uppercase">
+                        Tên vật tư *
+                      </label>
+                      <input
+                        required
+                        type="text"
+                        placeholder="Ví dụ: Tôn kẽm 0.4mm"
+                        value={formData.name}
+                        onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                        className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20"
+                      />
+                    </div>
+
+                    {/* 3. Right column: Đơn vị tính */}
+                    <div>
                       <CreatableSelect
                         label={`Đơn vị tính${isEditing && editingInUse ? ' 🔒' : ''}`}
                         value={formData.unit}
@@ -585,36 +622,39 @@ export const MaterialCatalog = ({
                         placeholder="Chọn hoặc nhập mới..."
                         disabled={isEditing && editingInUse}
                       />
-
-                      <div className="space-y-1">
-                        <label className="text-[10px] font-bold text-gray-400 uppercase">
-                          Quy cách / Kích thước
-                        </label>
-                        <input
-                          type="text"
-                          placeholder="Ví dụ: 1200mm x 2400mm"
-                          value={formData.specification}
-                          onChange={(e) =>
-                            setFormData({ ...formData, specification: e.target.value })
-                          }
-                          className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20"
-                        />
-                      </div>
-                      <div className="space-y-1">
-                        <label className="text-[10px] font-bold text-gray-400 uppercase">
-                          Mô tả chi tiết
-                        </label>
-                        <textarea
-                          rows={3}
-                          placeholder="Thông tin thêm về vật tư..."
-                          value={formData.description}
-                          onChange={(e) =>
-                            setFormData({ ...formData, description: e.target.value })
-                          }
-                          className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20 resize-none"
-                        />
-                      </div>
                     </div>
+
+                    {/* 4. Left column: Quy cách */}
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-bold text-gray-400 uppercase">
+                        Quy cách / Kích thước
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="Ví dụ: 1200mm x 2400mm"
+                        value={formData.specification}
+                        onChange={(e) =>
+                          setFormData({ ...formData, specification: e.target.value })
+                        }
+                        className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20"
+                      />
+                    </div>
+
+                    {/* 4. Right column: Mô tả */}
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-bold text-gray-400 uppercase">
+                        Mô tả chi tiết
+                      </label>
+                      <textarea
+                        rows={3}
+                        placeholder="Thông tin thêm về vật tư..."
+                        value={formData.description}
+                        onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                        className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20 resize-none"
+                      />
+                    </div>
+
+                    {/* 5. Ảnh */}
                     <div className="col-span-1 md:col-span-2 space-y-4 pt-4 border-t border-gray-100">
                       <ImageCapture
                         maxImages={1}

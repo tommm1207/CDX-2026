@@ -63,7 +63,7 @@ export const Dashboard = ({ user, onNavigate, addToast, pendingApprovals = 0 }: 
     return () => clearInterval(interval);
   }, [user.id]);
 
-  const isAdmin = user.role === 'Admin' || user.role === 'Admin App';
+  const isAdmin = user.role === 'Admin' || user.role === 'Develop';
 
   const menuActions = [
     {

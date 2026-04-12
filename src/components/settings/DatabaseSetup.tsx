@@ -322,87 +322,87 @@ RETURNS text AS $$
 $$ LANGUAGE sql SECURITY DEFINER;
 
 -- 1. Users Table Policies
-CREATE POLICY "Users can view their own profile" ON users FOR SELECT USING (auth.uid() = id OR get_user_role() IN ('Admin', 'Admin App'));
-CREATE POLICY "Admins can manage users" ON users FOR ALL USING (get_user_role() IN ('Admin', 'Admin App'));
+CREATE POLICY "Users can view their own profile" ON users FOR SELECT USING (auth.uid() = id OR get_user_role() IN ('Admin', 'Develop'));
+CREATE POLICY "Admins can manage users" ON users FOR ALL USING (get_user_role() IN ('Admin', 'Develop'));
 
 -- 2. Material Groups Policies
 CREATE POLICY "Everyone can view material groups" ON material_groups FOR SELECT USING (true);
-CREATE POLICY "Admins can manage material groups" ON material_groups FOR ALL USING (get_user_role() IN ('Admin', 'Admin App'));
+CREATE POLICY "Admins can manage material groups" ON material_groups FOR ALL USING (get_user_role() IN ('Admin', 'Develop'));
 
 -- 3. Materials Policies
 CREATE POLICY "Everyone can view materials" ON materials FOR SELECT USING (true);
-CREATE POLICY "Admins can manage materials" ON materials FOR ALL USING (get_user_role() IN ('Admin', 'Admin App'));
+CREATE POLICY "Admins can manage materials" ON materials FOR ALL USING (get_user_role() IN ('Admin', 'Develop'));
 
 -- 4. Warehouses Policies
 CREATE POLICY "Everyone can view warehouses" ON warehouses FOR SELECT USING (true);
-CREATE POLICY "Admins can manage warehouses" ON warehouses FOR ALL USING (get_user_role() IN ('Admin', 'Admin App'));
+CREATE POLICY "Admins can manage warehouses" ON warehouses FOR ALL USING (get_user_role() IN ('Admin', 'Develop'));
 
 -- 5. Stock In Policies
 CREATE POLICY "Users can view stock in" ON stock_in FOR SELECT USING (true);
 CREATE POLICY "Users can create stock in" ON stock_in FOR INSERT WITH CHECK (true);
-CREATE POLICY "Admins can manage stock in" ON stock_in FOR ALL USING (get_user_role() IN ('Admin', 'Admin App'));
+CREATE POLICY "Admins can manage stock in" ON stock_in FOR ALL USING (get_user_role() IN ('Admin', 'Develop'));
 
 -- 6. Stock Out Policies
 CREATE POLICY "Users can view stock out" ON stock_out FOR SELECT USING (true);
 CREATE POLICY "Users can create stock out" ON stock_out FOR INSERT WITH CHECK (true);
-CREATE POLICY "Admins can manage stock out" ON stock_out FOR ALL USING (get_user_role() IN ('Admin', 'Admin App'));
+CREATE POLICY "Admins can manage stock out" ON stock_out FOR ALL USING (get_user_role() IN ('Admin', 'Develop'));
 
 -- 7. Transfers Policies
 CREATE POLICY "Users can view transfers" ON transfers FOR SELECT USING (true);
 CREATE POLICY "Users can create transfers" ON transfers FOR INSERT WITH CHECK (true);
-CREATE POLICY "Admins can manage transfers" ON transfers FOR ALL USING (get_user_role() IN ('Admin', 'Admin App'));
+CREATE POLICY "Admins can manage transfers" ON transfers FOR ALL USING (get_user_role() IN ('Admin', 'Develop'));
 
 -- 8. Costs Policies
 CREATE POLICY "Users can view costs" ON costs FOR SELECT USING (true);
 CREATE POLICY "Users can create costs" ON costs FOR INSERT WITH CHECK (true);
-CREATE POLICY "Admins can manage costs" ON costs FOR ALL USING (get_user_role() IN ('Admin', 'Admin App'));
+CREATE POLICY "Admins can manage costs" ON costs FOR ALL USING (get_user_role() IN ('Admin', 'Develop'));
 
 -- 9. Attendance Policies
 CREATE POLICY "Users can view attendance" ON attendance FOR SELECT USING (true);
-CREATE POLICY "Admins can manage attendance" ON attendance FOR ALL USING (get_user_role() IN ('Admin', 'Admin App'));
+CREATE POLICY "Admins can manage attendance" ON attendance FOR ALL USING (get_user_role() IN ('Admin', 'Develop'));
 
 -- 10. Advances Policies
-CREATE POLICY "Users can view their own advances" ON advances FOR SELECT USING (auth.uid() = employee_id OR get_user_role() IN ('Admin', 'Admin App'));
-CREATE POLICY "Admins can manage advances" ON advances FOR ALL USING (get_user_role() IN ('Admin', 'Admin App'));
+CREATE POLICY "Users can view their own advances" ON advances FOR SELECT USING (auth.uid() = employee_id OR get_user_role() IN ('Admin', 'Develop'));
+CREATE POLICY "Admins can manage advances" ON advances FOR ALL USING (get_user_role() IN ('Admin', 'Develop'));
 
 -- 11. Reminders Policies
 CREATE POLICY "Users can manage their own reminders" ON reminders FOR ALL USING (true); -- Simplified for now
 
 -- 12. Notes Policies
 CREATE POLICY "Users can view notes" ON notes FOR SELECT USING (true);
-CREATE POLICY "Users can manage their own notes" ON notes FOR ALL USING (auth.uid() = created_by OR get_user_role() IN ('Admin', 'Admin App'));
+CREATE POLICY "Users can manage their own notes" ON notes FOR ALL USING (auth.uid() = created_by OR get_user_role() IN ('Admin', 'Develop'));
 
 -- 13. Inventory Policies
 CREATE POLICY "Everyone can view inventory" ON inventory FOR SELECT USING (true);
 CREATE POLICY "System can manage inventory" ON inventory FOR ALL USING (true); -- Usually managed via triggers or app logic
 
 -- 14. Salary Settings Policies
-CREATE POLICY "Users can view their own salary settings" ON salary_settings FOR SELECT USING (auth.uid() = employee_id OR get_user_role() IN ('Admin', 'Admin App'));
-CREATE POLICY "Admins can manage salary settings" ON salary_settings FOR ALL USING (get_user_role() IN ('Admin', 'Admin App'));
+CREATE POLICY "Users can view their own salary settings" ON salary_settings FOR SELECT USING (auth.uid() = employee_id OR get_user_role() IN ('Admin', 'Develop'));
+CREATE POLICY "Admins can manage salary settings" ON salary_settings FOR ALL USING (get_user_role() IN ('Admin', 'Develop'));
 
 -- 15. Partners Policies
 CREATE POLICY "Everyone can view partners" ON partners FOR SELECT USING (true);
-CREATE POLICY "Admins can manage partners" ON partners FOR ALL USING (get_user_role() IN ('Admin', 'Admin App'));
+CREATE POLICY "Admins can manage partners" ON partners FOR ALL USING (get_user_role() IN ('Admin', 'Develop'));
 
 -- 16. Allowances Policies
-CREATE POLICY "Users can view their own allowances" ON allowances FOR SELECT USING (auth.uid() = employee_id OR get_user_role() IN ('Admin', 'Admin App'));
-CREATE POLICY "Admins can manage allowances" ON allowances FOR ALL USING (get_user_role() IN ('Admin', 'Admin App'));
+CREATE POLICY "Users can view their own allowances" ON allowances FOR SELECT USING (auth.uid() = employee_id OR get_user_role() IN ('Admin', 'Develop'));
+CREATE POLICY "Admins can manage allowances" ON allowances FOR ALL USING (get_user_role() IN ('Admin', 'Develop'));
 
 -- 17. BOM Configs Policies
 CREATE POLICY "Everyone can view bom configs" ON bom_configs FOR SELECT USING (true);
-CREATE POLICY "Admins can manage bom configs" ON bom_configs FOR ALL USING (get_user_role() IN ('Admin', 'Admin App'));
+CREATE POLICY "Admins can manage bom configs" ON bom_configs FOR ALL USING (get_user_role() IN ('Admin', 'Develop'));
 
 -- 18. BOM Items Policies
 CREATE POLICY "Everyone can view bom items" ON bom_items FOR SELECT USING (true);
-CREATE POLICY "Admins can manage bom items" ON bom_items FOR ALL USING (get_user_role() IN ('Admin', 'Admin App'));
+CREATE POLICY "Admins can manage bom items" ON bom_items FOR ALL USING (get_user_role() IN ('Admin', 'Develop'));
 
 -- 19. Production Orders Policies
 CREATE POLICY "Everyone can view production orders" ON production_orders FOR SELECT USING (true);
-CREATE POLICY "Admins can manage production orders" ON production_orders FOR ALL USING (get_user_role() IN ('Admin', 'Admin App'));
+CREATE POLICY "Admins can manage production orders" ON production_orders FOR ALL USING (get_user_role() IN ('Admin', 'Develop'));
 
 -- 20. Construction Diaries Policies
 CREATE POLICY "Everyone can view diaries" ON construction_diaries FOR SELECT USING (true);
-CREATE POLICY "Users can manage their own diaries" ON construction_diaries FOR ALL USING (auth.uid() = created_by OR get_user_role() IN ('Admin', 'Admin App'));
+CREATE POLICY "Users can manage their own diaries" ON construction_diaries FOR ALL USING (auth.uid() = created_by OR get_user_role() IN ('Admin', 'Develop'));
 `;
 
   const copyToClipboard = () => {

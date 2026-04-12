@@ -8,18 +8,27 @@ import {
   Check,
   Square,
   CheckSquare,
+  AlertCircle,
+  CheckCircle,
+  ChevronUp,
+  ChevronDown,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { supabase } from '@/lib/supabase';
+import { Employee } from '@/types';
 import { PageBreadcrumb } from '../shared/PageBreadcrumb';
 import { ConfirmModal } from '../shared/ConfirmModal';
 import { ToastType } from '../shared/Toast';
-import { checkUsage } from '@/utils/dataIntegrity';
+import { Button } from '../shared/Button';
+import { checkUsage, UsageResult } from '@/utils/dataIntegrity';
+import { purgeDependencies } from '@/utils/dataFixer';
 
 export const DeletedMaterials = ({
+  user,
   onBack,
   addToast,
 }: {
+  user: Employee;
   onBack: () => void;
   addToast?: (message: string, type?: ToastType) => void;
 }) => {
@@ -29,12 +38,21 @@ export const DeletedMaterials = ({
   const [showRestoreModal, setShowRestoreModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [showActionModal, setShowActionModal] = useState(false);
+  const [showUsageDetails, setShowUsageDetails] = useState(false);
   const [showBulkDeleteModal, setShowBulkDeleteModal] = useState(false);
   const [showEmptyTrashModal, setShowEmptyTrashModal] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [usageInfo, setUsageInfo] = useState<UsageResult>({
+    inUse: false,
+    tables: [],
+    details: [],
+  });
+
   const [selectedItem, setSelectedItem] = useState<{
     id: string;
     table: string;
     name?: string;
+    code?: string;
   } | null>(null);
 
   useEffect(() => {
@@ -87,12 +105,33 @@ export const DeletedMaterials = ({
   };
 
   const handleRowClick = (item: any) => {
-    setSelectedItem({ id: item.id, table: item.table, name: item.displayName });
+    setSelectedItem({ id: item.id, table: item.table, name: item.displayName, code: item.code });
     setShowActionModal(true);
+  };
+
+  const handleRestoreClick = (item: any) => {
+    setSelectedItem({ id: item.id, table: item.table, name: item.displayName });
+    setShowActionModal(false);
+    setShowRestoreModal(true);
+  };
+
+  const handleDeleteClick = async (item: any) => {
+    setSelectedItem({ id: item.id, table: item.table, name: item.displayName, code: item.code });
+    setShowActionModal(false);
+    setShowDeleteModal(true);
+    setShowUsageDetails(false);
+    setUsageInfo({ inUse: false, tables: [], details: [] });
+    try {
+      const usage = await checkUsage(item.table === 'materials' ? 'material' : 'group', item.id);
+      setUsageInfo(usage);
+    } catch (err) {
+      console.error(err);
+    }
   };
 
   const confirmRestore = async () => {
     if (!selectedItem) return;
+    setSubmitting(true);
     try {
       const { error } = await supabase
         .from(selectedItem.table)
@@ -106,19 +145,21 @@ export const DeletedMaterials = ({
       setSelectedItem(null);
     } catch (err: any) {
       if (addToast) addToast('Lỗi khôi phục: ' + err.message, 'error');
+    } finally {
+      setSubmitting(false);
     }
   };
 
   const confirmDelete = async () => {
     if (!selectedItem) return;
+    setSubmitting(true);
     try {
-      // Use checkUsage if it's a permanent delete just in case
-      const usage = await checkUsage(
-        selectedItem.table === 'materials' ? 'material' : 'group',
-        selectedItem.id,
-      );
-      if (usage.inUse) {
-        throw new Error(`Dữ liệu đang được sử dụng ở: ${usage.tables.join(', ')}`);
+      const isDevelop = user.role === 'Develop';
+      if (isDevelop && usageInfo.inUse) {
+        await purgeDependencies(
+          selectedItem.table === 'materials' ? 'material' : 'group',
+          selectedItem.id,
+        );
       }
 
       const { error } = await supabase.from(selectedItem.table).delete().eq('id', selectedItem.id);
@@ -129,11 +170,14 @@ export const DeletedMaterials = ({
       setShowDeleteModal(false);
       setSelectedItem(null);
     } catch (err: any) {
-      if (addToast) addToast('Lỗi: ' + err.message, 'error');
+      if (addToast) addToast('Lỗi xóa vĩnh viễn: ' + err.message, 'error');
+    } finally {
+      setSubmitting(false);
     }
   };
 
   const restoreSelected = async () => {
+    setSubmitting(true);
     try {
       const promises = Array.from(selectedIds).map((sid) => {
         const [table, id] = sid.split('-');
@@ -144,18 +188,26 @@ export const DeletedMaterials = ({
       fetchDeletedItems();
     } catch (err: any) {
       if (addToast) addToast('Lỗi khôi phục hàng loạt: ' + err.message, 'error');
+    } finally {
+      setSubmitting(false);
     }
   };
 
   const bulkDelete = async () => {
+    setSubmitting(true);
     try {
+      const isDevelop = user.role === 'Develop';
       let successCount = 0;
       let failCount = 0;
 
       for (const sid of selectedIds) {
         const [table, id] = sid.split('-');
         const usage = await checkUsage(table === 'materials' ? 'material' : 'group', id);
-        if (!usage.inUse) {
+
+        if (!usage.inUse || isDevelop) {
+          if (usage.inUse && isDevelop) {
+            await purgeDependencies(table === 'materials' ? 'material' : 'group', id);
+          }
           const { error } = await supabase.from(table).delete().eq('id', id);
           if (!error) successCount++;
           else failCount++;
@@ -166,24 +218,31 @@ export const DeletedMaterials = ({
 
       if (addToast)
         addToast(
-          `Đã xóa vĩnh viễn ${successCount} mục. ${failCount > 0 ? `Thất bại ${failCount} mục do đang được sử dụng.` : ''}`,
-          'success',
+          `Đã xóa vĩnh viễn ${successCount} mục. ${failCount > 0 ? `Bỏ qua ${failCount} mục đang được dùng.` : ''}`,
+          successCount > 0 ? 'success' : 'error',
         );
       fetchDeletedItems();
       setShowBulkDeleteModal(false);
     } catch (err: any) {
       if (addToast) addToast('Lỗi xóa hàng loạt: ' + err.message, 'error');
+    } finally {
+      setSubmitting(false);
     }
   };
 
   const emptyTrash = async () => {
+    setSubmitting(true);
     try {
+      const isDevelop = user.role === 'Develop';
       let successCount = 0;
       let failCount = 0;
 
       for (const item of items) {
         const usage = await checkUsage(item.table === 'materials' ? 'material' : 'group', item.id);
-        if (!usage.inUse) {
+        if (!usage.inUse || isDevelop) {
+          if (usage.inUse && isDevelop) {
+            await purgeDependencies(item.table === 'materials' ? 'material' : 'group', item.id);
+          }
           const { error } = await supabase.from(item.table).delete().eq('id', item.id);
           if (!error) successCount++;
           else failCount++;
@@ -201,6 +260,8 @@ export const DeletedMaterials = ({
       setShowEmptyTrashModal(false);
     } catch (err: any) {
       if (addToast) addToast('Lỗi dọn thùng rác: ' + err.message, 'error');
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -268,8 +329,11 @@ export const DeletedMaterials = ({
           <tbody className="divide-y divide-gray-100">
             {loading ? (
               <tr>
-                <td colSpan={4} className="px-4 py-12 text-center text-gray-400 italic">
-                  Đang tải...
+                <td colSpan={4} className="px-4 py-12 text-center text-gray-400 italic font-medium">
+                  <div className="flex items-center justify-center gap-2">
+                    <RefreshCw size={16} className="animate-spin text-primary" />
+                    Đang tải danh sách...
+                  </div>
                 </td>
               </tr>
             ) : items.length === 0 ? (
@@ -312,7 +376,9 @@ export const DeletedMaterials = ({
                     <td className="px-4 py-3">
                       <div className="text-xs font-bold text-gray-800">{item.displayName}</div>
                       {item.code && (
-                        <div className="text-[10px] text-gray-400 mt-0.5">Mã: {item.code}</div>
+                        <div className="text-[10px] text-gray-400 mt-0.5 font-mono">
+                          Mã: {item.code}
+                        </div>
                       )}
                     </td>
                     <td className="px-4 py-3 text-right">
@@ -320,12 +386,7 @@ export const DeletedMaterials = ({
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
-                            setSelectedItem({
-                              id: item.id,
-                              table: item.table,
-                              name: item.displayName,
-                            });
-                            setShowRestoreModal(true);
+                            handleRestoreClick(item);
                           }}
                           className="p-2 bg-green-50 text-green-600 rounded-lg hover:bg-green-100 transition-colors"
                         >
@@ -334,12 +395,7 @@ export const DeletedMaterials = ({
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
-                            setSelectedItem({
-                              id: item.id,
-                              table: item.table,
-                              name: item.displayName,
-                            });
-                            setShowDeleteModal(true);
+                            handleDeleteClick(item);
                           }}
                           className="p-2 bg-red-50 text-red-600 rounded-lg hover:bg-red-100 transition-colors"
                         >
@@ -358,96 +414,171 @@ export const DeletedMaterials = ({
       <AnimatePresence>
         {showActionModal && selectedItem && (
           <div
-            className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-gray-900/50 backdrop-blur-sm"
+            className="fixed inset-0 z-[61] flex items-center justify-center p-4 bg-gray-900/50 backdrop-blur-sm"
             onClick={() => setShowActionModal(false)}
           >
             <motion.div
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
-              className="bg-white rounded-3xl shadow-xl w-full max-w-sm overflow-hidden p-6 text-center"
+              className="bg-white rounded-3xl shadow-xl w-full max-w-sm overflow-hidden p-8 text-center"
               onClick={(e) => e.stopPropagation()}
             >
-              <h3 className="text-xl font-bold text-gray-900 mb-2">Tùy chọn thao tác</h3>
-              <p className="text-sm text-gray-500 mb-6 font-medium">
-                Đối tượng: <span className="text-gray-800 font-bold">{selectedItem.name}</span>
+              <h3 className="text-xl font-bold text-gray-900 mb-2 uppercase tracking-wide">
+                Tùy chọn thao tác
+              </h3>
+              <p className="text-sm text-gray-500 mb-8 font-medium">
+                Đối tượng: <span className="text-primary font-black">{selectedItem.name}</span>
               </p>
-              <div className="flex flex-col gap-3">
-                <button
-                  onClick={() => {
-                    setShowActionModal(false);
-                    setShowRestoreModal(true);
-                  }}
-                  className="w-full py-4 px-4 rounded-xl font-bold text-green-700 bg-green-50 hover:bg-green-100 transition-colors flex items-center justify-center gap-3 shadow-sm border border-green-100"
+              <div className="flex flex-col gap-4">
+                <Button
+                  fullWidth
+                  variant="success"
+                  onClick={() => setShowRestoreModal(true)}
+                  icon={RefreshCw}
                 >
-                  <RefreshCw size={20} /> Khôi phục dữ liệu
-                </button>
-                <button
-                  onClick={() => {
-                    setShowActionModal(false);
-                    setShowDeleteModal(true);
-                  }}
-                  className="w-full py-4 px-4 rounded-xl font-bold text-red-700 bg-red-50 hover:bg-red-100 transition-colors flex items-center justify-center gap-3 shadow-sm border border-red-100"
+                  KHÔI PHỤC DỮ LIỆU
+                </Button>
+                <Button
+                  fullWidth
+                  variant="danger"
+                  onClick={() => setShowDeleteModal(true)}
+                  icon={Trash2}
                 >
-                  <Trash2 size={20} /> Xóa vĩnh viễn
-                </button>
-                <button
+                  XÓA VĨNH VIỄN
+                </Button>
+                <Button
+                  fullWidth
+                  variant="outline"
                   onClick={() => setShowActionModal(false)}
-                  className="w-full py-4 rounded-xl font-bold text-gray-600 bg-gray-100 hover:bg-gray-200 transition-colors mt-2"
+                  className="mt-2"
                 >
-                  Hủy bỏ
-                </button>
+                  HỦY BỎ
+                </Button>
               </div>
             </motion.div>
           </div>
         )}
-
-        {showRestoreModal && selectedItem && (
-          <ConfirmModal
-            show={showRestoreModal}
-            title="Xác nhận khôi phục"
-            message={`Bạn có chắc muốn khôi phục ${selectedItem.name} trở lại danh mục chính?`}
-            confirmText="Khôi phục ngay"
-            cancelText="Hủy bỏ"
-            onConfirm={confirmRestore}
-            onCancel={() => setShowRestoreModal(false)}
-            type="success"
-          />
-        )}
-
-        {showDeleteModal && selectedItem && (
-          <ConfirmModal
-            show={showDeleteModal}
-            title="Xóa vĩnh viễn?"
-            message={`Hành động này KHÔNG thể hoàn tác. ${selectedItem.name} sẽ bị xóa sạch khỏi hệ thống.`}
-            confirmText="Xác nhận xóa"
-            cancelText="Hủy bỏ"
-            onConfirm={confirmDelete}
-            onCancel={() => setShowDeleteModal(false)}
-            type="danger"
-          />
-        )}
-
-        <ConfirmModal
-          show={showBulkDeleteModal}
-          title={`Xóa vĩnh viễn ${selectedIds.size} mục?`}
-          message="Hành động này sẽ xóa vĩnh viễn tất cả các mục đã chọn. Các mục đang được sử dụng sẽ bị bỏ qua để bảo mật dữ liệu."
-          confirmText="Xác nhận xóa"
-          onConfirm={bulkDelete}
-          onCancel={() => setShowBulkDeleteModal(false)}
-          type="danger"
-        />
-
-        <ConfirmModal
-          show={showEmptyTrashModal}
-          title="Dọn sạch thùng rác?"
-          message="Bạn có chắc chắn muốn xóa vĩnh viễn tất cả vật tư và nhóm trong thùng rác không? Chỉ những mục không còn liên kết dữ liệu mới bị xóa."
-          confirmText="Dọn sạch ngay"
-          onConfirm={emptyTrash}
-          onCancel={() => setShowEmptyTrashModal(false)}
-          type="danger"
-        />
       </AnimatePresence>
+
+      <AnimatePresence>
+        {showDeleteModal && selectedItem && (
+          <div
+            className="fixed inset-0 z-[131] flex items-center justify-center p-4 bg-black/50 backdrop-blur-md overflow-hidden"
+            onClick={() => setShowDeleteModal(false)}
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              className="bg-white rounded-[2rem] md:rounded-[2.5rem] shadow-2xl p-8 max-w-sm w-full text-center relative z-10"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="w-16 h-16 bg-red-50 text-red-600 rounded-2xl flex items-center justify-center mx-auto mb-4 border border-red-100">
+                <Trash2 size={32} />
+              </div>
+              <h3 className="text-xl font-bold text-gray-800 mb-2">Xác nhận xóa?</h3>
+              <div className="text-sm text-gray-500 mb-6 text-left bg-gray-50 p-4 rounded-xl border border-gray-100 space-y-2">
+                <p>
+                  Đối tượng: <strong className="text-primary">{selectedItem.name}</strong>
+                </p>
+                {selectedItem.code && (
+                  <p>
+                    Mã: <strong className="text-primary">{selectedItem.code}</strong>
+                  </p>
+                )}
+
+                {usageInfo.inUse ? (
+                  <div className="mt-2 pt-2 border-t border-gray-200">
+                    <button
+                      onClick={() => setShowUsageDetails(!showUsageDetails)}
+                      className="flex items-center justify-between w-full text-[10px] text-red-500 font-black uppercase tracking-tighter hover:text-red-600"
+                    >
+                      <div className="flex items-center gap-1">
+                        <AlertCircle size={12} /> Có dữ liệu liên quan
+                      </div>
+                      {showUsageDetails ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
+                    </button>
+                    {showUsageDetails && (
+                      <div className="mt-2 space-y-1 max-h-32 overflow-y-auto pr-1">
+                        {usageInfo.details.map((d, idx) => (
+                          <div
+                            key={idx}
+                            className="flex justify-between text-[10px] text-gray-500 bg-white p-1.5 rounded-lg border border-gray-100"
+                          >
+                            <span>{d.label}</span>
+                            <span className="font-bold text-red-500">{d.count}</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <p className="text-[10px] text-green-600 font-bold flex items-center gap-1 uppercase tracking-widest ">
+                    <CheckCircle size={12} /> Sẵn sàng để xóa
+                  </p>
+                )}
+              </div>
+
+              <div className="flex flex-col gap-3">
+                {usageInfo.inUse && user.role === 'Develop' && (
+                  <div className="p-3 bg-red-50 rounded-2xl border border-red-100 mb-2">
+                    <p className="text-[10px] text-red-600 font-bold leading-relaxed italic">
+                      Lưu ý: Bạn đang thực hiện "Xóa cưỡng bức". Toàn bộ phiếu kho và tồn kho liên
+                      quan đến vật tư này sẽ bị xóa.
+                    </p>
+                  </div>
+                )}
+
+                <div className="flex gap-3">
+                  <Button fullWidth variant="outline" onClick={() => setShowDeleteModal(false)}>
+                    Hủy bỏ
+                  </Button>
+                  <Button
+                    fullWidth
+                    variant="danger"
+                    onClick={confirmDelete}
+                    disabled={usageInfo.inUse && user.role !== 'Develop'}
+                    isLoading={submitting}
+                  >
+                    {usageInfo.inUse && user.role === 'Develop' ? 'XÓA CƯỞNG BỨC' : 'Xác nhận xóa'}
+                  </Button>
+                </div>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      <ConfirmModal
+        show={showRestoreModal}
+        title="Xác nhận khôi phục"
+        message={`Bạn có chắc muốn khôi phục ${selectedItem?.name} trở lại danh mục chính?`}
+        onConfirm={confirmRestore}
+        onCancel={() => setShowRestoreModal(false)}
+        type="success"
+        isLoading={submitting}
+      />
+
+      <ConfirmModal
+        show={showBulkDeleteModal}
+        title={`Xóa vĩnh viễn ${selectedIds.size} mục?`}
+        message={`Hành động này sẽ xóa vĩnh viễn tất cả các mục đã chọn. Nếu là Develop, toàn bộ dữ liệu liên quan cũng sẽ bị dọn dẹp.`}
+        onConfirm={bulkDelete}
+        onCancel={() => setShowBulkDeleteModal(false)}
+        type="danger"
+        isLoading={submitting}
+      />
+
+      <ConfirmModal
+        show={showEmptyTrashModal}
+        title="Dọn sạch thùng rác?"
+        message="Xác nhận xóa VĨNH VIỄN toàn bộ vật tư và nhóm trong thùng rác? Với quyền Develop, các dữ liệu ràng buộc sẽ bị xóa/dọn sạch."
+        onConfirm={emptyTrash}
+        onCancel={() => setShowEmptyTrashModal(false)}
+        type="danger"
+        isLoading={submitting}
+      />
     </div>
   );
 };

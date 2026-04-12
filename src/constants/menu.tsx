@@ -72,7 +72,6 @@ export const getMenuGroups = (pendingCount: number) => [
       { id: 'hr-records', label: 'Quản lý nhân sự', icon: UserCircle },
       { id: 'notes', label: 'Ghi chú', icon: FileText },
       { id: 'reminders', label: 'Thiết lập Thông báo', icon: Bell },
-      { id: 'database-setup', label: 'Cấu hình Database', icon: Settings2 },
       { id: 'trash', label: 'Thùng rác', icon: Trash2 },
     ],
   },

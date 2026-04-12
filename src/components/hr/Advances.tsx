@@ -59,7 +59,7 @@ export const Advances = ({
       .select('*')
       .neq('status', 'Nghỉ việc')
       .neq('status', 'Đã xóa')
-      .neq('role', 'Admin App')
+      .neq('role', 'Develop')
       .eq('has_salary', true)
       .order('full_name');
 
@@ -126,6 +126,7 @@ export const Advances = ({
         date: formData.date,
         type: activeTab === 'advances' ? 'Tạm ứng' : formData.type,
         notes: formData.notes,
+        ...(activeTab === 'advances' ? { reason: formData.notes || 'Tạm ứng' } : {}),
       };
 
       if (isEditing && selectedItem) {

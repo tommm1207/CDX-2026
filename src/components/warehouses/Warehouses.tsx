@@ -1,5 +1,16 @@
 import { useState, useEffect, FormEvent } from 'react';
-import { Warehouse, Plus, Search, Edit, Trash2, X, Navigation, MapPin } from 'lucide-react';
+import {
+  Warehouse,
+  Plus,
+  Search,
+  Edit,
+  Trash2,
+  X,
+  Navigation,
+  MapPin,
+  AlertCircle,
+  CheckCircle,
+} from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { supabase } from '@/lib/supabase';
 import { Employee } from '@/types';
@@ -9,6 +20,7 @@ import { Button } from '../shared/Button';
 import { FAB } from '../shared/FAB';
 import { SortButton, SortOption } from '../shared/SortButton';
 import { checkUsage } from '@/utils/dataIntegrity';
+import { generateSmartCode } from '@/utils/codeGenerator';
 
 export const Warehouses = ({
   user,
@@ -87,8 +99,8 @@ export const Warehouses = ({
 
   const fetchEmployees = async () => {
     let query = supabase.from('users').select('*');
-    if (user.role !== 'Admin App') {
-      query = query.neq('role', 'Admin App');
+    if (user.role !== 'Develop') {
+      query = query.neq('role', 'Develop');
     }
     const { data } = await query;
     if (data) setEmployees(data);
@@ -96,22 +108,9 @@ export const Warehouses = ({
 
   const generateNextWarehouseCode = async () => {
     try {
-      const { data } = await supabase
-        .from('warehouses')
-        .select('code')
-        .like('code', 'WH%')
-        .order('code', { ascending: false })
-        .limit(1);
-
-      if (data && data.length > 0 && data[0].code) {
-        const lastCode = data[0].code;
-        const lastNumber = parseInt(lastCode.replace('KH', ''));
-        if (!isNaN(lastNumber)) {
-          const nextNumber = lastNumber + 1;
-          return `KH${nextNumber.toString().padStart(3, '0')}`;
-        }
-      }
-      return 'KH001';
+      const { data } = await supabase.from('warehouses').select('code').like('code', 'KH%');
+      const codes = data?.map((w) => w.code) || [];
+      return generateSmartCode(codes, 'KH', 3);
     } catch (err) {
       console.error('Error generating warehouse code:', err);
       return 'KH001';
@@ -123,7 +122,12 @@ export const Warehouses = ({
     setSubmitting(true);
 
     try {
-      const { id, ...dbPayload } = formData;
+      const { id, ...rawPayload } = formData;
+      const dbPayload = {
+        ...rawPayload,
+        manager_id: rawPayload.manager_id || null, // Convert empty string to null for UUID
+      };
+
       if (isEditing && id) {
         const { error } = await supabase.from('warehouses').update(dbPayload).eq('id', id);
         if (error) throw error;
@@ -171,36 +175,85 @@ export const Warehouses = ({
 
   const confirmDelete = async () => {
     if (!itemToDelete) return;
+    setSubmitting(true);
+    try {
+      // Always allow moving to Trash (soft delete) regardless of usageInfo.inUse
+      const { error } = await supabase
+        .from('warehouses')
+        .update({ status: 'Đã xóa' })
+        .eq('id', itemToDelete);
 
-    // Check usage before soft delete
-    if (usageInfo.inUse) {
-      if (addToast)
-        addToast(
-          `Không thể xóa vì kho đang có dữ liệu liên quan: ${usageInfo.tables.join(', ')}`,
-          'error',
-        );
-      return;
-    }
+      if (error) throw error;
 
-    const { error } = await supabase
-      .from('warehouses')
-      .update({ status: 'Đã xóa' })
-      .eq('id', itemToDelete);
-    if (error) {
-      const msg = error.message.includes('foreign key constraint')
-        ? 'Không thể xóa kho này vì đang có dữ liệu liên quan khác.'
-        : error.message;
-      if (addToast) addToast('Lỗi: ' + msg, 'error');
-      else alert('Lỗi: ' + msg);
-    } else {
-      if (addToast) addToast('Đã chuyển kho vào thùng rác', 'success');
       fetchWarehouses();
+      if (addToast) addToast('Đã chuyển kho vào thùng rác', 'success');
+      setShowDeleteModal(false);
+      setItemToDelete(null);
+    } catch (err: any) {
+      if (addToast) addToast('Lỗi: ' + err.message, 'error');
+    } finally {
+      setSubmitting(false);
     }
-    setShowDeleteModal(false);
+  };
+
+  const handlePurgeRelated = async () => {
+    if (!itemToDelete || user.role !== 'Develop' || !usageInfo.details) return;
+
+    if (
+      !window.confirm(
+        'Bạn có chắc chắn muốn XÓA VĨNH VIỄN toàn bộ các dữ liệu rác liên quan này? Hành động này không thể hoàn tác.',
+      )
+    )
+      return;
+
+    setSubmitting(true);
+    try {
+      for (const detail of usageInfo.details) {
+        if (detail.softDeletedCount > 0) {
+          let field = 'warehouse_id';
+          if (detail.table === 'transfers') {
+            const { error } = await supabase
+              .from('transfers')
+              .delete()
+              .or(`from_warehouse_id.eq.${itemToDelete},to_warehouse_id.eq.${itemToDelete}`)
+              .eq('status', 'Đã xóa');
+            if (error) throw error;
+            continue;
+          }
+          if (detail.table === 'production_orders') {
+            const { error } = await supabase
+              .from('production_orders')
+              .delete()
+              .or(`warehouse_id.eq.${itemToDelete},output_warehouse_id.eq.${itemToDelete}`)
+              .eq('status', 'Đã xóa');
+            if (error) throw error;
+            continue;
+          }
+          if (detail.table === 'materials') field = 'warehouse_id';
+          if (detail.table === 'users') field = 'warehouse_id';
+
+          const { error } = await supabase
+            .from(detail.table)
+            .delete()
+            .eq(field, itemToDelete)
+            .eq('status', 'Đã xóa');
+          if (error) throw error;
+        }
+      }
+
+      if (addToast) addToast('Đã dọn dẹp các dữ liệu rác liên quan!', 'success');
+      const usage = await checkUsage('warehouse', itemToDelete);
+      setUsageInfo(usage);
+    } catch (err: any) {
+      if (addToast) addToast('Lỗi khi dọn dẹp: ' + err.message, 'error');
+    } finally {
+      setSubmitting(true);
+      setTimeout(() => setSubmitting(false), 500);
+    }
   };
 
   const handlePermanentDelete = async () => {
-    if (!itemToDelete || user.role !== 'Admin App') return;
+    if (!itemToDelete || user.role !== 'Develop') return;
 
     if (
       !window.confirm(
@@ -217,7 +270,7 @@ export const Warehouses = ({
       if (error) {
         let msg = error.message;
         if (msg.includes('foreign key constraint')) {
-          msg = `Không thể xóa vĩnh viễn vì vẫn còn dữ liệu liên kết vật lý trong DB (${usageInfo.tables.join(', ')}). Vui lòng xóa các dữ liệu này trước.`;
+          msg = `Không thể xóa vĩnh viễn vì vẫn còn dữ liệu liên kết vật lý trong DB. Vui lòng dọn dẹp sạch các mục liên quan trước.`;
         }
         throw new Error(msg);
       }
@@ -345,6 +398,9 @@ export const Warehouses = ({
             <thead>
               <tr className="bg-primary text-white">
                 <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider border-r border-white/10">
+                  Mã
+                </th>
+                <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider border-r border-white/10">
                   Tên kho
                 </th>
                 <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider border-r border-white/10">
@@ -370,13 +426,13 @@ export const Warehouses = ({
             <tbody className="divide-y divide-gray-100">
               {loading ? (
                 <tr>
-                  <td colSpan={8} className="px-4 py-8 text-center text-gray-400 italic">
+                  <td colSpan={9} className="px-4 py-8 text-center text-gray-400 italic">
                     Đang tải dữ liệu...
                   </td>
                 </tr>
               ) : warehouses.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="px-4 py-8 text-center text-gray-400 italic">
+                  <td colSpan={9} className="px-4 py-8 text-center text-gray-400 italic">
                     Chưa có dữ liệu kho bãi
                   </td>
                 </tr>
@@ -397,6 +453,9 @@ export const Warehouses = ({
                       className="hover:bg-gray-50 transition-colors group cursor-pointer"
                       onClick={() => handleEdit(item)}
                     >
+                      <td className="px-4 py-3 text-xs font-bold text-primary font-mono">
+                        {item.code || '—'}
+                      </td>
                       <td className="px-4 py-3 text-xs text-gray-600">{item.name}</td>
                       <td className="px-4 py-3 text-xs text-gray-600">{item.address}</td>
                       <td className="px-4 py-3 text-xs text-gray-600">
@@ -473,42 +532,71 @@ export const Warehouses = ({
                 <p>
                   Kho: <strong>{warehouses.find((w) => w.id === itemToDelete)?.name}</strong>
                 </p>
-                {usageInfo.inUse ? (
-                  <p className="text-red-500 font-bold">
-                    ⚠️ KHÔNG THỂ XÓA MỀM vì đang có: {usageInfo.tables.join(', ')}
-                  </p>
+                {usageInfo.details && usageInfo.details.length > 0 ? (
+                  <div className="space-y-3">
+                    <p className="text-red-600 font-black flex items-center gap-2">
+                      <AlertCircle size={14} /> DỮ LIỆU LIÊN QUAN:
+                    </p>
+                    <div className="space-y-2">
+                      {usageInfo.details.map((detail, idx) => (
+                        <div
+                          key={idx}
+                          className="flex items-center justify-between text-[11px] bg-white p-2 rounded-lg border border-gray-100"
+                        >
+                          <span className="font-medium text-gray-700">{detail.label}</span>
+                          <div className="flex gap-2">
+                            {detail.count > 0 && (
+                              <span className="px-1.5 py-0.5 bg-amber-100 text-amber-700 rounded-md font-bold">
+                                {detail.count} hoạt động
+                              </span>
+                            )}
+                            {detail.softDeletedCount > 0 && (
+                              <span className="px-1.5 py-0.5 bg-gray-100 text-gray-500 rounded-md font-bold">
+                                {detail.softDeletedCount} trong rác
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+
+                    {user.role === 'Develop' &&
+                      usageInfo.details.some((d) => d.softDeletedCount > 0) && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          fullWidth
+                          onClick={handlePurgeRelated}
+                          isLoading={submitting}
+                          className="mt-2 text-[10px] py-2 border-amber-200 text-amber-700 bg-amber-50 hover:bg-amber-100"
+                          icon={Trash2}
+                        >
+                          DỌN DẸP RÁC LIÊN QUAN (ADMIN)
+                        </Button>
+                      )}
+
+                    {usageInfo.inUse && (
+                      <p className="text-[10px] text-red-500 italic mt-2">
+                        * Bạn phải xóa các dữ liệu 'hoạt động' trước khi có thể xóa kho này.
+                      </p>
+                    )}
+                  </div>
                 ) : (
-                  <p className="text-green-600">✅ Có thể chuyển vào thùng rác.</p>
+                  <p className="text-green-600 font-bold flex items-center gap-2 justify-center py-4">
+                    <CheckCircle size={18} /> Sẵn sàng để xóa
+                  </p>
                 )}
-                <p className="text-[10px] italic">
-                  * Dữ liệu trong thùng rác có thể khôi phục, xóa vĩnh viễn sẽ mất hoàn toàn.
-                </p>
               </div>
               <div className="flex flex-col gap-2">
                 <div className="grid grid-cols-2 gap-2">
                   <Button variant="outline" fullWidth onClick={() => setShowDeleteModal(false)}>
                     Hủy bỏ
                   </Button>
-                  <Button
-                    variant="danger"
-                    fullWidth
-                    onClick={confirmDelete}
-                    disabled={usageInfo.inUse}
-                  >
+                  <Button variant="danger" fullWidth onClick={confirmDelete}>
                     Thùng rác
                   </Button>
                 </div>
-                {user.role === 'Admin App' && (
-                  <Button
-                    variant="ghost"
-                    className="text-red-700 bg-red-50 hover:bg-red-100 border border-red-200"
-                    fullWidth
-                    onClick={handlePermanentDelete}
-                    isLoading={submitting}
-                  >
-                    XÓA VĨNH VIỄN (ADMIN APP)
-                  </Button>
-                )}
+                {/* XÓA VĨNH VIỄN removed from main list - use Trash module instead */}
               </div>
             </motion.div>
           </div>

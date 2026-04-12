@@ -15,7 +15,8 @@ interface AttendanceTableProps {
   onToggleAttendance?: (
     empId: string,
     day: number,
-    action?: 'present' | 'half-day' | 'remove',
+    action?: 'present' | 'half-day' | 'absent' | 'remove',
+    otHours?: number | '',
   ) => void;
   onOpenEditModal?: (empId: string, day: number) => void;
 }
@@ -40,6 +41,7 @@ export const AttendanceTable = ({
   } | null>(null);
 
   const [otInput, setOtInput] = useState<string>('');
+  const [selectedAction, setSelectedAction] = useState<'present' | 'half-day' | 'absent' | null>(null);
 
   const getStatus = (empId: string, day: number) => {
     const dateStr = `${selectedYear}-${String(selectedMonth).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
@@ -77,6 +79,7 @@ export const AttendanceTable = ({
     const rect = (e.target as HTMLElement).getBoundingClientRect();
     const currentAtt = getStatus(empId, day);
     setOtInput(currentAtt?.overtime_hours ? String(currentAtt.overtime_hours) : '');
+    setSelectedAction(currentAtt?.status || null);
     setConfirmPopup({
       empId,
       day,
@@ -101,6 +104,7 @@ export const AttendanceTable = ({
       );
     }
     setConfirmPopup(null);
+    setSelectedAction(null);
   };
 
   return (
@@ -208,10 +212,10 @@ export const AttendanceTable = ({
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.9 }}
               transition={{ duration: 0.15 }}
-              className="fixed z-[201] bg-white rounded-2xl shadow-2xl border border-gray-200 p-3 w-[180px]"
+              className="fixed z-[201] bg-white rounded-2xl shadow-2xl border border-gray-200 p-3 w-[185px]"
               style={{
-                left: Math.min(confirmPopup.x - 90, window.innerWidth - 200),
-                top: Math.max(confirmPopup.y - 130, 10),
+                left: Math.min(confirmPopup.x - 92, window.innerWidth - 200),
+                top: Math.max(confirmPopup.y - 200, 10),
               }}
             >
               <p className="text-[10px] text-gray-400 font-bold uppercase text-center mb-2 px-2 break-words">
@@ -219,42 +223,60 @@ export const AttendanceTable = ({
                 <span className="text-primary">{confirmPopup.employeeName}</span>
               </p>
               <div className="space-y-1.5">
-                <button
-                  onClick={() => handleConfirm('present')}
-                  className="w-full py-2.5 rounded-xl bg-green-500 text-white text-xs font-bold hover:bg-green-600 active:scale-95 transition-all"
-                >
-                  ✓ 1 công
-                </button>
-                <button
-                  onClick={() => handleConfirm('half-day')}
-                  className="w-full py-2.5 rounded-xl bg-amber-500 text-white text-xs font-bold hover:bg-amber-600 active:scale-95 transition-all"
-                >
-                  ½ công
-                </button>
-                <button
-                  onClick={() => handleConfirm('absent')}
-                  className="w-full py-2.5 rounded-xl bg-red-500 text-white text-xs font-bold hover:bg-red-600 active:scale-95 transition-all"
-                >
-                  X Vắng
-                </button>
+                {/* Status selector — chỉ chọn, chưa lưu */}
+                <div className="grid grid-cols-3 gap-1">
+                  {(['present', 'half-day', 'absent'] as const).map((s) => (
+                    <button
+                      key={s}
+                      onClick={() => setSelectedAction(s)}
+                      className={`py-2 rounded-xl text-xs font-bold transition-all active:scale-95 border-2 ${
+                        selectedAction === s
+                          ? s === 'present'
+                            ? 'bg-green-500 border-green-500 text-white'
+                            : s === 'half-day'
+                            ? 'bg-amber-500 border-amber-500 text-white'
+                            : 'bg-red-500 border-red-500 text-white'
+                          : 'bg-gray-50 border-transparent text-gray-400 hover:bg-gray-100'
+                      }`}
+                    >
+                      {s === 'present' ? 'X' : s === 'half-day' ? '½' : 'V'}
+                    </button>
+                  ))}
+                </div>
+                <p className="text-[9px] text-center text-gray-300">
+                  {selectedAction === 'present' ? '1 công' : selectedAction === 'half-day' ? 'Nửa công' : selectedAction === 'absent' ? 'Vắng mặt' : 'Chọn trạng thái'}
+                </p>
 
-                <div className="pt-1 pb-1 border-t border-b border-gray-100 my-1">
+                <div className="border-t border-gray-100 pt-1.5">
+                  <p className="text-[9px] text-gray-400 mb-1 font-bold">Giờ tăng ca (TC)</p>
                   <input
                     type="text"
-                    placeholder="Giờ OT..."
+                    placeholder="Nhập giờ TC..."
                     value={otInput}
                     onChange={(e) => {
-                      // Only allow numbers, dot, and comma
                       const val = e.target.value.replace(/[^0-9.,]/g, '');
                       setOtInput(val);
                     }}
-                    className="w-full text-center text-xs font-bold text-gray-600 py-1.5 border border-gray-200 outline-none rounded-xl focus:border-primary focus:ring-1 focus:ring-primary/20"
+                    className="w-full text-center text-xs font-bold text-amber-600 py-1.5 border border-gray-200 outline-none rounded-xl focus:border-primary focus:ring-1 focus:ring-primary/20"
                   />
                 </div>
 
+                {/* Nút Lưu — mới submit */}
+                <button
+                  onClick={() => selectedAction && handleConfirm(selectedAction)}
+                  disabled={!selectedAction}
+                  className={`w-full py-2.5 rounded-xl text-xs font-bold transition-all active:scale-95 ${
+                    selectedAction
+                      ? 'bg-primary text-white hover:brightness-110'
+                      : 'bg-gray-100 text-gray-300 cursor-not-allowed'
+                  }`}
+                >
+                  {selectedAction ? '✓ Lưu chấm công' : 'Chưa chọn trạng thái'}
+                </button>
+
                 <button
                   onClick={() => handleConfirm('remove')}
-                  className="w-full py-2.5 rounded-xl bg-gray-100 text-gray-600 text-[10px] font-bold hover:bg-gray-200 active:scale-95 transition-all uppercase"
+                  className="w-full py-1.5 rounded-xl bg-gray-50 text-gray-400 text-[9px] font-bold hover:bg-gray-100 active:scale-95 transition-all uppercase"
                 >
                   Xóa chấm công
                 </button>

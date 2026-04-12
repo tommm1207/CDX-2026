@@ -1,42 +1,53 @@
 import { useState, useEffect } from 'react';
 import {
-  Archive,
+  FileText,
   RefreshCw,
   Trash2,
-  AlertTriangle,
-  X,
-  Check,
   Square,
   CheckSquare,
+  AlertCircle,
+  CheckCircle,
+  ChevronDown,
+  ChevronUp,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { supabase } from '@/lib/supabase';
+import { Employee } from '@/types';
 import { PageBreadcrumb } from '../shared/PageBreadcrumb';
 import { ConfirmModal } from '../shared/ConfirmModal';
 import { ToastType } from '../shared/Toast';
-import { formatDate, formatNumber } from '@/utils/format';
+import { Button } from '../shared/Button';
+import { checkUsage, UsageResult } from '@/utils/dataIntegrity';
 import { getAvailableStock } from '@/utils/inventory';
 
 export const DeletedSlips = ({
+  user,
   onBack,
   addToast,
 }: {
+  user: Employee;
   onBack: () => void;
-  addToast?: (message: string, type?: ToastType) => void;
+  addToast: (msg: string, type?: ToastType) => void;
 }) => {
   const [slips, setSlips] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [showRestoreModal, setShowRestoreModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
-  const [showBulkDeleteModal, setShowBulkDeleteModal] = useState(false);
-  const [showBulkRestoreModal, setShowBulkRestoreModal] = useState(false);
-  const [showEmptyTrashModal, setShowEmptyTrashModal] = useState(false);
   const [showActionModal, setShowActionModal] = useState(false);
+  const [showUsageDetails, setShowUsageDetails] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [usageInfo, setUsageInfo] = useState<UsageResult>({
+    inUse: false,
+    tables: [],
+    details: [],
+  });
+
   const [selectedItem, setSelectedItem] = useState<{
     id: string;
     table: string;
-    name?: string;
+    code?: string;
+    type?: string;
   } | null>(null);
 
   useEffect(() => {
@@ -46,48 +57,58 @@ export const DeletedSlips = ({
   const fetchDeletedSlips = async () => {
     setLoading(true);
     try {
-      const [si, so, tr] = await Promise.all([
-        supabase
-          .from('stock_in')
-          .select('*, warehouses(name), materials(name)')
-          .eq('status', 'Đã xóa'),
-        supabase
-          .from('stock_out')
-          .select('*, warehouses(name), materials(name)')
-          .eq('status', 'Đã xóa'),
-        supabase
-          .from('transfers')
-          .select(
-            '*, from_wh:warehouses!from_warehouse_id(name), to_wh:warehouses!to_warehouse_id(name), materials(name)',
-          )
-          .eq('status', 'Đã xóa'),
-      ]);
+      const { data: inData } = await supabase
+        .from('stock_in')
+        .select('*, warehouses(name), materials(name)')
+        .eq('status', 'Đã xóa');
+      const { data: outData } = await supabase
+        .from('stock_out')
+        .select('*, warehouses(name), materials(name)')
+        .eq('status', 'Đã xóa');
+      const { data: transData } = await supabase
+        .from('transfers')
+        .select(
+          '*, from_wh:warehouses!from_warehouse_id(name), to_wh:warehouses!to_warehouse_id(name), materials(name)',
+        )
+        .eq('status', 'Đã xóa');
 
-      const allDeleted = [
-        ...(si.data || []).map((s) => ({ ...s, type: 'Nhập kho', table: 'stock_in' })),
-        ...(so.data || []).map((s) => ({ ...s, type: 'Xuất kho', table: 'stock_out' })),
-        ...(tr.data || []).map((s) => ({ ...s, type: 'Luân chuyển', table: 'transfers' })),
-      ].sort(
-        (a, b) =>
-          new Date(b.updated_at || b.created_at).getTime() -
-          new Date(a.updated_at || a.created_at).getTime(),
-      );
+      const allSlips = [
+        ...(inData || []).map((s) => ({
+          ...s,
+          type: 'Nhập kho',
+          table: 'stock_in',
+          code: s.import_code,
+          wh_name: s.warehouses?.name,
+        })),
+        ...(outData || []).map((s) => ({
+          ...s,
+          type: 'Xuất kho',
+          table: 'stock_out',
+          code: s.export_code,
+          wh_name: s.warehouses?.name,
+        })),
+        ...(transData || []).map((s) => ({
+          ...s,
+          type: 'Chuyển kho',
+          table: 'transfers',
+          code: s.transfer_code,
+          wh_name: `${(s as any).from_wh?.name} -> ${(s as any).to_wh?.name}`,
+        })),
+      ].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
 
-      setSlips(allDeleted);
+      setSlips(allSlips);
       setSelectedIds(new Set());
     } catch (err: any) {
-      console.error('Error fetching deleted slips:', err);
-      if (addToast) addToast('Lỗi tải dữ liệu: ' + err.message, 'error');
+      addToast('Lỗi tải dữ liệu: ' + err.message, 'error');
     } finally {
       setLoading(false);
     }
   };
 
-  const toggleSelect = (table: string, id: string) => {
-    const key = `${table}-${id}`;
+  const toggleSelect = (id: string) => {
     const next = new Set(selectedIds);
-    if (next.has(key)) next.delete(key);
-    else next.add(key);
+    if (next.has(id)) next.delete(id);
+    else next.add(id);
     setSelectedIds(next);
   };
 
@@ -96,164 +117,83 @@ export const DeletedSlips = ({
     else setSelectedIds(new Set(slips.map((s) => `${s.table}-${s.id}`)));
   };
 
-  const handleRestoreClick = (id: string, table: string, name: string) => {
-    setSelectedItem({ id, table, name });
-    setShowRestoreModal(true);
+  const handleRowClick = (item: any) => {
+    setSelectedItem({ id: item.id, table: item.table, code: item.code, type: item.type });
+    setShowActionModal(true);
   };
 
-  const handleRowClick = (item: any) => {
-    setSelectedItem({ id: item.id, table: item.table, name: item.materials?.name || 'Phiếu' });
-    setShowActionModal(true);
+  const handleDeleteClick = async (item: any) => {
+    setSelectedItem({ id: item.id, table: item.table, code: item.code, type: item.type });
+    setShowActionModal(false);
+    setShowDeleteModal(true);
+    setShowUsageDetails(false);
+    setUsageInfo({ inUse: false, tables: [], details: [] });
+    try {
+      // Slips don't usually have dependencies, but we check anyway
+      const usage = await checkUsage('material', item.id);
+      setUsageInfo(usage);
+    } catch (e) {
+      console.error(e);
+    }
   };
 
   const confirmRestore = async () => {
     if (!selectedItem) return;
+    setSubmitting(true);
     try {
-      const { data: slip } = await supabase
-        .from(selectedItem.table)
-        .select('*')
-        .eq('id', selectedItem.id)
-        .single();
-      if (!slip) throw new Error('Không tìm thấy phiếu');
+      const table = selectedItem.table;
+      const id = selectedItem.id;
 
-      if (selectedItem.table === 'stock_out' || selectedItem.table === 'transfers') {
-        const wh_id =
-          selectedItem.table === 'stock_out' ? slip.warehouse_id : slip.from_warehouse_id;
+      // Logic check stock status before restoring export/transfer
+      if (table === 'stock_out' || table === 'transfers') {
+        const slip = slips.find((s) => s.id === id && s.table === table);
+        const wh_id = table === 'stock_out' ? slip.warehouse_id : slip.from_warehouse_id;
         const stockAtDate = await getAvailableStock(slip.material_id, wh_id, slip.date);
-        if (Number(slip.quantity) > stockAtDate) {
+
+        if (stockAtDate < slip.quantity) {
           throw new Error(
-            `Kho không đủ tồn (${stockAtDate}) để khôi phục phiếu xuất (${slip.quantity})`,
+            `Không thể khôi phục. Tồn kho tại ngày ${slip.date} không đủ (${stockAtDate} < ${slip.quantity})`,
           );
         }
       }
 
-      const { error } = await supabase
-        .from(selectedItem.table)
-        .update({ status: 'Chờ duyệt' })
-        .eq('id', selectedItem.id);
+      const { error } = await supabase.from(table).update({ status: 'Chờ duyệt' }).eq('id', id);
       if (error) throw error;
-
-      if (addToast) addToast('Đã khôi phục chứng từ thành công!', 'success');
+      addToast(`Đã khôi phục phiếu ${selectedItem.code} thành công!`, 'success');
       fetchDeletedSlips();
       setShowRestoreModal(false);
       setSelectedItem(null);
     } catch (err: any) {
-      if (addToast) addToast('Lỗi: ' + err.message, 'error');
+      addToast(err.message, 'error');
+    } finally {
+      setSubmitting(false);
     }
-  };
-
-  const handleDeleteClick = (id: string, table: string, name: string) => {
-    setSelectedItem({ id, table, name });
-    setShowDeleteModal(true);
   };
 
   const confirmDelete = async () => {
     if (!selectedItem) return;
+    setSubmitting(true);
     try {
       const { error } = await supabase.from(selectedItem.table).delete().eq('id', selectedItem.id);
       if (error) throw error;
-      if (addToast) addToast('Đã xóa vĩnh viễn thành công!', 'success');
+      addToast(`Đã xóa vĩnh viễn phiếu ${selectedItem.code} thành công!`, 'success');
       fetchDeletedSlips();
       setShowDeleteModal(false);
       setSelectedItem(null);
     } catch (err: any) {
-      if (addToast) addToast('Lỗi: ' + err.message, 'error');
-    }
-  };
-
-  const bulkRestore = async () => {
-    try {
-      let success = 0;
-      let fail = 0;
-      for (const sid of selectedIds) {
-        const [table, id] = sid.split('-');
-        const item = slips.find((s) => s.table === table && s.id === id);
-        if (!item) continue;
-
-        try {
-          if (table === 'stock_out' || table === 'transfers') {
-            const wh_id = table === 'stock_out' ? item.warehouse_id : item.from_warehouse_id;
-            const stockAtDate = await getAvailableStock(item.material_id, wh_id, item.date);
-            if (Number(item.quantity) > stockAtDate) throw new Error('Hụt kho');
-          }
-          await supabase.from(table).update({ status: 'Chờ duyệt' }).eq('id', id);
-          success++;
-        } catch (e) {
-          fail++;
-        }
-      }
-      if (addToast)
-        addToast(`Thành công ${success}, thất bại ${fail}`, success > 0 ? 'success' : 'error');
-      fetchDeletedSlips();
-      setShowBulkRestoreModal(false);
-    } catch (err) {
-      console.warn(err);
-    }
-  };
-
-  const bulkDelete = async () => {
-    try {
-      const promises = Array.from(selectedIds).map((sid) => {
-        const [table, id] = sid.split('-');
-        return supabase.from(table).delete().eq('id', id);
-      });
-      const results = await Promise.all(promises);
-      const fails = results.filter((r) => r.error).length;
-      if (addToast) addToast(`Đã xóa ${selectedIds.size - fails} mục. Thất bại ${fails}.`, 'info');
-      fetchDeletedSlips();
-      setShowBulkDeleteModal(false);
-    } catch (err: any) {
-      console.warn(err);
-    }
-  };
-
-  const emptyTrash = async () => {
-    try {
-      const promises = slips.map((s) => supabase.from(s.table).delete().eq('id', s.id));
-      await Promise.all(promises);
-      if (addToast) addToast('Đã dọn sạch thùng rác', 'success');
-      fetchDeletedSlips();
-      setShowEmptyTrashModal(false);
-    } catch (err: any) {
-      console.warn(err);
+      addToast('Lỗi xóa vĩnh viễn: ' + err.message, 'error');
+    } finally {
+      setSubmitting(false);
     }
   };
 
   return (
     <div className="p-4 md:p-6 space-y-6 pb-24">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <PageBreadcrumb title="Phiếu đã xóa" onBack={onBack} />
-
-        {slips.length > 0 && (
-          <div className="flex items-center gap-2 overflow-x-auto pb-2 md:pb-0">
-            {selectedIds.size > 0 ? (
-              <>
-                <button
-                  onClick={() => setShowBulkRestoreModal(true)}
-                  className="whitespace-nowrap px-4 py-2 bg-green-600 text-white rounded-xl font-bold text-xs flex items-center gap-2 shadow-lg shadow-green-200"
-                >
-                  <RefreshCw size={14} /> Khôi phục ({selectedIds.size})
-                </button>
-                <button
-                  onClick={() => setShowBulkDeleteModal(true)}
-                  className="whitespace-nowrap px-4 py-2 bg-red-600 text-white rounded-xl font-bold text-xs flex items-center gap-2 shadow-lg shadow-red-200"
-                >
-                  <Trash2 size={14} /> Xóa vĩnh viễn ({selectedIds.size})
-                </button>
-              </>
-            ) : (
-              <button
-                onClick={() => setShowEmptyTrashModal(true)}
-                className="whitespace-nowrap px-4 py-2 bg-gray-800 text-white rounded-xl font-bold text-xs flex items-center gap-2 shadow-lg shadow-gray-200"
-              >
-                <Trash2 size={14} /> Dọn sạch thùng rác
-              </button>
-            )}
-          </div>
-        )}
+        <PageBreadcrumb title="Phiếu kho đã xóa" onBack={onBack} />
       </div>
 
-      <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden overflow-x-auto">
+      <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden overflow-x-auto min-h-[300px]">
         <table className="w-full text-left border-collapse whitespace-nowrap">
           <thead>
             <tr className="bg-gray-50 border-b border-gray-100">
@@ -270,21 +210,12 @@ export const DeletedSlips = ({
                 </button>
               </th>
               <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-gray-400">
-                Loại
+                Loại/Mã
               </th>
               <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-gray-400">
-                Ngày
+                Vật tư & Kho
               </th>
-              <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-gray-400">
-                Kho
-              </th>
-              <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-gray-400">
-                Vật tư
-              </th>
-              <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-gray-400 text-center">
-                SL
-              </th>
-              <th className="px-4 py-3 text-right text-[10px] font-bold uppercase tracking-wider text-gray-400">
+              <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-gray-400 text-right">
                 Thao tác
               </th>
             </tr>
@@ -292,13 +223,13 @@ export const DeletedSlips = ({
           <tbody className="divide-y divide-gray-100">
             {loading ? (
               <tr>
-                <td colSpan={7} className="px-4 py-12 text-center text-gray-400 italic">
+                <td colSpan={4} className="px-4 py-12 text-center text-gray-400 italic">
                   Đang tải...
                 </td>
               </tr>
             ) : slips.length === 0 ? (
               <tr>
-                <td colSpan={7} className="px-4 py-12 text-center text-gray-400 italic">
+                <td colSpan={4} className="px-4 py-12 text-center text-gray-400 italic">
                   Thùng rác trống
                 </td>
               </tr>
@@ -315,7 +246,7 @@ export const DeletedSlips = ({
                       className="px-4 py-3"
                       onClick={(e) => {
                         e.stopPropagation();
-                        toggleSelect(item.table, item.id);
+                        toggleSelect(`${item.table}-${item.id}`);
                       }}
                     >
                       <div className="text-gray-400 hover:text-primary transition-colors">
@@ -332,35 +263,32 @@ export const DeletedSlips = ({
                           item.type === 'Nhập kho'
                             ? 'bg-blue-100 text-blue-600'
                             : item.type === 'Xuất kho'
-                              ? 'bg-red-100 text-red-600'
-                              : 'bg-orange-100 text-orange-600'
+                              ? 'bg-orange-100 text-orange-600'
+                              : 'bg-indigo-100 text-indigo-600'
                         }`}
                       >
                         {item.type}
                       </span>
+                      <div className="text-[10px] text-gray-600 font-mono font-bold mt-1">
+                        {item.code}
+                      </div>
                     </td>
-                    <td className="px-4 py-3 text-xs text-gray-600">{formatDate(item.date)}</td>
-                    <td className="px-4 py-3 text-xs text-gray-600">
-                      {item.type === 'Luân chuyển'
-                        ? `${item.from_wh?.name} → ${item.to_wh?.name}`
-                        : item.warehouses?.name}
-                    </td>
-                    <td className="px-4 py-3 text-xs text-gray-800 font-medium">
-                      {item.materials?.name}
-                    </td>
-                    <td className="px-4 py-3 text-xs text-center font-bold text-gray-700">
-                      {formatNumber(item.quantity)}
+                    <td className="px-4 py-3">
+                      <div className="text-xs font-bold text-gray-800">{item.materials?.name}</div>
+                      <div className="text-[10px] text-gray-400 mt-0.5">{item.wh_name}</div>
                     </td>
                     <td className="px-4 py-3 text-right">
                       <div className="flex justify-end gap-2">
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
-                            handleRestoreClick(
-                              item.id,
-                              item.table,
-                              item.materials?.name || 'Phiếu',
-                            );
+                            setSelectedItem({
+                              id: item.id,
+                              table: item.table,
+                              code: item.code,
+                              type: item.type,
+                            });
+                            setShowRestoreModal(true);
                           }}
                           className="p-2 bg-green-50 text-green-600 rounded-lg hover:bg-green-100 transition-colors"
                         >
@@ -369,7 +297,7 @@ export const DeletedSlips = ({
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
-                            handleDeleteClick(item.id, item.table, item.materials?.name || 'Phiếu');
+                            handleDeleteClick(item);
                           }}
                           className="p-2 bg-red-50 text-red-600 rounded-lg hover:bg-red-100 transition-colors"
                         >
@@ -395,84 +323,131 @@ export const DeletedSlips = ({
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
-              className="bg-white rounded-3xl shadow-xl w-full max-w-sm overflow-hidden p-6 text-center"
+              className="bg-white rounded-3xl shadow-xl w-full max-w-sm overflow-hidden p-8 text-center"
               onClick={(e) => e.stopPropagation()}
             >
-              <h3 className="text-xl font-bold text-gray-900 mb-2">Tùy chọn thao tác</h3>
-              <p className="text-sm text-gray-500 mb-6">
-                Đối tượng: <span className="font-bold text-gray-800">{selectedItem.name}</span>
+              <h3 className="text-xl font-bold text-gray-900 mb-2 uppercase tracking-wide">
+                Tùy chọn thao tác
+              </h3>
+              <p className="text-sm text-gray-500 mb-8 font-medium">
+                Đối tượng: <span className="font-black text-primary">{selectedItem.code}</span>
               </p>
-              <div className="flex flex-col gap-3">
-                <button
-                  onClick={() => {
-                    setShowActionModal(false);
-                    setShowRestoreModal(true);
-                  }}
-                  className="w-full py-4 px-4 rounded-xl font-bold text-green-700 bg-green-50 hover:bg-green-100 transition-colors flex items-center justify-center gap-3"
+              <div className="flex flex-col gap-4">
+                <Button
+                  fullWidth
+                  variant="success"
+                  onClick={() => setShowRestoreModal(true)}
+                  icon={RefreshCw}
                 >
-                  <RefreshCw size={20} /> Khôi phục dữ liệu
-                </button>
-                <button
-                  onClick={() => {
-                    setShowActionModal(false);
-                    setShowDeleteModal(true);
-                  }}
-                  className="w-full py-4 px-4 rounded-xl font-bold text-red-700 bg-red-50 hover:bg-red-100 transition-colors flex items-center justify-center gap-3"
+                  KHÔI PHỤC PHIẾU
+                </Button>
+                <Button
+                  fullWidth
+                  variant="danger"
+                  onClick={() => setShowDeleteModal(true)}
+                  icon={Trash2}
                 >
-                  <Trash2 size={20} /> Xóa vĩnh viễn
-                </button>
-                <button
+                  XÓA VĨNH VIỄN
+                </Button>
+                <Button
+                  fullWidth
+                  variant="outline"
                   onClick={() => setShowActionModal(false)}
-                  className="w-full py-4 rounded-xl font-bold text-gray-600 bg-gray-100 hover:bg-gray-200 transition-colors mt-2"
+                  className="mt-2"
                 >
-                  Hủy bỏ
-                </button>
+                  HUỶ BỎ
+                </Button>
               </div>
             </motion.div>
           </div>
         )}
-
-        <ConfirmModal
-          show={showRestoreModal}
-          title="Khôi phục phiếu?"
-          message={`Khôi phục ${selectedItem?.name} về trạng thái Chờ duyệt?`}
-          onConfirm={confirmRestore}
-          onCancel={() => setShowRestoreModal(false)}
-          type="success"
-        />
-        <ConfirmModal
-          show={showDeleteModal}
-          title="Xóa vĩnh viễn?"
-          message={`Hành động này KHÔNG thể hoàn tác. ${selectedItem?.name} sẽ bị xóa.`}
-          onConfirm={confirmDelete}
-          onCancel={() => setShowDeleteModal(false)}
-          type="danger"
-        />
-        <ConfirmModal
-          show={showBulkRestoreModal}
-          title="Khôi phục các mục đã chọn?"
-          message={`Bạn muốn khôi phục ${selectedIds.size} chứng từ?`}
-          onConfirm={bulkRestore}
-          onCancel={() => setShowBulkRestoreModal(false)}
-          type="success"
-        />
-        <ConfirmModal
-          show={showBulkDeleteModal}
-          title="Xóa vĩnh viễn các mục đã chọn?"
-          message={`Hành động này sẽ xóa ${selectedIds.size} chứng từ vĩnh viễn.`}
-          onConfirm={bulkDelete}
-          onCancel={() => setShowBulkDeleteModal(false)}
-          type="danger"
-        />
-        <ConfirmModal
-          show={showEmptyTrashModal}
-          title="Dọn sạch thùng rác?"
-          message="Xác nhận xóa VĨNH VIỄN toàn bộ chứng từ trong thùng rác?"
-          onConfirm={emptyTrash}
-          onCancel={() => setShowEmptyTrashModal(false)}
-          type="danger"
-        />
       </AnimatePresence>
+
+      <AnimatePresence>
+        {showDeleteModal && selectedItem && (
+          <div
+            className="fixed inset-0 z-[130] flex items-center justify-center p-4 bg-black/50 backdrop-blur-md overflow-hidden"
+            onClick={() => setShowDeleteModal(false)}
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              className="bg-white rounded-[2rem] md:rounded-[2.5rem] shadow-2xl p-8 max-w-sm w-full text-center relative z-10"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="w-16 h-16 bg-red-50 text-red-600 rounded-2xl flex items-center justify-center mx-auto mb-4 border border-red-100">
+                <Trash2 size={32} />
+              </div>
+              <h3 className="text-xl font-bold text-gray-800 mb-2">Xác nhận xóa?</h3>
+              <div className="text-sm text-gray-500 mb-6 text-left bg-gray-50 p-4 rounded-xl border border-gray-100 space-y-2">
+                <p>
+                  Mã phiếu: <strong className="text-primary">{selectedItem.code}</strong>
+                </p>
+                <p>
+                  Loại: <strong className="text-primary">{selectedItem.type}</strong>
+                </p>
+                {usageInfo.inUse ? (
+                  <div className="mt-2 pt-2 border-t border-gray-200">
+                    <button
+                      onClick={() => setShowUsageDetails(!showUsageDetails)}
+                      className="flex items-center justify-between w-full text-[10px] text-red-500 font-black uppercase tracking-tighter hover:text-red-600"
+                    >
+                      <div className="flex items-center gap-1">
+                        <AlertCircle size={12} /> Có dữ liệu liên quan
+                      </div>
+                      {showUsageDetails ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
+                    </button>
+                    {showUsageDetails && (
+                      <div className="mt-2 space-y-1 max-h-32 overflow-y-auto pr-1">
+                        {usageInfo.details.map((d, idx) => (
+                          <div
+                            key={idx}
+                            className="flex justify-between text-[10px] text-gray-500 bg-white p-1.5 rounded-lg border border-gray-100"
+                          >
+                            <span>{d.label}</span>
+                            <span className="font-bold text-red-500">{d.count}</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <p className="text-[10px] text-green-600 font-bold flex items-center gap-1 uppercase tracking-widest ">
+                    <CheckCircle size={12} /> Sẵn sàng để xóa
+                  </p>
+                )}
+              </div>
+              <div className="flex flex-col gap-3">
+                <div className="flex gap-3">
+                  <Button fullWidth variant="outline" onClick={() => setShowDeleteModal(false)}>
+                    Hủy bỏ
+                  </Button>
+                  <Button
+                    fullWidth
+                    variant="danger"
+                    onClick={confirmDelete}
+                    disabled={usageInfo.inUse && user.role !== 'Develop'}
+                    isLoading={submitting}
+                  >
+                    Xác nhận xóa
+                  </Button>
+                </div>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      <ConfirmModal
+        show={showRestoreModal}
+        title="Xác nhận khôi phục"
+        message={`Bạn có chắc muốn khôi phục phiếu ${selectedItem?.code} trở lại danh sách chính?`}
+        onConfirm={confirmRestore}
+        onCancel={() => setShowRestoreModal(false)}
+        type="success"
+        isLoading={submitting}
+      />
     </div>
   );
 };

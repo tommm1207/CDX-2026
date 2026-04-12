@@ -1,5 +1,16 @@
 import { useState, useEffect, FormEvent } from 'react';
-import { Users, Plus, Search, Edit, Trash2, X, Eye, UserPlus } from 'lucide-react';
+import {
+  Users,
+  Plus,
+  Search,
+  Edit,
+  Trash2,
+  X,
+  Eye,
+  UserPlus,
+  AlertCircle,
+  CheckCircle,
+} from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { supabase } from '@/lib/supabase';
 import { Employee } from '@/types';
@@ -9,6 +20,7 @@ import { FAB } from '../shared/FAB';
 import { Button } from '../shared/Button';
 import { SortButton, SortOption } from '../shared/SortButton';
 import { checkUsage } from '@/utils/dataIntegrity';
+import { generateSmartCode } from '@/utils/codeGenerator';
 
 export const HRRecords = ({
   user,
@@ -26,6 +38,8 @@ export const HRRecords = ({
   const [submitting, setSubmitting] = useState(false);
   const [showFilter, setShowFilter] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [itemToDelete, setItemToDelete] = useState('');
   const [sortBy, setSortBy] = useState<SortOption>(
     (localStorage.getItem(`sort_pref_hr_${user.id}`) as SortOption) || 'newest',
   );
@@ -48,7 +62,7 @@ export const HRRecords = ({
     department: '',
     position: '',
     has_salary: false,
-    role: 'User' as 'User' | 'Admin' | 'Admin App',
+    role: 'User' as 'User' | 'Admin' | 'Develop',
     data_view_permission: '',
     resign_date: '',
     initial_budget: 0,
@@ -65,8 +79,8 @@ export const HRRecords = ({
     setLoading(true);
     let query = supabase.from('users').select('*').neq('status', 'Đã xóa');
 
-    if (user.role !== 'Admin App') {
-      query = query.neq('role', 'Admin App');
+    if (user.role !== 'Develop') {
+      query = query.neq('role', 'Develop');
     }
 
     const { data, error } = await query.order('code');
@@ -76,32 +90,20 @@ export const HRRecords = ({
 
   const generateNextEmployeeCode = async () => {
     try {
-      const { data } = await supabase
-        .from('users')
-        .select('code')
-        .like('code', 'CDX%')
-        .order('code', { ascending: false })
-        .limit(1);
+      const { data } = await supabase.from('users').select('code').like('code', 'CDX%');
 
-      if (data && data.length > 0) {
-        const lastCode = data[0].code;
-        const lastNumber = parseInt(lastCode.replace('CDX', ''));
-        if (!isNaN(lastNumber)) {
-          const nextNumber = lastNumber + 1;
-          return `CDX${nextNumber.toString().padStart(3, '0')}`;
-        }
-      }
-      return 'CDX001';
+      const codes = data?.map((d) => d.code) || [];
+      return generateSmartCode(codes, 'CDX', 3);
     } catch (err) {
       console.error('Error generating code:', err);
-      return 'cdx001';
+      return 'CDX001';
     }
   };
 
   const handleEdit = async (emp: Employee) => {
-    if (emp.role === 'Admin App' && user.role !== 'Admin App') {
-      if (addToast) addToast('Bạn không có quyền chỉnh sửa tài khoản Admin App', 'error');
-      else alert('Bạn không có quyền chỉnh sửa tài khoản Admin App');
+    if (emp.role === 'Develop' && user.role !== 'Develop') {
+      if (addToast) addToast('Bạn không có quyền chỉnh sửa tài khoản Develop', 'error');
+      else alert('Bạn không có quyền chỉnh sửa tài khoản Develop');
       return;
     }
 
@@ -122,36 +124,104 @@ export const HRRecords = ({
     setShowModal(true);
   };
 
-  const [showDeleteModal, setShowDeleteModal] = useState(false);
-  const [itemToDelete, setItemToDelete] = useState<string | null>(null);
+  const [usageInfo, setUsageInfo] = useState<{
+    inUse: boolean;
+    tables: string[];
+    details?: any[];
+  }>({ inUse: false, tables: [] });
 
-  const handleDeleteClick = (id: string) => {
+  const handleDeleteClick = async (id: string) => {
     setItemToDelete(id);
+    const usage = await checkUsage('employee', id);
+    setUsageInfo(usage);
     setShowDeleteModal(true);
+  };
+
+  const handlePurgeRelated = async () => {
+    if (!itemToDelete || user.role !== 'Develop' || !usageInfo.details) return;
+
+    if (
+      !window.confirm(
+        'Bạn có chắc chắn muốn XÓA VĨNH VIỄN toàn bộ các dữ liệu rác liên quan này? Hành động này không thể hoàn tác.',
+      )
+    )
+      return;
+
+    setSubmitting(true);
+    try {
+      for (const detail of usageInfo.details) {
+        if (detail.softDeletedCount > 0) {
+          const { error } = await supabase
+            .from(detail.table)
+            .delete()
+            .eq('employee_id', itemToDelete)
+            .eq('status', 'Đã xóa');
+
+          if (error && (detail.table === 'stock_in' || detail.table === 'stock_out')) {
+            // Some tables might use different field names for relations, though usually it's employee_id or created_by
+            // For now assuming employee_id as standard for many tables
+          }
+          if (error) throw error;
+        }
+      }
+
+      if (addToast) addToast('Đã dọn dẹp các dữ liệu rác liên quan!', 'success');
+      const usage = await checkUsage('employee', itemToDelete);
+      setUsageInfo(usage);
+    } catch (err: any) {
+      if (addToast) addToast('Lỗi khi dọn dẹp: ' + err.message, 'error');
+    } finally {
+      setSubmitting(true);
+      setTimeout(() => setSubmitting(false), 500);
+    }
+  };
+
+  const handlePermanentDelete = async () => {
+    if (!itemToDelete || user.role !== 'Develop') return;
+
+    if (
+      !window.confirm(
+        'CẢNH BÁO: Hành động này sẽ xóa VĨNH VIỄN nhân sự này khỏi cơ sở dữ liệu. Bạn có chắc chắn muốn tiếp tục?',
+      )
+    ) {
+      return;
+    }
+
+    setSubmitting(true);
+    try {
+      const { error } = await supabase.from('users').delete().eq('id', itemToDelete);
+
+      if (error) {
+        let msg = error.message;
+        if (msg.includes('foreign key constraint')) {
+          msg = `Không thể xóa vĩnh viễn vì vẫn còn dữ liệu liên kết vật lý trong DB. Vui lòng dọn dẹp sạch các mục liên quan trước.`;
+        }
+        throw new Error(msg);
+      }
+
+      if (addToast) addToast('Đã xóa vĩnh viễn nhân sự khỏi hệ thống', 'success');
+      fetchEmployees();
+      setShowDeleteModal(false);
+    } catch (err: any) {
+      if (addToast) addToast('Lỗi xóa vĩnh viễn: ' + err.message, 'error');
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   const confirmDelete = async () => {
     if (!itemToDelete) return;
 
     const target = employees.find((e) => e.id === itemToDelete);
-    if (target?.role === 'Admin App' && user.role !== 'Admin App') {
-      if (addToast) addToast('Bạn không có quyền xóa tài khoản Admin App', 'error');
-      else alert('Bạn không có quyền xóa tài khoản Admin App');
+    if (target?.role === 'Develop' && user.role !== 'Develop') {
+      if (addToast) addToast('Bạn không có quyền xóa tài khoản Develop', 'error');
+      else alert('Bạn không có quyền xóa tài khoản Develop');
       return;
     }
 
-    try {
-      const usage = await checkUsage('employee', itemToDelete);
-      if (usage.inUse) {
-        if (addToast)
-          addToast(
-            `Không thể xóa vì nhân sự này đang được dùng trong: ${usage.tables.join(', ')}`,
-            'error',
-          );
-        setShowDeleteModal(false);
-        return;
-      }
+    // Always allow moving to Trash (soft delete) regardless of usageInfo.inUse
 
+    try {
       const { error } = await supabase
         .from('users')
         .update({ status: 'Đã xóa' })
@@ -217,7 +287,7 @@ export const HRRecords = ({
         emp.full_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
         (emp.code && emp.code.toLowerCase().includes(searchTerm.toLowerCase()));
 
-      if (user.role !== 'Admin App' && emp.role === 'Admin App') {
+      if (user.role !== 'Develop' && emp.role === 'Develop') {
         return false;
       }
       return matchesSearch;
@@ -311,7 +381,7 @@ export const HRRecords = ({
                 <th className="p-3">Email</th>
                 <th className="p-3">Số điện thoại</th>
                 <th className="p-3">Ngày vào làm</th>
-                {user.role === 'Admin App' && <th className="p-3">Mật khẩu ứng dụng</th>}
+                {user.role === 'Develop' && <th className="p-3">Mật khẩu ứng dụng</th>}
                 <th className="p-3">Bộ phận</th>
                 <th className="p-3">Chức vụ</th>
                 <th className="p-3">Phân quyền</th>
@@ -322,7 +392,7 @@ export const HRRecords = ({
             <tbody className="text-xs text-gray-600">
               {loading ? (
                 <tr>
-                  <td colSpan={user.role === 'Admin App' ? 11 : 10} className="p-12 text-center">
+                  <td colSpan={user.role === 'Develop' ? 11 : 10} className="p-12 text-center">
                     <div className="flex flex-col items-center justify-center text-gray-400">
                       <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin mb-2"></div>
                       <p className="text-sm">Đang tải dữ liệu nhân sự...</p>
@@ -331,7 +401,7 @@ export const HRRecords = ({
                 </tr>
               ) : filteredEmployees.length === 0 ? (
                 <tr>
-                  <td colSpan={user.role === 'Admin App' ? 11 : 10} className="p-8 text-center">
+                  <td colSpan={user.role === 'Develop' ? 11 : 10} className="p-8 text-center">
                     Không tìm thấy nhân sự nào
                   </td>
                 </tr>
@@ -349,7 +419,7 @@ export const HRRecords = ({
                     <td className="p-3">{emp.email || '-'}</td>
                     <td className="p-3">{emp.phone || '-'}</td>
                     <td className="p-3">{emp.join_date || '-'}</td>
-                    {user.role === 'Admin App' && (
+                    {user.role === 'Develop' && (
                       <td className="p-3 font-mono text-blue-600">
                         <div className="flex items-center gap-2 group/pass">
                           <span className="opacity-0 group-hover/pass:opacity-100 transition-opacity absolute bg-white px-2 py-1 rounded shadow-sm border border-gray-100 z-50 pointer-events-none -mt-8 ml-4">
@@ -365,7 +435,7 @@ export const HRRecords = ({
                     <td className="p-3">
                       <span
                         className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
-                          emp.role === 'Admin App'
+                          emp.role === 'Develop'
                             ? 'bg-purple-100 text-purple-600'
                             : emp.role === 'Admin'
                               ? 'bg-blue-100 text-blue-600'
@@ -437,22 +507,79 @@ export const HRRecords = ({
                 <Trash2 size={32} />
               </div>
               <h3 className="text-xl font-bold text-gray-800 mb-2">Xác nhận xóa?</h3>
-              <p className="text-sm text-gray-500 mb-6 font-medium">
-                Bạn có chắc chắn muốn chuyển nhân sự{' '}
-                <strong>
-                  {employees.find((e) => e.id === itemToDelete)?.code || itemToDelete?.slice(0, 8)}
-                </strong>{' '}
-                vào thùng rác?
-                <br />
-                Hành động này có thể hoàn tác trong mục Thùng rác.
-              </p>
-              <div className="flex gap-3">
-                <Button fullWidth variant="outline" onClick={() => setShowDeleteModal(false)}>
-                  Hủy bỏ
-                </Button>
-                <Button fullWidth variant="danger" onClick={confirmDelete}>
-                  Di chuyển
-                </Button>
+              <div className="text-sm text-gray-500 mb-6 space-y-3 text-left bg-gray-50 p-4 rounded-xl border border-gray-100">
+                <p>
+                  Nhân sự:{' '}
+                  <strong>
+                    {employees.find((e) => e.id === itemToDelete)?.full_name || itemToDelete}
+                  </strong>
+                </p>
+
+                {usageInfo.details && usageInfo.details.length > 0 ? (
+                  <div className="space-y-3">
+                    <p className="text-red-600 font-bold flex items-center gap-2 text-[11px] uppercase tracking-wider">
+                      <AlertCircle size={14} /> Dữ liệu liên quan:
+                    </p>
+                    <div className="space-y-2">
+                      {usageInfo.details.map((detail, idx) => (
+                        <div
+                          key={idx}
+                          className="flex items-center justify-between text-[11px] bg-white p-2 rounded-xl border border-gray-100 shadow-sm"
+                        >
+                          <span className="font-medium text-gray-700">{detail.label}</span>
+                          <div className="flex gap-2">
+                            {detail.count > 0 && (
+                              <span className="px-1.5 py-0.5 bg-amber-100 text-amber-700 rounded-md font-bold">
+                                {detail.count} Active
+                              </span>
+                            )}
+                            {detail.softDeletedCount > 0 && (
+                              <span className="px-1.5 py-0.5 bg-gray-100 text-gray-500 rounded-md font-bold">
+                                {detail.softDeletedCount} Trash
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+
+                    {user.role === 'Develop' &&
+                      usageInfo.details.some((d) => d.softDeletedCount > 0) && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          fullWidth
+                          onClick={handlePurgeRelated}
+                          isLoading={submitting}
+                          className="mt-2 text-[10px] py-1 border-amber-200 text-amber-700 bg-amber-50 hover:bg-amber-100"
+                          icon={Trash2}
+                        >
+                          DỌN DẸP RÁC LIÊN QUAN (ADMIN)
+                        </Button>
+                      )}
+
+                    {usageInfo.inUse && (
+                      <p className="text-[10px] text-red-500 italic mt-1 leading-tight">
+                        * Phải xóa các phiếu/dữ liệu 'Active' trước khi có thể xóa nhân sự này.
+                      </p>
+                    )}
+                  </div>
+                ) : (
+                  <p className="text-green-600 font-bold flex items-center gap-2 justify-center py-2">
+                    <CheckCircle size={18} /> Sẵn sàng để xóa
+                  </p>
+                )}
+              </div>
+              <div className="flex flex-col gap-3">
+                <div className="flex gap-3">
+                  <Button fullWidth variant="outline" onClick={() => setShowDeleteModal(false)}>
+                    Hủy bỏ
+                  </Button>
+                  <Button fullWidth variant="danger" onClick={confirmDelete}>
+                    Thùng rác
+                  </Button>
+                </div>
+                {/* XÓA VĨNH VIỄN removed from main list - use Trash module instead */}
               </div>
             </motion.div>
           </div>
@@ -462,25 +589,25 @@ export const HRRecords = ({
       <AnimatePresence>
         {showModal && (
           <div
-            className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/50 backdrop-blur-md overflow-hidden"
+            className="fixed inset-0 z-[100] flex items-center justify-center p-2 sm:p-4 bg-black/50 backdrop-blur-md overflow-hidden"
             onClick={() => setShowModal(false)}
           >
             <motion.div
               initial={{ opacity: 0, scale: 0.95, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 20 }}
-              className="bg-white rounded-[2rem] md:rounded-[2.5rem] shadow-2xl w-full max-w-4xl relative z-10 flex flex-col overflow-hidden max-h-[90vh]"
+              className="bg-white rounded-[1.5rem] md:rounded-[2.5rem] shadow-2xl w-full max-w-4xl relative z-10 flex flex-col overflow-hidden max-h-[96vh] md:max-h-[90vh]"
               onClick={(e) => e.stopPropagation()}
             >
-              <div className="bg-primary p-6 flex items-center justify-between text-white rounded-t-[2rem] md:rounded-t-[2.5rem] flex-shrink-0 transition-colors">
+              <div className="bg-primary p-4 sm:p-6 flex items-center justify-between text-white rounded-t-[1.5rem] md:rounded-t-[2.5rem] flex-shrink-0 transition-colors">
                 <div className="flex items-center gap-3">
                   <div
                     className="p-2 bg-white/20 rounded-xl cursor-pointer hover:bg-white/30 transition-all active:scale-95"
                     onClick={() => setShowModal(false)}
                   >
-                    <UserPlus size={24} />
+                    <UserPlus size={20} className="sm:w-6 sm:h-6" />
                   </div>
-                  <h3 className="font-bold text-lg">
+                  <h3 className="font-bold text-base sm:text-lg truncate">
                     {isEditing ? 'Cập Nhật Nhân Sự' : 'Thêm Mới Nhân Sự'}
                   </h3>
                 </div>
@@ -488,226 +615,216 @@ export const HRRecords = ({
                   onClick={() => setShowModal(false)}
                   className="p-2 hover:bg-white/20 rounded-xl transition-all"
                 >
-                  <X size={24} />
+                  <X size={20} className="sm:w-6 sm:h-6" />
                 </button>
               </div>
 
               <div className="flex-1 overflow-y-auto custom-scrollbar">
-                <form onSubmit={handleSubmit}>
-                  <div className="p-6">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      <div className="md:col-span-2 space-y-2 mb-2">
-                        <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">
-                          Mã tham chiếu (Nhân viên)
-                        </label>
-                        <div className="bg-primary/5 px-5 py-3.5 rounded-2xl border border-primary/10 text-sm font-black text-primary uppercase shadow-inner italic">
-                          {formData.code ||
-                            `NV-${new Date().toISOString().slice(2, 10).replace(/-/g, '')}-001`}
-                        </div>
+                <form onSubmit={handleSubmit} className="p-4 sm:p-6">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="md:col-span-2 space-y-2 mb-2">
+                      <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">
+                        Mã tham chiếu (Nhân viên)
+                      </label>
+                      <div className="bg-primary/5 px-5 py-3.5 rounded-2xl border border-primary/10 text-sm font-black text-primary uppercase shadow-inner italic">
+                        {formData.code ||
+                          `NV-${new Date().toISOString().slice(2, 10).replace(/-/g, '')}-001`}
                       </div>
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-bold text-gray-400 uppercase">
+                        Họ và tên
+                      </label>
+                      <input
+                        required
+                        type="text"
+                        value={formData.full_name}
+                        onChange={(e) => setFormData({ ...formData, full_name: e.target.value })}
+                        className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-bold text-gray-400 uppercase">Email</label>
+                      <input
+                        type="email"
+                        value={formData.email}
+                        onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                        className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-bold text-gray-400 uppercase">
+                        Số điện thoại
+                      </label>
+                      <input
+                        type="text"
+                        value={formData.phone}
+                        onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                        className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-bold text-gray-400 uppercase">
+                        CMND / CCCD
+                      </label>
+                      <input
+                        type="text"
+                        value={formData.id_card}
+                        onChange={(e) => setFormData({ ...formData, id_card: e.target.value })}
+                        className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-bold text-gray-400 uppercase">
+                        Ngày sinh
+                      </label>
+                      <input
+                        type="date"
+                        value={formData.dob}
+                        onChange={(e) => setFormData({ ...formData, dob: e.target.value })}
+                        className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-bold text-gray-400 uppercase">
+                        Ngày vào làm
+                      </label>
+                      <input
+                        type="date"
+                        value={formData.join_date}
+                        onChange={(e) => setFormData({ ...formData, join_date: e.target.value })}
+                        className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-bold text-gray-400 uppercase">
+                        Mã số thuế
+                      </label>
+                      <input
+                        type="text"
+                        value={formData.tax_id}
+                        onChange={(e) => setFormData({ ...formData, tax_id: e.target.value })}
+                        className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20"
+                      />
+                    </div>
+                    {user.role === 'Develop' && (
                       <div className="space-y-1">
                         <label className="text-[10px] font-bold text-gray-400 uppercase">
-                          Họ và tên
+                          Mật khẩu ứng dụng
                         </label>
                         <input
                           required
                           type="text"
-                          value={formData.full_name}
-                          onChange={(e) => setFormData({ ...formData, full_name: e.target.value })}
+                          value={formData.app_pass}
+                          onChange={(e) => setFormData({ ...formData, app_pass: e.target.value })}
                           className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20"
                         />
                       </div>
-                      <div className="space-y-1">
-                        <label className="text-[10px] font-bold text-gray-400 uppercase">
-                          Email
-                        </label>
-                        <input
-                          type="email"
-                          value={formData.email}
-                          onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                          className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20"
-                        />
-                      </div>
-                      <div className="space-y-1">
-                        <label className="text-[10px] font-bold text-gray-400 uppercase">
-                          Số điện thoại
-                        </label>
-                        <input
-                          type="text"
-                          value={formData.phone}
-                          onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                          className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20"
-                        />
-                      </div>
-                      <div className="space-y-1">
-                        <label className="text-[10px] font-bold text-gray-400 uppercase">
-                          CMND / CCCD
-                        </label>
-                        <input
-                          type="text"
-                          value={formData.id_card}
-                          onChange={(e) => setFormData({ ...formData, id_card: e.target.value })}
-                          className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20"
-                        />
-                      </div>
-                      <div className="space-y-1">
-                        <label className="text-[10px] font-bold text-gray-400 uppercase">
-                          Ngày sinh
-                        </label>
-                        <input
-                          type="date"
-                          value={formData.dob}
-                          onChange={(e) => setFormData({ ...formData, dob: e.target.value })}
-                          className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20"
-                        />
-                      </div>
-                      <div className="space-y-1">
-                        <label className="text-[10px] font-bold text-gray-400 uppercase">
-                          Ngày vào làm
-                        </label>
-                        <input
-                          type="date"
-                          value={formData.join_date}
-                          onChange={(e) => setFormData({ ...formData, join_date: e.target.value })}
-                          className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20"
-                        />
-                      </div>
-                      <div className="space-y-1">
-                        <label className="text-[10px] font-bold text-gray-400 uppercase">
-                          Mã số thuế
-                        </label>
-                        <input
-                          type="text"
-                          value={formData.tax_id}
-                          onChange={(e) => setFormData({ ...formData, tax_id: e.target.value })}
-                          className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20"
-                        />
-                      </div>
-                      {user.role === 'Admin App' && (
-                        <div className="space-y-1">
-                          <label className="text-[10px] font-bold text-gray-400 uppercase">
-                            Mật khẩu ứng dụng
-                          </label>
-                          <input
-                            required
-                            type="text"
-                            value={formData.app_pass}
-                            onChange={(e) => setFormData({ ...formData, app_pass: e.target.value })}
-                            className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20"
-                          />
-                        </div>
-                      )}
-                      <div className="space-y-1">
-                        <label className="text-[10px] font-bold text-gray-400 uppercase">
-                          Bộ phận
-                        </label>
-                        <input
-                          type="text"
-                          value={formData.department}
-                          onChange={(e) => setFormData({ ...formData, department: e.target.value })}
-                          className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20"
-                        />
-                      </div>
-                      <div className="space-y-1">
-                        <label className="text-[10px] font-bold text-gray-400 uppercase">
-                          Chức vụ
-                        </label>
-                        <input
-                          type="text"
-                          value={formData.position}
-                          onChange={(e) => setFormData({ ...formData, position: e.target.value })}
-                          className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20"
-                        />
-                      </div>
-                      <div className="space-y-1">
-                        <label className="text-[10px] font-bold text-gray-400 uppercase">
-                          Có tính lương
-                        </label>
-                        <select
-                          value={formData.has_salary ? 'true' : 'false'}
-                          onChange={(e) =>
-                            setFormData({ ...formData, has_salary: e.target.value === 'true' })
-                          }
-                          className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20"
-                        >
-                          <option value="false">Không</option>
-                          <option value="true">Có</option>
-                        </select>
-                      </div>
-                      <div className="space-y-1">
-                        <label className="text-[10px] font-bold text-gray-400 uppercase">
-                          Phân quyền
-                        </label>
-                        <select
-                          value={formData.role}
-                          onChange={(e) =>
-                            setFormData({ ...formData, role: e.target.value as any })
-                          }
-                          className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20"
-                        >
-                          <option value="User">User</option>
-                          <option value="Admin">Admin</option>
-                          {user.role === 'Admin App' && (
-                            <option value="Admin App">Admin App</option>
-                          )}
-                        </select>
-                      </div>
-                      <div className="space-y-1">
-                        <label className="text-[10px] font-bold text-gray-400 uppercase">
-                          Quyền xem dữ liệu
-                        </label>
-                        <input
-                          type="text"
-                          placeholder="VD: kho-a,kho-b (chức năng đang phát triển)"
-                          value={formData.data_view_permission}
-                          onChange={(e) =>
-                            setFormData({ ...formData, data_view_permission: e.target.value })
-                          }
-                          className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20"
-                        />
-                        <p className="text-[10px] text-gray-400 italic mt-1">
-                          * Tính năng phân quyền theo kho đang được phát triển
-                        </p>
-                      </div>
-                      <div className="space-y-1">
-                        <label className="text-[10px] font-bold text-gray-400 uppercase">
-                          Ngày nghỉ việc
-                        </label>
-                        <input
-                          type="date"
-                          value={formData.resign_date}
-                          onChange={(e) =>
-                            setFormData({ ...formData, resign_date: e.target.value })
-                          }
-                          className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20"
-                        />
-                      </div>
-                      <div className="space-y-1">
-                        <label className="text-[10px] font-bold text-gray-400 uppercase">
-                          Ngân sách đầu kỳ
-                        </label>
-                        <input
-                          type="number"
-                          value={formData.initial_budget}
-                          onChange={(e) =>
-                            setFormData({ ...formData, initial_budget: parseFloat(e.target.value) })
-                          }
-                          className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20"
-                        />
-                      </div>
-                      <div className="space-y-1">
-                        <label className="text-[10px] font-bold text-gray-400 uppercase">
-                          Trạng thái
-                        </label>
-                        <select
-                          value={formData.status}
-                          onChange={(e) => setFormData({ ...formData, status: e.target.value })}
-                          className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20"
-                        >
-                          <option value="Đang làm việc">Đang làm việc</option>
-                          <option value="Nghỉ việc">Nghỉ việc</option>
-                        </select>
-                      </div>
+                    )}
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-bold text-gray-400 uppercase">
+                        Bộ phận
+                      </label>
+                      <input
+                        type="text"
+                        value={formData.department}
+                        onChange={(e) => setFormData({ ...formData, department: e.target.value })}
+                        className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-bold text-gray-400 uppercase">
+                        Chức vụ
+                      </label>
+                      <input
+                        type="text"
+                        value={formData.position}
+                        onChange={(e) => setFormData({ ...formData, position: e.target.value })}
+                        className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-bold text-gray-400 uppercase">
+                        Có tính lương
+                      </label>
+                      <select
+                        value={formData.has_salary ? 'true' : 'false'}
+                        onChange={(e) =>
+                          setFormData({ ...formData, has_salary: e.target.value === 'true' })
+                        }
+                        className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20"
+                      >
+                        <option value="false">Không</option>
+                        <option value="true">Có</option>
+                      </select>
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-bold text-gray-400 uppercase">
+                        Phân quyền
+                      </label>
+                      <select
+                        value={formData.role}
+                        onChange={(e) => setFormData({ ...formData, role: e.target.value as any })}
+                        className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20"
+                      >
+                        <option value="User">User</option>
+                        <option value="Admin">Admin</option>
+                        {user.role === 'Develop' && <option value="Develop">Develop</option>}
+                      </select>
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-bold text-gray-400 uppercase">
+                        Quyền xem dữ liệu
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="VD: kho-a,kho-b (chức năng đang phát triển)"
+                        value={formData.data_view_permission}
+                        onChange={(e) =>
+                          setFormData({ ...formData, data_view_permission: e.target.value })
+                        }
+                        className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20"
+                      />
+                      <p className="text-[10px] text-gray-400 italic mt-1">
+                        * Tính năng phân quyền theo kho đang được phát triển
+                      </p>
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-bold text-gray-400 uppercase">
+                        Ngày nghỉ việc
+                      </label>
+                      <input
+                        type="date"
+                        value={formData.resign_date}
+                        onChange={(e) => setFormData({ ...formData, resign_date: e.target.value })}
+                        className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-bold text-gray-400 uppercase">
+                        Ngân sách đầu kỳ
+                      </label>
+                      <input
+                        type="number"
+                        value={formData.initial_budget}
+                        onChange={(e) =>
+                          setFormData({ ...formData, initial_budget: parseFloat(e.target.value) })
+                        }
+                        className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-bold text-gray-400 uppercase">
+                        Trạng thái
+                      </label>
+                      <select
+                        value={formData.status}
+                        onChange={(e) => setFormData({ ...formData, status: e.target.value })}
+                        className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20"
+                      >
+                        <option value="Đang làm việc">Đang làm việc</option>
+                        <option value="Nghỉ việc">Nghỉ việc</option>
+                      </select>
                     </div>
                   </div>
 

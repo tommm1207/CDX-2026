@@ -13,6 +13,7 @@ import {
   Trash2,
   Edit,
   ChevronDown,
+  CheckCircle,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { supabase } from '@/lib/supabase';
@@ -175,7 +176,7 @@ export const PendingApprovals = ({
     item.cost_code ||
     '#' + item.id.slice(0, 8);
 
-  const isAdmin = user.role === 'Admin' || user.role === 'Admin App';
+  const isAdmin = user.role === 'Admin' || user.role === 'Develop';
 
   return (
     <div className="p-4 md:p-6 space-y-4 pb-24">

@@ -26,6 +26,7 @@ import {
   ArrowDownCircle,
   ArrowUpCircle,
   Info,
+  Navigation,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { utils, writeFile } from 'xlsx';
@@ -42,6 +43,8 @@ import { isUUID, getAllowedWarehouses } from '@/utils/helpers';
 import { isActiveWarehouse } from '@/utils/inventory';
 import { Button } from '../shared/Button';
 import { SortButton, SortOption } from '../shared/SortButton';
+import { generateSmartCode } from '@/utils/codeGenerator';
+import { checkUsage } from '@/utils/dataIntegrity';
 
 export const Costs = ({
   user,
@@ -89,17 +92,23 @@ export const Costs = ({
   );
 
   const [employees, setEmployees] = useState<any[]>([]);
+  const [costItems, setCostItems] = useState<any[]>([]);
+
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [itemToDelete, setItemToDelete] = useState<string | null>(null);
+  const [usageInfo, setUsageInfo] = useState<any>({ inUse: false, details: [] });
 
   const initialFormState = {
     date: new Date().toISOString().split('T')[0],
     transaction_type: 'Chi',
-    cost_type: '',
-    content: '',
+    cost_type: '', // Group
+    content: '', // Item
+    notes: '', // Free text
+    warehouse_id: '',
     warehouse_name: '',
     quantity: 0,
     unit: '',
     total_amount: 0,
-    notes: '',
   };
 
   const [formData, setFormData] = useState<any>(initialFormState);
@@ -109,12 +118,36 @@ export const Costs = ({
   }, [statusFilter]);
 
   useEffect(() => {
-    fetchMaterials();
     fetchWarehouses();
-    fetchCostTypes();
+    fetchCostGroups();
+    fetchCostItems();
     fetchUnits();
     fetchEmployees();
   }, []);
+
+  const fetchCostGroups = async () => {
+    const { data } = await supabase.from('costs').select('cost_type');
+    if (data) {
+      const unique = Array.from(new Set(data.map((item) => item.cost_type)))
+        .filter(Boolean)
+        .map((name) => ({ id: name as string, name: name as string }));
+      setCostTypes(unique);
+    }
+  };
+
+  const fetchCostItems = async (group?: string) => {
+    let query = supabase.from('costs').select('content');
+    if (group) {
+      query = query.eq('cost_type', group);
+    }
+    const { data } = await query;
+    if (data) {
+      const unique = Array.from(new Set(data.map((item) => item.content)))
+        .filter(Boolean)
+        .map((name) => ({ id: name as string, name: name as string }));
+      setCostItems(unique);
+    }
+  };
 
   const fetchEmployees = async () => {
     const { data } = await supabase
@@ -122,6 +155,17 @@ export const Costs = ({
       .select('id, full_name, code')
       .neq('status', 'Nghỉ việc');
     if (data) setEmployees(data);
+  };
+
+  const generateNextCostCode = async () => {
+    try {
+      const { data } = await supabase.from('costs').select('cost_code').like('cost_code', 'PC%');
+      const codes = data?.map((c) => c.cost_code) || [];
+      return generateSmartCode(codes, 'PC', 3);
+    } catch (err) {
+      console.error('Error generating cost code:', err);
+      return 'PC001';
+    }
   };
 
   const fetchCosts = async () => {
@@ -159,7 +203,7 @@ export const Costs = ({
   const fetchMaterials = async () => {
     const { data } = await supabase
       .from('materials')
-      .select('id, name')
+      .select('id, name, group_id, unit')
       .or('status.is.null,status.neq.Đã xóa');
     if (data) setMaterials(data);
   };
@@ -178,26 +222,6 @@ export const Costs = ({
     const { data } = await query;
     if (data) {
       setWarehouses(data.filter(isActiveWarehouse));
-    }
-  };
-
-  const fetchCostTypes = async () => {
-    const { data } = await supabase.from('costs').select('cost_type');
-    if (data) {
-      const uniqueTypes = Array.from(new Set(data.map((item) => item.cost_type)))
-        .filter(Boolean)
-        .map((name) => ({ id: name as string, name: name as string }));
-      setCostTypes(uniqueTypes);
-    }
-  };
-
-  const fetchUnits = async () => {
-    const { data } = await supabase.from('costs').select('unit');
-    if (data) {
-      const uniqueUnits = Array.from(new Set(data.map((item) => item.unit)))
-        .filter(Boolean)
-        .map((name) => ({ id: name, name }));
-      setUnits(uniqueUnits);
     }
   };
 
@@ -240,34 +264,26 @@ export const Costs = ({
         warehouses,
         fetchWarehouses,
       );
-      const isContentUuid = isUUID(formData.content);
-      const finalContent = isContentUuid
-        ? materials.find((m) => m.id === formData.content)?.name || formData.content
-        : formData.content;
-      const material_id = await ensureValueExists(
-        'materials',
-        finalContent,
-        materials,
-        fetchMaterials,
-      );
 
-      const payload: any = {
-        date: formData.date,
+      const cost_code = isEditing ? formData.cost_code : generateNextCostCode();
+
+      const payload = {
+        cost_code,
         transaction_type: formData.transaction_type,
-        cost_code:
-          formData.cost_code || `CP-${new Date().toISOString().slice(2, 10).replace(/-/g, '')}-001`,
-        employee_id: user.id,
         cost_type: formData.cost_type,
-        content: finalContent,
+        content: formData.content,
+        notes: formData.notes,
         warehouse_id,
-        material_id,
         quantity: formData.quantity,
         unit: formData.unit,
         total_amount: formData.total_amount,
-        notes: formData.notes,
-        status: 'Đã duyệt',
+        employee_id: user.id,
+        status: isEditing
+          ? formData.status === 'Đã duyệt'
+            ? 'Đã duyệt'
+            : 'Chờ duyệt'
+          : 'Chờ duyệt',
       };
-
       if (isEditing && editingId) {
         await supabase.from('costs').update(payload).eq('id', editingId);
       } else {
@@ -291,7 +307,7 @@ export const Costs = ({
     setFormData({
       date: item.date,
       transaction_type: item.transaction_type || 'Chi',
-      cost_type: item.cost_type,
+      cost_type: item.cost_type || '',
       content: item.content || '',
       warehouse_name: item.warehouses?.name || '',
       quantity: item.quantity,
@@ -299,30 +315,64 @@ export const Costs = ({
       total_amount: item.total_amount,
       notes: item.notes || '',
       cost_code: item.cost_code,
+      status: item.status,
     });
     setEditingId(item.id);
     setIsEditing(true);
     setShowModal(true);
     setShowDetailModal(false);
+    fetchCostItems(item.cost_type);
   };
 
-  const [showDeleteModal, setShowDeleteModal] = useState(false);
-  const [itemToDelete, setItemToDelete] = useState<string | null>(null);
-
-  const handleDeleteClick = (item: any) => {
+  const handleDeleteClick = async (item: any) => {
     setItemToDelete(item.id);
     setShowDeleteModal(true);
+    try {
+      // Costs usually haven't child dependencies but we check for consistency
+      const usage = await checkUsage('material', item.material_id || item.id);
+      setUsageInfo(usage);
+    } catch (err) {
+      console.error('Error checking usage:', err);
+    }
   };
 
   const confirmDelete = async () => {
     if (!itemToDelete) return;
+    setSubmitting(true);
     try {
-      await supabase.from('costs').update({ status: 'Đã xóa' }).eq('id', itemToDelete);
+      const { error } = await supabase
+        .from('costs')
+        .update({ status: 'Đã xóa' })
+        .eq('id', itemToDelete);
+      if (error) throw error;
       fetchCosts();
       if (addToast) addToast('Đã chuyển vào thùng rác', 'success');
       setShowDeleteModal(false);
     } catch (err: any) {
       if (addToast) addToast('Lỗi: ' + err.message, 'error');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handlePermanentDelete = async () => {
+    if (!itemToDelete || user.role !== 'Develop') return;
+    if (
+      !window.confirm('CẢNH BÁO: Hành động này sẽ xóa VĨNH VIỄN phiếu chi này. Bạn có chắc chắn?')
+    )
+      return;
+
+    setSubmitting(true);
+    try {
+      const { error } = await supabase.from('costs').delete().eq('id', itemToDelete);
+      if (error) throw error;
+      if (addToast) addToast('Đã xóa vĩnh viễn phiếu chi', 'success');
+      fetchCosts();
+      setShowDeleteModal(false);
+    } catch (err: any) {
+      if (addToast) addToast('Lỗi xóa vĩnh viễn: ' + err.message, 'error');
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -490,13 +540,13 @@ export const Costs = ({
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse whitespace-nowrap">
             <thead>
-              <tr className="bg-primary text-white text-[10px] font-bold uppercase">
-                <th className="px-4 py-3">Ngày</th>
-                <th className="px-4 py-3">Mã</th>
-                <th className="px-4 py-3">Loại</th>
-                <th className="px-4 py-3">Hạng mục</th>
-                <th className="px-4 py-3">Nội dung</th>
-                <th className="px-4 py-3 text-right">Số tiền</th>
+              <tr className="bg-primary text-white text-[10px] font-bold uppercase tracking-wider">
+                <th className="px-4 py-3 border-r border-white/10">Ngày</th>
+                <th className="px-4 py-3 border-r border-white/10">Mã</th>
+                <th className="px-4 py-3 border-r border-white/10 text-center">Loại</th>
+                <th className="px-4 py-3 border-r border-white/10">Kho</th>
+                <th className="px-4 py-3 border-r border-white/10">Hạng mục / Nội dung</th>
+                <th className="px-4 py-3 border-r border-white/10 text-right">Số tiền</th>
                 <th className="px-4 py-3 text-center">Trạng thái</th>
               </tr>
             </thead>
@@ -512,17 +562,22 @@ export const Costs = ({
                 >
                   <td className="px-4 py-3">{new Date(item.date).toLocaleDateString('vi-VN')}</td>
                   <td className="px-4 py-3 font-bold text-primary">{item.cost_code}</td>
-                  <td className="px-4 py-3">
+                  <td className="px-4 py-3 text-center">
                     <span
-                      className={`px-2 py-0.5 rounded-full ${item.transaction_type === 'Thu' ? 'bg-green-100 text-green-600' : 'bg-red-100 text-red-600'}`}
+                      className={`px-3 py-1 rounded-full font-bold text-[10px] ${item.transaction_type === 'Thu' ? 'bg-green-100 text-green-700 border border-green-200' : 'bg-red-100 text-red-700 border border-red-200'}`}
                     >
                       {item.transaction_type}
                     </span>
                   </td>
-                  <td className="px-4 py-3">{item.cost_type}</td>
-                  <td className="px-4 py-3">{item.content}</td>
+                  <td className="px-4 py-3 text-gray-500 font-medium">
+                    {item.warehouses?.name || '---'}
+                  </td>
+                  <td className="px-4 py-3 max-w-[200px]">
+                    <p className="font-bold text-gray-700 truncate">{item.cost_type}</p>
+                    <p className="text-[10px] text-gray-400 truncate italic">{item.content}</p>
+                  </td>
                   <td
-                    className={`px-4 py-3 font-bold text-right ${item.transaction_type === 'Thu' ? 'text-green-600' : 'text-red-600'}`}
+                    className={`px-4 py-3 font-black text-right ${item.transaction_type === 'Thu' ? 'text-green-600' : 'text-red-600'}`}
                   >
                     {formatCurrency(item.total_amount)}
                   </td>
@@ -562,18 +617,34 @@ export const Costs = ({
                   <X size={20} />
                 </button>
               </div>
-              <div className="space-y-3 text-sm">
-                <div className="flex justify-between">
-                  <span>Ngày:</span>
-                  <span>{new Date(selectedCost.date).toLocaleDateString('vi-VN')}</span>
+              <div className="space-y-4 text-sm">
+                <div className="flex justify-between border-b border-gray-50 pb-2">
+                  <span className="text-gray-400">Ngày:</span>
+                  <span className="font-medium">
+                    {new Date(selectedCost.date).toLocaleDateString('vi-VN')}
+                  </span>
                 </div>
-                <div className="flex justify-between">
-                  <span>Nội dung:</span>
-                  <span className="font-medium text-right">{selectedCost.content}</span>
+                <div className="flex justify-between border-b border-gray-50 pb-2">
+                  <span className="text-gray-400">Nhóm:</span>
+                  <span className="font-bold text-gray-700">{selectedCost.cost_type}</span>
                 </div>
-                <div className="flex justify-between">
-                  <span>Số tiền:</span>
-                  <span className="font-bold text-red-600">
+                <div className="flex justify-between border-b border-gray-50 pb-2">
+                  <span className="text-gray-400">Chi tiết:</span>
+                  <span className="font-bold text-primary">{selectedCost.content}</span>
+                </div>
+                <div className="space-y-1 border-b border-gray-50 pb-2">
+                  <span className="text-gray-400 text-[10px] uppercase font-bold">
+                    Nội dung thu chi:
+                  </span>
+                  <p className="text-xs text-gray-600 italic bg-gray-50 p-2 rounded-lg">
+                    {selectedCost.notes || 'Không có ghi chú'}
+                  </p>
+                </div>
+                <div className="flex justify-between border-b border-gray-50 pb-2">
+                  <span className="text-gray-400">Số tiền:</span>
+                  <span
+                    className={`font-black text-lg ${selectedCost.transaction_type === 'Thu' ? 'text-green-600' : 'text-red-600'}`}
+                  >
                     {formatCurrency(selectedCost.total_amount)}
                   </span>
                 </div>
@@ -593,23 +664,48 @@ export const Costs = ({
 
       <AnimatePresence>
         {showDeleteModal && (
-          <div className="fixed inset-0 z-[130] flex items-center justify-center p-4">
-            <div
-              className="fixed inset-0 bg-black/40 backdrop-blur-sm"
-              onClick={() => setShowDeleteModal(false)}
-            />
+          <div
+            className="fixed inset-0 z-[130] flex items-center justify-center p-4 bg-black/50 backdrop-blur-md overflow-hidden"
+            onClick={() => setShowDeleteModal(false)}
+          >
             <motion.div
-              initial={{ scale: 0.9 }}
-              animate={{ scale: 1 }}
-              className="bg-white rounded-3xl p-6 shadow-2xl z-10 text-center"
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              className="bg-white rounded-[2rem] md:rounded-[2.5rem] shadow-2xl p-8 max-w-sm w-full text-center relative z-10"
+              onClick={(e) => e.stopPropagation()}
             >
-              <h3 className="font-bold text-lg mb-2">Xác nhận xóa?</h3>
-              <p className="text-sm text-gray-500 mb-6">Hành động này không thể hoàn tác.</p>
-              <div className="flex gap-3">
-                <Button onClick={() => setShowDeleteModal(false)}>Hủy</Button>
-                <Button variant="danger" onClick={confirmDelete}>
-                  Xóa
-                </Button>
+              <div className="w-16 h-16 bg-red-50 text-red-600 rounded-2xl flex items-center justify-center mx-auto mb-4 border border-red-100">
+                <Trash2 size={32} />
+              </div>
+              <h3 className="text-xl font-bold text-gray-800 mb-2">Xác nhận xóa?</h3>
+              <div className="text-sm text-gray-500 mb-6 text-left bg-gray-50 p-4 rounded-xl border border-gray-100 space-y-2">
+                <p>
+                  Mã phiếu:{' '}
+                  <strong className="text-primary uppercase">
+                    {costs.find((c) => c.id === itemToDelete)?.cost_code}
+                  </strong>
+                </p>
+                {usageInfo.inUse ? (
+                  <p className="text-[10px] text-red-500 font-bold flex items-center gap-1 uppercase tracking-tighter">
+                    <AlertCircle size={12} /> Có dữ liệu liên quan - Cân nhắc kỹ
+                  </p>
+                ) : (
+                  <p className="text-[10px] text-green-600 font-bold flex items-center gap-1 uppercase tracking-widest">
+                    <CheckCircle size={12} /> Sẵn sàng để xóa
+                  </p>
+                )}
+              </div>
+              <div className="flex flex-col gap-3">
+                <div className="flex gap-3">
+                  <Button fullWidth variant="outline" onClick={() => setShowDeleteModal(false)}>
+                    Hủy bỏ
+                  </Button>
+                  <Button fullWidth variant="danger" onClick={confirmDelete} isLoading={submitting}>
+                    Thùng rác
+                  </Button>
+                </div>
+                {/* XÓA VĨNH VIỄN removed from main list - use Trash module instead */}
               </div>
             </motion.div>
           </div>
@@ -641,11 +737,33 @@ export const Costs = ({
                       Mã tham chiếu
                     </p>
                     <p className="font-black text-primary uppercase italic">
-                      {(formData as any).cost_code ||
-                        `CP-${new Date().toISOString().slice(2, 10).replace(/-/g, '')}-001`}
+                      {formData.cost_code || 'Tự động tạo khi lưu'}
                     </p>
                   </div>
                   <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-bold text-gray-400 uppercase">
+                        Loại giao dịch *
+                      </label>
+                      <div className="flex bg-gray-100 p-1 rounded-xl gap-1">
+                        {(['Thu', 'Chi'] as const).map((type) => (
+                          <button
+                            key={type}
+                            type="button"
+                            onClick={() => setFormData({ ...formData, transaction_type: type })}
+                            className={`flex-1 py-1.5 text-xs font-bold rounded-lg transition-all ${
+                              formData.transaction_type === type
+                                ? type === 'Thu'
+                                  ? 'bg-green-500 text-white shadow-sm'
+                                  : 'bg-red-500 text-white shadow-sm'
+                                : 'text-gray-400 hover:text-gray-600'
+                            }`}
+                          >
+                            {type === 'Thu' ? '↓ THU' : '↑ CHI'}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
                     <div className="space-y-1">
                       <label className="text-[10px] font-bold text-gray-400 uppercase">
                         Ngày *
@@ -655,18 +773,35 @@ export const Costs = ({
                         required
                         value={formData.date}
                         onChange={(e) => setFormData({ ...formData, date: e.target.value })}
-                        className="w-full px-4 py-2 rounded-xl border"
+                        className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20"
                       />
                     </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <CreatableSelect
-                      label="Loại chi phí *"
+                      label="Nhóm chi phí *"
                       value={formData.cost_type}
                       options={costTypes}
-                      onChange={(val) => setFormData({ ...formData, cost_type: val })}
-                      onCreate={(val) => setFormData({ ...formData, cost_type: val })}
+                      onChange={(val) => {
+                        setFormData({ ...formData, cost_type: val, content: '' });
+                        fetchCostItems(val);
+                      }}
+                      onCreate={(val) => {
+                        setFormData({ ...formData, cost_type: val, content: '' });
+                      }}
+                      required
+                    />
+                    <CreatableSelect
+                      label="Chi tiết chi phí *"
+                      value={formData.content}
+                      options={costItems}
+                      onChange={(val) => setFormData({ ...formData, content: val })}
+                      onCreate={(val) => setFormData({ ...formData, content: val })}
                       required
                     />
                   </div>
+
                   <CreatableSelect
                     label="Tên kho *"
                     value={formData.warehouse_name}
@@ -675,14 +810,18 @@ export const Costs = ({
                     onCreate={(val) => setFormData({ ...formData, warehouse_name: val })}
                     required
                   />
-                  <CreatableSelect
-                    label="Nội dung *"
-                    value={formData.content}
-                    options={materials}
-                    onChange={(val) => setFormData({ ...formData, content: val })}
-                    onCreate={(val) => setFormData({ ...formData, content: val })}
-                    required
-                  />
+
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-gray-400 uppercase">
+                      Nội dung thu chi (Ghi chú tự do)
+                    </label>
+                    <textarea
+                      value={formData.notes}
+                      onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+                      className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20 min-h-[80px]"
+                      placeholder="Gõ nội dung chi tiết tại đây..."
+                    />
+                  </div>
                   <div className="grid grid-cols-2 gap-4">
                     <NumericInput
                       label="Số lượng"
@@ -697,26 +836,29 @@ export const Costs = ({
                       onCreate={(val) => setFormData({ ...formData, unit: val })}
                     />
                   </div>
+
                   <NumericInput
-                    label="Số tiền *"
-                    required
+                    label="Thành tiền *"
                     value={formData.total_amount}
                     onChange={(val) => setFormData({ ...formData, total_amount: val })}
+                    required
                   />
-                  <textarea
-                    rows={3}
-                    placeholder="Ghi chú..."
-                    value={formData.notes}
-                    onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-                    className="w-full px-4 py-2 rounded-xl border resize-none"
-                  ></textarea>
-                  <div className="flex justify-end gap-3 pt-4">
-                    <Button variant="outline" onClick={() => setShowModal(false)}>
+
+                  <div className="mt-8 flex justify-end gap-3 flex-shrink-0">
+                    <button
+                      type="button"
+                      onClick={() => setShowModal(false)}
+                      className="px-6 py-2 rounded-xl text-sm font-bold text-gray-500 hover:bg-gray-100 transition-colors"
+                    >
                       Hủy
-                    </Button>
-                    <Button type="submit" variant="primary" isLoading={submitting}>
-                      Lưu bản ghi
-                    </Button>
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={submitting}
+                      className="px-8 py-2 rounded-xl text-sm font-bold bg-primary text-white hover:bg-primary-hover transition-all shadow-lg shadow-primary/20 disabled:opacity-50 active:scale-95"
+                    >
+                      {submitting ? 'Đang xử lý...' : isEditing ? 'Cập nhật' : 'Xác nhận tạo'}
+                    </button>
                   </div>
                 </form>
               </div>
@@ -727,12 +869,10 @@ export const Costs = ({
 
       <FAB
         onClick={() => {
-          setIsEditing(false);
           setFormData(initialFormState);
+          setIsEditing(false);
           setShowModal(true);
         }}
-        label="Thêm chi phí"
-        color="bg-primary"
       />
     </div>
   );

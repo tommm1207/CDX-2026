@@ -617,14 +617,22 @@ export const Costs = ({
                   </span>
                 </div>
               </div>
-              <div className="mt-6 flex gap-2">
-                <Button fullWidth variant="danger" onClick={() => handleDeleteClick(selectedCost)}>
-                  Xóa
-                </Button>
-                <Button fullWidth variant="primary" onClick={() => handleEdit(selectedCost)}>
-                  Sửa
-                </Button>
-              </div>
+              {/* Chỉ cho phép Sửa/Xóa nếu là Admin, hoặc User thì chỉ với phiếu của mình */}
+              {(['admin', 'develop'].includes(user.role?.toLowerCase() || '') ||
+                selectedCost.employee_id === user.id) && (
+                <div className="mt-6 flex gap-2">
+                  <Button
+                    fullWidth
+                    variant="danger"
+                    onClick={() => handleDeleteClick(selectedCost)}
+                  >
+                    Xóa
+                  </Button>
+                  <Button fullWidth variant="primary" onClick={() => handleEdit(selectedCost)}>
+                    Sửa
+                  </Button>
+                </div>
+              )}
             </motion.div>
           </div>
         )}

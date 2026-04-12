@@ -13,7 +13,7 @@ interface ImageCaptureProps {
 export const ImageCapture = ({
   onUpload,
   existingImages = [],
-  maxImages = 5,
+  maxImages = 10,
   label = 'Ảnh minh chứng / Hiện trường',
 }: ImageCaptureProps) => {
   const [uploading, setUploading] = useState(false);
@@ -62,7 +62,7 @@ export const ImageCapture = ({
       </div>
 
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-        {existingImages.map((url, idx) => (
+        {(existingImages || []).map((url, idx) => (
           <div
             key={idx}
             className="relative aspect-square rounded-2xl overflow-hidden border border-gray-100 group"
@@ -71,7 +71,7 @@ export const ImageCapture = ({
             <button
               type="button"
               onClick={() => removeImage(idx)}
-              className="absolute top-2 right-2 p-1.5 bg-red-500 text-white rounded-lg opacity-0 group-hover:opacity-100 transition-opacity shadow-lg"
+              className="absolute top-2 right-2 p-1.5 bg-red-500/90 text-white rounded-lg transition-all shadow-lg active:scale-95 z-10"
             >
               <X size={14} />
             </button>

@@ -18,17 +18,14 @@ import { InventoryReport } from '@/components/inventory/InventoryReport';
 import { Warehouses } from '@/components/warehouses/Warehouses';
 import { MaterialGroups } from '@/components/materials/MaterialGroups';
 import { MaterialCatalog } from '@/components/materials/MaterialCatalog';
-import { ProductionOrders } from '@/components/production/ProductionOrders';
-import { BOMConfig } from '@/components/production/BOMConfig';
-import { ProductionOrderDetail } from '@/components/production/ProductionOrderDetail';
 import { ConstructionDiaryComponent } from '@/components/production/ConstructionDiary';
+import { PlaceholderPage } from '@/components/materials/PlaceholderPage';
 import { Trash } from '@/components/trash/Trash';
 import { DeletedWarehouses } from '@/components/trash/DeletedWarehouses';
 import { DeletedMaterials } from '@/components/trash/DeletedMaterials';
 import { DeletedSlips } from '@/components/trash/DeletedSlips';
 import { DeletedEmployees } from '@/components/trash/DeletedEmployees';
 import { DeletedCosts } from '@/components/trash/DeletedCosts';
-import { DeletedProductionOrders } from '@/components/trash/DeletedProductionOrders';
 import { Notes } from '@/components/notes/Notes';
 import { Reminders } from '@/components/reminders/Reminders';
 import { Backup } from '@/components/settings/Backup';
@@ -175,28 +172,6 @@ export const AppRouter = ({
     case 'inventory-report':
       return <InventoryReport user={user} onBack={goBack} addToast={addToast} />;
 
-    // Production
-    case 'production-list':
-      return (
-        <ProductionOrders
-          user={user}
-          onBack={goBack}
-          addToast={addToast}
-          onOpenDetail={(id) => navigateTo('production-detail', { id })}
-          setHideBottomNav={setHideBottomNav}
-        />
-      );
-    case 'production-detail':
-      return (
-        <ProductionOrderDetail
-          user={user}
-          orderId={pageParams?.id}
-          onBack={goBack}
-          addToast={addToast}
-        />
-      );
-    case 'production-bom':
-      return <BOMConfig user={user} onBack={goBack} addToast={addToast} />;
     case 'construction-diary':
       return (
         <ConstructionDiaryComponent
@@ -219,8 +194,6 @@ export const AppRouter = ({
       return <DeletedEmployees user={user} onBack={goBack} addToast={addToast} />;
     case 'deleted-costs':
       return <DeletedCosts user={user} onBack={goBack} addToast={addToast} />;
-    case 'deleted-production-orders':
-      return <DeletedProductionOrders user={user} onBack={goBack} addToast={addToast} />;
     case 'material-groups':
       return <MaterialGroups user={user} onBack={goBack} addToast={addToast} />;
     case 'backup-settings':

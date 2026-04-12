@@ -88,14 +88,6 @@ export const Dashboard = ({ user, onNavigate, addToast, pendingApprovals = 0 }: 
       description: 'Chuyển vật tư giữa các kho',
     },
     {
-      id: 'production-list',
-      label: 'Lệnh sản xuất',
-      icon: Layers,
-      color: 'bg-indigo-600',
-      description: 'Điều phối sản xuất và vật tư',
-      adminOnly: true,
-    },
-    {
       id: 'cost-report',
       label: 'Báo cáo chi phí',
       icon: FileText,
@@ -284,13 +276,6 @@ const RadialMenu = ({ onNavigate }: { onNavigate: (page: string, params?: any) =
       icon: ArrowLeftRight,
       color: 'bg-orange-500',
       action: () => onNavigate('transfer', { action: 'add' }),
-    },
-    {
-      id: 'production-list',
-      label: 'Sản xuất',
-      icon: Layers,
-      color: 'bg-indigo-600',
-      action: () => onNavigate('production-list'),
     },
     {
       id: 'costs',

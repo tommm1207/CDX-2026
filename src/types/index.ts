@@ -173,40 +173,6 @@ export interface Reminder {
   created_at?: string;
 }
 
-export interface BOMConfig {
-  id: string;
-  bom_code: string;
-  product_item_id: string;
-  name: string;
-  is_two_stage?: boolean;
-  notes?: string;
-  status?: string;
-  created_at?: string;
-}
-
-export interface BOMItem {
-  id: string;
-  bom_id: string;
-  material_item_id: string;
-  quantity_per_unit: number;
-  unit: string;
-}
-
-export interface ProductionOrder {
-  id: string;
-  order_code: string;
-  bom_id: string;
-  warehouse_id: string;
-  output_warehouse_id: string;
-  quantity: number;
-  status: 'Mới' | 'Đã duyệt' | 'Hoàn thành' | 'Hủy';
-  planned_date?: string;
-  created_by?: string;
-  approved_by?: string;
-  notes?: string;
-  created_at?: string;
-}
-
 export interface ConstructionDiary {
   id: string;
   diary_code?: string;

@@ -257,15 +257,9 @@ export default function App() {
         items: group.items
           .filter((item) => {
             if (user.role === 'User') {
-              return [
-                'stock-in',
-                'stock-out',
-                'transfer',
-                'attendance',
-                'cost-report',
-                'production-list',
-                'production-detail',
-              ].includes(item.id);
+              return ['stock-in', 'stock-out', 'transfer', 'attendance', 'cost-report'].includes(
+                item.id,
+              );
             }
             if (user.role === 'Admin') return item.id !== 'database-setup';
             if (user.role === 'Develop') return item.id !== 'database-setup';

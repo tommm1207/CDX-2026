@@ -1,6 +1,4 @@
-import { 
-  useState,
-  useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import {
   ClipboardList,
   Plus,
@@ -16,8 +14,8 @@ import {
   MessageSquare,
   MapPin,
   ChevronRight,
-  ImageIcon,
-  CheckCircle
+  Image as ImageIcon,
+  CheckCircle,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { supabase } from '@/lib/supabase';
@@ -712,7 +710,7 @@ export const ConstructionDiaryComponent = ({
       {/* Add/Edit Modal (Sync with other features) */}
       <AnimatePresence>
         {showAddNew && (
-          <div 
+          <div
             className="fixed inset-0 z-[160] flex items-center justify-center p-2 sm:p-4 bg-black/60 backdrop-blur-md overflow-hidden no-print"
             onClick={() => {
               setShowAddNew(false);

@@ -23,7 +23,7 @@ import { Button } from '../shared/Button';
 import { formatNumber } from '@/utils/format';
 
 // ============================
-// BOM Manager Component
+// Quản lý Định mức Vật tư
 // ============================
 export const BomManager = ({
   user,
@@ -145,7 +145,7 @@ export const BomManager = ({
     }
     // Check duplicate material
     if (bomItems.some((i) => i.material_id === itemForm.material_id)) {
-      if (addToast) addToast('Vật tư này đã có trong BOM', 'warning');
+      if (addToast) addToast('Vật tư này đã có trong định mức', 'warning');
       return;
     }
     setBomItems([...bomItems, { ...itemForm }]);
@@ -162,7 +162,7 @@ export const BomManager = ({
       return;
     }
     if (bomItems.length === 0) {
-      if (addToast) addToast('Vui lòng thêm ít nhất 1 vật tư vào BOM', 'error');
+      if (addToast) addToast('Vui lòng thêm ít nhất 1 vật tư vào định mức', 'error');
       return;
     }
 
@@ -211,7 +211,10 @@ export const BomManager = ({
       if (itemsError) throw itemsError;
 
       if (addToast)
-        addToast(isEditing ? 'Cập nhật BOM thành công!' : 'Tạo BOM thành công!', 'success');
+        addToast(
+          isEditing ? 'Cập nhật định mức thành công!' : 'Tạo định mức thành công!',
+          'success',
+        );
       setShowModal(false);
       fetchBoms();
     } catch (err: any) {
@@ -222,10 +225,9 @@ export const BomManager = ({
   };
 
   const handleDelete = async (bom: any) => {
-    if (!window.confirm(`Bạn có chắc muốn xóa BOM "${bom.ten_san_pham}"?`)) return;
     try {
       await supabase.from('san_pham_bom').update({ dang_hoat_dong: false }).eq('id', bom.id);
-      if (addToast) addToast('Đã xóa BOM', 'success');
+      if (addToast) addToast('Đã xóa định mức', 'success');
       if (selectedBom?.id === bom.id) setSelectedBom(null);
       fetchBoms();
     } catch (err: any) {
@@ -249,7 +251,7 @@ export const BomManager = ({
   return (
     <div className="p-4 md:p-6 space-y-6 pb-24">
       <div className="flex items-center justify-between gap-2">
-        <PageBreadcrumb title="BOM & Lệnh sản xuất" onBack={onBack} />
+        <PageBreadcrumb title="Thiết lập Định mức vật tư" onBack={onBack} />
       </div>
 
       {/* Search */}
@@ -276,8 +278,8 @@ export const BomManager = ({
           ) : filteredBoms.length === 0 ? (
             <div className="flex flex-col items-center py-12 text-gray-400 bg-white rounded-2xl border border-dashed border-gray-200">
               <Package size={48} className="mb-3 text-gray-300" />
-              <p className="font-medium">Chưa có BOM nào</p>
-              <p className="text-xs mt-1">Bấm nút + để tạo công thức sản phẩm</p>
+              <p className="font-medium">Chưa có định mức nào</p>
+              <p className="text-xs mt-1">Bấm nút + để tạo định mức sản phẩm</p>
             </div>
           ) : (
             filteredBoms.map((bom) => (
@@ -405,7 +407,7 @@ export const BomManager = ({
               </table>
               {(selectedBom.san_pham_bom_chi_tiet || []).length === 0 && (
                 <p className="text-center text-gray-400 text-sm py-8 italic">
-                  BOM chưa có vật tư nào
+                  Chưa có vật tư nào trong định mức
                 </p>
               )}
             </div>
@@ -413,7 +415,7 @@ export const BomManager = ({
         )}
       </div>
 
-      <FAB onClick={handleAddNew} label="Tạo BOM mới" />
+      <FAB onClick={handleAddNew} label="Thêm định mức mới" />
 
       {/* Create/Edit BOM Modal */}
       <AnimatePresence>
@@ -439,7 +441,9 @@ export const BomManager = ({
                     <X size={20} />
                   </button>
                   <div>
-                    <h2 className="font-bold text-lg">{isEditing ? 'Sửa BOM' : 'Tạo BOM mới'}</h2>
+                    <h2 className="font-bold text-lg">
+                      {isEditing ? 'Sửa định mức' : 'Thêm định mức mới'}
+                    </h2>
                     <p className="text-xs text-white/70">Công thức sản phẩm & định mức vật tư</p>
                   </div>
                 </div>
@@ -532,7 +536,7 @@ export const BomManager = ({
                   disabled={submitting}
                   className="px-8 py-2.5 rounded-xl text-sm font-bold bg-primary text-white hover:bg-primary/90 shadow-lg shadow-primary/20 disabled:opacity-50"
                 >
-                  {submitting ? 'Đang lưu...' : isEditing ? 'Cập nhật' : 'Tạo BOM'}
+                  {submitting ? 'Đang lưu...' : isEditing ? 'Cập nhật' : 'Lưu định mức'}
                 </button>
               </div>
             </motion.div>
@@ -554,7 +558,7 @@ export const BomManager = ({
               className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 space-y-4"
               onClick={(e) => e.stopPropagation()}
             >
-              <h3 className="font-bold text-gray-800">Thêm vật tư vào BOM</h3>
+              <h3 className="font-bold text-gray-800">Thêm vật tư vào định mức</h3>
 
               <div>
                 <label className="text-[10px] font-bold text-gray-400 uppercase block mb-1">

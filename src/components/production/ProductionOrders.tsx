@@ -115,7 +115,7 @@ export const ProductionOrders = ({
     return `LSX${yyyy}${mm}${dd}-${random}`;
   };
 
-  // Calculate preview when BOM + quantity + warehouse change
+  // Calculate preview when Norms + quantity + warehouse change
   const calculatePreview = async () => {
     if (!formData.bom_id || formData.so_luong_ke_hoach <= 0 || !formData.kho_vat_tu_id) {
       setPreviewItems([]);
@@ -215,7 +215,7 @@ export const ProductionOrders = ({
 
       if (orderError) throw orderError;
 
-      // 2. Create stock_out for each BOM material (auto-approved)
+      // 2. Create stock_out for each material in norms (auto-approved)
       const bom = boms.find((b) => b.id === formData.bom_id);
       if (bom) {
         const stockOutItems = (bom.san_pham_bom_chi_tiet || []).map((bomItem: any) => ({
@@ -516,7 +516,7 @@ export const ProductionOrders = ({
                   <div>
                     <h2 className="font-bold text-lg">Phát lệnh sản xuất</h2>
                     <p className="text-xs text-white/70">
-                      Chọn BOM → nhập số lượng → kiểm tra tồn kho
+                      Chọn định mức → nhập số lượng → kiểm tra tồn kho
                     </p>
                   </div>
                 </div>
@@ -526,7 +526,7 @@ export const ProductionOrders = ({
               <div className="p-6 space-y-6 overflow-y-auto flex-1">
                 <div>
                   <label className="text-[10px] font-bold text-gray-400 uppercase block mb-1">
-                    Loại sản phẩm (BOM) *
+                    Loại sản phẩm (Định mức) *
                   </label>
                   <CreatableSelect
                     value={formData.bom_id}

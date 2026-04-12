@@ -27,7 +27,7 @@ export const SidebarItem: React.FC<{
         />
       </div>
       <span
-        className={`text-sm font-bold tracking-tight ${active ? 'text-white' : 'text-gray-600'}`}
+        className={`text-sm font-bold tracking-tight whitespace-nowrap ${active ? 'text-white' : 'text-gray-600'}`}
       >
         {label}
       </span>

@@ -19,6 +19,10 @@ import { Warehouses } from '@/components/warehouses/Warehouses';
 import { MaterialGroups } from '@/components/materials/MaterialGroups';
 import { MaterialCatalog } from '@/components/materials/MaterialCatalog';
 import { ConstructionDiaryComponent } from '@/components/production/ConstructionDiary';
+import { BomManager } from '@/components/production/BomManager';
+import { ProductionOrders } from '@/components/production/ProductionOrders';
+import { FinishedGoodsIntake } from '@/components/production/FinishedGoodsIntake';
+import { MaterialSplitMerge } from '@/components/production/MaterialSplitMerge';
 import { PlaceholderPage } from '@/components/materials/PlaceholderPage';
 import { Trash } from '@/components/trash/Trash';
 import { DeletedWarehouses } from '@/components/trash/DeletedWarehouses';
@@ -26,6 +30,7 @@ import { DeletedMaterials } from '@/components/trash/DeletedMaterials';
 import { DeletedSlips } from '@/components/trash/DeletedSlips';
 import { DeletedEmployees } from '@/components/trash/DeletedEmployees';
 import { DeletedCosts } from '@/components/trash/DeletedCosts';
+import { DeletedProduction } from '@/components/trash/DeletedProduction';
 import { Notes } from '@/components/notes/Notes';
 import { Reminders } from '@/components/reminders/Reminders';
 import { Backup } from '@/components/settings/Backup';
@@ -33,6 +38,7 @@ import { BackupNow } from '@/components/settings/BackupNow';
 import { Notifications } from '@/components/notifications/Notifications';
 import { DatabaseSetup } from '@/components/settings/DatabaseSetup';
 import { Employee } from '@/types';
+import { ErrorBoundary } from '@/components/shared/ErrorBoundary';
 
 interface AppRouterProps {
   currentPage: string;
@@ -73,7 +79,14 @@ export const AppRouter = ({
       return <Attendance user={user} onBack={goBack} addToast={addToast} />;
     case 'costs':
       return (
-        <Costs user={user} onBack={goBack} addToast={addToast} initialAction={pageParams?.action} />
+        <ErrorBoundary onBack={goBack}>
+          <Costs
+            user={user}
+            onBack={goBack}
+            addToast={addToast}
+            initialAction={pageParams?.action}
+          />
+        </ErrorBoundary>
       );
     case 'warehouses':
       return <Warehouses user={user} onBack={goBack} addToast={addToast} />;
@@ -182,6 +195,34 @@ export const AppRouter = ({
         />
       );
 
+    case 'xasa-gop':
+      return (
+        <ErrorBoundary onBack={goBack}>
+          <MaterialSplitMerge user={user} onBack={goBack} addToast={addToast} />
+        </ErrorBoundary>
+      );
+
+    case 'bom-lenh-sx':
+      return (
+        <ErrorBoundary onBack={goBack}>
+          <BomManager user={user} onBack={goBack} addToast={addToast} />
+        </ErrorBoundary>
+      );
+
+    case 'lenh-san-xuat':
+      return (
+        <ErrorBoundary onBack={goBack}>
+          <ProductionOrders user={user} onBack={goBack} addToast={addToast} />
+        </ErrorBoundary>
+      );
+
+    case 'nhap-thanh-pham':
+      return (
+        <ErrorBoundary onBack={goBack}>
+          <FinishedGoodsIntake user={user} onBack={goBack} addToast={addToast} />
+        </ErrorBoundary>
+      );
+
     case 'trash':
       return <Trash user={user} onNavigate={navigateTo} onBack={goBack} />;
     case 'deleted-warehouses':
@@ -194,6 +235,8 @@ export const AppRouter = ({
       return <DeletedEmployees user={user} onBack={goBack} addToast={addToast} />;
     case 'deleted-costs':
       return <DeletedCosts user={user} onBack={goBack} addToast={addToast} />;
+    case 'deleted-production':
+      return <DeletedProduction user={user} onBack={goBack} addToast={addToast} />;
     case 'material-groups':
       return <MaterialGroups user={user} onBack={goBack} addToast={addToast} />;
     case 'backup-settings':

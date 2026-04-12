@@ -46,6 +46,21 @@ import { SortButton, SortOption } from '../shared/SortButton';
 import { generateSmartCode } from '@/utils/codeGenerator';
 import { checkUsage } from '@/utils/dataIntegrity';
 
+const initialFormState = {
+  date: new Date().toISOString().split('T')[0],
+  transaction_type: 'Chi',
+  cost_type: '',
+  content: '',
+  notes: '',
+  warehouse_id: '',
+  warehouse_name: '',
+  quantity: 0,
+  unit: '',
+  total_amount: 0,
+  cost_code: '',
+  status: 'Chờ duyệt',
+};
+
 export const Costs = ({
   user,
   onBack,
@@ -98,24 +113,24 @@ export const Costs = ({
   const [itemToDelete, setItemToDelete] = useState<string | null>(null);
   const [usageInfo, setUsageInfo] = useState<any>({ inUse: false, details: [] });
 
-  const initialFormState = {
+  const [formData, setFormData] = useState<any>(() => ({
+    ...initialFormState,
     date: new Date().toISOString().split('T')[0],
-    transaction_type: 'Chi',
-    cost_type: '', // Group
-    content: '', // Item
-    notes: '', // Free text
-    warehouse_id: '',
-    warehouse_name: '',
-    quantity: 0,
-    unit: '',
-    total_amount: 0,
-  };
-
-  const [formData, setFormData] = useState<any>(initialFormState);
+  }));
 
   useEffect(() => {
     fetchCosts();
   }, [statusFilter]);
+
+  const fetchUnits = async () => {
+    const { data } = await supabase.from('costs').select('unit');
+    if (data) {
+      const uniqueUnits = Array.from(new Set(data.map((item) => item.unit)))
+        .filter(Boolean)
+        .map((name) => ({ id: name as string, name: name as string }));
+      setUnits(uniqueUnits);
+    }
+  };
 
   useEffect(() => {
     fetchWarehouses();
@@ -158,15 +173,21 @@ export const Costs = ({
   };
 
   const generateNextCostCode = async () => {
-    try {
-      const { data } = await supabase.from('costs').select('cost_code').like('cost_code', 'PC%');
-      const codes = data?.map((c) => c.cost_code) || [];
-      return generateSmartCode(codes, 'PC', 3);
-    } catch (err) {
-      console.error('Error generating cost code:', err);
-      return 'PC001';
-    }
+    const today = new Date();
+    const yyyy = today.getFullYear();
+    const mm = String(today.getMonth() + 1).padStart(2, '0');
+    const dd = String(today.getDate()).padStart(2, '0');
+    const random = Math.floor(1000 + Math.random() * 9000);
+    return `CP${yyyy}${mm}${dd}-${random}`;
   };
+
+  useEffect(() => {
+    if (initialAction === 'add') {
+      generateNextCostCode().then((code) => {
+        setFormData((prev: any) => ({ ...prev, cost_code: code }));
+      });
+    }
+  }, [initialAction]);
 
   const fetchCosts = async () => {
     setLoading(true);
@@ -265,7 +286,7 @@ export const Costs = ({
         fetchWarehouses,
       );
 
-      const cost_code = isEditing ? formData.cost_code : generateNextCostCode();
+      const cost_code = isEditing ? formData.cost_code : await generateNextCostCode();
 
       const payload = {
         cost_code,
@@ -560,7 +581,7 @@ export const Costs = ({
                   }}
                   className="hover:bg-gray-50 cursor-pointer text-xs"
                 >
-                  <td className="px-4 py-3">{new Date(item.date).toLocaleDateString('vi-VN')}</td>
+                  <td className="px-4 py-3">{formatDate(item.date)}</td>
                   <td className="px-4 py-3 font-bold text-primary">{item.cost_code}</td>
                   <td className="px-4 py-3 text-center">
                     <span
@@ -620,9 +641,7 @@ export const Costs = ({
               <div className="space-y-4 text-sm">
                 <div className="flex justify-between border-b border-gray-50 pb-2">
                   <span className="text-gray-400">Ngày:</span>
-                  <span className="font-medium">
-                    {new Date(selectedCost.date).toLocaleDateString('vi-VN')}
-                  </span>
+                  <span className="font-medium">{formatDate(selectedCost.date)}</span>
                 </div>
                 <div className="flex justify-between border-b border-gray-50 pb-2">
                   <span className="text-gray-400">Nhóm:</span>
@@ -868,8 +887,13 @@ export const Costs = ({
       </AnimatePresence>
 
       <FAB
-        onClick={() => {
-          setFormData(initialFormState);
+        onClick={async () => {
+          const nextCode = await generateNextCostCode();
+          setFormData({
+            ...initialFormState,
+            date: new Date().toISOString().split('T')[0],
+            cost_code: nextCode,
+          });
           setIsEditing(false);
           setShowModal(true);
         }}

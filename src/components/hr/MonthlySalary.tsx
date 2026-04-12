@@ -570,15 +570,22 @@ export const MonthlySalary = ({
               <div className="max-h-[55dvh] overflow-y-auto custom-scrollbar">
                 <div ref={billRef} className="bg-white">
                   {/* Bill header for image */}
-                  <div className="flex items-center justify-between px-5 pt-4 pb-2 border-b border-gray-100">
-                    <div className="flex items-center gap-2">
-                      <img src="/logo.png" alt="Logo" className="w-8 h-8 object-contain rounded-lg" />
+                  <div className="px-5 pt-5 pb-4 border-b border-gray-100">
+                    {/* Logo row */}
+                    <div className="flex items-center gap-2 mb-3">
+                      <img src="/logo.png" alt="Logo" className="w-9 h-9 object-contain rounded-lg flex-shrink-0" />
                       <div>
                         <p className="text-[9px] font-black text-gray-700 uppercase tracking-wider">CDX - CON ĐƯỜNG XANH</p>
-                        <p className="text-[7px] text-gray-400 uppercase tracking-widest">Phiếu lương cá nhân</p>
+                        <p className="text-[7px] text-gray-400 uppercase tracking-widest">Hệ thống quản lý kho và nhân sự</p>
                       </div>
                     </div>
-                    <p className="text-[9px] text-gray-400 font-bold">{new Date().toLocaleDateString('vi-VN')}</p>
+                    {/* Title block */}
+                    <h1 className="text-xl font-black text-primary uppercase tracking-tight leading-none">PHIẾU LƯƠNG</h1>
+                    <p className="text-[11px] font-bold text-gray-500 mt-0.5">
+                      {isCustomRange
+                        ? `${customRange.start} — ${customRange.end}`
+                        : `Tháng ${selectedMonth}/${selectedYear}`}
+                    </p>
                   </div>
 
                   <table className="w-full text-sm border-collapse">

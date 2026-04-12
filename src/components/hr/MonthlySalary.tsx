@@ -3,6 +3,7 @@ import * as XLSX from 'xlsx';
 import { Wallet, X, Eye, Printer, Download, Image as ImageIcon } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { toPng } from 'html-to-image';
+import { logoBase64 } from '../../utils/logoBase64';
 import { useRef } from 'react';
 import { supabase } from '@/lib/supabase';
 import { Employee } from '@/types';
@@ -231,6 +232,9 @@ export const MonthlySalary = ({
         cacheBust: true,
         backgroundColor: '#fff',
         quality: 1,
+        pixelRatio: 2, // Double resolution for crystal clear image
+        skipFonts: false,
+        fontEmbedCSS: '', // Ensure fonts are embedded
       });
       const link = document.createElement('a');
       link.download = `Phieu_Luong_${selectedSalary.full_name}_T${selectedMonth}_${selectedYear}.png`;
@@ -600,7 +604,7 @@ export const MonthlySalary = ({
                     {/* Logo row */}
                     <div className="flex items-center gap-2 mb-3">
                       <img
-                        src="/logo.png"
+                        src={logoBase64}
                         alt="Logo"
                         className="w-9 h-9 object-contain rounded-lg flex-shrink-0"
                       />
@@ -615,8 +619,13 @@ export const MonthlySalary = ({
                     </div>
                     {/* Title block */}
                     <h1 
-                      className="text-xl font-black uppercase tracking-tight leading-none"
-                      style={{ color: '#2D5A27' }} // Hardcoded primary color for image capture stability
+                      className="text-xl font-black uppercase leading-none"
+                      style={{ 
+                        color: '#2D5A27', 
+                        fontWeight: 900, 
+                        letterSpacing: '-0.05em',
+                        fontFamily: "'Inter', sans-serif" 
+                      }} // Explicit styling for perfect image capture consistency
                     >
                       BẢNG TÍNH LƯƠNG
                     </h1>

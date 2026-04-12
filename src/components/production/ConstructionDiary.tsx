@@ -92,6 +92,7 @@ export const ConstructionDiaryComponent = ({
       const { data: diaryData } = await supabase
         .from('construction_diaries')
         .select('*, warehouses(id, name, code)')
+        .or('trang_thai.is.null,trang_thai.neq.Đã xóa')
         .order('date', { ascending: false });
       if (diaryData) setDiaries(diaryData);
 
@@ -166,9 +167,12 @@ export const ConstructionDiaryComponent = ({
   const handleDelete = async () => {
     if (!deletingId) return;
     try {
-      const { error } = await supabase.from('construction_diaries').delete().eq('id', deletingId);
+      const { error } = await supabase
+        .from('construction_diaries')
+        .update({ trang_thai: 'Đã xóa' })
+        .eq('id', deletingId);
       if (error) throw error;
-      if (addToast) addToast('Đã xóa nhật ký', 'success');
+      if (addToast) addToast('Đã chuyển nhật ký vào thùng rác', 'success');
       setDeletingId(null);
       fetchData();
     } catch (err: any) {

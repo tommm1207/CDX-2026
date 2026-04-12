@@ -1,4 +1,4 @@
-export type UserRole = 'Admin App' | 'Admin' | 'User';
+export type UserRole = 'Develop' | 'Admin' | 'User';
 
 export interface Employee {
   id: string; // Khóa chính (TEXT, e.g., 'admin', 'cdx001')

@@ -25,7 +25,7 @@ export const BottomNav = ({
   isHidden?: boolean;
 }) => {
   const navItems =
-    user.role === 'Admin' || user.role === 'Admin App'
+    user.role === 'Admin' || user.role === 'Develop'
       ? [
           { id: 'dashboard', label: 'Trang chủ', icon: Home },
           {

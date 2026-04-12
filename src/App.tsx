@@ -268,7 +268,7 @@ export default function App() {
               ].includes(item.id);
             }
             if (user.role === 'Admin') return item.id !== 'database-setup';
-            if (user.role === 'Admin App') return item.id !== 'database-setup';
+            if (user.role === 'Develop') return item.id !== 'database-setup';
             return true;
           })
           .map((item) =>

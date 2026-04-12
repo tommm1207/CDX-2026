@@ -37,10 +37,6 @@ export const SalarySettings = ({
   const [submitting, setSubmitting] = useState(false);
   const [dateError, setDateError] = useState('');
 
-  useEffect(() => {
-    fetchData();
-  }, []);
-
   const fetchData = async () => {
     setLoading(true);
     let empQuery = supabase
@@ -49,8 +45,8 @@ export const SalarySettings = ({
       .neq('status', 'Nghỉ việc')
       .neq('status', 'Đã xóa')
       .eq('has_salary', true);
-    if (user.role !== 'Admin App') {
-      empQuery = empQuery.neq('role', 'Admin App');
+    if (user.role !== 'Develop') {
+      empQuery = empQuery.neq('role', 'Develop');
     }
     const { data: empData } = await empQuery.order('code');
     const { data: setData } = await supabase
@@ -63,19 +59,30 @@ export const SalarySettings = ({
     setLoading(false);
   };
 
+  useEffect(() => {
+    const init = async () => {
+      await fetchData();
+    };
+    init();
+  }, []);
+
   // Get current active salary for an employee (most recent valid_from)
   const getCurrentSetting = (empId: string) => {
     return (
       allSettings
         .filter((s) => s.employee_id === empId)
-        .sort((a, b) => new Date(b.valid_from || 0).getTime() - new Date(a.valid_from || 0).getTime())[0] || null
+        .sort(
+          (a, b) => new Date(b.valid_from || 0).getTime() - new Date(a.valid_from || 0).getTime(),
+        )[0] || null
     );
   };
 
   const getHistory = (empId: string) => {
     return allSettings
       .filter((s) => s.employee_id === empId)
-      .sort((a, b) => new Date(b.valid_from || 0).getTime() - new Date(a.valid_from || 0).getTime());
+      .sort(
+        (a, b) => new Date(b.valid_from || 0).getTime() - new Date(a.valid_from || 0).getTime(),
+      );
   };
 
   const handleOpenModal = (emp: any) => {
@@ -130,14 +137,18 @@ export const SalarySettings = ({
     const sanitized: any = { ...changes };
     if (sanitized.valid_from === '') sanitized.valid_from = null;
     if (sanitized.valid_to === '') sanitized.valid_to = null;
-    supabase.from('salary_settings').update(sanitized).eq('id', record.id).then(({ error }) => {
-      if (error) {
-        if (addToast) addToast('Lỗi: ' + error.message, 'error');
-      } else {
-        if (addToast) addToast('Cập nhật thành công!', 'success');
-        fetchData().then(() => setEmpHistory(getHistory(selectedEmp.id)));
-      }
-    });
+    supabase
+      .from('salary_settings')
+      .update(sanitized)
+      .eq('id', record.id)
+      .then(({ error }) => {
+        if (error) {
+          if (addToast) addToast('Lỗi: ' + error.message, 'error');
+        } else {
+          if (addToast) addToast('Cập nhật thành công!', 'success');
+          fetchData().then(() => setEmpHistory(getHistory(selectedEmp.id)));
+        }
+      });
   };
 
   const handleDeleteRecord = (recordId: string) => {
@@ -146,14 +157,18 @@ export const SalarySettings = ({
       if (addToast) addToast('Không thể xóa mức lương duy nhất!', 'error');
       return;
     }
-    supabase.from('salary_settings').delete().eq('id', recordId).then(({ error }) => {
-      if (error) {
-        if (addToast) addToast('Lỗi: ' + error.message, 'error');
-      } else {
-        if (addToast) addToast('Đã xóa!', 'success');
-        fetchData().then(() => setEmpHistory(getHistory(selectedEmp.id)));
-      }
-    });
+    supabase
+      .from('salary_settings')
+      .delete()
+      .eq('id', recordId)
+      .then(({ error }) => {
+        if (error) {
+          if (addToast) addToast('Lỗi: ' + error.message, 'error');
+        } else {
+          if (addToast) addToast('Đã xóa!', 'success');
+          fetchData().then(() => setEmpHistory(getHistory(selectedEmp.id)));
+        }
+      });
   };
 
   return (
@@ -204,11 +219,17 @@ export const SalarySettings = ({
                     <td className="px-4 py-3">
                       <div className="text-xs font-bold text-gray-800">{emp.full_name}</div>
                       {histCount > 1 && (
-                        <div className="text-[10px] text-primary/60 font-bold">{histCount} mức lương</div>
+                        <div className="text-[10px] text-primary/60 font-bold">
+                          {histCount} mức lương
+                        </div>
                       )}
                     </td>
                     <td className="px-4 py-3 text-right text-xs font-bold text-primary">
-                      {cur ? formatCurrency(cur.daily_rate) : <span className="text-gray-400 italic">Chưa cài</span>}
+                      {cur ? (
+                        formatCurrency(cur.daily_rate)
+                      ) : (
+                        <span className="text-gray-400 italic">Chưa cài</span>
+                      )}
                     </td>
                     <td className="px-4 py-3 text-right text-xs font-bold text-amber-600">
                       {cur ? `x${cur.monthly_ot_coeff}` : '-'}
@@ -221,7 +242,10 @@ export const SalarySettings = ({
                     </td>
                     <td className="px-4 py-3 text-center">
                       <button
-                        onClick={(e) => { e.stopPropagation(); handleOpenModal(emp); }}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleOpenModal(emp);
+                        }}
                         className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
                       >
                         <Edit size={14} />
@@ -256,28 +280,40 @@ export const SalarySettings = ({
                     <Settings2 size={20} />
                   </div>
                   <div>
-                    <p className="text-[10px] text-white/60 uppercase font-bold tracking-widest">Lịch sử lương</p>
+                    <p className="text-[10px] text-white/60 uppercase font-bold tracking-widest">
+                      Lịch sử lương
+                    </p>
                     <h3 className="font-black text-base">{selectedEmp.full_name}</h3>
                   </div>
                 </div>
-                <button onClick={() => setShowModal(false)} className="p-2 hover:bg-white/20 rounded-xl transition-all">
+                <button
+                  onClick={() => setShowModal(false)}
+                  className="p-2 hover:bg-white/20 rounded-xl transition-all"
+                >
                   <X size={22} />
                 </button>
               </div>
 
               {/* Body - scrollable */}
               <div className="overflow-y-auto flex-1 p-5 space-y-4">
-
                 {/* History table */}
                 <div className="overflow-x-auto rounded-2xl border border-gray-100">
                   <table className="w-full text-left border-collapse min-w-[580px] text-xs">
                     <thead>
                       <tr className="bg-gray-50 text-gray-500">
                         <th className="px-3 py-2 font-bold uppercase tracking-wider">Lương/Ngày</th>
-                        <th className="px-3 py-2 font-bold uppercase tracking-wider text-center">Hệ số OT</th>
-                        <th className="px-3 py-2 font-bold uppercase tracking-wider text-right">Khấu trừ BH</th>
-                        <th className="px-3 py-2 font-bold uppercase tracking-wider text-center">Từ ngày</th>
-                        <th className="px-3 py-2 font-bold uppercase tracking-wider text-center">Đến ngày</th>
+                        <th className="px-3 py-2 font-bold uppercase tracking-wider text-center">
+                          Hệ số OT
+                        </th>
+                        <th className="px-3 py-2 font-bold uppercase tracking-wider text-right">
+                          Khấu trừ BH
+                        </th>
+                        <th className="px-3 py-2 font-bold uppercase tracking-wider text-center">
+                          Từ ngày
+                        </th>
+                        <th className="px-3 py-2 font-bold uppercase tracking-wider text-center">
+                          Đến ngày
+                        </th>
                         <th className="px-3 py-2 w-10"></th>
                       </tr>
                     </thead>
@@ -305,14 +341,14 @@ export const SalarySettings = ({
                 </div>
 
                 {/* Error */}
-                {dateError && (
-                  <p className="text-xs text-red-500 font-bold px-1">{dateError}</p>
-                )}
+                {dateError && <p className="text-xs text-red-500 font-bold px-1">{dateError}</p>}
 
                 {/* Add new form */}
                 {addingNew ? (
                   <div className="border border-primary/20 rounded-2xl p-4 bg-primary/5 space-y-4">
-                    <p className="text-[10px] font-black text-primary uppercase tracking-widest">Mức lương mới</p>
+                    <p className="text-[10px] font-black text-primary uppercase tracking-widest">
+                      Mức lương mới
+                    </p>
                     <div className="grid grid-cols-2 gap-3">
                       <NumericInput
                         label="Lương/Ngày (8h) *"
@@ -321,12 +357,16 @@ export const SalarySettings = ({
                         required
                       />
                       <div className="space-y-1">
-                        <label className="text-[10px] font-bold text-gray-400 uppercase">Hệ số OT tháng</label>
+                        <label className="text-[10px] font-bold text-gray-400 uppercase">
+                          Hệ số OT tháng
+                        </label>
                         <input
                           type="number"
                           step="0.01"
                           value={newForm.monthly_ot_coeff}
-                          onChange={(e) => setNewForm({ ...newForm, monthly_ot_coeff: e.target.value })}
+                          onChange={(e) =>
+                            setNewForm({ ...newForm, monthly_ot_coeff: e.target.value })
+                          }
                           placeholder="Ví dụ: 1.1"
                           className="w-full px-3 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20"
                         />
@@ -339,7 +379,9 @@ export const SalarySettings = ({
                     />
                     <div className="grid grid-cols-2 gap-3">
                       <div className="space-y-1">
-                        <label className="text-[10px] font-bold text-gray-400 uppercase">Áp dụng từ</label>
+                        <label className="text-[10px] font-bold text-gray-400 uppercase">
+                          Áp dụng từ
+                        </label>
                         <input
                           type="date"
                           value={newForm.valid_from}
@@ -352,7 +394,9 @@ export const SalarySettings = ({
                         />
                       </div>
                       <div className="space-y-1">
-                        <label className="text-[10px] font-bold text-gray-400 uppercase">Đến ngày</label>
+                        <label className="text-[10px] font-bold text-gray-400 uppercase">
+                          Đến ngày
+                        </label>
                         <input
                           type="date"
                           value={newForm.valid_to}
@@ -367,17 +411,33 @@ export const SalarySettings = ({
                       </div>
                     </div>
                     <div className="flex gap-2">
-                      <Button variant="outline" fullWidth onClick={() => { setAddingNew(false); setDateError(''); }}>
+                      <Button
+                        variant="outline"
+                        fullWidth
+                        onClick={() => {
+                          setAddingNew(false);
+                          setDateError('');
+                        }}
+                      >
                         Hủy
                       </Button>
-                      <Button variant="primary" fullWidth isLoading={submitting} onClick={handleAddNew}>
+                      <Button
+                        variant="primary"
+                        fullWidth
+                        isLoading={submitting}
+                        onClick={handleAddNew}
+                      >
                         Lưu mức lương này
                       </Button>
                     </div>
                   </div>
                 ) : (
                   <button
-                    onClick={() => { setAddingNew(true); setNewForm({ ...emptyForm }); setDateError(''); }}
+                    onClick={() => {
+                      setAddingNew(true);
+                      setNewForm({ ...emptyForm });
+                      setDateError('');
+                    }}
                     className="w-full flex items-center justify-center gap-2 py-3 border-2 border-dashed border-primary/30 rounded-2xl text-primary font-black text-xs uppercase tracking-widest hover:bg-primary/5 transition-colors"
                   >
                     <Plus size={16} />
@@ -431,13 +491,22 @@ const HistoryRow = ({
     return (
       <tr className={isLatest ? 'bg-primary/5' : ''}>
         <td className="px-3 py-2.5 font-bold text-primary">{formatCurrency(record.daily_rate)}</td>
-        <td className="px-3 py-2.5 text-center font-bold text-amber-600">x{record.monthly_ot_coeff}</td>
-        <td className="px-3 py-2.5 text-right text-red-500">{formatCurrency(record.insurance_deduction)}</td>
+        <td className="px-3 py-2.5 text-center font-bold text-amber-600">
+          x{record.monthly_ot_coeff}
+        </td>
+        <td className="px-3 py-2.5 text-right text-red-500">
+          {formatCurrency(record.insurance_deduction)}
+        </td>
         <td className="px-3 py-2.5 text-center text-gray-500">{record.valid_from || '-'}</td>
-        <td className="px-3 py-2.5 text-center text-gray-500">{record.valid_to || <span className="text-green-600 font-bold">Hiện tại</span>}</td>
+        <td className="px-3 py-2.5 text-center text-gray-500">
+          {record.valid_to || <span className="text-green-600 font-bold">Hiện tại</span>}
+        </td>
         <td className="px-3 py-2.5">
           <div className="flex items-center gap-1">
-            <button onClick={() => setEditing(true)} className="p-1 text-blue-500 hover:bg-blue-50 rounded-lg">
+            <button
+              onClick={() => setEditing(true)}
+              className="p-1 text-blue-500 hover:bg-blue-50 rounded-lg"
+            >
               <Edit size={12} />
             </button>
             {canDelete && (
@@ -496,8 +565,18 @@ const HistoryRow = ({
       </td>
       <td className="px-2 py-1.5">
         <div className="flex flex-col gap-1">
-          <button onClick={handleSave} className="px-2 py-0.5 bg-green-500 text-white rounded text-[10px] font-bold">Lưu</button>
-          <button onClick={() => setEditing(false)} className="px-2 py-0.5 bg-gray-200 text-gray-600 rounded text-[10px]">Hủy</button>
+          <button
+            onClick={handleSave}
+            className="px-2 py-0.5 bg-green-500 text-white rounded text-[10px] font-bold"
+          >
+            Lưu
+          </button>
+          <button
+            onClick={() => setEditing(false)}
+            className="px-2 py-0.5 bg-gray-200 text-gray-600 rounded text-[10px]"
+          >
+            Hủy
+          </button>
         </div>
       </td>
     </tr>

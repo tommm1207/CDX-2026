@@ -142,7 +142,7 @@ export const AppRouter = ({
     case 'payroll':
       return <MonthlySalary user={user} onBack={goBack} addToast={addToast} />;
     case 'salary-settings':
-      if (!['Admin', 'Admin App'].includes(user.role))
+      if (!['Admin', 'Develop'].includes(user.role))
         return (
           <Dashboard
             user={user}
@@ -208,23 +208,23 @@ export const AppRouter = ({
       );
 
     case 'trash':
-      return <Trash onNavigate={navigateTo} onBack={goBack} />;
+      return <Trash user={user} onNavigate={navigateTo} onBack={goBack} />;
     case 'deleted-warehouses':
-      return <DeletedWarehouses onBack={goBack} addToast={addToast} />;
+      return <DeletedWarehouses user={user} onBack={goBack} addToast={addToast} />;
     case 'deleted-materials':
-      return <DeletedMaterials onBack={goBack} addToast={addToast} />;
+      return <DeletedMaterials user={user} onBack={goBack} addToast={addToast} />;
     case 'deleted-slips':
-      return <DeletedSlips onBack={goBack} addToast={addToast} />;
+      return <DeletedSlips user={user} onBack={goBack} addToast={addToast} />;
     case 'deleted-employees':
-      return <DeletedEmployees onBack={goBack} addToast={addToast} />;
+      return <DeletedEmployees user={user} onBack={goBack} addToast={addToast} />;
     case 'deleted-costs':
-      return <DeletedCosts onBack={goBack} addToast={addToast} />;
+      return <DeletedCosts user={user} onBack={goBack} addToast={addToast} />;
     case 'deleted-production-orders':
-      return <DeletedProductionOrders onBack={goBack} addToast={addToast} />;
+      return <DeletedProductionOrders user={user} onBack={goBack} addToast={addToast} />;
     case 'material-groups':
       return <MaterialGroups user={user} onBack={goBack} addToast={addToast} />;
     case 'backup-settings':
-      if (user.role !== 'Admin' && user.role !== 'Admin App')
+      if (user.role !== 'Admin' && user.role !== 'Develop')
         return (
           <Dashboard
             user={user}
@@ -235,7 +235,7 @@ export const AppRouter = ({
         );
       return <Backup user={user} onBack={goBack} addToast={addToast} />;
     case 'backup-now':
-      if (user.role !== 'Admin' && user.role !== 'Admin App')
+      if (user.role !== 'Admin' && user.role !== 'Develop')
         return (
           <Dashboard
             user={user}
@@ -246,7 +246,7 @@ export const AppRouter = ({
         );
       return <BackupNow onBack={goBack} addToast={addToast} />;
     case 'database-setup':
-      if (user.role !== 'Admin App')
+      if (user.role !== 'Develop')
         return (
           <Dashboard
             user={user}

@@ -1,5 +1,16 @@
 import { useState, useEffect, FormEvent } from 'react';
-import { Warehouse, Plus, Search, Edit, Trash2, X, Navigation, MapPin, AlertCircle, CheckCircle } from 'lucide-react';
+import {
+  Warehouse,
+  Plus,
+  Search,
+  Edit,
+  Trash2,
+  X,
+  Navigation,
+  MapPin,
+  AlertCircle,
+  CheckCircle,
+} from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { supabase } from '@/lib/supabase';
 import { Employee } from '@/types';
@@ -9,6 +20,7 @@ import { Button } from '../shared/Button';
 import { FAB } from '../shared/FAB';
 import { SortButton, SortOption } from '../shared/SortButton';
 import { checkUsage } from '@/utils/dataIntegrity';
+import { generateSmartCode } from '@/utils/codeGenerator';
 
 export const Warehouses = ({
   user,
@@ -87,8 +99,8 @@ export const Warehouses = ({
 
   const fetchEmployees = async () => {
     let query = supabase.from('users').select('*');
-    if (user.role !== 'Admin App') {
-      query = query.neq('role', 'Admin App');
+    if (user.role !== 'Develop') {
+      query = query.neq('role', 'Develop');
     }
     const { data } = await query;
     if (data) setEmployees(data);
@@ -96,31 +108,9 @@ export const Warehouses = ({
 
   const generateNextWarehouseCode = async () => {
     try {
-      const { data } = await supabase
-        .from('warehouses')
-        .select('code')
-        .like('code', 'KH%');
-
-      if (data && data.length > 0) {
-        let maxNumber = 0;
-        data.forEach((item) => {
-          if (item.code) {
-            const match = item.code.match(/KH(\d+)$/);
-            if (match) {
-              const num = parseInt(match[1], 10);
-              if (num > maxNumber) {
-                maxNumber = num;
-              }
-            }
-          }
-        });
-        
-        if (maxNumber > 0) {
-          const nextNumber = maxNumber + 1;
-          return `KH${nextNumber.toString().padStart(3, '0')}`;
-        }
-      }
-      return 'KH001';
+      const { data } = await supabase.from('warehouses').select('code').like('code', 'KH%');
+      const codes = data?.map((w) => w.code) || [];
+      return generateSmartCode(codes, 'KH', 3);
     } catch (err) {
       console.error('Error generating warehouse code:', err);
       return 'KH001';
@@ -183,8 +173,31 @@ export const Warehouses = ({
     setShowDeleteModal(true);
   };
 
+  const confirmDelete = async () => {
+    if (!itemToDelete) return;
+    setSubmitting(true);
+    try {
+      // Always allow moving to Trash (soft delete) regardless of usageInfo.inUse
+      const { error } = await supabase
+        .from('warehouses')
+        .update({ status: 'Đã xóa' })
+        .eq('id', itemToDelete);
+
+      if (error) throw error;
+
+      fetchWarehouses();
+      if (addToast) addToast('Đã chuyển kho vào thùng rác', 'success');
+      setShowDeleteModal(false);
+      setItemToDelete(null);
+    } catch (err: any) {
+      if (addToast) addToast('Lỗi: ' + err.message, 'error');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   const handlePurgeRelated = async () => {
-    if (!itemToDelete || user.role !== 'Admin App' || !usageInfo.details) return;
+    if (!itemToDelete || user.role !== 'Develop' || !usageInfo.details) return;
 
     if (
       !window.confirm(
@@ -240,7 +253,7 @@ export const Warehouses = ({
   };
 
   const handlePermanentDelete = async () => {
-    if (!itemToDelete || user.role !== 'Admin App') return;
+    if (!itemToDelete || user.role !== 'Develop') return;
 
     if (
       !window.confirm(
@@ -440,7 +453,9 @@ export const Warehouses = ({
                       className="hover:bg-gray-50 transition-colors group cursor-pointer"
                       onClick={() => handleEdit(item)}
                     >
-                      <td className="px-4 py-3 text-xs font-bold text-primary font-mono">{item.code || '—'}</td>
+                      <td className="px-4 py-3 text-xs font-bold text-primary font-mono">
+                        {item.code || '—'}
+                      </td>
                       <td className="px-4 py-3 text-xs text-gray-600">{item.name}</td>
                       <td className="px-4 py-3 text-xs text-gray-600">{item.address}</td>
                       <td className="px-4 py-3 text-xs text-gray-600">
@@ -545,7 +560,7 @@ export const Warehouses = ({
                       ))}
                     </div>
 
-                    {user.role === 'Admin App' &&
+                    {user.role === 'Develop' &&
                       usageInfo.details.some((d) => d.softDeletedCount > 0) && (
                         <Button
                           variant="outline"
@@ -577,27 +592,11 @@ export const Warehouses = ({
                   <Button variant="outline" fullWidth onClick={() => setShowDeleteModal(false)}>
                     Hủy bỏ
                   </Button>
-                  <Button
-                    variant="danger"
-                    fullWidth
-                    onClick={confirmDelete}
-                    disabled={usageInfo.inUse}
-                  >
+                  <Button variant="danger" fullWidth onClick={confirmDelete}>
                     Thùng rác
                   </Button>
                 </div>
-                {user.role === 'Admin App' && (
-                  <Button
-                    variant="ghost"
-                    className="text-red-700 bg-red-50 hover:bg-red-100 border border-red-200"
-                    fullWidth
-                    onClick={handlePermanentDelete}
-                    isLoading={submitting}
-                    disabled={usageInfo.inUse}
-                  >
-                    XÓA VĨNH VIỄN (ADMIN APP)
-                  </Button>
-                )}
+                {/* XÓA VĨNH VIỄN removed from main list - use Trash module instead */}
               </div>
             </motion.div>
           </div>

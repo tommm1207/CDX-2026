@@ -1,5 +1,15 @@
 import { useState, useEffect } from 'react';
-import { FileText, Plus, Search, X, Save, Edit, Trash2 } from 'lucide-react';
+import {
+  FileText,
+  Plus,
+  Search,
+  X,
+  Save,
+  Edit,
+  Trash2,
+  AlertCircle,
+  CheckCircle,
+} from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { supabase } from '@/lib/supabase';
 import { Employee } from '@/types';
@@ -9,6 +19,7 @@ import { ToastType } from '../shared/Toast';
 import { FAB } from '../shared/FAB';
 import { Button } from '../shared/Button';
 import { ConfirmModal } from '../shared/ConfirmModal';
+import { checkUsage } from '@/utils/dataIntegrity';
 
 export const WEATHER_OPTIONS = [
   { value: 'sunny', label: '☀️ Nắng nóng gay gắt' },
@@ -46,13 +57,18 @@ export const Notes = ({
       setHideBottomNav(showAddNew || showQuickNote);
     }
   }, [showAddNew, showQuickNote, setHideBottomNav]);
+
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [warehouses, setWarehouses] = useState<any[]>([]);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   const [showFilter, setShowFilter] = useState(false);
   const [showDeleteAllConfirm, setShowDeleteAllConfirm] = useState(false);
+
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [itemToDelete, setItemToDelete] = useState<string | null>(null);
+  const [usageInfo, setUsageInfo] = useState<any>({ inUse: false, details: [] });
+  const [submitting, setSubmitting] = useState(false);
 
   const [filters, setFilters] = useState({
     fromDate: '',
@@ -88,8 +104,8 @@ export const Notes = ({
     if (notesData) setNotes(notesData);
 
     let empQuery = supabase.from('users').select('*').neq('status', 'Nghỉ việc');
-    if (user.role !== 'Admin App') {
-      empQuery = empQuery.neq('role', 'Admin App');
+    if (user.role !== 'Develop') {
+      empQuery = empQuery.neq('role', 'Develop');
     }
     const { data: empData } = await empQuery.order('full_name');
     if (empData) setEmployees(empData);
@@ -111,15 +127,15 @@ export const Notes = ({
       return;
     }
 
+    setSubmitting(true);
     try {
-      // Auto-compute related_object from selected personnel
       const computedRelatedObject =
         formData.related_personnel.length > 0
           ? employees
               .filter((e) => formData.related_personnel.includes(e.id))
               .map((e) => e.full_name)
               .join(', ')
-          : 'Tất cả nhân viên'; // fallback
+          : 'Tất cả nhân viên';
 
       const payload = {
         title: formData.title,
@@ -161,6 +177,8 @@ export const Notes = ({
       fetchData();
     } catch (error: any) {
       if (addToast) addToast('Lỗi: ' + error.message, 'error');
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -180,24 +198,52 @@ export const Notes = ({
     setShowAddNew(true);
   };
 
-  const confirmDelete = (id: string) => {
-    setDeletingId(id);
+  const handleDeleteClick = async (id: string) => {
+    setItemToDelete(id);
+    setShowDeleteModal(true);
+    try {
+      const usage = await checkUsage('note', id);
+      setUsageInfo(usage);
+    } catch (err) {
+      console.error(err);
+    }
   };
 
   const executeDelete = async () => {
-    if (!deletingId) return;
+    if (!itemToDelete) return;
+    setSubmitting(true);
     try {
       const { error } = await supabase
         .from('notes')
         .update({ status: 'Đã xóa' })
-        .eq('id', deletingId);
+        .eq('id', itemToDelete);
       if (error) throw error;
       if (addToast) addToast('Đã chuyển ghi chú vào thùng rác', 'success');
-      setDeletingId(null);
+      setShowDeleteModal(false);
       fetchData();
     } catch (error: any) {
       if (addToast) addToast('Lỗi khi xóa: ' + error.message, 'error');
-      setDeletingId(null);
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handlePermanentDelete = async () => {
+    if (!itemToDelete || user.role !== 'Develop') return;
+    if (!window.confirm('CẢNH BÁO: Hành động này sẽ xóa VĨNH VIỄN ghi chú này. Bạn có chắc chắn?'))
+      return;
+
+    setSubmitting(true);
+    try {
+      const { error } = await supabase.from('notes').delete().eq('id', itemToDelete);
+      if (error) throw error;
+      if (addToast) addToast('Đã xóa vĩnh viễn ghi chú', 'success');
+      fetchData();
+      setShowDeleteModal(false);
+    } catch (err: any) {
+      if (addToast) addToast('Lỗi xóa vĩnh viễn: ' + err.message, 'error');
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -210,10 +256,13 @@ export const Notes = ({
         return;
       }
 
-      const { error } = await supabase.from('notes').delete().in('id', idsToDelete);
+      const { error } = await supabase
+        .from('notes')
+        .update({ status: 'Đã xóa' })
+        .in('id', idsToDelete);
       if (error) throw error;
 
-      if (addToast) addToast(`Đã xóa vĩnh viễn ${idsToDelete.length} ghi chú`, 'success');
+      if (addToast) addToast(`Đã chuyển ${idsToDelete.length} ghi chú vào thùng rác`, 'success');
       setShowDeleteAllConfirm(false);
       fetchData();
     } catch (error: any) {
@@ -236,7 +285,7 @@ export const Notes = ({
   });
 
   return (
-    <div className="p-4 md:p-6 space-y-6">
+    <div className="p-4 md:p-6 space-y-6 pb-24">
       <div className="flex items-center justify-between gap-2">
         <PageBreadcrumb title="Ghi chú" onBack={onBack} />
         <div className="flex items-center gap-2 justify-end flex-1">
@@ -432,7 +481,7 @@ export const Notes = ({
                           className="text-red-600 hover:bg-red-50"
                           onClick={(e) => {
                             e.stopPropagation();
-                            confirmDelete(note.id);
+                            handleDeleteClick(note.id);
                           }}
                           icon={Trash2}
                           iconSize={14}
@@ -446,6 +495,56 @@ export const Notes = ({
           </table>
         </div>
       </div>
+
+      <AnimatePresence>
+        {showDeleteModal && (
+          <div
+            className="fixed inset-0 z-[160] flex items-center justify-center p-4 bg-black/50 backdrop-blur-md overflow-hidden"
+            onClick={() => setShowDeleteModal(false)}
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              className="bg-white rounded-[2rem] md:rounded-[2.5rem] shadow-2xl p-8 max-w-sm w-full text-center relative z-10"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="w-16 h-16 bg-red-50 text-red-600 rounded-2xl flex items-center justify-center mx-auto mb-4 border border-red-100">
+                <Trash2 size={32} />
+              </div>
+              <h3 className="text-xl font-bold text-gray-800 mb-2">Xác nhận xóa?</h3>
+              <div className="text-sm text-gray-500 mb-6 text-left bg-gray-50 p-4 rounded-xl border border-gray-100 space-y-2">
+                <p>
+                  Ghi chú:{' '}
+                  <strong className="text-primary truncate">
+                    {notes.find((n) => n.id === itemToDelete)?.title || 'Không tiêu đề'}
+                  </strong>
+                </p>
+                {usageInfo.inUse ? (
+                  <p className="text-[10px] text-red-500 font-bold flex items-center gap-1 uppercase tracking-tighter">
+                    <AlertCircle size={12} /> Có dữ liệu liên quan - Cân nhắc kỹ
+                  </p>
+                ) : (
+                  <p className="text-[10px] text-green-600 font-bold flex items-center gap-1 uppercase tracking-widest">
+                    <CheckCircle size={12} /> Sẵn sàng để xóa
+                  </p>
+                )}
+              </div>
+              <div className="flex flex-col gap-3">
+                <div className="flex gap-3">
+                  <Button fullWidth variant="outline" onClick={() => setShowDeleteModal(false)}>
+                    Hủy bỏ
+                  </Button>
+                  <Button fullWidth variant="danger" onClick={executeDelete} isLoading={submitting}>
+                    Thùng rác
+                  </Button>
+                </div>
+                {/* XÓA VĨNH VIỄN removed from main list - use Trash module instead */}
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
 
       <AnimatePresence>
         {showQuickNote && (
@@ -630,7 +729,9 @@ export const Notes = ({
                   </div>
                   <div className="space-y-4">
                     <div>
-                      <label className="text-[10px] font-bold text-gray-400 uppercase">Tiêu đề</label>
+                      <label className="text-[10px] font-bold text-gray-400 uppercase">
+                        Tiêu đề
+                      </label>
                       <input
                         type="text"
                         value={formData.title}
@@ -663,7 +764,9 @@ export const Notes = ({
                             />
                             <span className="text-sm text-gray-700 font-medium truncate">
                               {emp.full_name}{' '}
-                              <span className="text-gray-400 text-xs font-normal">({emp.code})</span>
+                              <span className="text-gray-400 text-xs font-normal">
+                                ({emp.code})
+                              </span>
                             </span>
                           </label>
                         ))}
@@ -755,44 +858,6 @@ export const Notes = ({
         )}
       </AnimatePresence>
 
-      <AnimatePresence>
-        {deletingId && (
-          <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              onClick={() => setDeletingId(null)}
-              className="absolute inset-0 bg-black/40 backdrop-blur-sm"
-            />
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95, y: 20 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.95, y: 20 }}
-              className="bg-white rounded-3xl shadow-2xl overflow-hidden relative z-10 w-full max-w-sm"
-            >
-              <div className="p-6 text-center space-y-4">
-                <div className="w-16 h-16 bg-red-100 text-red-500 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <Trash2 size={32} />
-                </div>
-                <h3 className="text-xl font-bold text-gray-900">Chuyển vào thùng rác?</h3>
-                <p className="text-gray-500 text-sm">
-                  Bạn có chắc chắn muốn chuyển ghi chú này vào thùng rác?
-                </p>
-                <div className="flex gap-3 pt-4">
-                  <Button fullWidth variant="outline" onClick={() => setDeletingId(null)}>
-                    Hủy
-                  </Button>
-                  <Button fullWidth variant="danger" onClick={executeDelete}>
-                    Di chuyển
-                  </Button>
-                </div>
-              </div>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
-
       <ConfirmModal
         show={showDeleteAllConfirm}
         title="Xác nhận xóa danh sách"
@@ -803,8 +868,8 @@ export const Notes = ({
 
       <FAB
         onClick={() => {
-          setEditingId(null);
           setFormData({
+            title: '',
             content: '',
             date: new Date().toISOString().split('T')[0],
             weather: '',
@@ -814,10 +879,9 @@ export const Notes = ({
             location: '',
             related_personnel: [],
           });
+          setEditingId(null);
           setShowAddNew(true);
         }}
-        label="Thêm ghi chú mới"
-        color="bg-amber-500"
       />
     </div>
   );

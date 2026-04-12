@@ -59,7 +59,7 @@ export const Advances = ({
       .select('*')
       .neq('status', 'Nghỉ việc')
       .neq('status', 'Đã xóa')
-      .neq('role', 'Admin App')
+      .neq('role', 'Develop')
       .eq('has_salary', true)
       .order('full_name');
 

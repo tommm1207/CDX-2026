@@ -40,7 +40,7 @@ export const MonthlySalary = ({
         .select('*')
         .neq('status', 'Nghỉ việc')
         .neq('status', 'Đã xóa')
-        .neq('role', 'Admin App')
+        .neq('role', 'Develop')
         .eq('has_salary', true)
         .order('code');
       if (!employees) return;
@@ -69,7 +69,9 @@ export const MonthlySalary = ({
       const calculated = employees.map((emp) => {
         const set = settings
           ?.filter((s) => s.employee_id === emp.id)
-          .sort((a, b) => new Date(b.valid_from || 0).getTime() - new Date(a.valid_from || 0).getTime())
+          .sort(
+            (a, b) => new Date(b.valid_from || 0).getTime() - new Date(a.valid_from || 0).getTime(),
+          )
           .find((s) => {
             const start = s.valid_from || '1900-01-01';
             const end = s.valid_to || '2099-12-31';
@@ -99,10 +101,11 @@ export const MonthlySalary = ({
         const hourlyRate = dailyRate / 8;
 
         // Lương công: nhân hệ số OT tháng cho 8 tiếng chuẩn mỗi ngày đi làm
-        const earnedSalary = totalDays * dailyRate;                        // Lương công gốc
-        const monthOTSalary = totalDays * dailyRate * (monthlyCoeff - 1);   // TC tháng (phần thưởng từ hệ số)
-        const dayOTSalary = totalOT * hourlyRate;                           // TC ngày (giờ thực tế)
-        const netSalary = earnedSalary + monthOTSalary + dayOTSalary + totalAll - totalAdv - insuranceDeduction;
+        const earnedSalary = totalDays * dailyRate; // Lương công gốc
+        const monthOTSalary = totalDays * dailyRate * (monthlyCoeff - 1); // TC tháng (phần thưởng từ hệ số)
+        const dayOTSalary = totalOT * hourlyRate; // TC ngày (giờ thực tế)
+        const netSalary =
+          earnedSalary + monthOTSalary + dayOTSalary + totalAll - totalAdv - insuranceDeduction;
 
         return {
           ...emp,
@@ -172,15 +175,13 @@ export const MonthlySalary = ({
         .gte('date', customRange.start)
         .lte('date', customRange.end);
 
-      const set =
-        settings?.find((s) => {
-          if (s.employee_id !== selectedSalary.id) return false;
-          const start = s.valid_from || '1900-01-01';
-          const end = s.valid_to || '2099-12-31';
-          return customRange.start >= start && customRange.start <= end;
-        }) ||
-        settings?.find((s) => s.employee_id === selectedSalary.id) ||
-        {
+      const set = settings?.find((s) => {
+        if (s.employee_id !== selectedSalary.id) return false;
+        const start = s.valid_from || '1900-01-01';
+        const end = s.valid_to || '2099-12-31';
+        return customRange.start >= start && customRange.start <= end;
+      }) ||
+        settings?.find((s) => s.employee_id === selectedSalary.id) || {
           base_salary: 0,
           daily_rate: 0,
           monthly_ot_coeff: 1.0,
@@ -199,7 +200,8 @@ export const MonthlySalary = ({
       const earnedSalary = totalDays * dailyRate;
       const monthOTSalary = totalDays * dailyRate * (monthlyCoeff - 1);
       const dayOTSalary = totalOT * hourlyRate;
-      const netSalary = earnedSalary + monthOTSalary + dayOTSalary + totalAll - totalAdv - insuranceDeduction;
+      const netSalary =
+        earnedSalary + monthOTSalary + dayOTSalary + totalAll - totalAdv - insuranceDeduction;
 
       setSelectedSalary({
         ...selectedSalary,
@@ -244,7 +246,10 @@ export const MonthlySalary = ({
   const totalDaysAll = salaries.reduce((sum, s) => sum + s.totalDays, 0);
   const totalOTAll = salaries.reduce((sum, s) => sum + s.totalOT, 0);
   const totalMonthOTAll = salaries.reduce((sum, s) => sum + s.monthOTSalary, 0);
-  const earnedSalaryAll = salaries.reduce((sum, s) => sum + s.earnedSalary + s.dayOTSalary + s.monthOTSalary, 0);
+  const earnedSalaryAll = salaries.reduce(
+    (sum, s) => sum + s.earnedSalary + s.dayOTSalary + s.monthOTSalary,
+    0,
+  );
   const totalAllAll = salaries.reduce((sum, s) => sum + s.totalAll, 0);
   const totalAdvAll = salaries.reduce((sum, s) => sum + s.totalAdv, 0);
   const insuranceDeductionAll = salaries.reduce((sum, s) => sum + s.insuranceDeduction, 0);
@@ -391,7 +396,9 @@ export const MonthlySalary = ({
                   onClick={() => {
                     setSelectedSalary(s);
                     const firstDay = `${selectedYear}-${String(selectedMonth).padStart(2, '0')}-01`;
-                    const lastDay = new Date(selectedYear, selectedMonth, 0).toISOString().split('T')[0];
+                    const lastDay = new Date(selectedYear, selectedMonth, 0)
+                      .toISOString()
+                      .split('T')[0];
                     setCustomRange({ start: firstDay, end: lastDay });
                     setIsCustomRange(false);
                     setShowDetailModal(true);
@@ -457,12 +464,8 @@ export const MonthlySalary = ({
                 <td className="px-4 py-4 text-center text-xs font-black text-amber-600">
                   {totalOTAll.toFixed(1)}h
                 </td>
-                <td className="px-4 py-4 text-right text-xs font-black text-gray-400">
-                  -
-                </td>
-                <td className="px-4 py-4 text-right text-xs font-black text-gray-400">
-                  -
-                </td>
+                <td className="px-4 py-4 text-right text-xs font-black text-gray-400">-</td>
+                <td className="px-4 py-4 text-right text-xs font-black text-gray-400">-</td>
                 <td className="px-4 py-4 text-right text-xs font-black text-amber-600">
                   {formatCurrency(salaries.reduce((sum, s) => sum + s.monthOTSalary, 0))}
                 </td>
@@ -470,7 +473,12 @@ export const MonthlySalary = ({
                   {formatCurrency(salaries.reduce((sum, s) => sum + s.dayOTSalary, 0))}
                 </td>
                 <td className="px-4 py-4 text-right text-xs font-black text-gray-800">
-                  {formatCurrency(salaries.reduce((sum, s) => sum + s.earnedSalary + s.monthOTSalary + s.dayOTSalary, 0))}
+                  {formatCurrency(
+                    salaries.reduce(
+                      (sum, s) => sum + s.earnedSalary + s.monthOTSalary + s.dayOTSalary,
+                      0,
+                    ),
+                  )}
                 </td>
                 <td className="px-4 py-4 text-right text-xs font-black text-green-600">
                   +{formatCurrency(totalAllAll)}
@@ -497,55 +505,71 @@ export const MonthlySalary = ({
             onClick={() => setShowDetailModal(false)}
           >
             <motion.div
-              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              initial={{ opacity: 0, scale: 0.9, y: 30 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.95, y: 20 }}
-              className="bg-white rounded-[2rem] md:rounded-[2.5rem] shadow-2xl w-full max-w-lg overflow-hidden relative"
+              exit={{ opacity: 0, scale: 0.9, y: 30 }}
+              className="bg-white/95 backdrop-blur-xl rounded-[2.5rem] md:rounded-[3rem] shadow-[0_32px_64px_-16px_rgba(0,0,0,0.2)] w-full max-w-lg overflow-hidden relative border border-white/40"
               onClick={(e) => e.stopPropagation()}
             >
               {/* Header */}
-              <div className="bg-primary p-5 text-white flex items-center justify-between no-print">
-                <div className="flex items-center gap-3">
+              <div className="bg-gradient-to-br from-primary via-primary to-primary/80 p-6 text-white flex items-center justify-between no-print relative overflow-hidden">
+                <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -translate-y-1/2 translate-x-1/2 blur-2xl" />
+                <div className="flex items-center gap-4 relative z-10">
                   <div
-                    className="p-2 bg-white/20 rounded-xl cursor-pointer hover:bg-white/30 transition-all active:scale-95"
-                    onClick={() => { setShowDetailModal(false); setIsCustomRange(false); }}
+                    className="w-12 h-12 flex items-center justify-center bg-white/20 backdrop-blur-md rounded-2xl cursor-pointer hover:bg-white/30 transition-all active:scale-90 shadow-lg border border-white/20"
+                    onClick={() => {
+                      setShowDetailModal(false);
+                      setIsCustomRange(false);
+                    }}
                   >
-                    <Wallet size={20} />
+                    <Wallet size={24} className="text-white drop-shadow-sm" />
                   </div>
                   <div>
-                    <h3 className="font-bold text-base leading-tight">Phiếu lương — {selectedSalary.full_name}</h3>
-                    <p className="text-[10px] text-white/70 font-bold uppercase tracking-widest">
+                    <h3 className="font-extrabold text-lg leading-tight tracking-tight">
+                      Phiếu lương — {selectedSalary.full_name}
+                    </h3>
+                    <p className="text-[10px] text-white/80 font-black uppercase tracking-widest bg-black/10 px-2 py-0.5 rounded-full w-fit mt-1">
                       {isCustomRange
                         ? `${customRange.start} → ${customRange.end}`
-                        : `Tháng ${selectedMonth}/${selectedYear}`}
+                        : `THÁNG ${selectedMonth}/${selectedYear}`}
                     </p>
                   </div>
                 </div>
                 <button
-                  onClick={() => { setShowDetailModal(false); setIsCustomRange(false); }}
-                  className="p-2 hover:bg-white/20 rounded-xl transition-all"
+                  onClick={() => {
+                    setShowDetailModal(false);
+                    setIsCustomRange(false);
+                  }}
+                  className="p-2.5 hover:bg-white/20 rounded-2xl transition-all active:scale-95 text-white/80 hover:text-white"
                 >
-                  <X size={22} />
+                  <X size={24} />
                 </button>
               </div>
 
               {/* Custom date range controls */}
               <div className="px-5 pt-4 pb-2 no-print bg-gray-50 border-b border-gray-100">
-                <div className="flex items-center justify-between mb-2">
-                  <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">
-                    Khoảng ngày tính lương
-                  </label>
+                <div className="flex items-center justify-between mb-3 px-1">
+                  <div className="flex items-center gap-2">
+                    <div className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
+                    <label className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">
+                      KHOẢNG NGÀY TÍNH LƯƠNG
+                    </label>
+                  </div>
                   <button
                     onClick={() => setIsCustomRange(!isCustomRange)}
-                    className={`relative inline-flex items-center w-10 h-5 rounded-full transition-colors ${isCustomRange ? 'bg-primary' : 'bg-gray-300'}`}
+                    className={`relative inline-flex items-center w-12 h-6 rounded-full transition-all duration-300 shadow-inner ${isCustomRange ? 'bg-primary' : 'bg-gray-200'}`}
                   >
-                    <span className={`inline-block w-3.5 h-3.5 bg-white rounded-full shadow transform transition-transform ${isCustomRange ? 'translate-x-5' : 'translate-x-1'}`} />
+                    <span
+                      className={`inline-block w-4.5 h-4.5 bg-white rounded-full shadow-lg transform transition-transform duration-300 flex items-center justify-center ${isCustomRange ? 'translate-x-6.5' : 'translate-x-1'}`}
+                    />
                   </button>
                 </div>
                 {isCustomRange && (
                   <div className="grid grid-cols-2 gap-3">
                     <div className="space-y-0.5">
-                      <label className="text-[9px] font-bold text-gray-400 uppercase">Từ ngày</label>
+                      <label className="text-[9px] font-bold text-gray-400 uppercase">
+                        Từ ngày
+                      </label>
                       <input
                         type="date"
                         value={customRange.start}
@@ -554,7 +578,9 @@ export const MonthlySalary = ({
                       />
                     </div>
                     <div className="space-y-0.5">
-                      <label className="text-[9px] font-bold text-gray-400 uppercase">Đến ngày</label>
+                      <label className="text-[9px] font-bold text-gray-400 uppercase">
+                        Đến ngày
+                      </label>
                       <input
                         type="date"
                         value={customRange.end}
@@ -573,145 +599,239 @@ export const MonthlySalary = ({
                   <div className="px-5 pt-5 pb-4 border-b border-gray-100">
                     {/* Logo row */}
                     <div className="flex items-center gap-2 mb-3">
-                      <img src="/logo.png" alt="Logo" className="w-9 h-9 object-contain rounded-lg flex-shrink-0" />
+                      <img
+                        src="/logo.png"
+                        alt="Logo"
+                        className="w-9 h-9 object-contain rounded-lg flex-shrink-0"
+                      />
                       <div>
-                        <p className="text-[9px] font-black text-gray-700 uppercase tracking-wider">CDX - CON ĐƯỜNG XANH</p>
-                        <p className="text-[7px] text-gray-400 uppercase tracking-widest">Hệ thống quản lý kho và nhân sự</p>
+                        <p className="text-[9px] font-black text-gray-700 uppercase tracking-wider">
+                          CDX - CON ĐƯỜNG XANH
+                        </p>
+                        <p className="text-[7px] text-gray-400 uppercase tracking-widest">
+                          Hệ thống quản lý kho và nhân sự
+                        </p>
                       </div>
                     </div>
                     {/* Title block */}
-                    <h1 className="text-xl font-black text-primary uppercase tracking-tight leading-none">BẢNG TÍNH LƯƠNG</h1>
+                    <h1 className="text-xl font-black text-primary uppercase tracking-tight leading-none">
+                      BẢNG TÍNH LƯƠNG
+                    </h1>
                     <p className="text-[11px] font-bold text-gray-500 mt-0.5">
                       {isCustomRange
-                        ? `${customRange.start} — ${customRange.end}`
-                        : `Tháng ${selectedMonth}/${selectedYear}`}
+                        ? `Kỳ lương: ${customRange.start} — ${customRange.end}`
+                        : (() => {
+                            const dates = (selectedSalary.attendanceDetails || [])
+                              .map((a: any) => a.date)
+                              .filter(Boolean)
+                              .sort();
+                            const firstDate = dates[0];
+                            const lastDate = dates[dates.length - 1];
+                            const fmt = (d: string) => {
+                              const [y, m, day] = d.split('-');
+                              return `${parseInt(day)}/${parseInt(m)}`;
+                            };
+                            const range =
+                              firstDate && lastDate
+                                ? ` (${fmt(firstDate)} - ${fmt(lastDate)})`
+                                : '';
+                            return `Kỳ lương: Tháng ${selectedMonth}/${selectedYear}${range}`;
+                          })()}
                     </p>
+                    {/* Employee name row */}
+                    <div className="flex justify-between items-center mt-3">
+                      <span className="text-xs text-gray-500 font-medium">Tên nhân viên:</span>
+                      <span className="text-sm font-black text-gray-900">
+                        {selectedSalary.full_name}
+                      </span>
+                    </div>
                   </div>
 
-                  <table className="w-full text-sm border-collapse">
-                    <tbody>
-                      {/* Tên nhân viên */}
-                      <tr className="border-b border-gray-100">
-                        <td className="px-5 py-2.5 text-gray-500 font-medium w-[48%]">Tên nhân viên:</td>
-                        <td className="px-5 py-2.5 font-bold text-gray-900">{selectedSalary.full_name}</td>
-                      </tr>
-                      {/* Kỳ lương */}
-                      <tr className="border-b border-gray-100">
-                        <td className="px-5 py-2.5 text-gray-500 font-medium">Kỳ lương:</td>
-                        <td className="px-5 py-2.5 font-bold text-gray-900">
-                          {isCustomRange
-                            ? `từ ${customRange.start} → hết ${customRange.end}`
-                            : `Tháng ${selectedMonth}/${selectedYear}`}
-                        </td>
-                      </tr>
-                      {/* Giờ công */}
-                      <tr className="border-b border-gray-100">
-                        <td className="px-5 py-2.5 text-gray-500 font-medium">Giờ công:</td>
-                        <td className="px-5 py-2.5 text-gray-800">
-                          {(selectedSalary.totalDays * 8).toFixed(0)} giờ{' '}
-                          <span className="text-gray-400 text-xs">({selectedSalary.totalDays.toFixed(1)} Công)</span>
-                        </td>
-                      </tr>
-                      {/* Tăng ca */}
-                      <tr className="border-b border-gray-100">
-                        <td className="px-5 py-2.5 text-gray-500 font-medium">Tăng ca:</td>
-                        <td className="px-5 py-2.5 text-gray-800">{selectedSalary.totalOT.toFixed(1)} giờ</td>
-                      </tr>
-                      {/* Lương cơ bản */}
-                      <tr className="border-b border-gray-100">
-                        <td className="px-5 py-2.5 text-gray-500 font-medium">Lương cơ bản:</td>
-                        <td className="px-5 py-2.5 text-gray-800">{formatCurrency(selectedSalary.earnedSalary)}</td>
-                      </tr>
-                      {/* Tiền tăng ca */}
-                      <tr className="border-b border-gray-100">
-                        <td className="px-5 py-2.5 text-gray-500 font-medium">Tiền tăng ca:</td>
-                        <td className="px-5 py-2.5 text-amber-600 font-medium">
-                          {formatCurrency(selectedSalary.dayOTSalary + selectedSalary.monthOTSalary)}
-                        </td>
-                      </tr>
-                      {/* Phụ cấp */}
-                      <tr className="border-b border-gray-100">
-                        <td className="px-5 py-2.5 text-gray-500 font-medium">Phụ cấp:</td>
-                        <td className="px-5 py-2.5 text-green-700 font-medium">{formatCurrency(selectedSalary.totalAll)}</td>
-                      </tr>
-                      {/* Thưởng */}
-                      <tr className="border-b border-gray-200">
-                        <td className="px-5 py-2.5 text-gray-500 font-medium">Thưởng:</td>
-                        <td className="px-5 py-2.5 text-gray-800">0 đ</td>
-                      </tr>
-                      {/* TỔNG THU NHẬP */}
-                      <tr className="border-b-2 border-gray-300 bg-gray-50">
-                        <td className="px-5 py-3 font-black text-gray-900 uppercase text-xs tracking-wide">TỔNG THU NHẬP:</td>
-                        <td className="px-5 py-3 font-black text-gray-900 text-sm">
-                          {formatCurrency(selectedSalary.earnedSalary + selectedSalary.dayOTSalary + selectedSalary.monthOTSalary + selectedSalary.totalAll)}
-                        </td>
-                      </tr>
-                      {/* Tạm ứng */}
-                      <tr className="border-b border-gray-100">
-                        <td className="px-5 py-2.5 text-gray-500 font-medium">Tạm ứng:</td>
-                        <td className="px-5 py-2.5 text-red-600 font-medium">- {formatCurrency(selectedSalary.totalAdv)}</td>
-                      </tr>
-                      {/* Bảo hiểm */}
-                      <tr className="border-b border-gray-100">
-                        <td className="px-5 py-2.5 text-gray-500 font-medium">Bảo hiểm:</td>
-                        <td className="px-5 py-2.5 text-red-600 font-medium">- {formatCurrency(selectedSalary.insuranceDeduction)}</td>
-                      </tr>
-                      {/* Giảm trừ */}
-                      <tr className="border-b border-gray-200">
-                        <td className="px-5 py-2.5 text-gray-500 font-medium">Giảm trừ khác:</td>
-                        <td className="px-5 py-2.5 text-gray-800">- 0 đ</td>
-                      </tr>
-                      {/* TỔNG GIẢM */}
-                      <tr className="border-b-2 border-gray-300 bg-gray-50">
-                        <td className="px-5 py-3 font-black text-gray-900 uppercase text-xs tracking-wide">TỔNG GIẢM:</td>
-                        <td className="px-5 py-3 font-black text-red-600 text-sm">
-                          - {formatCurrency(selectedSalary.totalAdv + selectedSalary.insuranceDeduction)}
-                        </td>
-                      </tr>
-                      {/* CÒN ĐƯỢC NHẬN */}
-                      <tr className="border-b-2 border-primary/30 bg-primary/5">
-                        <td className="px-5 py-3 font-black text-primary uppercase text-xs tracking-wide">CÒN ĐƯỢC NHẬN:</td>
-                        <td className="px-5 py-3 font-black text-primary text-base">
-                          {formatCurrency(selectedSalary.netSalary)}
-                        </td>
-                      </tr>
-                      {/* Bằng chữ */}
-                      <tr className="border-b border-gray-100">
-                        <td className="px-5 py-2.5 text-gray-500 font-medium align-top">Bằng chữ:</td>
-                        <td className="px-5 py-2.5 text-gray-600 italic text-xs leading-relaxed">
-                          {numberToVietnamese(selectedSalary.netSalary)}
-                        </td>
-                      </tr>
-                      {/* Ghi chú */}
-                      <tr>
-                        <td className="px-5 py-2.5 text-gray-500 font-medium">Ghi chú:</td>
-                        <td className="px-5 py-2.5 text-gray-500 text-xs italic">
-                          {isCustomRange
-                            ? `${customRange.start} đến ${customRange.end}`
-                            : `01/${selectedMonth}/${selectedYear} đến ${new Date(selectedYear, selectedMonth, 0).getDate()}/${selectedMonth}/${selectedYear}`}
-                        </td>
-                      </tr>
-                    </tbody>
-                  </table>
+                  <div className="p-6 space-y-6">
+                    {/* Attendance summary */}
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="bg-gray-50/80 rounded-xl p-2.5 border border-gray-100 flex flex-col items-center justify-center space-y-0.5">
+                        <span className="text-[8px] font-black text-gray-400 uppercase tracking-widest">
+                          Công chuẩn
+                        </span>
+                        <div className="flex items-baseline gap-1">
+                          <span className="text-base font-black text-gray-800">
+                            {(selectedSalary.totalDays * 8).toFixed(0)}
+                          </span>
+                          <span className="text-[9px] font-bold text-gray-400">giờ</span>
+                        </div>
+                        <span className="text-[9px] text-gray-400">
+                          ({selectedSalary.totalDays.toFixed(1)} công)
+                        </span>
+                      </div>
+                      <div className="bg-amber-50/50 rounded-xl p-2.5 border border-amber-100 flex flex-col items-center justify-center space-y-0.5">
+                        <span className="text-[8px] font-black text-amber-500/70 uppercase tracking-widest">
+                          Tăng ca
+                        </span>
+                        <div className="flex items-baseline gap-1">
+                          <span className="text-base font-black text-amber-600">
+                            {selectedSalary.totalOT.toFixed(1)}
+                          </span>
+                          <span className="text-[9px] font-bold text-amber-500">giờ</span>
+                        </div>
+                      </div>
+                    </div>
 
-                  <div className="flex justify-between text-[8px] text-gray-300 font-bold uppercase tracking-widest px-5 py-3">
-                    <span>CDX ERP SYSTEM © 2026</span>
-                    <span>{new Date().toLocaleString('vi-VN')}</span>
+                    {/* Earnings */}
+                    <div className="space-y-3">
+                      <div className="flex items-center gap-2 mb-1">
+                        <div className="h-4 w-1 bg-primary rounded-full" />
+                        <h3 className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">
+                          CÁC KHOẢN THU NHẬP
+                        </h3>
+                      </div>
+                      <div className="space-y-2">
+                        <div className="flex justify-between text-xs items-center">
+                          <span className="font-bold text-gray-500">Lương cơ bản</span>
+                          <span className="font-bold text-gray-800">
+                            {formatCurrency(selectedSalary.earnedSalary)}
+                          </span>
+                        </div>
+                        <div className="flex justify-between text-xs items-center">
+                          <span className="font-bold text-gray-500">Tiền tăng ca</span>
+                          <span className="font-bold text-amber-600">
+                            {formatCurrency(
+                              selectedSalary.dayOTSalary + selectedSalary.monthOTSalary,
+                            )}
+                          </span>
+                        </div>
+                        <div className="flex justify-between text-xs items-center">
+                          <span className="font-bold text-gray-500">Phụ cấp</span>
+                          <span className="font-bold text-green-600">
+                            +{formatCurrency(selectedSalary.totalAll)}
+                          </span>
+                        </div>
+                        <div className="pt-2 border-t border-gray-100">
+                          <div className="flex justify-between items-center">
+                            <span className="text-xs font-black text-gray-800 uppercase tracking-wide">
+                              TỔNG THU NHẬP
+                            </span>
+                            <span className="text-base font-black text-gray-900 tracking-tight">
+                              {formatCurrency(
+                                selectedSalary.earnedSalary +
+                                  selectedSalary.dayOTSalary +
+                                  selectedSalary.monthOTSalary +
+                                  selectedSalary.totalAll,
+                              )}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Deductions */}
+                    <div className="space-y-3">
+                      <div className="flex items-center gap-2 mb-1">
+                        <div className="h-4 w-1 bg-red-400 rounded-full" />
+                        <h3 className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">
+                          CÁC KHOẢN KHẤU TRỪ
+                        </h3>
+                      </div>
+                      <div className="space-y-2">
+                        <div className="flex justify-between text-xs items-center">
+                          <span className="font-bold text-gray-500">Tạm ứng</span>
+                          <span className="font-bold text-red-500">
+                            -{formatCurrency(selectedSalary.totalAdv)}
+                          </span>
+                        </div>
+                        <div className="flex justify-between text-xs items-center">
+                          <span className="font-bold text-gray-500">Bảo hiểm</span>
+                          <span className="font-bold text-red-500">
+                            -{formatCurrency(selectedSalary.insuranceDeduction)}
+                          </span>
+                        </div>
+                        <div className="pt-2 border-t border-gray-100">
+                          <div className="flex justify-between items-center">
+                            <span className="text-xs font-black text-gray-800 uppercase tracking-wide">
+                              TỔNG GIẢM TRỪ
+                            </span>
+                            <span className="text-base font-black tracking-tight text-red-600">
+                              -
+                              {formatCurrency(
+                                selectedSalary.totalAdv + selectedSalary.insuranceDeduction,
+                              )}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Net Pay */}
+                    <div className="bg-gradient-to-br from-primary to-primary-dark p-4 rounded-2xl shadow-lg text-white relative overflow-hidden group">
+                      <div className="absolute top-0 right-0 w-24 h-24 bg-white/10 rounded-full -translate-y-1/2 translate-x-1/2 blur-2xl group-hover:scale-110 transition-transform duration-700" />
+
+                      <div className="relative z-10">
+                        <div className="flex justify-between items-center mb-1">
+                          <span className="text-[9px] font-black uppercase tracking-[0.25em] opacity-80 italic">
+                            THỰC LĨNH :
+                          </span>
+                          <div className="w-6 h-6 rounded-full bg-white/20 flex items-center justify-center backdrop-blur-md border border-white/20">
+                            <Wallet size={11} className="text-white" />
+                          </div>
+                        </div>
+
+                        {/* Auto-scaling font size for currency */}
+                        <div className="mt-1">
+                          <span
+                            className={`font-black tracking-tighter block leading-none ${selectedSalary.netSalary.toString().length > 9 ? 'text-2xl' : 'text-3xl'}`}
+                          >
+                            {formatCurrency(selectedSalary.netSalary)}
+                          </span>
+                        </div>
+
+                        <div className="mt-3 pt-3 border-t border-white/20">
+                          <p className="text-[8px] font-black uppercase tracking-widest opacity-60 mb-1">
+                            Bằng chữ:
+                          </p>
+                          <p className="text-[10px] font-extrabold italic leading-relaxed text-white/90">
+                            {numberToVietnamese(selectedSalary.netSalary)}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Footer */}
+                    <div className="pt-2 flex justify-between items-center">
+                      <div className="flex items-center gap-1.5 opacity-30">
+                        <div className="w-1.5 h-1.5 rounded-full bg-gray-400" />
+                        <span className="text-[8px] font-black text-gray-500 uppercase tracking-widest">
+                          CDX ERP System
+                        </span>
+                      </div>
+                      <span className="text-[8px] font-black text-gray-400 uppercase tracking-widest opacity-30">
+                        {new Date().toLocaleString('vi-VN', {
+                          hour: '2-digit',
+                          minute: '2-digit',
+                          second: '2-digit',
+                          day: '2-digit',
+                          month: '2-digit',
+                          year: 'numeric',
+                        })}
+                      </span>
+                    </div>
                   </div>
                 </div>
               </div>
 
               {/* Actions */}
-              <div className="p-5 border-t border-gray-100 flex gap-3 no-print">
+              <div className="p-6 bg-white border-t border-gray-100 flex gap-3 no-print">
                 <button
                   onClick={handleSaveImage}
-                  className="flex-1 bg-gray-900 text-white font-black py-3 rounded-xl hover:bg-black transition-all flex items-center justify-center gap-2 shadow-lg active:scale-95 text-xs"
+                  className="flex-1 bg-gray-900 text-white font-black py-3.5 rounded-2xl hover:bg-black transition-all flex items-center justify-center gap-2 shadow-xl active:scale-95 text-[11px] uppercase tracking-wider"
                 >
-                  <ImageIcon size={16} /> LƯU ẢNH
+                  <ImageIcon size={18} /> LƯU ẢNH PHIẾU
                 </button>
                 <button
-                  onClick={() => { setShowDetailModal(false); setIsCustomRange(false); }}
-                  className="flex-1 bg-primary/5 text-primary font-black py-3 rounded-xl hover:bg-primary/10 transition-all active:scale-95 border border-primary/10 text-xs"
+                  onClick={() => {
+                    setShowDetailModal(false);
+                    setIsCustomRange(false);
+                  }}
+                  className="px-6 bg-gray-100 text-gray-600 font-black py-3.5 rounded-2xl hover:bg-gray-200 transition-all active:scale-95 text-[11px] uppercase tracking-wider"
                 >
                   ĐÓNG
                 </button>
@@ -723,4 +843,3 @@ export const MonthlySalary = ({
     </div>
   );
 };
-

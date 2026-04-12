@@ -39,7 +39,7 @@ export const Attendance = ({
         .select('*')
         .neq('status', 'Nghỉ việc')
         .neq('status', 'Đã xóa')
-        .neq('role', 'Admin App')
+        .neq('role', 'Develop')
         .eq('has_salary', true)
         .order('code');
       if (empData) setEmployees(empData);
@@ -113,7 +113,7 @@ export const Attendance = ({
       if (status === 'present') msg = '1 công';
       else if (status === 'half-day') msg = '½ công';
       else if (status === 'absent') msg = 'vắng (nghỉ)';
-      
+
       addToast(
         `Đã chấm ${msg} ngày ${day}/${selectedMonth}`,
         status === 'absent' ? 'warning' : 'success',
@@ -137,8 +137,7 @@ export const Attendance = ({
     }));
   };
 
-  const getBulkTC = (empId: string, date: string) =>
-    bulkEmpDayTC[empId]?.[date] ?? 0;
+  const getBulkTC = (empId: string, date: string) => bulkEmpDayTC[empId]?.[date] ?? 0;
 
   // Generate list of dates in range
   const getBulkDays = () => {
@@ -185,7 +184,7 @@ export const Attendance = ({
     setBulkLoading(true);
     const days = getBulkDays();
     const hours = bulkStatus === 'present' ? 8 : bulkStatus === 'half-day' ? 4 : 0;
-    let totalOps = selectedEmployees.length * days.length;
+    const totalOps = selectedEmployees.length * days.length;
     let done = 0;
     let isError = false;
 
@@ -194,22 +193,29 @@ export const Attendance = ({
         const emp = employees.find((e) => e.id === empId);
         for (const dateStr of days) {
           done++;
-          setBulkProgress({ current: done, total: totalOps, label: `${emp?.full_name || ''} - ${dateStr}` });
+          setBulkProgress({
+            current: done,
+            total: totalOps,
+            label: `${emp?.full_name || ''} - ${dateStr}`,
+          });
           const tc = getBulkTC(empId, dateStr);
 
           await supabase.from('attendance').delete().eq('employee_id', empId).eq('date', dateStr);
 
-          const { error } = await supabase.from('attendance').insert([{
-            employee_id: empId,
-            date: dateStr,
-            status: bulkStatus,
-            hours_worked: hours,
-            overtime_hours: tc,
-          }]);
+          const { error } = await supabase.from('attendance').insert([
+            {
+              employee_id: empId,
+              date: dateStr,
+              status: bulkStatus,
+              hours_worked: hours,
+              overtime_hours: tc,
+            },
+          ]);
 
           if (error) {
             isError = true;
-            if (addToast) addToast(`Lỗi: ${emp?.full_name} - ${dateStr}: ${error.message}`, 'error');
+            if (addToast)
+              addToast(`Lỗi: ${emp?.full_name} - ${dateStr}: ${error.message}`, 'error');
             break;
           }
         }
@@ -217,7 +223,11 @@ export const Attendance = ({
       }
 
       if (!isError) {
-        if (addToast) addToast(`Đã chấm công ${days.length} ngày cho ${selectedEmployees.length} nhân viên!`, 'success');
+        if (addToast)
+          addToast(
+            `Đã chấm công ${days.length} ngày cho ${selectedEmployees.length} nhân viên!`,
+            'success',
+          );
         setShowBulkModal(false);
       }
     } catch (err: any) {
@@ -457,7 +467,9 @@ export const Attendance = ({
                 {/* Row 1: Date Range + Status */}
                 <div className="bg-primary/5 p-5 rounded-3xl border border-primary/10 grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
                   <div className="space-y-1">
-                    <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Từ ngày</label>
+                    <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">
+                      Từ ngày
+                    </label>
                     <input
                       type="date"
                       value={bulkDateFrom}
@@ -466,7 +478,9 @@ export const Attendance = ({
                     />
                   </div>
                   <div className="space-y-1">
-                    <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Đến ngày</label>
+                    <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">
+                      Đến ngày
+                    </label>
                     <input
                       type="date"
                       value={bulkDateTo}
@@ -476,14 +490,18 @@ export const Attendance = ({
                     />
                   </div>
                   <div className="space-y-1">
-                    <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Trạng thái</label>
+                    <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">
+                      Trạng thái
+                    </label>
                     <div className="flex gap-1 bg-white p-1 rounded-xl border border-gray-200">
                       {(['present', 'half-day', 'absent'] as const).map((s) => (
                         <button
                           key={s}
                           onClick={() => setBulkStatus(s)}
                           className={`flex-1 py-1.5 rounded-lg text-[10px] font-bold transition-all ${
-                            bulkStatus === s ? 'bg-primary text-white' : 'text-gray-400 hover:bg-gray-50'
+                            bulkStatus === s
+                              ? 'bg-primary text-white'
+                              : 'text-gray-400 hover:bg-gray-50'
                           }`}
                         >
                           {s === 'present' ? '1 Công' : s === 'half-day' ? '½ Công' : 'Vắng'}
@@ -504,12 +522,16 @@ export const Attendance = ({
                       <button
                         onClick={() =>
                           setSelectedEmployees(
-                            selectedEmployees.length === employees.length ? [] : employees.map((e) => e.id),
+                            selectedEmployees.length === employees.length
+                              ? []
+                              : employees.map((e) => e.id),
                           )
                         }
                         className="text-[10px] font-bold text-primary hover:underline"
                       >
-                        {selectedEmployees.length === employees.length ? 'Bỏ chọn hết' : 'Chọn tất cả'}
+                        {selectedEmployees.length === employees.length
+                          ? 'Bỏ chọn hết'
+                          : 'Chọn tất cả'}
                       </button>
                     </div>
                     <div className="space-y-2 overflow-y-auto flex-1 custom-scrollbar">
@@ -518,7 +540,9 @@ export const Attendance = ({
                           key={emp.id}
                           onClick={() =>
                             setSelectedEmployees((prev) =>
-                              prev.includes(emp.id) ? prev.filter((id) => id !== emp.id) : [...prev, emp.id],
+                              prev.includes(emp.id)
+                                ? prev.filter((id) => id !== emp.id)
+                                : [...prev, emp.id],
                             )
                           }
                           className={`flex items-center gap-3 p-3 rounded-xl cursor-pointer transition-all border ${
@@ -529,10 +553,14 @@ export const Attendance = ({
                         >
                           <div
                             className={`w-5 h-5 rounded-md border flex items-center justify-center ${
-                              selectedEmployees.includes(emp.id) ? 'bg-primary border-primary text-white' : 'bg-white border-gray-200'
+                              selectedEmployees.includes(emp.id)
+                                ? 'bg-primary border-primary text-white'
+                                : 'bg-white border-gray-200'
                             }`}
                           >
-                            {selectedEmployees.includes(emp.id) && <Check size={12} strokeWidth={4} />}
+                            {selectedEmployees.includes(emp.id) && (
+                              <Check size={12} strokeWidth={4} />
+                            )}
                           </div>
                           <div>
                             <p className="text-xs font-bold text-gray-800">{emp.full_name}</p>
@@ -564,20 +592,32 @@ export const Attendance = ({
                       <div className="overflow-y-auto flex-1 custom-scrollbar space-y-3">
                         {getBulkDays().map((d) => {
                           const dateObj = new Date(d);
-                          const dayOfWeek = dateObj.toLocaleDateString('vi-VN', { weekday: 'short' });
+                          const dayOfWeek = dateObj.toLocaleDateString('vi-VN', {
+                            weekday: 'short',
+                          });
                           const dayNum = dateObj.getDate();
                           return (
-                            <div key={d} className="border border-gray-100 rounded-2xl overflow-hidden">
+                            <div
+                              key={d}
+                              className="border border-gray-100 rounded-2xl overflow-hidden"
+                            >
                               <div className="bg-gray-50 px-3 py-1.5 flex items-center gap-2">
-                                <span className="text-[10px] font-black text-gray-500 uppercase">Ngày {dayNum}</span>
+                                <span className="text-[10px] font-black text-gray-500 uppercase">
+                                  Ngày {dayNum}
+                                </span>
                                 <span className="text-[9px] text-gray-400">({dayOfWeek})</span>
                               </div>
                               <div className="divide-y divide-gray-50">
                                 {selectedEmployees.map((empId) => {
                                   const emp = employees.find((e) => e.id === empId);
                                   return (
-                                    <div key={empId} className="flex items-center justify-between px-3 py-1.5 hover:bg-gray-50/50">
-                                      <span className="text-xs text-gray-700 truncate max-w-[110px]">{emp?.full_name}</span>
+                                    <div
+                                      key={empId}
+                                      className="flex items-center justify-between px-3 py-1.5 hover:bg-gray-50/50"
+                                    >
+                                      <span className="text-xs text-gray-700 truncate max-w-[110px]">
+                                        {emp?.full_name}
+                                      </span>
                                       <div className="flex items-center gap-1.5 shrink-0">
                                         <span className="text-[10px] text-gray-400">TC:</span>
                                         <input
@@ -585,7 +625,9 @@ export const Attendance = ({
                                           min="0"
                                           step="0.5"
                                           value={getBulkTC(empId, d)}
-                                          onChange={(e) => setBulkTC(empId, d, parseFloat(e.target.value) || 0)}
+                                          onChange={(e) =>
+                                            setBulkTC(empId, d, parseFloat(e.target.value) || 0)
+                                          }
                                           className="w-14 px-2 py-0.5 text-center text-sm font-bold text-amber-600 border border-gray-200 rounded-lg outline-none focus:ring-1 focus:ring-primary/20"
                                         />
                                         <span className="text-[10px] text-gray-400">h</span>
@@ -607,7 +649,9 @@ export const Attendance = ({
                   <div className="bg-primary/5 p-4 rounded-2xl space-y-2">
                     <div className="flex justify-between text-xs font-bold text-primary">
                       <span>Đang lưu...</span>
-                      <span>{bulkProgress.current}/{bulkProgress.total}</span>
+                      <span>
+                        {bulkProgress.current}/{bulkProgress.total}
+                      </span>
                     </div>
                     <div className="w-full bg-white rounded-full h-2 border border-primary/10">
                       <div
@@ -671,10 +715,18 @@ export const Attendance = ({
                 </div>
                 <p className="text-sm text-gray-500 leading-relaxed font-medium px-2">
                   Xác nhận chấm công cho{' '}
-                  <span className="font-bold text-primary">{selectedEmployees.length}</span> nhân viên<br />
-                  từ <span className="font-bold text-gray-800">{new Date(bulkDateFrom).toLocaleDateString('vi-VN')}</span>
-                  {' '}đến <span className="font-bold text-gray-800">{new Date(bulkDateTo).toLocaleDateString('vi-VN')}</span>
-                  {' '}({getBulkDays().length} ngày)?
+                  <span className="font-bold text-primary">{selectedEmployees.length}</span> nhân
+                  viên
+                  <br />
+                  từ{' '}
+                  <span className="font-bold text-gray-800">
+                    {new Date(bulkDateFrom).toLocaleDateString('vi-VN')}
+                  </span>{' '}
+                  đến{' '}
+                  <span className="font-bold text-gray-800">
+                    {new Date(bulkDateTo).toLocaleDateString('vi-VN')}
+                  </span>{' '}
+                  ({getBulkDays().length} ngày)?
                 </p>
                 <div className="flex gap-3 pt-2">
                   <Button variant="outline" fullWidth onClick={() => setShowConfirmBulk(false)}>

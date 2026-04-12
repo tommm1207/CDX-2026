@@ -772,7 +772,7 @@ export const StockOut = ({
                 )}
 
                 {selectedSlip.status !== 'Đã xóa' &&
-                  (user.role === 'Admin' || user.role === 'Admin App') &&
+                  (user.role === 'Admin' || user.role === 'Develop') &&
                   selectedSlip.status === 'Chờ duyệt' && (
                     <div className="grid grid-cols-2 gap-2">
                       <Button

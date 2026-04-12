@@ -1,16 +1,31 @@
 import { useState, useEffect } from 'react';
-import { Layers, RefreshCw, Trash2, Square, CheckSquare } from 'lucide-react';
+import {
+  Layers,
+  RefreshCw,
+  Trash2,
+  Square,
+  CheckSquare,
+  AlertCircle,
+  CheckCircle,
+  ChevronDown,
+  ChevronUp,
+} from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { supabase } from '@/lib/supabase';
+import { Employee } from '@/types';
 import { PageBreadcrumb } from '../shared/PageBreadcrumb';
 import { ConfirmModal } from '../shared/ConfirmModal';
 import { ToastType } from '../shared/Toast';
-import { checkUsage } from '@/utils/dataIntegrity';
+import { Button } from '../shared/Button';
+import { checkUsage, UsageResult } from '@/utils/dataIntegrity';
+import { purgeDependencies } from '@/utils/dataFixer';
 
 export const DeletedProductionOrders = ({
+  user,
   onBack,
   addToast,
 }: {
+  user: Employee;
   onBack: () => void;
   addToast?: (message: string, type?: ToastType) => void;
 }) => {
@@ -20,6 +35,14 @@ export const DeletedProductionOrders = ({
   const [showRestoreModal, setShowRestoreModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [showActionModal, setShowActionModal] = useState(false);
+  const [showUsageDetails, setShowUsageDetails] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [usageInfo, setUsageInfo] = useState<UsageResult>({
+    inUse: false,
+    tables: [],
+    details: [],
+  });
+
   const [selectedItem, setSelectedItem] = useState<{
     id: string;
     table: string;
@@ -77,7 +100,7 @@ export const DeletedProductionOrders = ({
 
   const toggleSelectAll = () => {
     if (selectedIds.size === items.length) setSelectedIds(new Set());
-    else setSelectedIds(new Set(items.map((i) => i.id)));
+    else setSelectedIds(new Set(items.map((i) => `${i.table}-${i.id}`)));
   };
 
   const handleRowClick = (item: any) => {
@@ -85,8 +108,23 @@ export const DeletedProductionOrders = ({
     setShowActionModal(true);
   };
 
+  const handleDeleteClick = async (item: any) => {
+    setSelectedItem({ id: item.id, table: item.table, code: item.displayName, display: item.type });
+    setShowActionModal(false);
+    setShowDeleteModal(true);
+    setShowUsageDetails(false);
+    setUsageInfo({ inUse: false, tables: [], details: [] });
+    try {
+      const usage = await checkUsage(item.table === 'bom_configs' ? 'bom' : 'material', item.id);
+      setUsageInfo(usage);
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
   const confirmRestore = async () => {
     if (!selectedItem) return;
+    setSubmitting(true);
     try {
       const { error } = await supabase
         .from(selectedItem.table)
@@ -104,28 +142,34 @@ export const DeletedProductionOrders = ({
       setSelectedItem(null);
     } catch (err: any) {
       if (addToast) addToast('Lỗi khôi phục: ' + err.message, 'error');
+    } finally {
+      setSubmitting(false);
     }
   };
 
   const confirmDelete = async () => {
     if (!selectedItem) return;
+    setSubmitting(true);
     try {
-      if (selectedItem.table === 'bom_configs') {
-        const usage = await checkUsage('bom', selectedItem.id);
-        if (usage.inUse) {
-          throw new Error(`Đang được sử dụng bởi: ${usage.tables.join(', ')}`);
-        }
+      const isDevelop = user.role === 'Develop';
+      if (isDevelop && usageInfo.inUse) {
+        await purgeDependencies(
+          selectedItem.table === 'bom_configs' ? 'bom' : 'material',
+          selectedItem.id,
+        );
       }
 
       const { error } = await supabase.from(selectedItem.table).delete().eq('id', selectedItem.id);
       if (error) throw error;
 
-      if (addToast) addToast('Đã xóa vĩnh viễn dữ liệu!', 'success');
+      if (addToast) addToast('Đã xóa vĩnh viễn dữ liệu thành công!', 'success');
       fetchDeletedItems();
       setShowDeleteModal(false);
       setSelectedItem(null);
     } catch (err: any) {
-      if (addToast) addToast('Lỗi: ' + err.message, 'error');
+      if (addToast) addToast('Lỗi xóa vĩnh viễn: ' + err.message, 'error');
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -177,10 +221,10 @@ export const DeletedProductionOrders = ({
               </tr>
             ) : (
               items.map((item) => {
-                const isSelected = selectedIds.has(item.id);
+                const isSelected = selectedIds.has(`${item.table}-${item.id}`);
                 return (
                   <tr
-                    key={item.id}
+                    key={`${item.table}-${item.id}`}
                     className={`hover:bg-gray-50/50 transition-colors cursor-pointer group ${isSelected ? 'bg-primary/5' : ''}`}
                     onClick={() => handleRowClick(item)}
                   >
@@ -188,7 +232,7 @@ export const DeletedProductionOrders = ({
                       className="px-4 py-3"
                       onClick={(e) => {
                         e.stopPropagation();
-                        toggleSelect(item.id);
+                        toggleSelect(`${item.table}-${item.id}`);
                       }}
                     >
                       <div className="text-gray-400 hover:text-primary transition-colors">
@@ -232,13 +276,7 @@ export const DeletedProductionOrders = ({
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
-                            setSelectedItem({
-                              id: item.id,
-                              table: item.table,
-                              code: item.displayName,
-                              display: item.type,
-                            });
-                            setShowDeleteModal(true);
+                            handleDeleteClick(item);
                           }}
                           className="p-2 bg-red-50 text-red-600 rounded-lg hover:bg-red-100 transition-colors"
                         >
@@ -257,77 +295,149 @@ export const DeletedProductionOrders = ({
       <AnimatePresence>
         {showActionModal && selectedItem && (
           <div
-            className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-gray-900/50 backdrop-blur-sm"
+            className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-gray-900/50 backdrop-blur-sm shadow-2xl"
             onClick={() => setShowActionModal(false)}
           >
             <motion.div
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
-              className="bg-white rounded-3xl shadow-xl w-full max-w-sm overflow-hidden p-6 text-center"
+              className="bg-white rounded-3xl shadow-2xl w-full max-w-sm overflow-hidden p-8 text-center"
               onClick={(e) => e.stopPropagation()}
             >
-              <h3 className="text-xl font-bold text-gray-900 mb-2">Tùy chọn thao tác</h3>
-              <p className="text-sm text-gray-500 mb-6 font-medium">
-                {selectedItem.display}:{' '}
-                <span className="text-gray-800 font-bold">{selectedItem.code}</span>
+              <h3 className="text-xl font-bold text-gray-900 mb-2 uppercase tracking-wide">
+                Tùy chọn thao tác
+              </h3>
+              <p className="text-sm text-gray-500 mb-8 font-medium">
+                Đối tượng: <span className="font-black text-primary">{selectedItem.code}</span>
               </p>
-              <div className="flex flex-col gap-3">
-                <button
-                  onClick={() => {
-                    setShowActionModal(false);
-                    setShowRestoreModal(true);
-                  }}
-                  className="w-full py-4 px-4 rounded-xl font-bold text-green-700 bg-green-50 hover:bg-green-100 transition-colors flex items-center justify-center gap-3 shadow-sm border border-green-100"
+              <div className="flex flex-col gap-4">
+                <Button
+                  fullWidth
+                  variant="success"
+                  onClick={() => setShowRestoreModal(true)}
+                  icon={RefreshCw}
                 >
-                  <RefreshCw size={20} /> Khôi phục dữ liệu
-                </button>
-                <button
-                  onClick={() => {
-                    setShowActionModal(false);
-                    setShowDeleteModal(true);
-                  }}
-                  className="w-full py-4 px-4 rounded-xl font-bold text-red-700 bg-red-50 hover:bg-red-100 transition-colors flex items-center justify-center gap-3 shadow-sm border border-red-100"
+                  KHÔI PHỤC DỮ LIỆU
+                </Button>
+                <Button
+                  fullWidth
+                  variant="danger"
+                  onClick={() => setShowDeleteModal(true)}
+                  icon={Trash2}
                 >
-                  <Trash2 size={20} /> Xóa vĩnh viễn
-                </button>
-                <button
+                  XÓA VĨNH VIỄN
+                </Button>
+                <Button
+                  fullWidth
+                  variant="outline"
                   onClick={() => setShowActionModal(false)}
-                  className="w-full py-4 rounded-xl font-bold text-gray-600 bg-gray-100 hover:bg-gray-200 transition-colors mt-2"
+                  className="mt-2"
                 >
-                  Hủy bỏ
-                </button>
+                  HUỶ BỎ
+                </Button>
               </div>
             </motion.div>
           </div>
         )}
+      </AnimatePresence>
 
-        {showRestoreModal && selectedItem && (
-          <ConfirmModal
-            show={showRestoreModal}
-            title="Xác nhận khôi phục"
-            message={`Bạn có chắc muốn khôi phục ${selectedItem.display} ${selectedItem.code} trở lại danh sách chính?`}
-            confirmText="Khôi phục ngay"
-            cancelText="Hủy bỏ"
-            onConfirm={confirmRestore}
-            onCancel={() => setShowRestoreModal(false)}
-            type="success"
-          />
-        )}
-
+      <AnimatePresence>
         {showDeleteModal && selectedItem && (
-          <ConfirmModal
-            show={showDeleteModal}
-            title="Xóa vĩnh viễn?"
-            message={`Hành động này KHÔNG thể hoàn tác. ${selectedItem.display} ${selectedItem.code} sẽ bị xóa sạch khỏi hệ thống.`}
-            confirmText="Xác nhận xóa"
-            cancelText="Hủy bỏ"
-            onConfirm={confirmDelete}
-            onCancel={() => setShowDeleteModal(false)}
-            type="danger"
-          />
+          <div
+            className="fixed inset-0 z-[130] flex items-center justify-center p-4 bg-black/50 backdrop-blur-md overflow-hidden"
+            onClick={() => setShowDeleteModal(false)}
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              className="bg-white rounded-[2rem] md:rounded-[2.5rem] shadow-2xl p-8 max-w-sm w-full text-center relative z-10"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="w-16 h-16 bg-red-50 text-red-600 rounded-2xl flex items-center justify-center mx-auto mb-4 border border-red-100">
+                <Trash2 size={32} />
+              </div>
+              <h3 className="text-xl font-bold text-gray-800 mb-2">Xác nhận xóa?</h3>
+              <div className="text-sm text-gray-500 mb-6 text-left bg-gray-50 p-4 rounded-xl border border-gray-100 space-y-2">
+                <p>
+                  Mã/Tên: <strong className="text-primary">{selectedItem.code}</strong>
+                </p>
+                <p>
+                  Loại: <strong className="text-primary">{selectedItem.display}</strong>
+                </p>
+
+                {usageInfo.inUse ? (
+                  <div className="mt-2 pt-2 border-t border-gray-200">
+                    <button
+                      onClick={() => setShowUsageDetails(!showUsageDetails)}
+                      className="flex items-center justify-between w-full text-[10px] text-red-500 font-black uppercase tracking-tighter hover:text-red-600"
+                    >
+                      <div className="flex items-center gap-1">
+                        <AlertCircle size={12} /> Có dữ liệu liên quan
+                      </div>
+                      {showUsageDetails ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
+                    </button>
+                    {showUsageDetails && (
+                      <div className="mt-2 space-y-1 max-h-32 overflow-y-auto pr-1">
+                        {usageInfo.details.map((d, idx) => (
+                          <div
+                            key={idx}
+                            className="flex justify-between text-[10px] text-gray-500 bg-white p-1.5 rounded-lg border border-gray-100"
+                          >
+                            <span>{d.label}</span>
+                            <span className="font-bold text-red-500">{d.count}</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <p className="text-[10px] text-green-600 font-bold flex items-center gap-1 uppercase tracking-widest ">
+                    <CheckCircle size={12} /> Sẵn sàng để xóa
+                  </p>
+                )}
+              </div>
+
+              <div className="flex flex-col gap-3">
+                {usageInfo.inUse && user.role === 'Develop' && (
+                  <div className="p-3 bg-red-50 rounded-2xl border border-red-100 mb-2">
+                    <p className="text-[10px] text-red-600 font-bold leading-relaxed italic">
+                      Lưu ý: Bạn đang thực hiện "Xóa cưỡng bức". Mọi lệnh sản xuất và định mức liên
+                      quan sẽ bị xóa sạch.
+                    </p>
+                  </div>
+                )}
+
+                <div className="flex gap-3">
+                  <Button fullWidth variant="outline" onClick={() => setShowDeleteModal(false)}>
+                    Hủy bỏ
+                  </Button>
+                  <Button
+                    fullWidth
+                    variant="danger"
+                    onClick={confirmDelete}
+                    disabled={usageInfo.inUse && user.role !== 'Develop'}
+                    isLoading={submitting}
+                  >
+                    {usageInfo.inUse && user.role === 'Develop' ? 'XÓA CƯỞNG BỨC' : 'Xác nhận xóa'}
+                  </Button>
+                </div>
+              </div>
+            </motion.div>
+          </div>
         )}
       </AnimatePresence>
+
+      <ConfirmModal
+        show={showRestoreModal}
+        title="Xác nhận khôi phục"
+        message={`Bạn có chắc muốn khôi phục ${selectedItem?.display} ${selectedItem?.code} trở lại danh sách chính?`}
+        onConfirm={confirmRestore}
+        onCancel={() => setShowRestoreModal(false)}
+        type="success"
+        isLoading={submitting}
+      />
     </div>
   );
 };

@@ -1,9 +1,4 @@
-import { 
-  useState,
-  useEffect,
-  FormEvent,
-  useRef,
-  useMemo } from 'react';
+import { useState, useEffect, FormEvent, useRef, useMemo } from 'react';
 import {
   Search,
   Plus,
@@ -30,7 +25,8 @@ import {
   FileSpreadsheet,
   ArrowDownCircle,
   ArrowUpCircle,
-  Info
+  Info,
+  Navigation,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { utils, writeFile } from 'xlsx';
@@ -47,6 +43,8 @@ import { isUUID, getAllowedWarehouses } from '@/utils/helpers';
 import { isActiveWarehouse } from '@/utils/inventory';
 import { Button } from '../shared/Button';
 import { SortButton, SortOption } from '../shared/SortButton';
+import { generateSmartCode } from '@/utils/codeGenerator';
+import { checkUsage } from '@/utils/dataIntegrity';
 
 export const Costs = ({
   user,
@@ -96,6 +94,10 @@ export const Costs = ({
   const [employees, setEmployees] = useState<any[]>([]);
   const [costItems, setCostItems] = useState<any[]>([]);
 
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [itemToDelete, setItemToDelete] = useState<string | null>(null);
+  const [usageInfo, setUsageInfo] = useState<any>({ inUse: false, details: [] });
+
   const initialFormState = {
     date: new Date().toISOString().split('T')[0],
     transaction_type: 'Chi',
@@ -134,8 +136,6 @@ export const Costs = ({
   };
 
   const fetchCostItems = async (group?: string) => {
-    // We still fetch unique values from existing records to suggest, 
-    // but the UI will treat them as non-binding suggestions.
     let query = supabase.from('costs').select('content');
     if (group) {
       query = query.eq('cost_type', group);
@@ -156,11 +156,16 @@ export const Costs = ({
       .neq('status', 'Nghỉ việc');
     if (data) setEmployees(data);
   };
- 
-  const generateNextCostCode = () => {
-    const today = new Date().toISOString().slice(2, 10).replace(/-/g, '');
-    const random = Math.floor(1000 + Math.random() * 9000); // 4 digits random
-    return `CP-${today}-${random}`;
+
+  const generateNextCostCode = async () => {
+    try {
+      const { data } = await supabase.from('costs').select('cost_code').like('cost_code', 'PC%');
+      const codes = data?.map((c) => c.cost_code) || [];
+      return generateSmartCode(codes, 'PC', 3);
+    } catch (err) {
+      console.error('Error generating cost code:', err);
+      return 'PC001';
+    }
   };
 
   const fetchCosts = async () => {
@@ -220,26 +225,6 @@ export const Costs = ({
     }
   };
 
-  const fetchCostTypes = async () => {
-    const { data } = await supabase.from('costs').select('cost_type');
-    if (data) {
-      const uniqueTypes = Array.from(new Set(data.map((item) => item.cost_type)))
-        .filter(Boolean)
-        .map((name) => ({ id: name as string, name: name as string }));
-      setCostTypes(uniqueTypes);
-    }
-  };
-
-  const fetchUnits = async () => {
-    const { data } = await supabase.from('costs').select('unit');
-    if (data) {
-      const uniqueUnits = Array.from(new Set(data.map((item) => item.unit)))
-        .filter(Boolean)
-        .map((name) => ({ id: name, name }));
-      setUnits(uniqueUnits);
-    }
-  };
-
   const ensureValueExists = async (
     table: string,
     name: string,
@@ -280,9 +265,7 @@ export const Costs = ({
         fetchWarehouses,
       );
 
-      const cost_code = isEditing
-        ? formData.cost_code
-        : generateNextCostCode();
+      const cost_code = isEditing ? formData.cost_code : generateNextCostCode();
 
       const payload = {
         cost_code,
@@ -295,7 +278,11 @@ export const Costs = ({
         unit: formData.unit,
         total_amount: formData.total_amount,
         employee_id: user.id,
-        status: isEditing ? (formData.status === 'Đã duyệt' ? 'Đã duyệt' : 'Chờ duyệt') : 'Chờ duyệt',
+        status: isEditing
+          ? formData.status === 'Đã duyệt'
+            ? 'Đã duyệt'
+            : 'Chờ duyệt'
+          : 'Chờ duyệt',
       };
       if (isEditing && editingId) {
         await supabase.from('costs').update(payload).eq('id', editingId);
@@ -337,23 +324,55 @@ export const Costs = ({
     fetchCostItems(item.cost_type);
   };
 
-  const [showDeleteModal, setShowDeleteModal] = useState(false);
-  const [itemToDelete, setItemToDelete] = useState<string | null>(null);
-
-  const handleDeleteClick = (item: any) => {
+  const handleDeleteClick = async (item: any) => {
     setItemToDelete(item.id);
     setShowDeleteModal(true);
+    try {
+      // Costs usually haven't child dependencies but we check for consistency
+      const usage = await checkUsage('material', item.material_id || item.id);
+      setUsageInfo(usage);
+    } catch (err) {
+      console.error('Error checking usage:', err);
+    }
   };
 
   const confirmDelete = async () => {
     if (!itemToDelete) return;
+    setSubmitting(true);
     try {
-      await supabase.from('costs').update({ status: 'Đã xóa' }).eq('id', itemToDelete);
+      const { error } = await supabase
+        .from('costs')
+        .update({ status: 'Đã xóa' })
+        .eq('id', itemToDelete);
+      if (error) throw error;
       fetchCosts();
       if (addToast) addToast('Đã chuyển vào thùng rác', 'success');
       setShowDeleteModal(false);
     } catch (err: any) {
       if (addToast) addToast('Lỗi: ' + err.message, 'error');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handlePermanentDelete = async () => {
+    if (!itemToDelete || user.role !== 'Develop') return;
+    if (
+      !window.confirm('CẢNH BÁO: Hành động này sẽ xóa VĨNH VIỄN phiếu chi này. Bạn có chắc chắn?')
+    )
+      return;
+
+    setSubmitting(true);
+    try {
+      const { error } = await supabase.from('costs').delete().eq('id', itemToDelete);
+      if (error) throw error;
+      if (addToast) addToast('Đã xóa vĩnh viễn phiếu chi', 'success');
+      fetchCosts();
+      setShowDeleteModal(false);
+    } catch (err: any) {
+      if (addToast) addToast('Lỗi xóa vĩnh viễn: ' + err.message, 'error');
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -601,7 +620,9 @@ export const Costs = ({
               <div className="space-y-4 text-sm">
                 <div className="flex justify-between border-b border-gray-50 pb-2">
                   <span className="text-gray-400">Ngày:</span>
-                  <span className="font-medium">{new Date(selectedCost.date).toLocaleDateString('vi-VN')}</span>
+                  <span className="font-medium">
+                    {new Date(selectedCost.date).toLocaleDateString('vi-VN')}
+                  </span>
                 </div>
                 <div className="flex justify-between border-b border-gray-50 pb-2">
                   <span className="text-gray-400">Nhóm:</span>
@@ -612,12 +633,18 @@ export const Costs = ({
                   <span className="font-bold text-primary">{selectedCost.content}</span>
                 </div>
                 <div className="space-y-1 border-b border-gray-50 pb-2">
-                  <span className="text-gray-400 text-[10px] uppercase font-bold">Nội dung thu chi:</span>
-                  <p className="text-xs text-gray-600 italic bg-gray-50 p-2 rounded-lg">{selectedCost.notes || 'Không có ghi chú'}</p>
+                  <span className="text-gray-400 text-[10px] uppercase font-bold">
+                    Nội dung thu chi:
+                  </span>
+                  <p className="text-xs text-gray-600 italic bg-gray-50 p-2 rounded-lg">
+                    {selectedCost.notes || 'Không có ghi chú'}
+                  </p>
                 </div>
                 <div className="flex justify-between border-b border-gray-50 pb-2">
                   <span className="text-gray-400">Số tiền:</span>
-                  <span className={`font-black text-lg ${selectedCost.transaction_type === 'Thu' ? 'text-green-600' : 'text-red-600'}`}>
+                  <span
+                    className={`font-black text-lg ${selectedCost.transaction_type === 'Thu' ? 'text-green-600' : 'text-red-600'}`}
+                  >
                     {formatCurrency(selectedCost.total_amount)}
                   </span>
                 </div>
@@ -652,24 +679,33 @@ export const Costs = ({
                 <Trash2 size={32} />
               </div>
               <h3 className="text-xl font-bold text-gray-800 mb-2">Xác nhận xóa?</h3>
-              <div className="text-sm text-gray-500 mb-6 text-left bg-gray-50 p-4 rounded-xl border border-gray-100">
+              <div className="text-sm text-gray-500 mb-6 text-left bg-gray-50 p-4 rounded-xl border border-gray-100 space-y-2">
                 <p>
                   Mã phiếu:{' '}
-                  <strong className="text-primary">
+                  <strong className="text-primary uppercase">
                     {costs.find((c) => c.id === itemToDelete)?.cost_code}
                   </strong>
                 </p>
-                <p className="text-xs text-amber-600 mt-2 flex items-center gap-1">
-                  Phiếu sẽ được chuyển vào <strong>Thùng rác</strong>.
-                </p>
+                {usageInfo.inUse ? (
+                  <p className="text-[10px] text-red-500 font-bold flex items-center gap-1 uppercase tracking-tighter">
+                    <AlertCircle size={12} /> Có dữ liệu liên quan - Cân nhắc kỹ
+                  </p>
+                ) : (
+                  <p className="text-[10px] text-green-600 font-bold flex items-center gap-1 uppercase tracking-widest">
+                    <CheckCircle size={12} /> Sẵn sàng để xóa
+                  </p>
+                )}
               </div>
-              <div className="flex gap-3">
-                <Button fullWidth variant="outline" onClick={() => setShowDeleteModal(false)}>
-                  Hủy bỏ
-                </Button>
-                <Button fullWidth variant="danger" onClick={confirmDelete} icon={Trash2}>
-                  Thùng rác
-                </Button>
+              <div className="flex flex-col gap-3">
+                <div className="flex gap-3">
+                  <Button fullWidth variant="outline" onClick={() => setShowDeleteModal(false)}>
+                    Hủy bỏ
+                  </Button>
+                  <Button fullWidth variant="danger" onClick={confirmDelete} isLoading={submitting}>
+                    Thùng rác
+                  </Button>
+                </div>
+                {/* XÓA VĨNH VIỄN removed from main list - use Trash module instead */}
               </div>
             </motion.div>
           </div>
@@ -701,7 +737,7 @@ export const Costs = ({
                       Mã tham chiếu
                     </p>
                     <p className="font-black text-primary uppercase italic">
-                      {(formData as any).cost_code || generateNextCostCode()}
+                      {formData.cost_code || 'Tự động tạo khi lưu'}
                     </p>
                   </div>
                   <div className="grid grid-cols-2 gap-4">
@@ -800,19 +836,29 @@ export const Costs = ({
                       onCreate={(val) => setFormData({ ...formData, unit: val })}
                     />
                   </div>
+
                   <NumericInput
-                    label="Số tiền *"
-                    required
+                    label="Thành tiền *"
                     value={formData.total_amount}
                     onChange={(val) => setFormData({ ...formData, total_amount: val })}
+                    required
                   />
-                  <div className="flex justify-end gap-3 pt-4">
-                    <Button variant="outline" onClick={() => setShowModal(false)}>
+
+                  <div className="mt-8 flex justify-end gap-3 flex-shrink-0">
+                    <button
+                      type="button"
+                      onClick={() => setShowModal(false)}
+                      className="px-6 py-2 rounded-xl text-sm font-bold text-gray-500 hover:bg-gray-100 transition-colors"
+                    >
                       Hủy
-                    </Button>
-                    <Button type="submit" variant="primary" isLoading={submitting}>
-                      Lưu bản ghi
-                    </Button>
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={submitting}
+                      className="px-8 py-2 rounded-xl text-sm font-bold bg-primary text-white hover:bg-primary-hover transition-all shadow-lg shadow-primary/20 disabled:opacity-50 active:scale-95"
+                    >
+                      {submitting ? 'Đang xử lý...' : isEditing ? 'Cập nhật' : 'Xác nhận tạo'}
+                    </button>
                   </div>
                 </form>
               </div>
@@ -823,13 +869,10 @@ export const Costs = ({
 
       <FAB
         onClick={() => {
+          setFormData(initialFormState);
           setIsEditing(false);
-          const nextCode = generateNextCostCode();
-          setFormData({ ...initialFormState, cost_code: nextCode });
           setShowModal(true);
         }}
-        label="Thêm chi phí"
-        color="bg-primary"
       />
     </div>
   );

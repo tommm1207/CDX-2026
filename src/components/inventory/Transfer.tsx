@@ -820,7 +820,7 @@ export const Transfer = ({
               </div>
               <div className="p-4 border-t border-gray-100 bg-gray-50 space-y-2">
                 {selectedSlip.status !== 'Đã xóa' &&
-                  (user.role === 'Admin' || user.role === 'Admin App') &&
+                  (user.role === 'Admin' || user.role === 'Develop') &&
                   selectedSlip.status === 'Chờ duyệt' && (
                     <div className="grid grid-cols-2 gap-2">
                       <Button

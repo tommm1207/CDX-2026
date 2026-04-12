@@ -1,4 +1,5 @@
 import { supabase } from '@/lib/supabase';
+import { generateSmartCode } from './codeGenerator';
 
 /**
  * Tổng nhập kho của 1 mặt hàng tại 1 kho trong khoảng [startDate, endDate].
@@ -416,19 +417,10 @@ export const generateNextMaterialCode = async (groupId: string): Promise<string>
       .from('materials')
       .select('code')
       .eq('group_id', groupId)
-      .like('code', `${groupPrefix}-%`)
-      .order('code', { ascending: false })
-      .limit(1);
+      .like('code', `${groupPrefix}-%`);
 
-    if (data && data.length > 0 && data[0].code) {
-      const lastCode = data[0].code; // e.g. VAT001-003
-      const match = lastCode.match(/(\d+)$/);
-      if (match) {
-        const nextNum = parseInt(match[1]) + 1;
-        return `${groupPrefix}-${nextNum.toString().padStart(3, '0')}`;
-      }
-    }
-    return `${groupPrefix}-001`;
+    const codes = data?.map((m) => m.code) || [];
+    return generateSmartCode(codes, `${groupPrefix}-`, 3);
   } catch (err) {
     console.error('Error generating material code:', err);
     return '';
@@ -441,22 +433,10 @@ export const generateNextMaterialCode = async (groupId: string): Promise<string>
  */
 export const generateNextGroupCode = async (): Promise<string> => {
   try {
-    const { data } = await supabase
-      .from('material_groups')
-      .select('code')
-      .like('code', 'VAT%')
-      .order('code', { ascending: false })
-      .limit(1);
+    const { data } = await supabase.from('material_groups').select('code').like('code', 'VAT%');
 
-    if (data && data.length > 0 && data[0].code) {
-      const lastCode = data[0].code; // e.g. VAT003
-      const match = lastCode.match(/VAT(\d+)$/);
-      if (match) {
-        const nextNumber = parseInt(match[1]) + 1;
-        return `VAT${nextNumber.toString().padStart(3, '0')}`;
-      }
-    }
-    return 'VAT001';
+    const codes = data?.map((g) => g.code) || [];
+    return generateSmartCode(codes, 'VAT', 3);
   } catch (err) {
     console.error('Error generating group code:', err);
     return 'VAT001';

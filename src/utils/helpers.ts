@@ -57,17 +57,34 @@ export const slugify = (str: string): string => {
 
 /**
  * Chuyển số tiền thành chữ tiếng Việt.
+ * Hỗ trợ số âm bằng cách thêm tiền tố "Âm".
  */
 export const numberToVietnamese = (num: number): string => {
-  if (!num || num === 0) return 'Không đồng';
-  const ones = ['', 'một', 'hai', 'ba', 'bốn', 'năm', 'sáu', 'bảy', 'tám', 'chín'];
-  const tens = ['', 'mười', 'hai mươi', 'ba mươi', 'bốn mươi', 'năm mươi', 'sáu mươi', 'bảy mươi', 'tám mươi', 'chín mươi'];
+  const n = Math.round(num);
+  if (n === 0) return 'Không đồng';
 
-  const readGroup = (n: number): string => {
-    if (n === 0) return '';
-    const h = Math.floor(n / 100);
-    const t = Math.floor((n % 100) / 10);
-    const o = n % 10;
+  const isNegative = n < 0;
+  const absN = Math.abs(n);
+
+  const ones = ['', 'một', 'hai', 'ba', 'bốn', 'năm', 'sáu', 'bảy', 'tám', 'chín'];
+  const tens = [
+    '',
+    'mười',
+    'hai mươi',
+    'ba mươi',
+    'bốn mươi',
+    'năm mươi',
+    'sáu mươi',
+    'bảy mươi',
+    'tám mươi',
+    'chín mươi',
+  ];
+
+  const readGroup = (groupNum: number): string => {
+    if (groupNum === 0) return '';
+    const h = Math.floor(groupNum / 100);
+    const t = Math.floor((groupNum % 100) / 10);
+    const o = groupNum % 10;
     let result = '';
     if (h > 0) result += ones[h] + ' trăm ';
     if (t > 0) {
@@ -81,14 +98,12 @@ export const numberToVietnamese = (num: number): string => {
     return result.trim();
   };
 
-  const n = Math.round(num);
-  if (n === 0) return 'Không đồng';
-  const billions = Math.floor(n / 1_000_000_000);
-  const millions = Math.floor((n % 1_000_000_000) / 1_000_000);
-  const thousands = Math.floor((n % 1_000_000) / 1_000);
-  const remainder = n % 1_000;
+  const billions = Math.floor(absN / 1_000_000_000);
+  const millions = Math.floor((absN % 1_000_000_000) / 1_000_000);
+  const thousands = Math.floor((absN % 1_000_000) / 1_000);
+  const remainder = absN % 1_000;
 
-  let result = '';
+  let result = isNegative ? 'Âm ' : '';
   if (billions > 0) result += readGroup(billions) + ' tỷ ';
   if (millions > 0) result += readGroup(millions) + ' triệu ';
   if (thousands > 0) result += readGroup(thousands) + ' nghìn ';
@@ -96,4 +111,3 @@ export const numberToVietnamese = (num: number): string => {
 
   return result.trim().replace(/\s+/g, ' ') + ' đồng';
 };
-

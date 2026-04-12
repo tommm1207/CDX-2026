@@ -8,17 +8,27 @@ import {
   Check,
   Square,
   CheckSquare,
+  AlertCircle,
+  CheckCircle,
+  ChevronDown,
+  ChevronUp,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { supabase } from '@/lib/supabase';
+import { Employee } from '@/types';
 import { PageBreadcrumb } from '../shared/PageBreadcrumb';
 import { ConfirmModal } from '../shared/ConfirmModal';
 import { ToastType } from '../shared/Toast';
+import { Button } from '../shared/Button';
+import { checkUsage, UsageResult } from '@/utils/dataIntegrity';
+import { purgeDependencies } from '@/utils/dataFixer';
 
 export const DeletedEmployees = ({
+  user,
   onBack,
   addToast,
 }: {
+  user: Employee;
   onBack: () => void;
   addToast: (msg: string, type?: ToastType) => void;
 }) => {
@@ -31,10 +41,19 @@ export const DeletedEmployees = ({
   const [showBulkDeleteModal, setShowBulkDeleteModal] = useState(false);
   const [showEmptyTrashModal, setShowEmptyTrashModal] = useState(false);
   const [showActionModal, setShowActionModal] = useState(false);
+  const [showUsageDetails, setShowUsageDetails] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [usageInfo, setUsageInfo] = useState<UsageResult>({
+    inUse: false,
+    tables: [],
+    details: [],
+  });
+
   const [selectedItem, setSelectedItem] = useState<{
     id: string;
     name?: string;
     role?: string;
+    code?: string;
   } | null>(null);
 
   useEffect(() => {
@@ -67,100 +86,160 @@ export const DeletedEmployees = ({
     else setSelectedIds(new Set(employees.map((e) => e.id)));
   };
 
+  const handleRowClick = async (item: any) => {
+    setSelectedItem({ id: item.id, name: item.full_name, role: item.role, code: item.code });
+    setShowActionModal(true);
+  };
+
   const handleRestoreClick = (id: string, name: string) => {
     setSelectedItem({ id, name });
+    setShowActionModal(false);
     setShowRestoreModal(true);
   };
 
-  const handleRowClick = (item: any) => {
-    setSelectedItem({ id: item.id, name: item.full_name, role: item.role });
-    setShowActionModal(true);
+  const handleDeleteClick = async (id: string, name: string, role: string, code: string) => {
+    setSelectedItem({ id, name, role, code });
+    setShowActionModal(false);
+    setShowDeleteModal(true);
+    setShowUsageDetails(false);
+    setUsageInfo({ inUse: false, tables: [], details: [] });
+    try {
+      const usage = await checkUsage('employee', id);
+      setUsageInfo(usage);
+    } catch (err) {
+      console.error(err);
+    }
   };
 
   const confirmRestore = async () => {
     if (!selectedItem) return;
+    setSubmitting(true);
+    setLoading(true);
     try {
       const { error } = await supabase
         .from('users')
         .update({ status: 'Đang làm việc' })
         .eq('id', selectedItem.id);
       if (error) throw error;
-      if (addToast) addToast(`Đã khôi phục nhân sự thành công!`, 'success');
-      fetchDeletedEmployees();
+      addToast(`Đã khôi phục nhân sự ${selectedItem.name} thành công!`, 'success');
+      await fetchDeletedEmployees();
       setShowRestoreModal(false);
       setSelectedItem(null);
     } catch (err: any) {
-      if (addToast) addToast('Lỗi: ' + err.message, 'error');
+      addToast('Lỗi: ' + err.message, 'error');
+    } finally {
+      setSubmitting(false);
+      setLoading(false);
     }
   };
 
   const confirmDelete = async () => {
     if (!selectedItem) return;
+    setSubmitting(true);
     try {
+      const isDevelop = user.role === 'Develop';
+
+      // If Develop and has dependencies, perform purge first
+      if (isDevelop && usageInfo.inUse) {
+        const purgeRes = await purgeDependencies('employee', selectedItem.id);
+        if (!purgeRes.success) throw new Error('Lỗi dọn dẹp dữ liệu: ' + purgeRes.error);
+      }
+
       const { error } = await supabase.from('users').delete().eq('id', selectedItem.id);
       if (error) {
         if (error.code === '23503' || error.message.includes('violates foreign key constraint')) {
-          throw new Error('Dữ liệu đang được sử dụng, không thể xóa vĩnh viễn.');
+          throw new Error(
+            'Dữ liệu đang được sử dụng ở nhiều phân hệ khác, không thể xóa vĩnh viễn.',
+          );
         }
         throw error;
       }
-      if (addToast) addToast(`Đã xóa vĩnh viễn thành công!`, 'success');
+      addToast(`Đã xóa vĩnh viễn nhân sự ${selectedItem.name} thành công!`, 'success');
       fetchDeletedEmployees();
       setShowDeleteModal(false);
       setSelectedItem(null);
     } catch (err: any) {
-      if (addToast) addToast(err.message, 'error');
+      addToast(err.message, 'error');
+    } finally {
+      setSubmitting(false);
     }
   };
 
   const bulkRestore = async () => {
+    setSubmitting(true);
+    setLoading(true);
     try {
       const promises = Array.from(selectedIds).map((id) =>
         supabase.from('users').update({ status: 'Đang làm việc' }).eq('id', id),
       );
       await Promise.all(promises);
-      if (addToast) addToast(`Đã khôi phục ${selectedIds.size} nhân sự thành công!`, 'success');
-      fetchDeletedEmployees();
+      addToast(`Đã khôi phục ${selectedIds.size} nhân sự thành công!`, 'success');
+      await fetchDeletedEmployees();
       setShowBulkRestoreModal(false);
     } catch (err: any) {
-      if (addToast) addToast('Lỗi: ' + err.message, 'error');
+      addToast('Lỗi: ' + err.message, 'error');
+    } finally {
+      setSubmitting(false);
+      setLoading(false);
     }
   };
 
   const bulkDelete = async () => {
+    setSubmitting(true);
     try {
-      const deletableIds = Array.from(selectedIds).filter((id) => {
-        const emp = employees.find((e) => e.id === id);
-        return emp && emp.role !== 'Admin App';
-      });
+      const isDevelop = user.role === 'Develop';
+      let successCount = 0;
+      let failCount = 0;
 
-      if (deletableIds.length === 0) {
-        if (addToast) addToast('Không có nhân sự nào có thể xóa (Bỏ qua Admin App).', 'error');
-        return;
+      for (const id of selectedIds) {
+        try {
+          const usage = await checkUsage('employee', id);
+          if (isDevelop && usage.inUse) {
+            await purgeDependencies('employee', id);
+          }
+
+          const { error } = await supabase.from('users').delete().eq('id', id);
+          if (error) throw error;
+          successCount++;
+        } catch (e) {
+          failCount++;
+        }
       }
 
-      const promises = deletableIds.map((id) => supabase.from('users').delete().eq('id', id));
-      const results = await Promise.all(promises);
-      const fails = results.filter((r) => r.error).length;
-      if (addToast)
-        addToast(`Đã xóa ${deletableIds.length - fails} nhân sự. Thất bại ${fails}.`, 'info');
+      addToast(`Đã xóa ${successCount} nhân sự. Thất bại ${failCount}.`, 'info');
       fetchDeletedEmployees();
       setShowBulkDeleteModal(false);
     } catch (err: any) {
       console.warn(err);
+    } finally {
+      setSubmitting(false);
     }
   };
 
   const emptyTrash = async () => {
+    setSubmitting(true);
     try {
-      const deletableIds = employees.filter((e) => e.role !== 'Admin App').map((e) => e.id);
-      const promises = deletableIds.map((id) => supabase.from('users').delete().eq('id', id));
-      await Promise.all(promises);
-      if (addToast) addToast('Đã dọn sạch thùng rác (Bỏ qua Admin App)', 'success');
+      const isDevelop = user.role === 'Develop';
+      let count = 0;
+      for (const emp of employees) {
+        try {
+          const usage = await checkUsage('employee', emp.id);
+          if (usage.inUse && !isDevelop) continue;
+          if (usage.inUse && isDevelop) await purgeDependencies('employee', emp.id);
+
+          await supabase.from('users').delete().eq('id', emp.id);
+          count++;
+        } catch (e) {
+          console.warn(e);
+        }
+      }
+      addToast(`Đã dọn sạch ${count} nhân sự khỏi thùng rác`, 'success');
       fetchDeletedEmployees();
       setShowEmptyTrashModal(false);
     } catch (err: any) {
       console.warn(err);
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -197,16 +276,19 @@ export const DeletedEmployees = ({
         )}
       </div>
 
-      <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden overflow-x-auto">
+      <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden overflow-x-auto min-h-[400px]">
         <table className="w-full text-left border-collapse whitespace-nowrap">
           <thead>
             <tr className="bg-gray-50 border-b border-gray-100">
               <th className="px-4 py-3 w-10">
-                <button onClick={toggleSelectAll}>
+                <button
+                  onClick={toggleSelectAll}
+                  className="p-1 text-gray-400 hover:text-primary transition-colors"
+                >
                   {selectedIds.size === employees.length && employees.length > 0 ? (
                     <CheckSquare size={20} className="text-primary" />
                   ) : (
-                    <Square size={20} className="text-gray-400" />
+                    <Square size={20} />
                   )}
                 </button>
               </th>
@@ -224,8 +306,11 @@ export const DeletedEmployees = ({
           <tbody className="divide-y divide-gray-100">
             {loading ? (
               <tr>
-                <td colSpan={4} className="px-4 py-12 text-center text-gray-400 italic">
-                  Đang tải...
+                <td colSpan={4} className="px-4 py-12 text-center text-gray-400 italic font-medium">
+                  <div className="flex items-center justify-center gap-2">
+                    <RefreshCw size={16} className="animate-spin text-primary" />
+                    Đang tải danh sách...
+                  </div>
                 </td>
               </tr>
             ) : employees.length === 0 ? (
@@ -250,11 +335,13 @@ export const DeletedEmployees = ({
                         toggleSelect(item.id);
                       }}
                     >
-                      {isSelected ? (
-                        <CheckSquare size={20} className="text-primary" />
-                      ) : (
-                        <Square size={20} className="text-gray-400" />
-                      )}
+                      <div className="text-gray-400 hover:text-primary transition-colors">
+                        {isSelected ? (
+                          <CheckSquare size={20} className="text-primary" />
+                        ) : (
+                          <Square size={20} />
+                        )}
+                      </div>
                     </td>
                     <td className="px-4 py-3 text-xs text-gray-600 font-mono font-bold text-primary">
                       {item.code || item.id.slice(0, 8)}
@@ -267,21 +354,16 @@ export const DeletedEmployees = ({
                             e.stopPropagation();
                             handleRestoreClick(item.id, item.full_name);
                           }}
-                          className="p-2 bg-green-50 text-green-600 rounded-lg shadow-sm"
+                          className="p-2 bg-green-50 text-green-600 rounded-lg shadow-sm hover:bg-green-100 transition-colors"
                         >
                           <RefreshCw size={14} />
                         </button>
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
-                            if (item.role === 'Admin App') {
-                              if (addToast) addToast('Bản quyền Admin App', 'error');
-                              return;
-                            }
-                            setSelectedItem({ id: item.id, name: item.full_name });
-                            setShowDeleteModal(true);
+                            handleDeleteClick(item.id, item.full_name, item.role, item.code);
                           }}
-                          className="p-2 bg-red-50 text-red-600 rounded-lg shadow-sm"
+                          className="p-2 bg-red-50 text-red-600 rounded-lg shadow-sm hover:bg-red-100 transition-colors"
                         >
                           <Trash2 size={14} />
                         </button>
@@ -305,88 +387,177 @@ export const DeletedEmployees = ({
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
-              className="bg-white rounded-3xl shadow-xl w-full max-w-sm overflow-hidden p-6 text-center"
+              className="bg-white rounded-3xl shadow-2xl w-full max-w-sm overflow-hidden p-8 text-center"
               onClick={(e) => e.stopPropagation()}
             >
-              <h3 className="text-xl font-bold text-gray-900 mb-2">Tùy chọn thao tác</h3>
-              <p className="text-sm text-gray-500 mb-6 font-medium">
-                Đối tượng: <span className="font-bold text-gray-800">{selectedItem.name}</span>
+              <h3 className="text-xl font-bold text-gray-900 mb-2 uppercase tracking-wide">
+                Tùy chọn thao tác
+              </h3>
+              <p className="text-sm text-gray-500 mb-8 font-medium">
+                Đối tượng: <span className="font-black text-primary">{selectedItem.name}</span>
               </p>
-              <div className="flex flex-col gap-3">
-                <button
-                  onClick={() => {
-                    setShowActionModal(false);
-                    setShowRestoreModal(true);
-                  }}
-                  className="w-full py-4 rounded-xl font-bold text-green-700 bg-green-50 hover:bg-green-100 flex items-center justify-center gap-3 shadow-sm shadow-green-100"
+              <div className="flex flex-col gap-4">
+                <Button
+                  fullWidth
+                  variant="success"
+                  onClick={() => handleRestoreClick(selectedItem.id, selectedItem.name!)}
+                  icon={RefreshCw}
                 >
-                  <RefreshCw size={20} /> Khôi phục dữ liệu
-                </button>
-                <button
-                  onClick={() => {
-                    setShowActionModal(false);
-                    if (selectedItem.role === 'Admin App') {
-                      if (addToast) addToast('Không được xóa Admin App', 'error');
-                      return;
-                    }
-                    setShowDeleteModal(true);
-                  }}
-                  className="w-full py-4 rounded-xl font-bold text-red-700 bg-red-50 hover:bg-red-100 flex items-center justify-center gap-3 shadow-sm shadow-red-100"
+                  KHÔI PHỤC DỮ LIỆU
+                </Button>
+                <Button
+                  fullWidth
+                  variant="danger"
+                  onClick={() =>
+                    handleDeleteClick(
+                      selectedItem.id,
+                      selectedItem.name!,
+                      selectedItem.role!,
+                      selectedItem.code!,
+                    )
+                  }
+                  icon={Trash2}
                 >
-                  <Trash2 size={20} /> Xóa vĩnh viễn
-                </button>
-                <button
+                  XÓA VĨNH VIỄN
+                </Button>
+                <Button
+                  fullWidth
+                  variant="outline"
                   onClick={() => setShowActionModal(false)}
-                  className="w-full py-4 rounded-xl font-bold text-gray-600 bg-gray-100 transition-colors mt-2"
+                  className="mt-2"
                 >
-                  Hủy bỏ
-                </button>
+                  HUỶ BỎ
+                </Button>
               </div>
             </motion.div>
           </div>
         )}
-
-        <ConfirmModal
-          show={showRestoreModal}
-          title="Khôi phục nhân sự?"
-          message={`Khôi phục nhân sự ${selectedItem?.name} về danh sách làm việc?`}
-          onConfirm={confirmRestore}
-          onCancel={() => setShowRestoreModal(false)}
-          type="success"
-        />
-        <ConfirmModal
-          show={showDeleteModal}
-          title="Xóa vĩnh viễn?"
-          message={`Hành động này KHÔNG thể hoàn tác. Nhân sự ${selectedItem?.name} sẽ bị xóa.`}
-          onConfirm={confirmDelete}
-          onCancel={() => setShowDeleteModal(false)}
-          type="danger"
-        />
-        <ConfirmModal
-          show={showBulkRestoreModal}
-          title="Khôi phục đã chọn?"
-          message={`Bạn muốn khôi phục ${selectedIds.size} nhân sự?`}
-          onConfirm={bulkRestore}
-          onCancel={() => setShowBulkRestoreModal(false)}
-          type="success"
-        />
-        <ConfirmModal
-          show={showBulkDeleteModal}
-          title="Xóa vĩnh viễn đã chọn?"
-          message={`Hành động này sẽ xóa ${selectedIds.size} nhân sự vĩnh viễn.`}
-          onConfirm={bulkDelete}
-          onCancel={() => setShowBulkDeleteModal(false)}
-          type="danger"
-        />
-        <ConfirmModal
-          show={showEmptyTrashModal}
-          title="Dọn sạch thùng rác?"
-          message="Xác nhận xóa VĨNH VIỄN toàn bộ nhân sự trong thùng rác (Bỏ qua Admin App)?"
-          onConfirm={emptyTrash}
-          onCancel={() => setShowEmptyTrashModal(false)}
-          type="danger"
-        />
       </AnimatePresence>
+
+      <AnimatePresence>
+        {showDeleteModal && selectedItem && (
+          <div
+            className="fixed inset-0 z-[130] flex items-center justify-center p-4 bg-black/50 backdrop-blur-md overflow-hidden"
+            onClick={() => setShowDeleteModal(false)}
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              className="bg-white rounded-[2rem] md:rounded-[2.5rem] shadow-2xl p-8 max-w-sm w-full text-center relative z-10"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="w-16 h-16 bg-red-50 text-red-600 rounded-2xl flex items-center justify-center mx-auto mb-4 border border-red-100">
+                <Trash2 size={32} />
+              </div>
+              <h3 className="text-xl font-bold text-gray-800 mb-2">Xác nhận xóa?</h3>
+              <div className="text-sm text-gray-500 mb-6 text-left bg-gray-50 p-4 rounded-xl border border-gray-100 space-y-2">
+                <p>
+                  Nhân sự: <strong className="text-primary">{selectedItem.name}</strong>
+                </p>
+                <p>
+                  Mã nhân sự: <strong className="text-primary">{selectedItem.code}</strong>
+                </p>
+
+                {usageInfo.inUse ? (
+                  <div className="mt-2 pt-2 border-t border-gray-200">
+                    <button
+                      onClick={() => setShowUsageDetails(!showUsageDetails)}
+                      className="flex items-center justify-between w-full text-[10px] text-red-500 font-black uppercase tracking-tighter hover:text-red-600"
+                    >
+                      <div className="flex items-center gap-1">
+                        <AlertCircle size={12} /> Có dữ liệu liên quan
+                      </div>
+                      {showUsageDetails ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
+                    </button>
+                    {showUsageDetails && (
+                      <div className="mt-2 space-y-1 max-h-32 overflow-y-auto pr-1">
+                        {usageInfo.details.map((d, idx) => (
+                          <div
+                            key={idx}
+                            className="flex justify-between text-[10px] text-gray-500 bg-white p-1.5 rounded-lg border border-gray-100"
+                          >
+                            <span>{d.label}</span>
+                            <span className="font-bold text-red-500">{d.count}</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <p className="text-[10px] text-green-600 font-bold flex items-center gap-1 uppercase tracking-widest ">
+                    <CheckCircle size={12} /> Sẵn sàng để xóa
+                  </p>
+                )}
+              </div>
+
+              <div className="flex flex-col gap-3">
+                {usageInfo.inUse && user.role === 'Develop' && (
+                  <div className="p-3 bg-red-50 rounded-2xl border border-red-100 mb-2">
+                    <p className="text-[10px] text-red-600 font-bold leading-relaxed italic">
+                      Lưu ý: Bạn đang thực hiện "Xóa cưỡng bức". Dữ liệu liên quan sẽ bị xóa hoặc
+                      dọn dẹp sạch sẽ.
+                    </p>
+                  </div>
+                )}
+
+                <div className="flex gap-3">
+                  <Button fullWidth variant="outline" onClick={() => setShowDeleteModal(false)}>
+                    Hủy bỏ
+                  </Button>
+                  <Button
+                    fullWidth
+                    variant="danger"
+                    onClick={confirmDelete}
+                    disabled={usageInfo.inUse && user.role !== 'Develop'}
+                    isLoading={submitting}
+                  >
+                    {usageInfo.inUse && user.role === 'Develop' ? 'XÓA CƯỞNG BỨC' : 'Xác nhận xóa'}
+                  </Button>
+                </div>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      <ConfirmModal
+        show={showRestoreModal}
+        title="Khôi phục nhân sự?"
+        message={`Khôi phục nhân sự ${selectedItem?.name} về danh sách làm việc?`}
+        onConfirm={confirmRestore}
+        onCancel={() => setShowRestoreModal(false)}
+        type="success"
+        isLoading={submitting}
+      />
+
+      <ConfirmModal
+        show={showBulkRestoreModal}
+        title="Khôi phục đã chọn?"
+        message={`Bạn muốn khôi phục ${selectedIds.size} nhân sự về danh sách làm việc?`}
+        onConfirm={bulkRestore}
+        onCancel={() => setShowBulkRestoreModal(false)}
+        type="success"
+        isLoading={submitting}
+      />
+      <ConfirmModal
+        show={showBulkDeleteModal}
+        title="Xóa vĩnh viễn đã chọn?"
+        message={`Hành động này sẽ xóa ${selectedIds.size} nhân sự vĩnh viễn khỏi hệ thống. Với Develop, toàn bộ dữ liệu liên quan cũng sẽ bị dọn dẹp.`}
+        onConfirm={bulkDelete}
+        onCancel={() => setShowBulkDeleteModal(false)}
+        type="danger"
+        isLoading={submitting}
+      />
+      <ConfirmModal
+        show={showEmptyTrashModal}
+        title="Dọn sạch thùng rác?"
+        message="Xác nhận xóa VĨNH VIỄN toàn bộ nhân sự trong thùng rác? Với quyền Develop, các dữ liệu ràng buộc sẽ bị xóa/dọn sạch."
+        onConfirm={emptyTrash}
+        onCancel={() => setShowEmptyTrashModal(false)}
+        type="danger"
+        isLoading={submitting}
+      />
     </div>
   );
 };

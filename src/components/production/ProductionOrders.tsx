@@ -1,5 +1,14 @@
 import { useState, useEffect } from 'react';
-import { ClipboardList, Plus, Search, Eye, CheckCircle2, XCircle, Clock } from 'lucide-react';
+import {
+  ClipboardList,
+  Plus,
+  Search,
+  Eye,
+  CheckCircle2,
+  XCircle,
+  Clock,
+  CheckCircle,
+} from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { supabase } from '@/lib/supabase';
 import { Employee, ProductionOrder, BOMConfig } from '@/types';

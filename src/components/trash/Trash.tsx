@@ -3,9 +3,11 @@ import { Package, Warehouse, Archive, UserCircle, Wallet, Layers } from 'lucide-
 import { PageBreadcrumb } from '../shared/PageBreadcrumb';
 
 export const Trash = ({
+  user,
   onNavigate,
   onBack,
 }: {
+  user: any;
   onNavigate: (page: string) => void;
   onBack: () => void;
 }) => {

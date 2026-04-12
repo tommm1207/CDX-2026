@@ -80,8 +80,8 @@ export const CostFilter = ({
 
     // Fetch employees
     let empQuery = supabase.from('users').select('id, full_name');
-    if (user.role !== 'Admin App') {
-      empQuery = empQuery.neq('role', 'Admin App');
+    if (user.role !== 'Develop') {
+      empQuery = empQuery.neq('role', 'Develop');
     }
     const { data: empData } = await empQuery;
     if (empData) setEmployees(empData.map((e) => ({ id: e.id, name: e.full_name })));

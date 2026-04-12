@@ -230,15 +230,18 @@ export const MonthlySalary = ({
 
     try {
       setIsCapturing(true);
-      // Wait for Safari to stabilize (reduced for better UX)
+      // Wait for Safari to stabilize
       await new Promise((resolve) => setTimeout(resolve, 900));
 
-      // Step 1: Capture the bill without logo
+      const fileName = `Phieu_Luong_${selectedSalary.full_name}_T${selectedMonth}_${selectedYear}.png`;
+      const scale = 4; // High resolution for premium quality
+
+      // Step 1: Capture the bill base
       const rawDataUrl = await toPng(billRef.current, {
         cacheBust: true,
         backgroundColor: '#FCFCFC',
         quality: 1,
-        pixelRatio: 3,
+        pixelRatio: scale,
         skipFonts: false,
         style: {
           transform: 'scale(1)',
@@ -258,21 +261,23 @@ export const MonthlySalary = ({
           // Draw the captured bill
           ctx.drawImage(billImg, 0, 0);
 
-          // Draw logo manually on top with rounded corners (matches px-5=20px, pt-5=20px)
+          // Draw logo manually with high quality
           const logoImg = new Image();
           logoImg.onload = () => {
-            const scale = 3; // matches pixelRatio
             const logoX = Math.round(20 * scale);
             const logoY = Math.round(20 * scale);
             const logoSize = Math.round(36 * scale);
-            const radius = Math.round(8 * scale); // rounded-lg equivalent
+            const radius = Math.round(8 * scale);
 
             ctx.save();
+            // Enable high quality smoothing
+            ctx.imageSmoothingEnabled = true;
+            ctx.imageSmoothingQuality = 'high';
+
             ctx.beginPath();
             if (ctx.roundRect) {
               ctx.roundRect(logoX, logoY, logoSize, logoSize, radius);
             } else {
-              // Fallback for older browsers
               ctx.moveTo(logoX + radius, logoY);
               ctx.arcTo(logoX + logoSize, logoY, logoX + logoSize, logoY + logoSize, radius);
               ctx.arcTo(logoX + logoSize, logoY + logoSize, logoX, logoY + logoSize, radius);
@@ -284,20 +289,42 @@ export const MonthlySalary = ({
 
             ctx.drawImage(logoImg, logoX, logoY, logoSize, logoSize);
             ctx.restore();
-            resolve(canvas.toDataURL('image/png'));
+            resolve(canvas.toDataURL('image/png', 1.0));
           };
-          logoImg.onerror = () => {
-            // If logo fails, still save the image without logo
-            resolve(rawDataUrl);
-          };
+          logoImg.onerror = () => resolve(rawDataUrl);
           logoImg.src = logoBase64;
         };
         billImg.src = rawDataUrl;
       });
 
       setIsCapturing(false);
+
+      // Step 3: Share (Mobile) or Download (Desktop)
+      if (navigator.share && navigator.canShare) {
+        try {
+          // Convert dataUrl to File for sharing
+          const res = await fetch(finalDataUrl);
+          const blob = await res.blob();
+          const file = new File([blob], fileName, { type: 'image/png' });
+
+          if (navigator.canShare({ files: [file] })) {
+            await navigator.share({
+              files: [file],
+              title: 'Phiếu Lương',
+              text: `Phiếu lương tháng ${selectedMonth}/${selectedYear} của ${selectedSalary.full_name}`,
+            });
+            if (addToast) addToast('Đã mở bảng chia sẻ!', 'success');
+            return;
+          }
+        } catch (shareErr) {
+          console.error('Share failed:', shareErr);
+          // Fallback to traditional download if share is cancelled or fails
+        }
+      }
+
+      // Traditional Download Fallback
       const link = document.createElement('a');
-      link.download = `Phieu_Luong_${selectedSalary.full_name}_T${selectedMonth}_${selectedYear}.png`;
+      link.download = fileName;
       link.href = finalDataUrl;
       link.click();
       if (addToast) addToast('Đã lưu ảnh phiếu lương thành công!', 'success');

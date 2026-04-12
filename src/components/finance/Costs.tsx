@@ -370,6 +370,7 @@ export const Costs = ({
       <div className="flex items-center justify-between gap-2">
         <PageBreadcrumb title="Quản lý Chi phí" onBack={onBack} />
         <div className="flex items-center gap-2">
+          <ExcelButton onClick={exportToExcel} />
           <SortButton
             currentSort={sortBy}
             onSortChange={(val) => setSortBy(val)}
@@ -385,7 +386,6 @@ export const Costs = ({
             onClick={() => setShowFilter(!showFilter)}
             icon={Search}
           />
-          <ExcelButton onClick={exportToExcel} />
         </div>
       </div>
 

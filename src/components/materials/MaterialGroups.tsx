@@ -360,7 +360,7 @@ export const MaterialGroups = ({
     <div className="p-4 md:p-6 space-y-6 pb-24">
       <div className="flex items-center justify-between gap-2">
         <PageBreadcrumb title="Nhóm vật tư" onBack={onBack} />
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 justify-end flex-1">
           <SortButton
             currentSort={sortBy}
             onSortChange={(val) => {
@@ -368,7 +368,7 @@ export const MaterialGroups = ({
               localStorage.setItem(`sort_pref_mat_groups_${user.id}`, val);
             }}
             options={[
-              { value: 'code', label: 'Mã hiệu' },
+              { value: 'name', label: 'Tên nhóm' },
               { value: 'newest', label: 'Mới nhất' },
             ]}
           />

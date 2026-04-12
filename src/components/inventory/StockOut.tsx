@@ -477,7 +477,7 @@ export const StockOut = ({
     <div className="p-4 md:p-6 space-y-6 pb-24 overflow-x-hidden">
       <div className="flex items-center justify-between gap-2">
         <PageBreadcrumb title="Xuất kho" onBack={onBack} />
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 justify-end flex-1">
           <SortButton
             currentSort={sortBy}
             onSortChange={(val) => {

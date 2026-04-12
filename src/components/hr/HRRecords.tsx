@@ -239,7 +239,7 @@ export const HRRecords = ({
           <Users size={20} className="text-primary flex-shrink-0" />{' '}
           <span className="truncate">Hồ sơ Nhân sự</span>
         </h2>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 justify-end flex-1">
           <SortButton
             currentSort={sortBy}
             onSortChange={(val) => {

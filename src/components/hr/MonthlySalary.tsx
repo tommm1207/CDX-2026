@@ -204,7 +204,9 @@ export const MonthlySalary = ({
             onMonthChange={setSelectedMonth}
             onYearChange={setSelectedYear}
           />
-          <ExcelButton onClick={handleExportExcel} loading={salaries.length === 0} />
+          <div className="flex items-center gap-2 justify-end flex-1">
+            <ExcelButton onClick={handleExportExcel} loading={salaries.length === 0} />
+          </div>
         </div>
       </div>
 

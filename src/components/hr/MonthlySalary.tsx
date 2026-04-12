@@ -614,10 +614,13 @@ export const MonthlySalary = ({
                       </div>
                     </div>
                     {/* Title block */}
-                    <h1 className="text-xl font-black text-primary uppercase tracking-tight leading-none">
+                    <h1 
+                      className="text-xl font-black uppercase tracking-tight leading-none"
+                      style={{ color: '#2D5A27' }} // Hardcoded primary color for image capture stability
+                    >
                       BẢNG TÍNH LƯƠNG
                     </h1>
-                    <p className="text-[11px] font-bold text-gray-500 mt-0.5">
+                    <p className="text-[11px] font-bold text-gray-500 mt-0.5 whitespace-nowrap">
                       {isCustomRange
                         ? `Kỳ lương: ${customRange.start} — ${customRange.end}`
                         : (() => {
@@ -639,9 +642,9 @@ export const MonthlySalary = ({
                           })()}
                     </p>
                     {/* Employee name row */}
-                    <div className="flex justify-between items-center mt-3">
-                      <span className="text-xs text-gray-500 font-medium">Tên nhân viên:</span>
-                      <span className="text-sm font-black text-gray-900">
+                    <div className="flex justify-between items-center mt-3 gap-2">
+                      <span className="text-xs text-gray-500 font-medium whitespace-nowrap">Tên nhân viên:</span>
+                      <span className="text-base font-black text-gray-900 whitespace-nowrap">
                         {selectedSalary.full_name}
                       </span>
                     </div>
@@ -686,32 +689,32 @@ export const MonthlySalary = ({
                         </h3>
                       </div>
                       <div className="space-y-2">
-                        <div className="flex justify-between text-xs items-center">
-                          <span className="font-bold text-gray-500">Lương cơ bản</span>
-                          <span className="font-bold text-gray-800">
+                        <div className="flex justify-between text-xs items-center gap-2">
+                          <span className="font-bold text-gray-500 whitespace-nowrap">Lương cơ bản</span>
+                          <span className="font-bold text-gray-800 whitespace-nowrap">
                             {formatCurrency(selectedSalary.earnedSalary)}
                           </span>
                         </div>
-                        <div className="flex justify-between text-xs items-center">
-                          <span className="font-bold text-gray-500">Tiền tăng ca</span>
-                          <span className="font-bold text-amber-600">
+                        <div className="flex justify-between text-xs items-center gap-2">
+                          <span className="font-bold text-gray-500 whitespace-nowrap">Tiền tăng ca</span>
+                          <span className="font-bold text-amber-600 whitespace-nowrap">
                             {formatCurrency(
                               selectedSalary.dayOTSalary + selectedSalary.monthOTSalary,
                             )}
                           </span>
                         </div>
-                        <div className="flex justify-between text-xs items-center">
-                          <span className="font-bold text-gray-500">Phụ cấp</span>
-                          <span className="font-bold text-green-600">
+                        <div className="flex justify-between text-xs items-center gap-2">
+                          <span className="font-bold text-gray-500 whitespace-nowrap">Phụ cấp</span>
+                          <span className="font-bold text-green-600 whitespace-nowrap">
                             +{formatCurrency(selectedSalary.totalAll)}
                           </span>
                         </div>
                         <div className="pt-2 border-t border-gray-100">
-                          <div className="flex justify-between items-center">
-                            <span className="text-xs font-black text-gray-800 uppercase tracking-wide">
+                          <div className="flex justify-between items-center gap-2">
+                            <span className="text-xs font-black text-gray-800 uppercase tracking-wide whitespace-nowrap">
                               TỔNG THU NHẬP
                             </span>
-                            <span className="text-base font-black text-gray-900 tracking-tight">
+                            <span className="text-base font-black text-gray-900 tracking-tight whitespace-nowrap">
                               {formatCurrency(
                                 selectedSalary.earnedSalary +
                                   selectedSalary.dayOTSalary +
@@ -733,26 +736,25 @@ export const MonthlySalary = ({
                         </h3>
                       </div>
                       <div className="space-y-2">
-                        <div className="flex justify-between text-xs items-center">
-                          <span className="font-bold text-gray-500">Tạm ứng</span>
-                          <span className="font-bold text-red-500">
+                        <div className="flex justify-between text-xs items-center gap-2">
+                          <span className="font-bold text-gray-500 whitespace-nowrap">Tạm ứng</span>
+                          <span className="font-bold text-red-500 whitespace-nowrap">
                             -{formatCurrency(selectedSalary.totalAdv)}
                           </span>
                         </div>
-                        <div className="flex justify-between text-xs items-center">
-                          <span className="font-bold text-gray-500">Bảo hiểm</span>
-                          <span className="font-bold text-red-500">
+                        <div className="flex justify-between text-xs items-center gap-2">
+                          <span className="font-bold text-gray-500 whitespace-nowrap">Bảo hiểm</span>
+                          <span className="font-bold text-red-500 whitespace-nowrap">
                             -{formatCurrency(selectedSalary.insuranceDeduction)}
                           </span>
                         </div>
                         <div className="pt-2 border-t border-gray-100">
-                          <div className="flex justify-between items-center">
-                            <span className="text-xs font-black text-gray-800 uppercase tracking-wide">
+                          <div className="flex justify-between items-center gap-2">
+                            <span className="text-xs font-black text-gray-800 uppercase tracking-wide whitespace-nowrap">
                               TỔNG GIẢM TRỪ
                             </span>
-                            <span className="text-base font-black tracking-tight text-red-600">
-                              -
-                              {formatCurrency(
+                            <span className="text-base font-black tracking-tight text-red-600 whitespace-nowrap">
+                              -{formatCurrency(
                                 selectedSalary.totalAdv + selectedSalary.insuranceDeduction,
                               )}
                             </span>
@@ -767,7 +769,7 @@ export const MonthlySalary = ({
 
                       <div className="relative z-10">
                         <div className="flex justify-between items-center mb-1">
-                          <span className="text-[9px] font-black uppercase tracking-[0.25em] opacity-80 italic">
+                          <span className="text-[9px] font-black uppercase tracking-[0.25em] opacity-80 italic whitespace-nowrap">
                             THỰC LĨNH :
                           </span>
                           <div className="w-6 h-6 rounded-full bg-white/20 flex items-center justify-center backdrop-blur-md border border-white/20">
@@ -778,7 +780,7 @@ export const MonthlySalary = ({
                         {/* Auto-scaling font size for currency */}
                         <div className="mt-1">
                           <span
-                            className={`font-black tracking-tighter block leading-none ${selectedSalary.netSalary.toString().length > 9 ? 'text-2xl' : 'text-3xl'}`}
+                            className={`font-black tracking-tighter block leading-none whitespace-nowrap ${selectedSalary.netSalary.toString().length > 9 ? 'text-2xl' : 'text-3xl'}`}
                           >
                             {formatCurrency(selectedSalary.netSalary)}
                           </span>

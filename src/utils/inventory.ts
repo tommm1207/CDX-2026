@@ -403,67 +403,60 @@ export const getTonKhoTable = async (
  */
 export const generateNextMaterialCode = async (groupId: string): Promise<string> => {
   try {
-    const today = new Date().toISOString().slice(2, 10).replace(/-/g, '');
-    let prefix = 'VAT';
-    
-    if (groupId && isUUID(groupId)) {
-      const { data: groupData } = await supabase
-        .from('material_groups')
-        .select('code')
-        .eq('id', groupId)
-        .single();
-      if (groupData?.code) prefix = groupData.code;
-    }
-    
-    const fullPrefix = `${prefix}-${today}-`;
+    if (!groupId) return '';
+    const { data: groupData } = await supabase
+      .from('material_groups')
+      .select('code')
+      .eq('id', groupId)
+      .single();
+    if (!groupData || !groupData.code) return '';
+    const groupPrefix = groupData.code;
+
     const { data } = await supabase
       .from('materials')
       .select('code')
-      .like('code', `${fullPrefix}%`)
+      .eq('group_id', groupId)
       .order('code', { ascending: false })
       .limit(1);
 
     if (data && data.length > 0 && data[0].code) {
       const lastCode = data[0].code;
-      const lastNumber = parseInt(lastCode.split('-').pop() || '0');
-      if (!isNaN(lastNumber)) {
-        return `${fullPrefix}${(lastNumber + 1).toString().padStart(3, '0')}`;
-      }
+      const parts = lastCode.split('-');
+      const lastNum = parseInt(parts[parts.length - 1]);
+      if (!isNaN(lastNum)) return `${groupPrefix}-${(lastNum + 1).toString().padStart(3, '0')}`;
     }
-    return `${fullPrefix}001`;
+    return `${groupPrefix}-001`;
   } catch (err) {
     console.error('Error generating material code:', err);
-    return `VAT-${new Date().toISOString().slice(2, 10).replace(/-/g, '')}-001`;
+    return '';
   }
 };
 
 /**
  * Tự động sinh mã nhóm vật tư tiếp theo.
- * Định dạng: NVT-ngày-xxx (VD: NVT-260412-001)
+ * Định dạng: NH[Số thứ tự 3 chữ số] (VD: NH001)
  */
 export const generateNextGroupCode = async (): Promise<string> => {
   try {
-    const today = new Date().toISOString().slice(2, 10).replace(/-/g, '');
-    const prefix = `NVT-${today}-`;
-    
     const { data } = await supabase
       .from('material_groups')
       .select('code')
-      .like('code', `${prefix}%`)
+      .like('code', 'NH%')
       .order('code', { ascending: false })
       .limit(1);
 
     if (data && data.length > 0 && data[0].code) {
       const lastCode = data[0].code;
-      const lastNumber = parseInt(lastCode.split('-').pop() || '0');
-      if (!isNaN(lastNumber)) {
-        return `${prefix}${(lastNumber + 1).toString().padStart(3, '0')}`;
+      const match = lastCode.match(/NH(\d+)/);
+      if (match && match[1]) {
+        const nextNumber = parseInt(match[1]) + 1;
+        return `NH${nextNumber.toString().padStart(3, '0')}`;
       }
     }
-    return `${prefix}001`;
+    return 'NH001';
   } catch (err) {
     console.error('Error generating group code:', err);
-    return `NVT-001`;
+    return 'NH001';
   }
 };
 

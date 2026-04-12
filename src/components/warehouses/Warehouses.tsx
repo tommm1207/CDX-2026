@@ -96,27 +96,25 @@ export const Warehouses = ({
 
   const generateNextWarehouseCode = async () => {
     try {
-      const today = new Date().toISOString().slice(2, 10).replace(/-/g, '');
-      const prefix = `KH-${today}-`;
-
       const { data } = await supabase
         .from('warehouses')
         .select('code')
-        .like('code', `${prefix}%`)
+        .like('code', 'KH%')
         .order('code', { ascending: false })
         .limit(1);
 
       if (data && data.length > 0 && data[0].code) {
         const lastCode = data[0].code;
-        const lastNumber = parseInt(lastCode.split('-').pop() || '0');
+        const lastNumber = parseInt(lastCode.replace('KH', ''));
         if (!isNaN(lastNumber)) {
-          return `${prefix}${(lastNumber + 1).toString().padStart(3, '0')}`;
+          const nextNumber = lastNumber + 1;
+          return `KH${nextNumber.toString().padStart(3, '0')}`;
         }
       }
-      return `${prefix}001`;
+      return 'KH001';
     } catch (err) {
       console.error('Error generating warehouse code:', err);
-      return `KH-${new Date().toISOString().slice(2, 10).replace(/-/g, '')}-001`;
+      return 'KH001';
     }
   };
 

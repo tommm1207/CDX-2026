@@ -12,7 +12,7 @@ import { formatCurrency, formatDate } from '@/utils/format';
 import { MonthYearPicker } from '../shared/MonthYearPicker';
 import { Button } from '../shared/Button';
 import { ExcelButton } from '../shared/ExcelButton';
-import { slugify } from '@/utils/helpers';
+import { slugify, numberToVietnamese } from '@/utils/helpers';
 
 export const MonthlySalary = ({
   user,
@@ -500,262 +500,214 @@ export const MonthlySalary = ({
               initial={{ opacity: 0, scale: 0.95, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 20 }}
-              className="bg-white rounded-[2rem] md:rounded-[2.5rem] shadow-2xl w-full max-w-xl overflow-hidden relative"
+              className="bg-white rounded-[2rem] md:rounded-[2.5rem] shadow-2xl w-full max-w-lg overflow-hidden relative"
               onClick={(e) => e.stopPropagation()}
             >
-              <div className="bg-primary p-6 text-white flex items-center justify-between no-print transition-colors">
+              {/* Header */}
+              <div className="bg-primary p-5 text-white flex items-center justify-between no-print">
                 <div className="flex items-center gap-3">
                   <div
                     className="p-2 bg-white/20 rounded-xl cursor-pointer hover:bg-white/30 transition-all active:scale-95"
-                    onClick={() => {
-                      setShowDetailModal(false);
-                      setIsCustomRange(false);
-                    }}
+                    onClick={() => { setShowDetailModal(false); setIsCustomRange(false); }}
                   >
-                    <Wallet size={24} />
+                    <Wallet size={20} />
                   </div>
                   <div>
-                    <h3 className="font-bold text-lg leading-tight">Phiếu lương chi tiết</h3>
+                    <h3 className="font-bold text-base leading-tight">Phiếu lương — {selectedSalary.full_name}</h3>
                     <p className="text-[10px] text-white/70 font-bold uppercase tracking-widest">
                       {isCustomRange
-                        ? `${formatDate(customRange.start)} - ${formatDate(customRange.end)}`
+                        ? `${customRange.start} → ${customRange.end}`
                         : `Tháng ${selectedMonth}/${selectedYear}`}
                     </p>
                   </div>
                 </div>
                 <button
-                  onClick={() => {
-                    setShowDetailModal(false);
-                    setIsCustomRange(false);
-                  }}
+                  onClick={() => { setShowDetailModal(false); setIsCustomRange(false); }}
                   className="p-2 hover:bg-white/20 rounded-xl transition-all"
                 >
-                  <X size={24} />
+                  <X size={22} />
                 </button>
               </div>
 
-              <div className="max-h-[70dvh] overflow-y-auto overflow-x-hidden custom-scrollbar bg-gray-50/50">
-                <div ref={billRef} className="bg-white mx-auto shadow-sm w-full max-w-[600px]">
-                  <div className="p-4 sm:p-8 space-y-6 sm:space-y-8">
-                    {/* Professional Header for Image/Print */}
-                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center border-b-2 border-primary/10 pb-4 sm:pb-6 gap-4">
-                      <div className="flex items-center gap-3 sm:gap-4 w-full sm:w-auto">
-                        <div className="w-10 h-10 sm:w-12 sm:h-12 bg-white rounded-xl flex items-center justify-center p-1 shadow-sm border border-gray-100 overflow-hidden flex-shrink-0">
-                          <img
-                            src="/logo.png"
-                            alt="Logo"
-                            className="w-full h-full object-contain rounded-lg"
-                          />
-                        </div>
-                        <div className="flex-shrink-0">
-                          <h2 className="text-xs sm:text-sm font-black text-gray-900 uppercase whitespace-nowrap">
-                            CDX - CON ĐƯỜNG XANH
-                          </h2>
-                          <p className="text-[7px] sm:text-[8px] text-gray-400 font-bold uppercase tracking-widest whitespace-nowrap">
-                            Hệ thống quản lý Kho và nhân sự
-                          </p>
-                        </div>
-                      </div>
-                      <div className="flex flex-col items-start sm:items-end w-full sm:w-auto border-t sm:border-t-0 border-gray-100 pt-3 sm:pt-0">
-                          <h1 className="text-lg sm:text-xl font-black text-primary uppercase tracking-tighter whitespace-nowrap text-right">
-                            PHIẾU LƯƠNG
-                          </h1>
-                          <p className="text-[10px] sm:text-xs text-gray-500 font-black tracking-widest whitespace-nowrap text-right">
-                            {isCustomRange
-                              ? `${formatDate(customRange.start)} — ${formatDate(customRange.end)}`
-                              : `Tháng ${selectedMonth}/${selectedYear}`}
-                          </p>
-                        </div>
+              {/* Custom date range controls */}
+              <div className="px-5 pt-4 pb-2 no-print bg-gray-50 border-b border-gray-100">
+                <div className="flex items-center justify-between mb-2">
+                  <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">
+                    Khoảng ngày tính lương
+                  </label>
+                  <button
+                    onClick={() => setIsCustomRange(!isCustomRange)}
+                    className={`relative inline-flex items-center w-10 h-5 rounded-full transition-colors ${isCustomRange ? 'bg-primary' : 'bg-gray-300'}`}
+                  >
+                    <span className={`inline-block w-3.5 h-3.5 bg-white rounded-full shadow transform transition-transform ${isCustomRange ? 'translate-x-5' : 'translate-x-1'}`} />
+                  </button>
+                </div>
+                {isCustomRange && (
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-0.5">
+                      <label className="text-[9px] font-bold text-gray-400 uppercase">Từ ngày</label>
+                      <input
+                        type="date"
+                        value={customRange.start}
+                        onChange={(e) => setCustomRange({ ...customRange, start: e.target.value })}
+                        className="w-full px-3 py-1.5 rounded-xl border border-gray-200 text-xs outline-none focus:ring-1 focus:ring-primary/20"
+                      />
                     </div>
-
-                    {/* Bill Content Header */}
-                    <div className="flex items-center gap-6 py-4">
-                      <div className="space-y-1">
-                        <h4 className="text-2xl font-black text-gray-900 tracking-tight">
-                          {selectedSalary.full_name}
-                        </h4>
-                        <div className="flex items-center gap-3">
-                          <span className="text-[10px] bg-gray-100 text-gray-500 px-2 py-0.5 rounded-md font-bold uppercase tracking-wider">
-                            ID: {selectedSalary.code || selectedSalary.id.slice(0, 8)}
-                          </span>
-                          <span className="text-[10px] bg-blue-50 text-blue-600 px-2 py-0.5 rounded-md font-bold uppercase tracking-wider">
-                            {selectedSalary.role}
-                          </span>
-                        </div>
-                      </div>
+                    <div className="space-y-0.5">
+                      <label className="text-[9px] font-bold text-gray-400 uppercase">Đến ngày</label>
+                      <input
+                        type="date"
+                        value={customRange.end}
+                        onChange={(e) => setCustomRange({ ...customRange, end: e.target.value })}
+                        className="w-full px-3 py-1.5 rounded-xl border border-gray-200 text-xs outline-none focus:ring-1 focus:ring-primary/20"
+                      />
                     </div>
+                  </div>
+                )}
+              </div>
 
-                    <div className="w-full h-px bg-gray-100 relative">
-                      <div className="absolute -left-10 -top-2 w-4 h-4 bg-gray-100 rounded-full no-print" />
-                      <div className="absolute -right-10 -top-2 w-4 h-4 bg-gray-100 rounded-full no-print" />
-                    </div>
-
-                    {/* Calculation Details */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                      <div className="space-y-4">
-                        <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest flex items-center gap-2">
-                          <div className="w-1 h-3 bg-primary rounded-full" /> Chi phí cơ bản
-                        </p>
-                        <div className="bg-gray-50/50 p-5 rounded-2xl border border-gray-100 space-y-3">
-                          <div className="flex justify-between items-center text-xs">
-                            <span className="text-gray-500 font-medium italic">
-                              Đơn giá ngày công (8h)
-                            </span>
-                            <span className="font-bold text-gray-800">
-                              {formatCurrency(selectedSalary.dailyRate)}
-                            </span>
-                          </div>
-                          <div className="flex justify-between items-center text-xs">
-                            <span className="text-gray-500 font-medium italic">
-                              Đơn giá tăng ca (1h)
-                            </span>
-                            <span className="font-bold text-gray-800">
-                              {formatCurrency(selectedSalary.hourlyRate)}
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-
-                      <div className="space-y-4">
-                        <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest flex items-center gap-2">
-                          <div className="w-1 h-3 bg-amber-500 rounded-full" /> Thu nhập & Khấu trừ
-                        </p>
-                        <div className="space-y-3 px-1">
-                          <div className="flex justify-between items-center text-sm">
-                            <span className="text-gray-500 text-xs">
-                              Lương ngày công ({selectedSalary.totalDays.toFixed(1)} ngày)
-                            </span>
-                            <span className="font-bold text-gray-800">
-                              {formatCurrency(selectedSalary.earnedSalary)}
-                            </span>
-                          </div>
-                          <div className="flex justify-between items-center text-sm">
-                            <span className="text-gray-500 text-xs">
-                              TC Ngày ({selectedSalary.totalOT.toFixed(1)} giờ)
-                            </span>
-                            <span className="font-bold text-amber-600">
-                              +{formatCurrency(selectedSalary.dayOTSalary)}
-                            </span>
-                          </div>
-                          <div className="flex justify-between items-center text-sm">
-                            <span className="text-gray-500 text-xs">
-                              TC Tháng (Hệ số x{selectedSalary.monthlyCoeff})
-                            </span>
-                            <span className="font-bold text-amber-600">
-                              +{formatCurrency(selectedSalary.monthOTSalary)}
-                            </span>
-                          </div>
-                          <div className="flex justify-between items-center text-sm">
-                            <span className="text-gray-500 text-xs">Các khoản phụ cấp</span>
-                            <span className="font-bold text-green-600">
-                              +{formatCurrency(selectedSalary.totalAll)}
-                            </span>
-                          </div>
-                          <div className="flex justify-between items-center text-sm">
-                            <span className="text-gray-500 text-xs">Tạm ứng trong tháng</span>
-                            <span className="font-bold text-red-500">
-                              -{formatCurrency(selectedSalary.totalAdv)}
-                            </span>
-                          </div>
-                          <div className="flex justify-between items-center text-sm">
-                            <span className="text-gray-500 text-xs">Khấu trừ bảo hiểm</span>
-                            <span className="font-bold text-red-500">
-                              -{formatCurrency(selectedSalary.insuranceDeduction)}
-                            </span>
-                          </div>
-                        </div>
+              {/* Bill table */}
+              <div className="max-h-[55dvh] overflow-y-auto custom-scrollbar">
+                <div ref={billRef} className="bg-white">
+                  {/* Bill header for image */}
+                  <div className="flex items-center justify-between px-5 pt-4 pb-2 border-b border-gray-100">
+                    <div className="flex items-center gap-2">
+                      <img src="/logo.png" alt="Logo" className="w-8 h-8 object-contain rounded-lg" />
+                      <div>
+                        <p className="text-[9px] font-black text-gray-700 uppercase tracking-wider">CDX - CON ĐƯỜNG XANH</p>
+                        <p className="text-[7px] text-gray-400 uppercase tracking-widest">Phiếu lương cá nhân</p>
                       </div>
                     </div>
+                    <p className="text-[9px] text-gray-400 font-bold">{new Date().toLocaleDateString('vi-VN')}</p>
+                  </div>
 
-                    <div className="pt-8 border-t-2 border-dashed border-gray-100 flex justify-between items-end">
-                      <div className="space-y-1">
-                        <p className="text-[9px] font-black text-gray-400 uppercase tracking-[0.2em] leading-none mb-1">
-                          Tổng thực lĩnh
-                        </p>
-                        <h4 className="text-sm font-black text-gray-900 uppercase leading-none">
-                          Net Salary Details
-                        </h4>
-                      </div>
-                      <div className="text-right flex-shrink-0">
-                        <span className="text-2xl sm:text-3xl font-black text-primary leading-none tracking-tighter whitespace-nowrap">
+                  <table className="w-full text-sm border-collapse">
+                    <tbody>
+                      {/* Tên nhân viên */}
+                      <tr className="border-b border-gray-100">
+                        <td className="px-5 py-2.5 text-gray-500 font-medium w-[48%]">Tên nhân viên:</td>
+                        <td className="px-5 py-2.5 font-bold text-gray-900">{selectedSalary.full_name}</td>
+                      </tr>
+                      {/* Kỳ lương */}
+                      <tr className="border-b border-gray-100">
+                        <td className="px-5 py-2.5 text-gray-500 font-medium">Kỳ lương:</td>
+                        <td className="px-5 py-2.5 font-bold text-gray-900">
+                          {isCustomRange
+                            ? `từ ${customRange.start} → hết ${customRange.end}`
+                            : `Tháng ${selectedMonth}/${selectedYear}`}
+                        </td>
+                      </tr>
+                      {/* Giờ công */}
+                      <tr className="border-b border-gray-100">
+                        <td className="px-5 py-2.5 text-gray-500 font-medium">Giờ công:</td>
+                        <td className="px-5 py-2.5 text-gray-800">
+                          {(selectedSalary.totalDays * 8).toFixed(0)} giờ{' '}
+                          <span className="text-gray-400 text-xs">({selectedSalary.totalDays.toFixed(1)} Công)</span>
+                        </td>
+                      </tr>
+                      {/* Tăng ca */}
+                      <tr className="border-b border-gray-100">
+                        <td className="px-5 py-2.5 text-gray-500 font-medium">Tăng ca:</td>
+                        <td className="px-5 py-2.5 text-gray-800">{selectedSalary.totalOT.toFixed(1)} giờ</td>
+                      </tr>
+                      {/* Lương cơ bản */}
+                      <tr className="border-b border-gray-100">
+                        <td className="px-5 py-2.5 text-gray-500 font-medium">Lương cơ bản:</td>
+                        <td className="px-5 py-2.5 text-gray-800">{formatCurrency(selectedSalary.earnedSalary)}</td>
+                      </tr>
+                      {/* Tiền tăng ca */}
+                      <tr className="border-b border-gray-100">
+                        <td className="px-5 py-2.5 text-gray-500 font-medium">Tiền tăng ca:</td>
+                        <td className="px-5 py-2.5 text-amber-600 font-medium">
+                          {formatCurrency(selectedSalary.dayOTSalary + selectedSalary.monthOTSalary)}
+                        </td>
+                      </tr>
+                      {/* Phụ cấp */}
+                      <tr className="border-b border-gray-100">
+                        <td className="px-5 py-2.5 text-gray-500 font-medium">Phụ cấp:</td>
+                        <td className="px-5 py-2.5 text-green-700 font-medium">{formatCurrency(selectedSalary.totalAll)}</td>
+                      </tr>
+                      {/* Thưởng */}
+                      <tr className="border-b border-gray-200">
+                        <td className="px-5 py-2.5 text-gray-500 font-medium">Thưởng:</td>
+                        <td className="px-5 py-2.5 text-gray-800">0 đ</td>
+                      </tr>
+                      {/* TỔNG THU NHẬP */}
+                      <tr className="border-b-2 border-gray-300 bg-gray-50">
+                        <td className="px-5 py-3 font-black text-gray-900 uppercase text-xs tracking-wide">TỔNG THU NHẬP:</td>
+                        <td className="px-5 py-3 font-black text-gray-900 text-sm">
+                          {formatCurrency(selectedSalary.earnedSalary + selectedSalary.dayOTSalary + selectedSalary.monthOTSalary + selectedSalary.totalAll)}
+                        </td>
+                      </tr>
+                      {/* Tạm ứng */}
+                      <tr className="border-b border-gray-100">
+                        <td className="px-5 py-2.5 text-gray-500 font-medium">Tạm ứng:</td>
+                        <td className="px-5 py-2.5 text-red-600 font-medium">{formatCurrency(selectedSalary.totalAdv)}</td>
+                      </tr>
+                      {/* Bảo hiểm */}
+                      <tr className="border-b border-gray-100">
+                        <td className="px-5 py-2.5 text-gray-500 font-medium">Bảo hiểm:</td>
+                        <td className="px-5 py-2.5 text-red-600 font-medium">{formatCurrency(selectedSalary.insuranceDeduction)}</td>
+                      </tr>
+                      {/* Giảm trừ */}
+                      <tr className="border-b border-gray-200">
+                        <td className="px-5 py-2.5 text-gray-500 font-medium">Giảm trừ khác:</td>
+                        <td className="px-5 py-2.5 text-gray-800">0 đ</td>
+                      </tr>
+                      {/* TỔNG GIẢM */}
+                      <tr className="border-b-2 border-gray-300 bg-gray-50">
+                        <td className="px-5 py-3 font-black text-gray-900 uppercase text-xs tracking-wide">TỔNG GIẢM:</td>
+                        <td className="px-5 py-3 font-black text-red-600 text-sm">
+                          {formatCurrency(selectedSalary.totalAdv + selectedSalary.insuranceDeduction)}
+                        </td>
+                      </tr>
+                      {/* CÒN ĐƯỢC NHẬN */}
+                      <tr className="border-b-2 border-primary/30 bg-primary/5">
+                        <td className="px-5 py-3 font-black text-primary uppercase text-xs tracking-wide">CÒN ĐƯỢC NHẬN:</td>
+                        <td className="px-5 py-3 font-black text-primary text-base">
                           {formatCurrency(selectedSalary.netSalary)}
-                        </span>
-                        <p className="text-[8px] text-gray-400 font-bold mt-1 italic uppercase underline decoration-primary/30 underline-offset-4 whitespace-nowrap">
-                          Đã bao gồm các khoản thuế phí
-                        </p>
-                      </div>
-                    </div>
+                        </td>
+                      </tr>
+                      {/* Bằng chữ */}
+                      <tr className="border-b border-gray-100">
+                        <td className="px-5 py-2.5 text-gray-500 font-medium align-top">Bằng chữ:</td>
+                        <td className="px-5 py-2.5 text-gray-600 italic text-xs leading-relaxed">
+                          {numberToVietnamese(selectedSalary.netSalary)}
+                        </td>
+                      </tr>
+                      {/* Ghi chú */}
+                      <tr>
+                        <td className="px-5 py-2.5 text-gray-500 font-medium">Ghi chú:</td>
+                        <td className="px-5 py-2.5 text-gray-500 text-xs italic">
+                          {isCustomRange
+                            ? `${customRange.start} đến ${customRange.end}`
+                            : `01/${selectedMonth}/${selectedYear} đến ${new Date(selectedYear, selectedMonth, 0).getDate()}/${selectedMonth}/${selectedYear}`}
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
 
-                    {/* Footer Notes */}
-                    <div className="p-5 bg-gray-50 rounded-2xl border border-gray-100 border-dashed">
-                      <p className="text-[10px] text-gray-500 leading-relaxed text-center font-medium italic">
-                        "Bảng lương này được tính toán tự động dựa trên dữ liệu chấm công thực tế."
-                      </p>
-                    </div>
-
-                    <div className="flex justify-between text-[8px] text-gray-300 font-bold uppercase tracking-widest pt-4">
-                      <span>CDX ERP SYSTEM © 2026</span>
-                      <span>{new Date().toLocaleString('vi-VN')}</span>
-                    </div>
+                  <div className="flex justify-between text-[8px] text-gray-300 font-bold uppercase tracking-widest px-5 py-3">
+                    <span>CDX ERP SYSTEM © 2026</span>
+                    <span>{new Date().toLocaleString('vi-VN')}</span>
                   </div>
                 </div>
               </div>
 
-              <div className="p-6 pt-0 flex flex-col gap-4 no-print mt-2">
-                <div className="bg-gray-50 p-4 rounded-2xl border border-gray-100 space-y-3">
-                  <div className="flex items-center justify-between">
-                    <label className="text-[10px] font-bold text-gray-400 uppercase">Tùy chỉnh khoảng ngày</label>
-                    <button
-                      onClick={() => setIsCustomRange(!isCustomRange)}
-                      className={`relative inline-flex items-center w-11 h-6 rounded-full transition-colors duration-200 focus:outline-none ${isCustomRange ? 'bg-primary' : 'bg-gray-300'}`}
-                    >
-                      <span
-                        className={`inline-block w-4 h-4 bg-white rounded-full shadow transform transition-transform duration-200 ${isCustomRange ? 'translate-x-6' : 'translate-x-1'}`}
-                      />
-                    </button>
-                  </div>
-                  
-                  {isCustomRange && (
-                    <div className="grid grid-cols-2 gap-3">
-                      <div className="space-y-1">
-                        <label className="text-[8px] font-bold text-gray-400 uppercase">Từ ngày</label>
-                        <input
-                          type="date"
-                          value={customRange.start}
-                          onChange={(e) => setCustomRange({ ...customRange, start: e.target.value })}
-                          className="w-full px-3 py-1.5 rounded-xl border border-gray-200 text-xs outline-none focus:ring-1 focus:ring-primary/20"
-                        />
-                      </div>
-                      <div className="space-y-1">
-                        <label className="text-[8px] font-bold text-gray-400 uppercase">Đến ngày</label>
-                        <input
-                          type="date"
-                          value={customRange.end}
-                          onChange={(e) => setCustomRange({ ...customRange, end: e.target.value })}
-                          className="w-full px-3 py-1.5 rounded-xl border border-gray-200 text-xs outline-none focus:ring-1 focus:ring-primary/20"
-                        />
-                      </div>
-                    </div>
-                  )}
-                </div>
-
-                <div className="flex gap-3">
-                  <button
-                    onClick={handleSaveImage}
-                    className="flex-1 bg-gray-900 text-white font-black py-3 rounded-xl hover:bg-black transition-all flex items-center justify-center gap-2 shadow-lg active:scale-95 text-xs"
-                  >
-                    <ImageIcon size={16} /> LƯU ẢNH
-                  </button>
-                  <button
-                    onClick={() => {
-                      setShowDetailModal(false);
-                      setIsCustomRange(false);
-                    }}
-                    className="flex-1 bg-primary/5 text-primary font-black py-3 rounded-xl hover:bg-primary/10 transition-all active:scale-95 border border-primary/10 text-xs"
-                  >
-                    ĐÓNG
-                  </button>
-                </div>
+              {/* Actions */}
+              <div className="p-5 border-t border-gray-100 flex gap-3 no-print">
+                <button
+                  onClick={handleSaveImage}
+                  className="flex-1 bg-gray-900 text-white font-black py-3 rounded-xl hover:bg-black transition-all flex items-center justify-center gap-2 shadow-lg active:scale-95 text-xs"
+                >
+                  <ImageIcon size={16} /> LƯU ẢNH
+                </button>
+                <button
+                  onClick={() => { setShowDetailModal(false); setIsCustomRange(false); }}
+                  className="flex-1 bg-primary/5 text-primary font-black py-3 rounded-xl hover:bg-primary/10 transition-all active:scale-95 border border-primary/10 text-xs"
+                >
+                  ĐÓNG
+                </button>
               </div>
             </motion.div>
           </div>
@@ -764,3 +716,4 @@ export const MonthlySalary = ({
     </div>
   );
 };
+

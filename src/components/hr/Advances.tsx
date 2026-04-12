@@ -126,6 +126,7 @@ export const Advances = ({
         date: formData.date,
         type: activeTab === 'advances' ? 'Tạm ứng' : formData.type,
         notes: formData.notes,
+        ...(activeTab === 'advances' ? { reason: formData.notes || 'Tạm ứng' } : {}),
       };
 
       if (isEditing && selectedItem) {

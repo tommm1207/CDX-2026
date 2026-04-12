@@ -189,6 +189,7 @@ export const MaterialSplitMerge = ({
             kho_id,
             nguoi_tao: user.id,
             ghi_chu: ghi_chu || null,
+            trang_thai: 'cho_duyet',
           },
         ])
         .select()
@@ -234,9 +235,9 @@ export const MaterialSplitMerge = ({
             unit: nguonXa.don_vi,
             employee_id: user.id,
             notes: `Xả vật tư - Phiếu: ${ma_phieu}`,
-            status: 'Đã duyệt',
-            approved_by: user.id,
-            approved_date: today,
+            status: 'Chờ duyệt',
+            approved_by: null,
+            approved_date: null,
           },
         ]);
 
@@ -249,9 +250,7 @@ export const MaterialSplitMerge = ({
           unit: o.don_vi,
           employee_id: user.id,
           notes: `Mảnh ra từ xả vật tư - Phiếu: ${ma_phieu}`,
-          status: 'Đã duyệt',
-          approved_by: user.id,
-          approved_date: today,
+          status: 'Chờ duyệt',
         }));
         await supabase.from('stock_in').insert(stockInItems);
       } else {
@@ -288,9 +287,7 @@ export const MaterialSplitMerge = ({
           unit: n.don_vi,
           employee_id: user.id,
           notes: `Gộp vật tư - Phiếu: ${ma_phieu}`,
-          status: 'Đã duyệt',
-          approved_by: user.id,
-          approved_date: today,
+          status: 'Chờ duyệt',
         }));
         await supabase.from('stock_out').insert(stockOuts);
 
@@ -305,20 +302,101 @@ export const MaterialSplitMerge = ({
             unit: outputGop.don_vi,
             employee_id: user.id,
             notes: `Vật tư gộp ra - Phiếu: ${ma_phieu}`,
-            status: 'Đã duyệt',
-            approved_by: user.id,
-            approved_date: today,
+            status: 'Chờ duyệt',
+            approved_by: null,
+            approved_date: null,
           },
         ]);
       }
 
-      if (addToast) addToast(`Phiếu ${ma_phieu} đã được tạo thành công!`, 'success');
+      if (addToast) addToast(`Phiếu ${ma_phieu} đã được tạo và đang chờ duyệt!`, 'success');
       setShowModal(false);
       fetchHistory();
     } catch (err: any) {
       if (addToast) addToast('Lỗi: ' + err.message, 'error');
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  const handleApprovePhieu = async (phieu: any) => {
+    if (user.role !== 'Admin' && user.role !== 'Develop') {
+      if (addToast) addToast('Bạn không có quyền duyệt phiếu này', 'error');
+      return;
+    }
+
+    setSubmitting(true);
+    try {
+      const today = new Date().toISOString().split('T')[0];
+
+      // 1. Approve associated stock_in/out
+      const pref = phieu.loai === 'xa' ? 'XA-' : 'GOP-';
+      const slipCode = `${pref}${phieu.ma_phieu}`;
+
+      await supabase
+        .from('stock_in')
+        .update({ status: 'Đã duyệt', approved_by: user.id, approved_date: today })
+        .eq('slip_code', slipCode);
+
+      await supabase
+        .from('stock_out')
+        .update({ status: 'Đã duyệt', approved_by: user.id, approved_date: today })
+        .eq('slip_code', slipCode);
+
+      // 2. Update phieu status
+      const { error } = await supabase
+        .from('xasa_gop_phieu')
+        .update({ trang_thai: 'da_duyet' })
+        .eq('id', phieu.id);
+      if (error) throw error;
+
+      if (addToast) addToast(`Đã duyệt phiếu ${phieu.ma_phieu} thành công!`, 'success');
+      fetchHistory();
+    } catch (err: any) {
+      if (addToast) addToast('Lỗi duyệt: ' + err.message, 'error');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleRejectPhieu = async (phieu: any) => {
+    if (!window.confirm(`Từ chối và xóa phiếu ${phieu.ma_phieu}?`)) return;
+
+    setSubmitting(true);
+    try {
+      const pref = phieu.loai === 'xa' ? 'XA-' : 'GOP-';
+      const slipCode = `${pref}${phieu.ma_phieu}`;
+
+      // Delete stock records
+      await supabase.from('stock_in').delete().eq('slip_code', slipCode);
+      await supabase.from('stock_out').delete().eq('slip_code', slipCode);
+
+      // Delete phieu chi tiet
+      await supabase.from('xasa_gop_chi_tiet').delete().eq('phieu_id', phieu.id);
+
+      // Delete phieu header
+      const { error } = await supabase.from('xasa_gop_phieu').delete().eq('id', phieu.id);
+      if (error) throw error;
+
+      if (addToast) addToast('Đã từ chối và xóa phiếu', 'info');
+      fetchHistory();
+    } catch (err: any) {
+      if (addToast) addToast('Lỗi: ' + err.message, 'error');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const getStatusBadge = (trang_thai: string) => {
+    switch (trang_thai) {
+      case 'cho_duyet':
+        return { label: 'Chờ duyệt', bg: 'bg-primary/10', text: 'text-primary' };
+      case 'da_duyet':
+        return { label: 'Đã duyệt', bg: 'bg-green-100', text: 'text-green-700' };
+      case 'da_huy':
+        return { label: 'Đã hủy', bg: 'bg-red-100', text: 'text-red-700' };
+      default:
+        return { label: 'Đã duyệt', bg: 'bg-green-100', text: 'text-green-700' };
     }
   };
 
@@ -354,6 +432,7 @@ export const MaterialSplitMerge = ({
       <div className="flex items-center justify-between gap-2">
         <PageBreadcrumb title="Xả / Gộp vật tư" onBack={onBack} />
         <div className="flex items-center gap-2">
+          <ExcelButton onClick={exportToExcel} />
           <SortButton
             currentSort={sortBy}
             onSortChange={(val) => {
@@ -371,7 +450,6 @@ export const MaterialSplitMerge = ({
             onClick={() => setShowFilter((f) => !f)}
             icon={Search}
           />
-          <ExcelButton onClick={exportToExcel} />
         </div>
       </div>
 
@@ -445,20 +523,35 @@ export const MaterialSplitMerge = ({
             const raItems = (item.xasa_gop_chi_tiet || []).filter((d: any) => d.vai_tro === 'ra');
 
             return (
-              <div key={item.id} className="bg-white rounded-2xl p-4 border border-gray-100">
+              <div
+                key={item.id}
+                className="bg-white rounded-2xl p-4 border border-gray-100 shadow-sm transition-all hover:shadow-md"
+              >
                 <div className="flex items-center justify-between mb-2">
                   <div className="flex items-center gap-3">
                     <div
-                      className={`w-8 h-8 rounded-lg flex items-center justify-center ${item.loai === 'xa' ? 'bg-orange-100' : 'bg-blue-100'}`}
+                      className={`w-10 h-10 rounded-xl flex items-center justify-center ${item.loai === 'xa' ? 'bg-orange-100' : 'bg-blue-100'}`}
                     >
                       {item.loai === 'xa' ? (
-                        <Scissors size={14} className="text-orange-600" />
+                        <Scissors size={20} className="text-orange-600" />
                       ) : (
-                        <Merge size={14} className="text-blue-600" />
+                        <Merge size={20} className="text-blue-600" />
                       )}
                     </div>
                     <div>
-                      <p className="text-sm font-bold text-gray-800">{item.ma_phieu}</p>
+                      <div className="flex items-center gap-2">
+                        <h4 className="font-bold text-gray-800 text-sm">{item.ma_phieu}</h4>
+                        {(() => {
+                          const badge = getStatusBadge(item.trang_thai);
+                          return (
+                            <span
+                              className={`px-2 py-0.5 rounded-lg text-[10px] font-bold ${badge.bg} ${badge.text}`}
+                            >
+                              {badge.label}
+                            </span>
+                          );
+                        })()}
+                      </div>
                       <p className="text-[10px] text-gray-400">
                         {formatDate(item.ngay)} • {item.warehouses?.name} • {item.users?.full_name}
                       </p>
@@ -473,10 +566,44 @@ export const MaterialSplitMerge = ({
 
                 {/* Brief summary */}
                 <div className="flex items-center gap-2 text-xs text-gray-500 bg-gray-50 rounded-xl px-3 py-2">
-                  <span>{nguonItems.map((n: any) => n.materials?.name || 'N/A').join(', ')}</span>
+                  <span className="truncate">
+                    {nguonItems.map((n: any) => n.materials?.name || 'N/A').join(', ')}
+                  </span>
                   <ArrowRight size={12} className="shrink-0 text-gray-400" />
-                  <span>{raItems.map((r: any) => r.materials?.name || 'N/A').join(', ')}</span>
+                  <span className="truncate">
+                    {raItems.map((r: any) => r.materials?.name || 'N/A').join(', ')}
+                  </span>
                 </div>
+
+                {item.ghi_chu && (
+                  <p className="mt-2 text-[10px] text-gray-400 italic px-1">“{item.ghi_chu}”</p>
+                )}
+
+                {item.trang_thai === 'cho_duyet' &&
+                  (user.role === 'Admin' || user.role === 'Develop') && (
+                    <div className="mt-4 flex gap-2">
+                      <Button
+                        variant="success"
+                        size="sm"
+                        icon={Package}
+                        onClick={() => handleApprovePhieu(item)}
+                        className="flex-1"
+                        isLoading={submitting}
+                      >
+                        Duyệt phiếu
+                      </Button>
+                      <Button
+                        variant="danger"
+                        size="sm"
+                        icon={Trash2}
+                        onClick={() => handleRejectPhieu(item)}
+                        className="flex-1"
+                        isLoading={submitting}
+                      >
+                        Từ chối
+                      </Button>
+                    </div>
+                  )}
               </div>
             );
           })
@@ -487,19 +614,19 @@ export const MaterialSplitMerge = ({
       <AnimatePresence>
         {showModal && (
           <div
-            className="fixed inset-0 z-[150] flex md:items-center justify-center p-0 md:p-4 bg-black/60 backdrop-blur-sm overflow-y-auto"
+            className="fixed inset-0 z-[150] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
             onClick={() => setShowModal(false)}
           >
             <motion.div
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.95 }}
-              className="bg-white rounded-none md:rounded-3xl shadow-2xl w-full max-w-2xl h-full md:h-auto md:max-h-[90vh] flex flex-col mt-auto md:mt-0"
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              className="bg-white rounded-[2rem] md:rounded-[2.5rem] shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden"
               onClick={(e) => e.stopPropagation()}
             >
               {/* Header */}
               <div
-                className={`p-6 pt-[calc(1.5rem+env(safe-area-inset-top))] md:pt-6 text-white flex items-center justify-between rounded-none md:rounded-t-3xl shrink-0 ${mode === 'xa' ? 'bg-orange-500' : 'bg-blue-500'}`}
+                className={`p-6 text-white flex items-center justify-between rounded-t-[2rem] md:rounded-t-[2.5rem] flex-shrink-0 ${mode === 'xa' ? 'bg-orange-500' : 'bg-blue-500'}`}
               >
                 <div className="flex items-center gap-3">
                   <button

@@ -212,7 +212,7 @@ export const ProductionOrders = ({
             ngay_phat_lenh: today,
             nguoi_phat_lenh: user.id,
             ghi_chu: formData.ghi_chu || null,
-            trang_thai: 'dang_san_xuat',
+            trang_thai: 'cho_duyet',
           },
         ])
         .select()
@@ -232,9 +232,9 @@ export const ProductionOrders = ({
           unit: bomItem.don_vi,
           employee_id: user.id,
           notes: `Xuất kho tự động - Lệnh SX: ${ma_lenh}`,
-          status: 'Đã duyệt',
-          approved_by: user.id,
-          approved_date: today,
+          status: 'Chờ duyệt',
+          approved_by: null,
+          approved_date: null,
         }));
 
         const { error: stockOutError } = await supabase.from('stock_out').insert(stockOutItems);
@@ -242,10 +242,7 @@ export const ProductionOrders = ({
       }
 
       if (addToast)
-        addToast(
-          `Phát lệnh sản xuất ${ma_lenh} thành công! Vật tư đã được trừ khỏi kho.`,
-          'success',
-        );
+        addToast(`Lệnh sản xuất ${ma_lenh} đã được khởi tạo và đang chờ duyệt.`, 'success');
       setShowModal(false);
       fetchOrders();
     } catch (err: any) {
@@ -260,16 +257,31 @@ export const ProductionOrders = ({
       if (addToast) addToast('Không thể hủy lệnh đã có thành phẩm nhập kho!', 'error');
       return;
     }
-    if (!window.confirm(`Hủy lệnh ${order.ma_lenh}? Vật tư sẽ được hoàn trả vào kho.`)) return;
+    if (
+      !window.confirm(
+        `Hủy lệnh ${order.ma_lenh}? Toàn bộ lịch trình và xuất kho liên quan sẽ bị xóa.`,
+      )
+    )
+      return;
 
     try {
-      // Delete related stock_out entries
+      // 1. Delete associated stock_out
       await supabase.from('stock_out').delete().eq('slip_code', `XSX-${order.ma_lenh}`);
 
-      // Update order status
-      await supabase.from('lenh_san_xuat').update({ trang_thai: 'da_huy' }).eq('id', order.id);
+      // 2. Delete the order itself if it's just pending, or soft delete if it's production
+      if (order.trang_thai === 'cho_duyet') {
+        const { error } = await supabase.from('lenh_san_xuat').delete().eq('id', order.id);
+        if (error) throw error;
+        if (addToast) addToast('Đã xóa lệnh sản xuất thành công', 'success');
+      } else {
+        const { error } = await supabase
+          .from('lenh_san_xuat')
+          .update({ trang_thai: 'da_huy' })
+          .eq('id', order.id);
+        if (error) throw error;
+        if (addToast) addToast('Đã hủy lệnh sản xuất thành công', 'success');
+      }
 
-      if (addToast) addToast('Đã hủy lệnh sản xuất & hoàn trả vật tư', 'success');
       if (selectedOrder?.id === order.id) setSelectedOrder(null);
       fetchOrders();
     } catch (err: any) {
@@ -277,8 +289,73 @@ export const ProductionOrders = ({
     }
   };
 
+  const handleApproveOrder = async (order: any) => {
+    if (user.role !== 'Admin' && user.role !== 'Develop') {
+      if (addToast) addToast('Bạn không có quyền duyệt lệnh này', 'error');
+      return;
+    }
+
+    setSubmitting(true);
+    try {
+      const today = new Date().toISOString().split('T')[0];
+
+      // 1. Approve associated stock_out
+      const { error: stockError } = await supabase
+        .from('stock_out')
+        .update({
+          status: 'Đã duyệt',
+          approved_by: user.id,
+          approved_date: today,
+        })
+        .eq('slip_code', `XSX-${order.ma_lenh}`);
+      if (stockError) throw stockError;
+
+      // 2. Update order status
+      const { error: orderError } = await supabase
+        .from('lenh_san_xuat')
+        .update({ trang_thai: 'dang_san_xuat' })
+        .eq('id', order.id);
+      if (orderError) throw orderError;
+
+      if (addToast)
+        addToast(`Đã duyệt lệnh sản xuất ${order.ma_lenh}. Vật tư đã được trừ kho.`, 'success');
+      fetchOrders();
+      if (selectedOrder?.id === order.id) {
+        setSelectedOrder({ ...selectedOrder, trang_thai: 'dang_san_xuat' });
+      }
+    } catch (err: any) {
+      if (addToast) addToast('Lỗi duyệt: ' + err.message, 'error');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleRejectOrder = async (order: any) => {
+    if (!window.confirm(`Từ chối và xóa lệnh ${order.ma_lenh}?`)) return;
+
+    setSubmitting(true);
+    try {
+      // Delete associated stock_out
+      await supabase.from('stock_out').delete().eq('slip_code', `XSX-${order.ma_lenh}`);
+
+      // Delete the order
+      const { error } = await supabase.from('lenh_san_xuat').delete().eq('id', order.id);
+      if (error) throw error;
+
+      if (addToast) addToast('Đã từ chối lệnh sản xuất', 'info');
+      fetchOrders();
+      if (selectedOrder?.id === order.id) setSelectedOrder(null);
+    } catch (err: any) {
+      if (addToast) addToast('Lỗi: ' + err.message, 'error');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   const getStatusBadge = (trang_thai: string) => {
     switch (trang_thai) {
+      case 'cho_duyet':
+        return { label: 'Chờ duyệt', bg: 'bg-primary/10', text: 'text-primary' };
       case 'dang_san_xuat':
         return { label: 'Đang SX', bg: 'bg-amber-100', text: 'text-amber-700' };
       case 'hoan_thanh':
@@ -325,6 +402,7 @@ export const ProductionOrders = ({
       <div className="flex items-center justify-between gap-2">
         <PageBreadcrumb title="Lệnh sản xuất" onBack={onBack} />
         <div className="flex items-center gap-2">
+          <ExcelButton onClick={exportToExcel} />
           <SortButton
             currentSort={sortBy}
             onSortChange={(val) => {
@@ -342,7 +420,6 @@ export const ProductionOrders = ({
             onClick={() => setShowFilter((f) => !f)}
             icon={Search}
           />
-          <ExcelButton onClick={exportToExcel} />
         </div>
       </div>
 
@@ -506,6 +583,38 @@ export const ProductionOrders = ({
                           )}
                         </div>
 
+                        {order.trang_thai === 'cho_duyet' &&
+                          (user.role === 'Admin' || user.role === 'Develop') && (
+                            <div className="flex gap-2 w-full">
+                              <Button
+                                variant="success"
+                                size="sm"
+                                icon={CheckCircle}
+                                onClick={(e: any) => {
+                                  e.stopPropagation();
+                                  handleApproveOrder(order);
+                                }}
+                                className="flex-1"
+                                isLoading={submitting}
+                              >
+                                Duyệt lệnh
+                              </Button>
+                              <Button
+                                variant="danger"
+                                size="sm"
+                                icon={XCircle}
+                                onClick={(e: any) => {
+                                  e.stopPropagation();
+                                  handleRejectOrder(order);
+                                }}
+                                className="flex-1"
+                                isLoading={submitting}
+                              >
+                                Từ chối
+                              </Button>
+                            </div>
+                          )}
+
                         {order.trang_thai === 'dang_san_xuat' && (
                           <Button
                             variant="danger"
@@ -536,18 +645,18 @@ export const ProductionOrders = ({
       <AnimatePresence>
         {showModal && (
           <div
-            className="fixed inset-0 z-[150] flex md:items-center justify-center p-0 md:p-4 bg-black/60 backdrop-blur-sm overflow-y-auto"
+            className="fixed inset-0 z-[150] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
             onClick={() => setShowModal(false)}
           >
             <motion.div
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.95 }}
-              className="bg-white rounded-none md:rounded-3xl shadow-2xl w-full max-w-2xl h-full md:h-auto md:max-h-[90vh] flex flex-col mt-auto md:mt-0"
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              className="bg-white rounded-[2rem] md:rounded-[2.5rem] shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden relative z-10"
               onClick={(e) => e.stopPropagation()}
             >
               {/* Header */}
-              <div className="bg-primary p-6 pt-[calc(1.5rem+env(safe-area-inset-top))] md:pt-6 text-white flex items-center justify-between rounded-none md:rounded-t-3xl shrink-0">
+              <div className="bg-primary p-6 text-white flex items-center justify-between rounded-t-[2rem] md:rounded-t-[2.5rem] flex-shrink-0">
                 <div className="flex items-center gap-3">
                   <button
                     onClick={() => setShowModal(false)}

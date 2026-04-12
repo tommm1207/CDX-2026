@@ -72,19 +72,22 @@ export const DeletedProduction = ({
       let error: any = null;
 
       if (activeTab === 'production_orders') {
-        const res = await supabase.from('production_orders').select('*').eq('status', 'Đã xóa');
+        const res = await supabase.from('lenh_san_xuat').select('*').eq('trang_thai', 'Đã xóa');
         data = res.data;
         error = res.error;
       } else if (activeTab === 'boms') {
-        const res = await supabase.from('bom_configs').select('*').eq('status', 'Đã xóa');
+        const res = await supabase.from('san_pham_bom').select('*').eq('dang_hoat_dong', false);
         data = res.data;
         error = res.error;
       } else if (activeTab === 'split_merge_history') {
-        const res = await supabase.from('split_merge_history').select('*').eq('status', 'Đã xóa');
+        const res = await supabase.from('xasa_gop_phieu').select('*').eq('trang_thai', 'Đã xóa');
         data = res.data;
         error = res.error;
       } else if (activeTab === 'construction_diaries') {
-        const res = await supabase.from('construction_diaries').select('*').eq('status', 'Đã xóa');
+        const res = await supabase
+          .from('construction_diaries')
+          .select('*')
+          .eq('trang_thai', 'Đã xóa');
         data = res.data;
         error = res.error;
       }
@@ -100,14 +103,18 @@ export const DeletedProduction = ({
   };
 
   const getCode = (item: any) => {
-    return item.code || item.order_code || item.id.slice(0, 8);
+    return item.ma_lenh || item.ma_phieu || item.diary_code || item.code || item.id.slice(0, 8);
   };
 
   const getName = (item: any) => {
-    if (activeTab === 'production_orders') return `Lệnh: ${item.notes || 'Không mô tả'}`;
+    if (activeTab === 'production_orders') {
+      return item.ghi_chu || 'Không mô tả';
+    }
     if (activeTab === 'boms') return item.ten_san_pham || 'Không tên';
-    if (activeTab === 'split_merge_history') return `Vật tư gốc: ${item.original_material_id}`;
-    if (activeTab === 'construction_diaries') return `Ngày: ${formatDate(item.date)}`;
+    if (activeTab === 'split_merge_history')
+      return `${item.loai === 'xa' ? 'Xả' : 'Gộp'} vật tư - ${item.ghi_chu || ''}`;
+    if (activeTab === 'construction_diaries')
+      return `Nhật ký: ${item.work_progress || ''} (${formatDate(item.date)})`;
     return 'Không rõ';
   };
 
@@ -136,12 +143,24 @@ export const DeletedProduction = ({
     if (!selectedItem) return;
     setSubmitting(true);
     try {
+      const isBom = selectedItem.table === 'boms';
+      const actualTable =
+        selectedItem.table === 'production_orders'
+          ? 'lenh_san_xuat'
+          : selectedItem.table === 'boms'
+            ? 'san_pham_bom'
+            : selectedItem.table === 'split_merge_history'
+              ? 'xasa_gop_phieu'
+              : selectedItem.table;
+
+      const updateData = isBom ? { dang_hoat_dong: true } : { trang_thai: 'Chờ duyệt' };
+
       const { error } = await supabase
-        .from(selectedItem.table)
-        .update({ status: 'Chờ duyệt' }) // Or equivalent generic status
+        .from(actualTable)
+        .update(updateData)
         .eq('id', selectedItem.id);
       if (error) throw error;
-      if (addToast) addToast(`Đã khôi phục dữ liệu ${selectedItem.code} thành công!`, 'success');
+      if (addToast) addToast(`Đã khôi phục ${selectedItem.code} thành công!`, 'success');
       fetchDeletedItems();
       setShowRestoreModal(false);
       setSelectedItem(null);
@@ -156,16 +175,25 @@ export const DeletedProduction = ({
     if (!selectedItem) return;
     setSubmitting(true);
     try {
-      // BOM configs have bom_items taking cascade deletion or needing manual clean up.
-      if (selectedItem.table === 'bom_configs') {
+      const actualTable =
+        selectedItem.table === 'production_orders'
+          ? 'lenh_san_xuat'
+          : selectedItem.table === 'boms'
+            ? 'san_pham_bom'
+            : selectedItem.table === 'split_merge_history'
+              ? 'xasa_gop_phieu'
+              : selectedItem.table;
+
+      // BOM configs have chi tiết taking cascade deletion or needing manual clean up.
+      if (selectedItem.table === 'boms') {
         const { error: err1 } = await supabase
-          .from('bom_items')
+          .from('san_pham_bom_chi_tiet')
           .delete()
-          .eq('bom_id', selectedItem.id);
+          .eq('san_pham_bom_id', selectedItem.id);
         if (err1) throw err1;
       }
 
-      const { error } = await supabase.from(selectedItem.table).delete().eq('id', selectedItem.id);
+      const { error } = await supabase.from(actualTable).delete().eq('id', selectedItem.id);
       if (error) {
         if (error.code === '23503' || error.message.includes('violates foreign key constraint')) {
           throw new Error('Dữ liệu đang được sử dụng, không thể xóa vĩnh viễn.');

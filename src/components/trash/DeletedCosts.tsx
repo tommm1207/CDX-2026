@@ -153,16 +153,16 @@ export const DeletedCosts = ({
       if (!searchTerm) return true;
       const s = searchTerm.toLowerCase();
       return (
-        (c.code || '').toLowerCase().includes(s) ||
-        (c.description || '').toLowerCase().includes(s) ||
-        (c.category || '').toLowerCase().includes(s)
+        (c.cost_code || '').toLowerCase().includes(s) ||
+        (c.content || '').toLowerCase().includes(s) ||
+        (c.cost_type || '').toLowerCase().includes(s)
       );
     })
     .sort((a, b) => {
       if (sortBy === 'newest')
         return new Date(b.date || 0).getTime() - new Date(a.date || 0).getTime();
-      if (sortBy === 'code') return (a.code || '').localeCompare(b.code || '');
-      if (sortBy === 'price') return (b.amount || 0) - (a.amount || 0);
+      if (sortBy === 'code') return (a.cost_code || '').localeCompare(b.cost_code || '');
+      if (sortBy === 'price') return (b.total_amount || 0) - (a.total_amount || 0);
       return 0;
     });
 

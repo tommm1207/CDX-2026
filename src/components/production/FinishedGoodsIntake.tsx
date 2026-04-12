@@ -122,16 +122,21 @@ export const FinishedGoodsIntake = ({
       const today = new Date().toISOString().split('T')[0];
 
       // 1. Create intake record
-      const { error: intakeError } = await supabase.from('lenh_nhap_thanh_pham').insert([
-        {
-          lenh_id: selectedOrder.id,
-          so_luong: formData.so_luong,
-          kho_id: formData.kho_id,
-          ngay_nhap: today,
-          nguoi_nhap: user.id,
-          ghi_chu: formData.ghi_chu || null,
-        },
-      ]);
+      const { data: intakeData, error: intakeError } = await supabase
+        .from('lenh_nhap_thanh_pham')
+        .insert([
+          {
+            lenh_id: selectedOrder.id,
+            so_luong: formData.so_luong,
+            kho_id: formData.kho_id,
+            ngay_nhap: today,
+            nguoi_nhap: user.id,
+            ghi_chu: formData.ghi_chu || null,
+            trang_thai: 'cho_duyet',
+          },
+        ])
+        .select()
+        .single();
       if (intakeError) throw intakeError;
 
       // 2. Create stock_in for finished product (auto-approved)
@@ -168,17 +173,61 @@ export const FinishedGoodsIntake = ({
             quantity: formData.so_luong,
             unit: 'cái',
             employee_id: user.id,
-            notes: `Nhập thành phẩm - Lệnh SX: ${selectedOrder.ma_lenh}`,
-            status: 'Đã duyệt',
-            approved_by: user.id,
-            approved_date: today,
+            notes: `Nhập thành phẩm (Chờ duyệt) - Lệnh SX: ${selectedOrder.ma_lenh}`,
+            status: 'Chờ duyệt',
+            approved_by: null,
+            approved_date: null,
           },
         ]);
         if (stockInError) throw stockInError;
       }
 
-      // 3. Update production order
-      const newCompleted = selectedOrder.so_luong_hoan_thanh + formData.so_luong;
+      if (addToast)
+        addToast(
+          `Đã tạo phiếu nhập ${formData.so_luong} thành phẩm. Vui lòng chờ Admin duyệt.`,
+          'success',
+        );
+
+      setShowModal(false);
+      fetchActiveOrders();
+      fetchIntakeHistory(selectedOrder.id);
+    } catch (err: any) {
+      if (addToast) addToast('Lỗi: ' + err.message, 'error');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleApproveIntake = async (intake: any) => {
+    if (user.role !== 'Admin' && user.role !== 'Develop') {
+      if (addToast) addToast('Bạn không có quyền duyệt phiếu này', 'error');
+      return;
+    }
+
+    setSubmitting(true);
+    try {
+      const today = new Date().toISOString().split('T')[0];
+
+      // 1. Approve stock_in
+      await supabase
+        .from('stock_in')
+        .update({
+          status: 'Đã duyệt',
+          approved_by: user.id,
+          approved_date: today,
+        })
+        .eq('slip_code', `NTP-${selectedOrder.ma_lenh}`)
+        .is('approved_by', null)
+        .limit(1); // Careful with slip_code collisions
+
+      // 2. Update intake status
+      await supabase
+        .from('lenh_nhap_thanh_pham')
+        .update({ trang_thai: 'da_duyet' })
+        .eq('id', intake.id);
+
+      // 3. Update production order progress
+      const newCompleted = selectedOrder.so_luong_hoan_thanh + intake.so_luong;
       const updatedStatus =
         newCompleted >= selectedOrder.so_luong_ke_hoach ? 'hoan_thanh' : 'dang_san_xuat';
 
@@ -190,17 +239,9 @@ export const FinishedGoodsIntake = ({
         })
         .eq('id', selectedOrder.id);
 
-      if (addToast)
-        addToast(
-          `Nhập ${formData.so_luong} thành phẩm thành công!${updatedStatus === 'hoan_thanh' ? ' ✅ Lệnh đã hoàn thành!' : ''}`,
-          'success',
-        );
-
-      setShowModal(false);
+      if (addToast) addToast('Đã duyệt phiếu nhập thành phẩm', 'success');
       fetchActiveOrders();
       fetchIntakeHistory(selectedOrder.id);
-
-      // Update local selected order
       setSelectedOrder({
         ...selectedOrder,
         so_luong_hoan_thanh: newCompleted,
@@ -210,6 +251,42 @@ export const FinishedGoodsIntake = ({
       if (addToast) addToast('Lỗi: ' + err.message, 'error');
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  const handleRejectIntake = async (intake: any) => {
+    if (!window.confirm('Từ chối và xóa phiếu nhập này?')) return;
+
+    setSubmitting(true);
+    try {
+      // 1. Delete associated stock_in (the one that is pending)
+      await supabase
+        .from('stock_in')
+        .delete()
+        .eq('slip_code', `NTP-${selectedOrder.ma_lenh}`)
+        .eq('status', 'Chờ duyệt')
+        .limit(1);
+
+      // 2. Delete intake record
+      await supabase.from('lenh_nhap_thanh_pham').delete().eq('id', intake.id);
+
+      if (addToast) addToast('Đã từ chối phiếu nhập', 'info');
+      fetchIntakeHistory(selectedOrder.id);
+    } catch (err: any) {
+      if (addToast) addToast('Lỗi: ' + err.message, 'error');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const getStatusBadge = (status: string) => {
+    switch (status) {
+      case 'cho_duyet':
+        return { label: 'Chờ duyệt', bg: 'bg-primary/10', text: 'text-primary' };
+      case 'da_duyet':
+        return { label: 'Đã duyệt', bg: 'bg-green-100', text: 'text-green-700' };
+      default:
+        return { label: 'Đã duyệt', bg: 'bg-green-100', text: 'text-green-700' };
     }
   };
 
@@ -414,20 +491,55 @@ export const FinishedGoodsIntake = ({
                   </h3>
                 </div>
                 <div className="divide-y divide-gray-50">
-                  {intakeHistory.map((intake) => (
-                    <div key={intake.id} className="p-4 flex items-center justify-between">
-                      <div>
-                        <p className="text-sm font-bold text-gray-800">
-                          +{intake.so_luong} sản phẩm
-                        </p>
-                        <p className="text-[10px] text-gray-400">
-                          {formatDate(intake.ngay_nhap)} • {intake.users?.full_name} •{' '}
-                          {intake.warehouses?.name}
-                        </p>
+                  {intakeHistory.map((intake) => {
+                    const badge = getStatusBadge(intake.trang_thai);
+                    return (
+                      <div key={intake.id} className="p-4 space-y-3">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <div className="flex items-center gap-2">
+                              <p className="text-sm font-bold text-gray-800">
+                                +{intake.so_luong} sản phẩm
+                              </p>
+                              <span
+                                className={`px-2 py-0.5 rounded-lg text-[10px] font-bold ${badge.bg} ${badge.text}`}
+                              >
+                                {badge.label}
+                              </span>
+                            </div>
+                            <p className="text-[10px] text-gray-400">
+                              {formatDate(intake.ngay_nhap)} • {intake.users?.full_name} •{' '}
+                              {intake.warehouses?.name}
+                            </p>
+                          </div>
+                          <Package
+                            size={16}
+                            className={
+                              intake.trang_thai === 'cho_duyet' ? 'text-primary' : 'text-green-500'
+                            }
+                          />
+                        </div>
+
+                        {intake.trang_thai === 'cho_duyet' &&
+                          (user.role === 'Admin' || user.role === 'Develop') && (
+                            <div className="flex gap-2">
+                              <button
+                                onClick={() => handleApproveIntake(intake)}
+                                className="flex-1 py-1.5 rounded-lg bg-green-50 text-green-600 text-[10px] font-bold hover:bg-green-100"
+                              >
+                                Duyệt
+                              </button>
+                              <button
+                                onClick={() => handleRejectIntake(intake)}
+                                className="flex-1 py-1.5 rounded-lg bg-red-50 text-red-600 text-[10px] font-bold hover:bg-red-100"
+                              >
+                                Từ chối
+                              </button>
+                            </div>
+                          )}
                       </div>
-                      <Package size={16} className="text-green-500" />
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
             )}

@@ -12,6 +12,7 @@ import {
   CheckCircle,
   ChevronDown,
   ChevronUp,
+  Search,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { supabase } from '@/lib/supabase';
@@ -20,6 +21,7 @@ import { PageBreadcrumb } from '../shared/PageBreadcrumb';
 import { ConfirmModal } from '../shared/ConfirmModal';
 import { ToastType } from '../shared/Toast';
 import { Button } from '../shared/Button';
+import { SortButton, SortOption } from '../shared/SortButton';
 import { checkUsage, UsageResult } from '@/utils/dataIntegrity';
 import { purgeDependencies } from '@/utils/dataFixer';
 
@@ -35,6 +37,11 @@ export const DeletedWarehouses = ({
   const [warehouses, setWarehouses] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [searchTerm, setSearchTerm] = useState('');
+  const [sortBy, setSortBy] = useState<SortOption>(
+    (localStorage.getItem(`sort_pref_trashWH_${user.id}`) as SortOption) || 'newest',
+  );
+  const [showFilter, setShowFilter] = useState(false);
   const [showRestoreModal, setShowRestoreModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [showBulkRestoreModal, setShowBulkRestoreModal] = useState(false);
@@ -228,38 +235,93 @@ export const DeletedWarehouses = ({
     }
   };
 
+  const filteredWarehouses = warehouses
+    .filter((w) => {
+      if (!searchTerm) return true;
+      const s = searchTerm.toLowerCase();
+      return (w.name || '').toLowerCase().includes(s) || (w.code || '').toLowerCase().includes(s);
+    })
+    .sort((a, b) => {
+      if (sortBy === 'newest')
+        return new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime();
+      if (sortBy === 'code') return (a.code || '').localeCompare(b.code || '');
+      return 0;
+    });
+
   return (
-    <div className="p-4 md:p-6 space-y-6 pb-24">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+    <div className="p-4 md:p-6 space-y-6 pb-24 overflow-x-hidden">
+      <div className="flex items-center justify-between gap-2">
         <PageBreadcrumb title="Kho đã xóa" onBack={onBack} />
-        {warehouses.length > 0 && (
-          <div className="flex items-center gap-2 overflow-x-auto pb-2 md:pb-0">
-            {selectedIds.size > 0 ? (
-              <>
-                <button
-                  onClick={() => setShowBulkRestoreModal(true)}
-                  className="whitespace-nowrap px-4 py-2 bg-green-600 text-white rounded-xl font-bold text-xs flex items-center gap-2 shadow-lg shadow-green-200"
-                >
-                  <RefreshCw size={14} /> Khôi phục ({selectedIds.size})
-                </button>
-                <button
-                  onClick={() => setShowBulkDeleteModal(true)}
-                  className="whitespace-nowrap px-4 py-2 bg-red-600 text-white rounded-xl font-bold text-xs flex items-center gap-2 shadow-lg shadow-red-200"
-                >
-                  <Trash2 size={14} /> Xóa vĩnh viễn ({selectedIds.size})
-                </button>
-              </>
-            ) : (
-              <button
-                onClick={() => setShowEmptyTrashModal(true)}
-                className="whitespace-nowrap px-4 py-2 bg-gray-800 text-white rounded-xl font-bold text-xs flex items-center gap-2 shadow-lg shadow-gray-200"
-              >
-                <Trash2 size={14} /> Dọn sạch thùng rác
-              </button>
-            )}
-          </div>
-        )}
+        <div className="flex items-center gap-2">
+          <SortButton
+            currentSort={sortBy}
+            onSortChange={(val) => {
+              setSortBy(val);
+              localStorage.setItem(`sort_pref_trashWH_${user.id}`, val);
+            }}
+            options={[
+              { value: 'newest', label: 'Mới nhất' },
+              { value: 'code', label: 'Mã kho' },
+            ]}
+          />
+          <Button
+            size="icon"
+            variant={showFilter ? 'primary' : 'outline'}
+            onClick={() => setShowFilter((f) => !f)}
+            icon={Search}
+          />
+        </div>
       </div>
+
+      <AnimatePresence>
+        {showFilter && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
+            className="overflow-hidden"
+          >
+            <div className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 space-y-2">
+              <label className="text-[10px] font-bold text-gray-400 uppercase">Tìm kiếm</label>
+              <input
+                type="text"
+                placeholder="Tên kho, mã kho..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full px-3 py-2 rounded-lg border border-gray-200 text-xs outline-none focus:ring-2 focus:ring-primary/20"
+              />
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {filteredWarehouses.length > 0 && (
+        <div className="flex items-center gap-2 overflow-x-auto pb-2 md:pb-0">
+          {selectedIds.size > 0 ? (
+            <>
+              <button
+                onClick={() => setShowBulkRestoreModal(true)}
+                className="whitespace-nowrap px-4 py-2 bg-green-600 text-white rounded-xl font-bold text-xs flex items-center gap-2 shadow-lg shadow-green-200"
+              >
+                <RefreshCw size={14} /> Khôi phục ({selectedIds.size})
+              </button>
+              <button
+                onClick={() => setShowBulkDeleteModal(true)}
+                className="whitespace-nowrap px-4 py-2 bg-red-600 text-white rounded-xl font-bold text-xs flex items-center gap-2 shadow-lg shadow-red-200"
+              >
+                <Trash2 size={14} /> Xóa vĩnh viễn ({selectedIds.size})
+              </button>
+            </>
+          ) : (
+            <button
+              onClick={() => setShowEmptyTrashModal(true)}
+              className="whitespace-nowrap px-4 py-2 bg-gray-800 text-white rounded-xl font-bold text-xs flex items-center gap-2 shadow-lg shadow-gray-200"
+            >
+              <Trash2 size={14} /> Dọn sạch thùng rác
+            </button>
+          )}
+        </div>
+      )}
 
       <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden overflow-x-auto min-h-[300px]">
         <table className="w-full text-left border-collapse whitespace-nowrap">
@@ -270,7 +332,8 @@ export const DeletedWarehouses = ({
                   onClick={toggleSelectAll}
                   className="p-1 text-gray-400 hover:text-primary transition-colors"
                 >
-                  {selectedIds.size === warehouses.length && warehouses.length > 0 ? (
+                  {selectedIds.size === filteredWarehouses.length &&
+                  filteredWarehouses.length > 0 ? (
                     <CheckSquare size={20} className="text-primary" />
                   ) : (
                     <Square size={20} />
@@ -298,14 +361,14 @@ export const DeletedWarehouses = ({
                   </div>
                 </td>
               </tr>
-            ) : warehouses.length === 0 ? (
+            ) : filteredWarehouses.length === 0 ? (
               <tr>
                 <td colSpan={4} className="px-4 py-12 text-center text-gray-400 italic">
-                  Thùng rác trống
+                  {searchTerm ? 'Không tìm thấy kết quả' : 'Thùng rác trống'}
                 </td>
               </tr>
             ) : (
-              warehouses.map((item) => {
+              filteredWarehouses.map((item) => {
                 const isSelected = selectedIds.has(item.id);
                 return (
                   <tr

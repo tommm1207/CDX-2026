@@ -8,6 +8,7 @@ import { NumericInput } from '../shared/NumericInput';
 import { CreatableSelect } from '../shared/CreatableSelect';
 import { ToastType } from '../shared/Toast';
 import { Button } from '../shared/Button';
+import { SortButton, SortOption } from '../shared/SortButton';
 import { formatDate, formatNumber } from '@/utils/format';
 import { isActiveWarehouse } from '@/utils/inventory';
 import { getAllowedWarehouses } from '@/utils/helpers';
@@ -31,6 +32,11 @@ export const FinishedGoodsIntake = ({
   const [selectedOrder, setSelectedOrder] = useState<any>(null);
   const [showModal, setShowModal] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [sortBy, setSortBy] = useState<SortOption>(
+    (localStorage.getItem(`sort_pref_finGoods_${user.id}`) as SortOption) || 'newest',
+  );
+  const [showFilter, setShowFilter] = useState(false);
 
   const [formData, setFormData] = useState({
     so_luong: 0,
@@ -209,15 +215,74 @@ export const FinishedGoodsIntake = ({
 
   const warehouseOptions = warehouses.map((w) => ({ id: w.id, name: w.name }));
 
+  const filteredOrders = orders
+    .filter((o) => {
+      if (!searchTerm) return true;
+      const s = searchTerm.toLowerCase();
+      return (
+        (o.ma_lenh || '').toLowerCase().includes(s) ||
+        (o.ten_san_pham || '').toLowerCase().includes(s)
+      );
+    })
+    .sort((a, b) => {
+      if (sortBy === 'newest')
+        return new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime();
+      if (sortBy === 'code') return (a.ma_lenh || '').localeCompare(b.ma_lenh || '');
+      return 0;
+    });
+
   return (
     <div className="p-4 md:p-6 space-y-6 pb-24">
-      <PageBreadcrumb title="Nhập kho thành phẩm" onBack={onBack} />
+      <div className="flex items-center justify-between gap-2">
+        <PageBreadcrumb title="Nhập kho thành phẩm" onBack={onBack} />
+        <div className="flex items-center gap-2">
+          <SortButton
+            currentSort={sortBy}
+            onSortChange={(val) => {
+              setSortBy(val);
+              localStorage.setItem(`sort_pref_finGoods_${user.id}`, val);
+            }}
+            options={[
+              { value: 'newest', label: 'Mới nhất' },
+              { value: 'code', label: 'Mã lệnh' },
+            ]}
+          />
+          <Button
+            size="icon"
+            variant={showFilter ? 'primary' : 'outline'}
+            onClick={() => setShowFilter((f) => !f)}
+            icon={Search}
+          />
+        </div>
+      </div>
+
+      <AnimatePresence>
+        {showFilter && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
+            className="overflow-hidden"
+          >
+            <div className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 space-y-2">
+              <label className="text-[10px] font-bold text-gray-400 uppercase">Tìm kiếm</label>
+              <input
+                type="text"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                placeholder="Mã lệnh, tên sản phẩm..."
+                className="w-full px-3 py-2 rounded-lg border border-gray-200 text-xs outline-none focus:ring-2 focus:ring-primary/20"
+              />
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       <div className="flex flex-col lg:flex-row gap-6">
         {/* Left: Active orders list */}
         <div className="flex-1 space-y-3">
           <h3 className="text-xs font-bold text-gray-500 uppercase">
-            Lệnh đang sản xuất ({orders.length})
+            Lệnh đang sản xuất ({filteredOrders.length})
           </h3>
 
           {loading ? (
@@ -225,13 +290,15 @@ export const FinishedGoodsIntake = ({
               <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin mb-2" />
               <p className="text-sm">Đang tải...</p>
             </div>
-          ) : orders.length === 0 ? (
+          ) : filteredOrders.length === 0 ? (
             <div className="flex flex-col items-center py-12 text-gray-400 bg-white rounded-2xl border border-dashed border-gray-200">
               <Factory size={48} className="mb-3 text-gray-300" />
-              <p className="font-medium">Không có lệnh đang sản xuất</p>
+              <p className="font-medium">
+                {searchTerm ? 'Không tìm thấy kết quả' : 'Không có lệnh đang sản xuất'}
+              </p>
             </div>
           ) : (
-            orders.map((order) => {
+            filteredOrders.map((order) => {
               const remaining = order.so_luong_ke_hoach - order.so_luong_hoan_thanh;
               const progress = Math.round(
                 (order.so_luong_hoan_thanh / order.so_luong_ke_hoach) * 100,

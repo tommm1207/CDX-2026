@@ -21,6 +21,7 @@ import { CreatableSelect } from '../shared/CreatableSelect';
 import { ToastType } from '../shared/Toast';
 import { FAB } from '../shared/FAB';
 import { Button } from '../shared/Button';
+import { SortButton, SortOption } from '../shared/SortButton';
 import { ExcelButton } from '../shared/ExcelButton';
 import { formatDate, formatNumber, formatCurrency } from '@/utils/format';
 import { isActiveWarehouse, getAvailableStock } from '@/utils/inventory';
@@ -48,6 +49,10 @@ export const ProductionOrders = ({
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('Tất cả');
   const [submitting, setSubmitting] = useState(false);
+  const [sortBy, setSortBy] = useState<SortOption>(
+    (localStorage.getItem(`sort_pref_prodOrders_${user.id}`) as SortOption) || 'newest',
+  );
+  const [showFilter, setShowFilter] = useState(true);
 
   // Form
   const [formData, setFormData] = useState({
@@ -319,32 +324,69 @@ export const ProductionOrders = ({
     <div className="p-4 md:p-6 space-y-6 pb-24">
       <div className="flex items-center justify-between gap-2">
         <PageBreadcrumb title="Lệnh sản xuất" onBack={onBack} />
-        <ExcelButton onClick={exportToExcel} />
+        <div className="flex items-center gap-2">
+          <SortButton
+            currentSort={sortBy}
+            onSortChange={(val) => {
+              setSortBy(val);
+              localStorage.setItem(`sort_pref_prodOrders_${user.id}`, val);
+            }}
+            options={[
+              { value: 'newest', label: 'Mới nhất' },
+              { value: 'code', label: 'Mã lệnh' },
+            ]}
+          />
+          <Button
+            size="icon"
+            variant={showFilter ? 'primary' : 'outline'}
+            onClick={() => setShowFilter((f) => !f)}
+            icon={Search}
+          />
+          <ExcelButton onClick={exportToExcel} />
+        </div>
       </div>
 
       {/* Filters */}
-      <div className="flex flex-col sm:flex-row gap-3">
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
-          <input
-            type="text"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            placeholder="Tìm mã lệnh, sản phẩm..."
-            className="w-full pl-10 pr-4 py-3 rounded-2xl border border-gray-200 text-sm focus:ring-2 focus:ring-primary/20 outline-none bg-white"
-          />
-        </div>
-        <select
-          value={statusFilter}
-          onChange={(e) => setStatusFilter(e.target.value)}
-          className="px-4 py-3 rounded-2xl border border-gray-200 text-sm bg-white"
-        >
-          <option value="Tất cả">Tất cả trạng thái</option>
-          <option value="dang_san_xuat">Đang SX</option>
-          <option value="hoan_thanh">Hoàn thành</option>
-          <option value="da_huy">Đã hủy</option>
-        </select>
-      </div>
+      <AnimatePresence>
+        {showFilter && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
+            className="overflow-hidden"
+          >
+            <div className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 space-y-3">
+              <div className="flex flex-col sm:flex-row gap-3">
+                <div className="flex-1 space-y-1">
+                  <label className="text-[10px] font-bold text-gray-400 uppercase">Tìm kiếm</label>
+                  <input
+                    type="text"
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    placeholder="Tìm mã lệnh, sản phẩm..."
+                    className="w-full px-3 py-2 rounded-lg border border-gray-200 text-xs outline-none focus:ring-2 focus:ring-primary/20"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-[10px] font-bold text-gray-400 uppercase">
+                    Trạng thái
+                  </label>
+                  <select
+                    value={statusFilter}
+                    onChange={(e) => setStatusFilter(e.target.value)}
+                    className="w-full px-3 py-2 rounded-lg border border-gray-200 text-xs outline-none focus:ring-2 focus:ring-primary/20"
+                  >
+                    <option value="Tất cả">Tất cả trạng thái</option>
+                    <option value="dang_san_xuat">Đang SX</option>
+                    <option value="hoan_thanh">Hoàn thành</option>
+                    <option value="da_huy">Đã hủy</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Orders list */}
       <div className="space-y-3">

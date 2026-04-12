@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { CalendarCheck, Plus, X, Users, Check, RefreshCw } from 'lucide-react';
+import { CalendarCheck, Plus, X, Users, Check, RefreshCw, Search } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { supabase } from '@/lib/supabase';
 import { Employee } from '@/types';
@@ -8,6 +8,7 @@ import { NumericInput } from '../shared/NumericInput';
 import { ToastType } from '../shared/Toast';
 import { MonthYearPicker } from '../shared/MonthYearPicker';
 import { Button } from '../shared/Button';
+import { SortButton, SortOption } from '../shared/SortButton';
 
 import { AttendanceTable } from './AttendanceTable';
 import { FAB } from '../shared/FAB';
@@ -23,6 +24,11 @@ export const Attendance = ({
 }) => {
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [attendance, setAttendance] = useState<any[]>([]);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [sortBy, setSortBy] = useState<SortOption>(
+    (localStorage.getItem(`sort_pref_attendance_${user.id}`) as SortOption) || 'code',
+  );
+  const [showFilter, setShowFilter] = useState(false);
   const [loading, setLoading] = useState(true);
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1);
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
@@ -314,11 +320,42 @@ export const Attendance = ({
     }
   };
 
+  const filteredEmployees = employees
+    .filter((e) => {
+      if (!searchTerm) return true;
+      const s = searchTerm.toLowerCase();
+      return (
+        (e.full_name || '').toLowerCase().includes(s) || (e.code || '').toLowerCase().includes(s)
+      );
+    })
+    .sort((a, b) => {
+      if (sortBy === 'code') return (a.code || '').localeCompare(b.code || '');
+      if (sortBy === 'newest') return (a.full_name || '').localeCompare(b.full_name || '');
+      return 0;
+    });
+
   return (
     <div className="p-4 md:p-6 space-y-6 pb-24 overflow-x-hidden">
       <div className="flex items-center justify-between gap-2">
         <PageBreadcrumb title="Chấm công" onBack={onBack} />
         <div className="flex items-center gap-2">
+          <SortButton
+            currentSort={sortBy}
+            onSortChange={(val) => {
+              setSortBy(val);
+              localStorage.setItem(`sort_pref_attendance_${user.id}`, val);
+            }}
+            options={[
+              { value: 'code', label: 'Mã NV' },
+              { value: 'newest', label: 'Tên A-Z' },
+            ]}
+          />
+          <Button
+            size="icon"
+            variant={showFilter ? 'primary' : 'outline'}
+            onClick={() => setShowFilter((f) => !f)}
+            icon={Search}
+          />
           <MonthYearPicker
             selectedMonth={selectedMonth}
             selectedYear={selectedYear}
@@ -328,8 +365,30 @@ export const Attendance = ({
         </div>
       </div>
 
+      <AnimatePresence>
+        {showFilter && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
+            className="overflow-hidden"
+          >
+            <div className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 space-y-2">
+              <label className="text-[10px] font-bold text-gray-400 uppercase">Tìm nhân viên</label>
+              <input
+                type="text"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                placeholder="Tên, mã NV..."
+                className="w-full px-3 py-2 rounded-lg border border-gray-200 text-xs outline-none focus:ring-2 focus:ring-primary/20"
+              />
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       <AttendanceTable
-        employees={employees}
+        employees={filteredEmployees}
         days={days}
         attendance={attendance}
         loading={loading}

@@ -30,6 +30,7 @@ import { DeletedMaterials } from '@/components/trash/DeletedMaterials';
 import { DeletedSlips } from '@/components/trash/DeletedSlips';
 import { DeletedEmployees } from '@/components/trash/DeletedEmployees';
 import { DeletedCosts } from '@/components/trash/DeletedCosts';
+import { DeletedProduction } from '@/components/trash/DeletedProduction';
 import { Notes } from '@/components/notes/Notes';
 import { Reminders } from '@/components/reminders/Reminders';
 import { Backup } from '@/components/settings/Backup';
@@ -234,6 +235,8 @@ export const AppRouter = ({
       return <DeletedEmployees user={user} onBack={goBack} addToast={addToast} />;
     case 'deleted-costs':
       return <DeletedCosts user={user} onBack={goBack} addToast={addToast} />;
+    case 'deleted-production':
+      return <DeletedProduction user={user} onBack={goBack} addToast={addToast} />;
     case 'material-groups':
       return <MaterialGroups user={user} onBack={goBack} addToast={addToast} />;
     case 'backup-settings':

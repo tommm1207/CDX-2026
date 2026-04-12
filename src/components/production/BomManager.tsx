@@ -20,6 +20,7 @@ import { CreatableSelect } from '../shared/CreatableSelect';
 import { ToastType } from '../shared/Toast';
 import { FAB } from '../shared/FAB';
 import { Button } from '../shared/Button';
+import { SortButton, SortOption } from '../shared/SortButton';
 import { formatNumber } from '@/utils/format';
 
 // ============================
@@ -42,6 +43,10 @@ export const BomManager = ({
   const [isEditing, setIsEditing] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [sortBy, setSortBy] = useState<SortOption>(
+    (localStorage.getItem(`sort_pref_bom_${user.id}`) as SortOption) || 'newest',
+  );
+  const [showFilter, setShowFilter] = useState(false);
 
   // Form state
   const [formData, setFormData] = useState({
@@ -235,13 +240,20 @@ export const BomManager = ({
     }
   };
 
-  const filteredBoms = boms.filter((bom) => {
-    if (!searchTerm) return true;
-    const s = searchTerm.toLowerCase();
-    return (
-      bom.ten_san_pham.toLowerCase().includes(s) || (bom.mo_ta || '').toLowerCase().includes(s)
-    );
-  });
+  const filteredBoms = boms
+    .filter((bom) => {
+      if (!searchTerm) return true;
+      const s = searchTerm.toLowerCase();
+      return (
+        bom.ten_san_pham.toLowerCase().includes(s) || (bom.mo_ta || '').toLowerCase().includes(s)
+      );
+    })
+    .sort((a, b) => {
+      if (sortBy === 'newest')
+        return new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime();
+      if (sortBy === 'code') return (a.ten_san_pham || '').localeCompare(b.ten_san_pham || '');
+      return 0;
+    });
 
   const materialOptions = materials.map((m) => ({
     id: m.id,
@@ -252,19 +264,49 @@ export const BomManager = ({
     <div className="p-4 md:p-6 space-y-6 pb-24">
       <div className="flex items-center justify-between gap-2">
         <PageBreadcrumb title="Thiết lập Định mức vật tư" onBack={onBack} />
+        <div className="flex items-center gap-2">
+          <SortButton
+            currentSort={sortBy}
+            onSortChange={(val) => {
+              setSortBy(val);
+              localStorage.setItem(`sort_pref_bom_${user.id}`, val);
+            }}
+            options={[
+              { value: 'newest', label: 'Mới nhất' },
+              { value: 'code', label: 'Tên SP' },
+            ]}
+          />
+          <Button
+            size="icon"
+            variant={showFilter ? 'primary' : 'outline'}
+            onClick={() => setShowFilter((f) => !f)}
+            icon={Search}
+          />
+        </div>
       </div>
 
-      {/* Search */}
-      <div className="relative">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
-        <input
-          type="text"
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          placeholder="Tìm kiếm sản phẩm..."
-          className="w-full pl-10 pr-4 py-3 rounded-2xl border border-gray-200 text-sm focus:ring-2 focus:ring-primary/20 outline-none bg-white"
-        />
-      </div>
+      {/* Search panel */}
+      <AnimatePresence>
+        {showFilter && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
+            className="overflow-hidden"
+          >
+            <div className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 space-y-2">
+              <label className="text-[10px] font-bold text-gray-400 uppercase">Tìm kiếm</label>
+              <input
+                type="text"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                placeholder="Tìm kiếm sản phẩm..."
+                className="w-full px-3 py-2 rounded-lg border border-gray-200 text-xs outline-none focus:ring-2 focus:ring-primary/20"
+              />
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* BOM List + Detail split view */}
       <div className="flex flex-col lg:flex-row gap-6">

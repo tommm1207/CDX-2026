@@ -19,6 +19,7 @@ import { CreatableSelect } from '../shared/CreatableSelect';
 import { ToastType } from '../shared/Toast';
 import { FAB } from '../shared/FAB';
 import { Button } from '../shared/Button';
+import { SortButton, SortOption } from '../shared/SortButton';
 import { ExcelButton } from '../shared/ExcelButton';
 import { formatDate, formatNumber } from '@/utils/format';
 import { isActiveWarehouse, getAvailableStock } from '@/utils/inventory';
@@ -45,6 +46,10 @@ export const MaterialSplitMerge = ({
   const [submitting, setSubmitting] = useState(false);
   const [mode, setMode] = useState<'xa' | 'gop'>('xa');
   const [searchTerm, setSearchTerm] = useState('');
+  const [sortBy, setSortBy] = useState<SortOption>(
+    (localStorage.getItem(`sort_pref_splitMerge_${user.id}`) as SortOption) || 'newest',
+  );
+  const [showFilter, setShowFilter] = useState(false);
 
   // Form
   const [kho_id, setKhoId] = useState('');
@@ -348,7 +353,26 @@ export const MaterialSplitMerge = ({
     <div className="p-4 md:p-6 space-y-6 pb-24">
       <div className="flex items-center justify-between gap-2">
         <PageBreadcrumb title="Xả / Gộp vật tư" onBack={onBack} />
-        <ExcelButton onClick={exportToExcel} />
+        <div className="flex items-center gap-2">
+          <SortButton
+            currentSort={sortBy}
+            onSortChange={(val) => {
+              setSortBy(val);
+              localStorage.setItem(`sort_pref_splitMerge_${user.id}`, val);
+            }}
+            options={[
+              { value: 'newest', label: 'Mới nhất' },
+              { value: 'code', label: 'Mã phiếu' },
+            ]}
+          />
+          <Button
+            size="icon"
+            variant={showFilter ? 'primary' : 'outline'}
+            onClick={() => setShowFilter((f) => !f)}
+            icon={Search}
+          />
+          <ExcelButton onClick={exportToExcel} />
+        </div>
       </div>
 
       {/* Action buttons */}
@@ -380,16 +404,27 @@ export const MaterialSplitMerge = ({
       </div>
 
       {/* History */}
-      <div className="relative">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
-        <input
-          type="text"
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          placeholder="Tìm mã phiếu..."
-          className="w-full pl-10 pr-4 py-3 rounded-2xl border border-gray-200 text-sm focus:ring-2 focus:ring-primary/20 outline-none bg-white"
-        />
-      </div>
+      <AnimatePresence>
+        {showFilter && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
+            className="overflow-hidden"
+          >
+            <div className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 space-y-2">
+              <label className="text-[10px] font-bold text-gray-400 uppercase">Tìm kiếm</label>
+              <input
+                type="text"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                placeholder="Tìm mã phiếu..."
+                className="w-full px-3 py-2 rounded-lg border border-gray-200 text-xs outline-none focus:ring-2 focus:ring-primary/20"
+              />
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       <div className="space-y-3">
         {loading ? (

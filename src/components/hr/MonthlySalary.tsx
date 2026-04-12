@@ -28,6 +28,7 @@ export const MonthlySalary = ({
   const [loading, setLoading] = useState(true);
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1);
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
+  const [isCapturing, setIsCapturing] = useState(false);
 
   useEffect(() => {
     fetchSalaries();
@@ -228,23 +229,26 @@ export const MonthlySalary = ({
     if (billRef.current === null) return;
 
     try {
-      // Add a small delay to ensure all micro-layouts and heavy images are fully rendered
-      await new Promise((resolve) => setTimeout(resolve, 200));
+      setIsCapturing(true);
+      // Wait for layout to lock and re-render stabilized styles
+      await new Promise((resolve) => setTimeout(resolve, 500));
 
       const dataUrl = await toPng(billRef.current, {
         cacheBust: true,
-        backgroundColor: '#fff',
+        backgroundColor: '#FCFCFC',
         quality: 1,
-        pixelRatio: 3, // Premium 3x resolution for saved images
+        pixelRatio: 4, // Higher 4x resolution for premium look
         skipFonts: false,
-        fontEmbedCSS: '',
       });
+
+      setIsCapturing(false);
       const link = document.createElement('a');
       link.download = `Phieu_Luong_${selectedSalary.full_name}_T${selectedMonth}_${selectedYear}.png`;
       link.href = dataUrl;
       link.click();
       if (addToast) addToast('Đã lưu ảnh phiếu lương thành công!', 'success');
     } catch (err) {
+      setIsCapturing(false);
       console.error('Lỗi khi lưu ảnh:', err);
       if (addToast) addToast('Lỗi khi tạo ảnh phiếu lương', 'error');
     }
@@ -604,13 +608,16 @@ export const MonthlySalary = ({
                 <div ref={billRef} className="bg-white">
                   {/* Explicit style block for perfect image capture consistency (fixes missing bold/italic/colors) */}
                   <style>{`
-                    .bill-capture { font-family: 'Inter', system-ui, sans-serif !important; width: 380px !important; margin: 0 auto !important; }
+                    .bill-capture { font-family: 'Inter', system-ui, sans-serif !important; width: 380px !important; margin: 0 auto !important; background: #FCFCFC !important; position: relative !important; }
+                    .bill-capture.is-capturing { border: none !important; box-shadow: none !important; overflow: visible !important; }
                     .bill-capture .font-bold { font-weight: 700 !important; }
                     .bill-capture .font-black { font-weight: 900 !important; }
                     .bill-capture .font-extrabold { font-weight: 800 !important; }
                     .bill-capture .italic { font-style: italic !important; }
                     .bill-capture .uppercase { text-transform: uppercase !important; }
                     .bill-capture .text-primary { color: #2D5A27 !important; }
+                    .bill-capture .logo-img { width: 36px !important; height: 36px !important; mix-blend-mode: multiply !important; opacity: 1 !important; visibility: visible !important; display: block !important; background-color: transparent !important; }
+                    .bill-capture .main-title { color: #2D5A27 !important; font-weight: 900 !important; letter-spacing: -0.02em !important; text-shadow: none !important; }
                     .bill-capture .text-gray-400 { color: #9CA3AF !important; }
                     .bill-capture .text-gray-500 { color: #6B7280 !important; }
                     .bill-capture .text-gray-700 { color: #374151 !important; }
@@ -623,15 +630,19 @@ export const MonthlySalary = ({
                     .bill-capture .whitespace-nowrap { white-space: nowrap !important; }
                   `}</style>
 
-                  <div className="bill-capture">
+                  <div className={`bill-capture ${isCapturing ? 'is-capturing' : ''}`}>
                     {/* Bill header for image */}
                     <div className="px-5 pt-5 pb-4 border-b border-gray-100">
                       {/* Logo row */}
                       <div className="flex items-center gap-2 mb-3">
-                        <img
-                          src={logoBase64}
-                          alt="Logo"
-                          className="w-9 h-9 object-contain rounded-lg flex-shrink-0"
+                        <div
+                          className="logo-img rounded-lg flex-shrink-0"
+                          style={{
+                            backgroundImage: `url(${logoBase64})`,
+                            backgroundSize: 'contain',
+                            backgroundRepeat: 'no-repeat',
+                            backgroundPosition: 'center',
+                          }}
                         />
                         <div>
                           <p className="text-[9px] font-black text-gray-700 uppercase tracking-wider">
@@ -644,13 +655,11 @@ export const MonthlySalary = ({
                       </div>
                       {/* Title block */}
                       <h1
-                        className="text-xl font-black uppercase leading-none"
+                        className="text-xl uppercase leading-none main-title italic"
                         style={{
                           color: '#2D5A27',
                           fontWeight: 900,
-                          letterSpacing: '-0.05em',
-                          fontFamily: "'Inter', sans-serif",
-                        }} // Explicit styling for perfect image capture consistency
+                        }}
                       >
                         BẢNG TÍNH LƯƠNG
                       </h1>

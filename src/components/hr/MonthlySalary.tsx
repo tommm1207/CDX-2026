@@ -697,7 +697,7 @@ export const MonthlySalary = ({
                     .bill-capture .italic { font-style: italic !important; }
                     .bill-capture .uppercase { text-transform: uppercase !important; }
                     .bill-capture .text-primary { color: #2D5A27 !important; }
-                    .bill-capture .logo-img { width: 36px !important; height: 36px !important; opacity: 1 !important; visibility: visible !important; display: block !important; background-color: transparent !important; transform: translateZ(0) !important; -webkit-transform: translateZ(0) !important; }
+                    .bill-capture .logo-img { width: 36px !important; height: 36px !important; opacity: 1 !important; visibility: hidden !important; display: block !important; background-color: transparent !important; transform: translateZ(0) !important; -webkit-transform: translateZ(0) !important; }
                     .bill-capture .main-title { color: #2D5A27 !important; font-weight: 900 !important; letter-spacing: -0.02em !important; text-shadow: none !important; }
                     .bill-capture .text-gray-400 { color: #9CA3AF !important; }
                     .bill-capture .text-gray-500 { color: #6B7280 !important; }

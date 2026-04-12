@@ -398,8 +398,8 @@ export const getTonKhoTable = async (
 };
 
 /**
- * Tự động sinh mã vật tư tiếp theo dựa trên nhóm vật tư.
- * Định dạng: [Mã nhóm]-[Số thứ tự 3 chữ số] (VD: VT-001)
+ * Tự động sinh mã vật tư tiếp theo dựa trên nhóm vat.
+ * Định dạng: [MãNhóm]-[Số thứ tự 3 chữ số] (VD: VAT001-001)
  */
 export const generateNextMaterialCode = async (groupId: string): Promise<string> => {
   try {
@@ -410,20 +410,23 @@ export const generateNextMaterialCode = async (groupId: string): Promise<string>
       .eq('id', groupId)
       .single();
     if (!groupData || !groupData.code) return '';
-    const groupPrefix = groupData.code;
+    const groupPrefix = groupData.code; // e.g. VAT001
 
     const { data } = await supabase
       .from('materials')
       .select('code')
       .eq('group_id', groupId)
+      .like('code', `${groupPrefix}-%`)
       .order('code', { ascending: false })
       .limit(1);
 
     if (data && data.length > 0 && data[0].code) {
-      const lastCode = data[0].code;
-      const parts = lastCode.split('-');
-      const lastNum = parseInt(parts[parts.length - 1]);
-      if (!isNaN(lastNum)) return `${groupPrefix}-${(lastNum + 1).toString().padStart(3, '0')}`;
+      const lastCode = data[0].code; // e.g. VAT001-003
+      const match = lastCode.match(/(\d+)$/);
+      if (match) {
+        const nextNum = parseInt(match[1]) + 1;
+        return `${groupPrefix}-${nextNum.toString().padStart(3, '0')}`;
+      }
     }
     return `${groupPrefix}-001`;
   } catch (err) {
@@ -434,29 +437,29 @@ export const generateNextMaterialCode = async (groupId: string): Promise<string>
 
 /**
  * Tự động sinh mã nhóm vật tư tiếp theo.
- * Định dạng: NH[Số thứ tự 3 chữ số] (VD: NH001)
+ * Định dạng: VAT[Số thứ tự 3 chữ số] (VD: VAT001, VAT002)
  */
 export const generateNextGroupCode = async (): Promise<string> => {
   try {
     const { data } = await supabase
       .from('material_groups')
       .select('code')
-      .like('code', 'NH%')
+      .like('code', 'VAT%')
       .order('code', { ascending: false })
       .limit(1);
 
     if (data && data.length > 0 && data[0].code) {
-      const lastCode = data[0].code;
-      const match = lastCode.match(/NH(\d+)/);
-      if (match && match[1]) {
+      const lastCode = data[0].code; // e.g. VAT003
+      const match = lastCode.match(/VAT(\d+)$/);
+      if (match) {
         const nextNumber = parseInt(match[1]) + 1;
-        return `NH${nextNumber.toString().padStart(3, '0')}`;
+        return `VAT${nextNumber.toString().padStart(3, '0')}`;
       }
     }
-    return 'NH001';
+    return 'VAT001';
   } catch (err) {
     console.error('Error generating group code:', err);
-    return 'NH001';
+    return 'VAT001';
   }
 };
 

@@ -100,14 +100,15 @@ export const Warehouses = ({
         .from('warehouses')
         .select('code')
         .like('code', 'KH%')
+        .not('status', 'eq', 'Đã xóa')
         .order('code', { ascending: false })
         .limit(1);
 
       if (data && data.length > 0 && data[0].code) {
         const lastCode = data[0].code;
-        const lastNumber = parseInt(lastCode.replace('KH', ''));
-        if (!isNaN(lastNumber)) {
-          const nextNumber = lastNumber + 1;
+        const match = lastCode.match(/KH(\d+)$/);
+        if (match) {
+          const nextNumber = parseInt(match[1]) + 1;
           return `KH${nextNumber.toString().padStart(3, '0')}`;
         }
       }

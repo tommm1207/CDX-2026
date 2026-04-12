@@ -530,7 +530,8 @@ export const MaterialCatalog = ({
               <div className="flex-1 overflow-y-auto custom-scrollbar">
                 <form onSubmit={handleSubmit} className="p-6">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    {/* NHÓM lên đầu — chọn nhóm trước để sinh mã */}
+
+                    {/* 1. NHÓM — chọn đầu tiên để sinh mã */}
                     <div className="md:col-span-2">
                       <CreatableSelect
                         label={`Nhóm vật tư *${isEditing && editingInUse ? ' 🔒' : ''}`}
@@ -552,7 +553,7 @@ export const MaterialCatalog = ({
                       />
                     </div>
 
-                    {/* Mã tham chiếu — hiện sau khi chọn nhóm */}
+                    {/* 2. MÃ — hiện sau khi chọn nhóm */}
                     <div className="md:col-span-2 space-y-2">
                       <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">
                         Mã tham chiếu (Vật tư)
@@ -562,22 +563,21 @@ export const MaterialCatalog = ({
                       </div>
                     </div>
 
-                    <div className="space-y-4">
-                      <div className="space-y-1">
-                        <label className="text-[10px] font-bold text-gray-400 uppercase">
-                          Tên vật tư *
-                        </label>
-                        <input
-                          required
-                          type="text"
-                          placeholder="Ví dụ: Tôn kẽm 0.4mm"
-                          value={formData.name}
-                          onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                          className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20"
-                        />
-                      </div>
+                    {/* 3. Left column: Tên */}
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-bold text-gray-400 uppercase">Tên vật tư *</label>
+                      <input
+                        required
+                        type="text"
+                        placeholder="Ví dụ: Tôn kẽm 0.4mm"
+                        value={formData.name}
+                        onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                        className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20"
+                      />
+                    </div>
 
-                    <div className="space-y-4">
+                    {/* 3. Right column: Đơn vị tính */}
+                    <div>
                       <CreatableSelect
                         label={`Đơn vị tính${isEditing && editingInUse ? ' 🔒' : ''}`}
                         value={formData.unit}
@@ -589,36 +589,33 @@ export const MaterialCatalog = ({
                         placeholder="Chọn hoặc nhập mới..."
                         disabled={isEditing && editingInUse}
                       />
-
-                      <div className="space-y-1">
-                        <label className="text-[10px] font-bold text-gray-400 uppercase">
-                          Quy cách / Kích thước
-                        </label>
-                        <input
-                          type="text"
-                          placeholder="Ví dụ: 1200mm x 2400mm"
-                          value={formData.specification}
-                          onChange={(e) =>
-                            setFormData({ ...formData, specification: e.target.value })
-                          }
-                          className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20"
-                        />
-                      </div>
-                      <div className="space-y-1">
-                        <label className="text-[10px] font-bold text-gray-400 uppercase">
-                          Mô tả chi tiết
-                        </label>
-                        <textarea
-                          rows={3}
-                          placeholder="Thông tin thêm về vật tư..."
-                          value={formData.description}
-                          onChange={(e) =>
-                            setFormData({ ...formData, description: e.target.value })
-                          }
-                          className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20 resize-none"
-                        />
-                      </div>
                     </div>
+
+                    {/* 4. Left column: Quy cách */}
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-bold text-gray-400 uppercase">Quy cách / Kích thước</label>
+                      <input
+                        type="text"
+                        placeholder="Ví dụ: 1200mm x 2400mm"
+                        value={formData.specification}
+                        onChange={(e) => setFormData({ ...formData, specification: e.target.value })}
+                        className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20"
+                      />
+                    </div>
+
+                    {/* 4. Right column: Mô tả */}
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-bold text-gray-400 uppercase">Mô tả chi tiết</label>
+                      <textarea
+                        rows={3}
+                        placeholder="Thông tin thêm về vật tư..."
+                        value={formData.description}
+                        onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                        className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20 resize-none"
+                      />
+                    </div>
+
+                    {/* 5. Ảnh */}
                     <div className="col-span-1 md:col-span-2 space-y-4 pt-4 border-t border-gray-100">
                       <ImageCapture
                         maxImages={1}
@@ -628,6 +625,7 @@ export const MaterialCatalog = ({
                       />
                     </div>
                   </div>
+
 
                   <div className="mt-8 flex justify-end gap-3 pt-6 border-t border-gray-100 flex-shrink-0">
                     <Button variant="outline" onClick={() => setShowModal(false)}>

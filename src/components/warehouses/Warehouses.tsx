@@ -132,7 +132,12 @@ export const Warehouses = ({
     setSubmitting(true);
 
     try {
-      const { id, ...dbPayload } = formData;
+      const { id, ...rawPayload } = formData;
+      const dbPayload = {
+        ...rawPayload,
+        manager_id: rawPayload.manager_id || null, // Convert empty string to null for UUID
+      };
+
       if (isEditing && id) {
         const { error } = await supabase.from('warehouses').update(dbPayload).eq('id', id);
         if (error) throw error;

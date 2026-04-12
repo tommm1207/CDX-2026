@@ -100,7 +100,7 @@ export const Warehouses = ({
         .from('warehouses')
         .select('code')
         .like('code', 'KH%')
-        .not('status', 'eq', 'Đã xóa')
+        .or('status.is.null,status.neq.Đã xóa')
         .order('code', { ascending: false })
         .limit(1);
 
@@ -372,6 +372,9 @@ export const Warehouses = ({
             <thead>
               <tr className="bg-primary text-white">
                 <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider border-r border-white/10">
+                  Mã
+                </th>
+                <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider border-r border-white/10">
                   Tên kho
                 </th>
                 <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider border-r border-white/10">
@@ -397,13 +400,13 @@ export const Warehouses = ({
             <tbody className="divide-y divide-gray-100">
               {loading ? (
                 <tr>
-                  <td colSpan={8} className="px-4 py-8 text-center text-gray-400 italic">
+                  <td colSpan={9} className="px-4 py-8 text-center text-gray-400 italic">
                     Đang tải dữ liệu...
                   </td>
                 </tr>
               ) : warehouses.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="px-4 py-8 text-center text-gray-400 italic">
+                  <td colSpan={9} className="px-4 py-8 text-center text-gray-400 italic">
                     Chưa có dữ liệu kho bãi
                   </td>
                 </tr>
@@ -424,6 +427,7 @@ export const Warehouses = ({
                       className="hover:bg-gray-50 transition-colors group cursor-pointer"
                       onClick={() => handleEdit(item)}
                     >
+                      <td className="px-4 py-3 text-xs font-bold text-primary font-mono">{item.code || '—'}</td>
                       <td className="px-4 py-3 text-xs text-gray-600">{item.name}</td>
                       <td className="px-4 py-3 text-xs text-gray-600">{item.address}</td>
                       <td className="px-4 py-3 text-xs text-gray-600">

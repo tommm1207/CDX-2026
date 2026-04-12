@@ -230,8 +230,8 @@ export const MonthlySalary = ({
 
     try {
       setIsCapturing(true);
-      // Wait for Safari to fully render the layout
-      await new Promise((resolve) => setTimeout(resolve, 1500));
+      // Wait for Safari to stabilize (reduced for better UX)
+      await new Promise((resolve) => setTimeout(resolve, 900));
 
       // Step 1: Capture the bill without logo
       const rawDataUrl = await toPng(billRef.current, {
@@ -258,14 +258,32 @@ export const MonthlySalary = ({
           // Draw the captured bill
           ctx.drawImage(billImg, 0, 0);
 
-          // Draw logo manually on top (position matches px-5=20px, pt-5=20px)
+          // Draw logo manually on top with rounded corners (matches px-5=20px, pt-5=20px)
           const logoImg = new Image();
           logoImg.onload = () => {
             const scale = 3; // matches pixelRatio
-            const logoX = 20 * scale;
-            const logoY = 20 * scale;
-            const logoSize = 36 * scale;
+            const logoX = Math.round(20 * scale);
+            const logoY = Math.round(20 * scale);
+            const logoSize = Math.round(36 * scale);
+            const radius = Math.round(8 * scale); // rounded-lg equivalent
+
+            ctx.save();
+            ctx.beginPath();
+            if (ctx.roundRect) {
+              ctx.roundRect(logoX, logoY, logoSize, logoSize, radius);
+            } else {
+              // Fallback for older browsers
+              ctx.moveTo(logoX + radius, logoY);
+              ctx.arcTo(logoX + logoSize, logoY, logoX + logoSize, logoY + logoSize, radius);
+              ctx.arcTo(logoX + logoSize, logoY + logoSize, logoX, logoY + logoSize, radius);
+              ctx.arcTo(logoX, logoY + logoSize, logoX, logoY, radius);
+              ctx.arcTo(logoX, logoY, logoX + logoSize, logoY, radius);
+            }
+            ctx.closePath();
+            ctx.clip();
+
             ctx.drawImage(logoImg, logoX, logoY, logoSize, logoSize);
+            ctx.restore();
             resolve(canvas.toDataURL('image/png'));
           };
           logoImg.onerror = () => {

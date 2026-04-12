@@ -16,6 +16,13 @@
   padding-bottom: env(safe-area-inset-bottom);
 }
 
+html,
+body {
+  overflow-x: hidden;
+  max-width: 100vw;
+  position: relative;
+}
+
 .custom-scrollbar::-webkit-scrollbar {
   width: 4px;
 }

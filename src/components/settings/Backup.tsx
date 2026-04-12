@@ -32,7 +32,8 @@ export const BACKUP_TABLES = [
   { id: 'material_groups', label: 'Nhóm vật tư' },
   { id: 'costs', label: 'Báo cáo Chi phí' },
   { id: 'notes', label: 'Ghi chú & Nhật ký' },
-  { id: 'reminders', label: 'Lịch nhắc việc' },
+  { id: 'construction_diaries', label: 'Nhật ký thi công' },
+  { id: 'reminders', label: 'Thông báo & Nhắc việc' },
   { id: 'partners', label: 'Khách hàng & NCC' },
 ];
 

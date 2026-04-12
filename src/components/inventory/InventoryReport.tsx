@@ -42,6 +42,7 @@ export const InventoryReport = ({
   const [startDate, setStartDate] = useState<string>(firstOfYear);
   const [endDate, setEndDate] = useState<string>(today);
   const [hideEmpty, setHideEmpty] = useState(true);
+  const [searchTerm, setSearchTerm] = useState('');
   const [showFilter, setShowFilter] = useState(false);
 
   useEffect(() => {
@@ -65,7 +66,7 @@ export const InventoryReport = ({
     if (materials.length > 0 && warehouses.length > 0) {
       fetchReport();
     }
-  }, [selectedWarehouse, startDate, endDate, materials, warehouses]);
+  }, [selectedWarehouse, startDate, endDate, materials, warehouses, hideEmpty, searchTerm]);
 
   const fetchReport = async () => {
     setLoading(true);
@@ -99,11 +100,20 @@ export const InventoryReport = ({
             a.warehouseName.localeCompare(b.warehouseName, 'vi'),
         );
 
-      const finalRows = hideEmpty
+      let finalRows = hideEmpty
         ? enriched.filter(
             (r) => r.materialName !== 'N/A' && r.warehouseName !== 'N/A' && r.tonCuoi > 0,
           )
         : enriched;
+
+      if (searchTerm) {
+        const lowerSearch = searchTerm.toLowerCase();
+        finalRows = finalRows.filter(
+          (r) =>
+            r.materialName.toLowerCase().includes(lowerSearch) ||
+            r.materialCode.toLowerCase().includes(lowerSearch),
+        );
+      }
 
       setReport(finalRows);
     } catch (err: any) {
@@ -193,7 +203,7 @@ export const InventoryReport = ({
   };
 
   return (
-    <div className="p-4 md:p-6 space-y-6 pb-44">
+    <div className="p-4 md:p-6 space-y-6 pb-24">
       <div className="flex items-center justify-between gap-2">
         <PageBreadcrumb title="Kiểm tra tồn kho" onBack={onBack} />
         <div className="flex items-center gap-2 flex-shrink-0">
@@ -209,6 +219,33 @@ export const InventoryReport = ({
           </button>
           <ExcelButton onClick={handleExportExcel} />
         </div>
+      </div>
+
+      <div className="flex justify-end">
+        <button
+          onClick={() => setHideEmpty(!hideEmpty)}
+          className={`group flex items-center gap-2 px-4 py-2 rounded-2xl border transition-all duration-300 ${
+            hideEmpty
+              ? 'bg-amber-50 text-amber-600 border-amber-200 shadow-sm shadow-amber-100/50'
+              : 'bg-white text-gray-400 border-gray-100 hover:bg-gray-50'
+          }`}
+        >
+          {hideEmpty ? (
+            <EyeOff size={16} className="animate-pulse" />
+          ) : (
+            <BarChart3 size={16} className="group-hover:scale-110 transition-transform" />
+          )}
+          <span className="text-[11px] font-black uppercase tracking-tight">
+            (Ẩn vật tư tồn bằng 0)
+          </span>
+          <div
+            className={`w-8 h-4 rounded-full relative transition-colors duration-200 ${hideEmpty ? 'bg-amber-400' : 'bg-gray-200'}`}
+          >
+            <div
+              className={`absolute top-0.5 w-3 h-3 bg-white rounded-full transition-all duration-200 ${hideEmpty ? 'left-4.5' : 'left-0.5'}`}
+            />
+          </div>
+        </button>
       </div>
 
       {/* Bộ lọc */}
@@ -260,25 +297,33 @@ export const InventoryReport = ({
                   ))}
                 </select>
               </div>
+              <div className="flex-[2]">
+                <label className="text-[10px] font-bold text-gray-400 uppercase mb-1 block">
+                  Tìm kiếm vật tư
+                </label>
+                <div className="relative">
+                  <Search
+                    size={14}
+                    className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
+                  />
+                  <input
+                    type="text"
+                    placeholder="Nhập tên hoặc mã vật tư cần tìm..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="w-full pl-9 pr-3 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20"
+                  />
+                </div>
+              </div>
+            </div>
+            <div className="flex items-center justify-end px-4 pb-2">
+              <div className="text-[10px] text-gray-400 font-medium">
+                Tìm thấy {report.length} kết quả phù hợp
+              </div>
             </div>
           </motion.div>
         )}
       </AnimatePresence>
-
-      <div className="flex justify-end">
-        <label className="flex items-center gap-2 cursor-pointer bg-white px-4 py-2 rounded-xl shadow-sm border border-gray-100 hover:bg-gray-50 transition-colors">
-          <input
-            type="checkbox"
-            checked={hideEmpty}
-            onChange={(e) => setHideEmpty(e.target.checked)}
-            className="w-4 h-4 text-primary rounded border-gray-300 focus:ring-primary"
-          />
-          <span className="text-sm font-bold text-gray-700 flex items-center gap-2">
-            <EyeOff size={16} className="text-gray-400" />
-            Ẩn vật tư đã hết (Tồn = 0) và dữ liệu hỏng (N/A)
-          </span>
-        </label>
-      </div>
 
       {/* Bảng tồn kho — giống bảng Tonkho app cũ */}
       <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">

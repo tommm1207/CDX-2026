@@ -12,6 +12,7 @@ import { formatCurrency, formatDate } from '@/utils/format';
 import { MonthYearPicker } from '../shared/MonthYearPicker';
 import { Button } from '../shared/Button';
 import { ExcelButton } from '../shared/ExcelButton';
+import { slugify } from '@/utils/helpers';
 
 export const MonthlySalary = ({
   user,
@@ -38,6 +39,7 @@ export const MonthlySalary = ({
         .from('users')
         .select('*')
         .neq('status', 'Nghỉ việc')
+        .neq('status', 'Đã xóa')
         .neq('role', 'Admin App')
         .eq('has_salary', true)
         .order('code');
@@ -192,10 +194,10 @@ export const MonthlySalary = ({
   };
 
   return (
-    <div className="p-4 md:p-6 space-y-6 pb-44 overflow-x-hidden">
+    <div className="p-4 md:p-6 space-y-6 pb-24 overflow-x-hidden">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <PageBreadcrumb title="Bảng lương" onBack={onBack} />
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex flex-nowrap items-center gap-2 whitespace-nowrap">
           <MonthYearPicker
             selectedMonth={selectedMonth}
             selectedYear={selectedYear}
@@ -210,6 +212,9 @@ export const MonthlySalary = ({
         <table className="w-full text-left border-collapse min-w-[800px] whitespace-nowrap">
           <thead>
             <tr className="bg-primary text-white">
+              <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider">
+                Mã bảng lương
+              </th>
               <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider">
                 Nhân viên
               </th>
@@ -263,6 +268,12 @@ export const MonthlySalary = ({
                   className="hover:bg-gray-50 transition-colors cursor-pointer"
                 >
                   <td className="px-4 py-3">
+                    <div className="bg-primary/5 px-3 py-1.5 rounded-xl border border-primary/10 text-[10px] font-black text-primary uppercase shadow-inner italic inline-block">
+                      SL-{slugify(s.full_name)}-{selectedMonth.toString().padStart(2, '0')}
+                      {selectedYear.toString().slice(-2)}
+                    </div>
+                  </td>
+                  <td className="px-4 py-3">
                     <p className="text-xs font-bold text-gray-800">{s.full_name}</p>
                     <p className="text-[9px] text-gray-400">{s.code || s.id.slice(0, 8)}</p>
                   </td>
@@ -294,7 +305,9 @@ export const MonthlySalary = ({
           {!loading && salaries.length > 0 && (
             <tfoot className="bg-gray-50/80 border-t-2 border-primary/20">
               <tr>
-                <td className="px-4 py-4 text-xs font-black text-gray-800 uppercase">Tổng cộng</td>
+                <td className="px-4 py-4 text-xs font-black text-gray-800 uppercase" colSpan={2}>
+                  Tổng cộng
+                </td>
                 <td className="px-4 py-4 text-center text-xs font-black text-gray-800">
                   {totalDaysAll.toFixed(1)}
                 </td>
@@ -332,7 +345,7 @@ export const MonthlySalary = ({
               initial={{ opacity: 0, scale: 0.95, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 20 }}
-              className="bg-white rounded-[2rem] md:rounded-[2.5rem] shadow-2xl w-full max-w-xl overflow-hidden m-4 relative"
+              className="bg-white rounded-[2rem] md:rounded-[2.5rem] shadow-2xl w-full max-w-xl overflow-hidden relative"
               onClick={(e) => e.stopPropagation()}
             >
               <div className="bg-primary p-6 text-white flex items-center justify-between no-print transition-colors">

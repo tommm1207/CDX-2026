@@ -40,3 +40,17 @@ export const getAllowedWarehouses = (permissionStr?: string): string[] | null =>
   }
   return [];
 };
+
+export const slugify = (str: string): string => {
+  return str
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[đĐ]/g, 'd')
+    .replace(/([^0-9a-z-\s])/g, '')
+    .replace(/(\s+)/g, '-')
+    .replace(/-+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .toUpperCase()
+    .replace(/-/g, '');
+};

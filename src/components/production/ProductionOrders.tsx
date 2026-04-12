@@ -104,7 +104,7 @@ export const ProductionOrders = ({
   );
 
   return (
-    <div className="p-4 md:p-6 space-y-6 pb-44 overflow-x-hidden">
+    <div className="p-4 md:p-6 space-y-6 pb-24 overflow-x-hidden">
       <div className="flex items-center justify-between gap-2">
         <PageBreadcrumb title="Lệnh sản xuất" onBack={onBack} />
         <div className="flex items-center gap-2">

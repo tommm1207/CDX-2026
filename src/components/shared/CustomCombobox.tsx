@@ -1,5 +1,5 @@
 import { useState, useRef, useMemo, useEffect } from 'react';
-import { ChevronDown, Plus } from 'lucide-react';
+import { ChevronDown, Plus, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
 export const CustomCombobox = ({
@@ -67,18 +67,34 @@ export const CustomCombobox = ({
             setSearchTerm('');
           }}
           placeholder={placeholder}
-          className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20 pr-10 bg-white transition-all"
+          className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20 pr-14 bg-white transition-all overflow-hidden text-ellipsis whitespace-nowrap"
         />
-        <button
-          type="button"
-          onClick={() => setIsOpen(!isOpen)}
-          className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
-        >
-          <ChevronDown
-            size={16}
-            className={`transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`}
-          />
-        </button>
+        <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1 group">
+          {value && !isOpen && (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                onChange('');
+                setSearchTerm('');
+              }}
+              className="p-1 hover:bg-gray-100 text-gray-400 hover:text-red-500 rounded-lg transition-all"
+              title="Xóa"
+            >
+              <X size={14} />
+            </button>
+          )}
+          <button
+            type="button"
+            onClick={() => setIsOpen(!isOpen)}
+            className="p-1 hover:bg-gray-100 text-gray-400 hover:text-gray-600 rounded-lg transition-all"
+          >
+            <ChevronDown
+              size={16}
+              className={`transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`}
+            />
+          </button>
+        </div>
       </div>
 
       <AnimatePresence>

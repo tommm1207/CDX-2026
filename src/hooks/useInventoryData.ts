@@ -18,7 +18,7 @@ export const useInventoryData = (dataViewPermission?: string) => {
         query = query.in('id', allowedWhIds);
       }
 
-      const { data, error } = await query.order('name');
+      const { data, error } = await query.order('code');
       if (error) throw error;
       if (data) {
         setWarehouses(data.filter(isActiveWarehouse));
@@ -30,7 +30,7 @@ export const useInventoryData = (dataViewPermission?: string) => {
 
   const fetchMaterials = useCallback(async () => {
     try {
-      const { data, error } = await supabase.from('materials').select('*').order('name');
+      const { data, error } = await supabase.from('materials').select('*').order('code');
       if (error) throw error;
       if (data) setMaterials(data);
     } catch (err) {
@@ -40,7 +40,7 @@ export const useInventoryData = (dataViewPermission?: string) => {
 
   const fetchGroups = useCallback(async () => {
     try {
-      const { data, error } = await supabase.from('material_groups').select('*').order('name');
+      const { data, error } = await supabase.from('material_groups').select('*').order('code');
       if (error) throw error;
       if (data) setGroups(data);
     } catch (err) {

@@ -34,9 +34,12 @@ export const AttendanceTable = ({
   const [confirmPopup, setConfirmPopup] = useState<{
     empId: string;
     day: number;
+    employeeName: string;
     x: number;
     y: number;
   } | null>(null);
+
+  const [otInput, setOtInput] = useState<string>('');
 
   const getStatus = (empId: string, day: number) => {
     const dateStr = `${selectedYear}-${String(selectedMonth).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
@@ -69,15 +72,33 @@ export const AttendanceTable = ({
     }
   };
 
-  const handleCellClick = (empId: string, day: number, e: React.MouseEvent) => {
+  const handleCellClick = (empId: string, empName: string, day: number, e: React.MouseEvent) => {
     if (user.role === 'User') return;
     const rect = (e.target as HTMLElement).getBoundingClientRect();
-    setConfirmPopup({ empId, day, x: rect.left + rect.width / 2, y: rect.top });
+    const currentAtt = getStatus(empId, day);
+    setOtInput(currentAtt?.overtime_hours ? String(currentAtt.overtime_hours) : '');
+    setConfirmPopup({
+      empId,
+      day,
+      employeeName: empName,
+      x: rect.left + rect.width / 2,
+      y: rect.top,
+    });
   };
 
-  const handleConfirm = (action: 'present' | 'half-day' | 'remove') => {
+  const handleConfirm = (action: 'present' | 'half-day' | 'absent' | 'remove') => {
     if (confirmPopup && onToggleAttendance) {
-      onToggleAttendance(confirmPopup.empId, confirmPopup.day, action);
+      let numericOt = 0;
+      if (otInput !== '') {
+        numericOt = parseFloat(otInput.replace(',', '.'));
+        if (isNaN(numericOt)) numericOt = 0;
+      }
+      onToggleAttendance(
+        confirmPopup.empId,
+        confirmPopup.day,
+        action,
+        numericOt === 0 ? '' : numericOt,
+      );
     }
     setConfirmPopup(null);
   };
@@ -147,7 +168,7 @@ export const AttendanceTable = ({
                         return (
                           <td key={d} className="p-0.5 border-r border-gray-50 relative group/cell">
                             <button
-                              onClick={(e) => handleCellClick(emp.id, d, e)}
+                              onClick={(e) => handleCellClick(emp.id, emp.full_name, d, e)}
                               onContextMenu={(e) => {
                                 e.preventDefault();
                                 onOpenEditModal?.(emp.id, d);
@@ -162,14 +183,6 @@ export const AttendanceTable = ({
                                 </span>
                               )}
                             </button>
-                            {user.role !== 'User' && onOpenEditModal && (
-                              <button
-                                onClick={() => onOpenEditModal(emp.id, d)}
-                                className="absolute -top-1.5 -right-1.5 bg-white shadow-md border border-gray-100 rounded-full p-1 transition-all z-20 hover:scale-110 active:scale-90"
-                              >
-                                <Plus size={10} className="text-primary" />
-                              </button>
-                            )}
                           </td>
                         );
                       })}
@@ -201,8 +214,9 @@ export const AttendanceTable = ({
                 top: Math.max(confirmPopup.y - 130, 10),
               }}
             >
-              <p className="text-[10px] text-gray-400 font-bold uppercase text-center mb-2">
-                Chấm công ngày {confirmPopup.day}
+              <p className="text-[10px] text-gray-400 font-bold uppercase text-center mb-2 px-2 break-words">
+                CHẤM CÔNG NGÀY {confirmPopup.day} <br />
+                <span className="text-primary">{confirmPopup.employeeName}</span>
               </p>
               <div className="space-y-1.5">
                 <button
@@ -218,8 +232,29 @@ export const AttendanceTable = ({
                   ½ công
                 </button>
                 <button
+                  onClick={() => handleConfirm('absent')}
+                  className="w-full py-2.5 rounded-xl bg-red-500 text-white text-xs font-bold hover:bg-red-600 active:scale-95 transition-all"
+                >
+                  X Vắng
+                </button>
+
+                <div className="pt-1 pb-1 border-t border-b border-gray-100 my-1">
+                  <input
+                    type="text"
+                    placeholder="Giờ OT..."
+                    value={otInput}
+                    onChange={(e) => {
+                      // Only allow numbers, dot, and comma
+                      const val = e.target.value.replace(/[^0-9.,]/g, '');
+                      setOtInput(val);
+                    }}
+                    className="w-full text-center text-xs font-bold text-gray-600 py-1.5 border border-gray-200 outline-none rounded-xl focus:border-primary focus:ring-1 focus:ring-primary/20"
+                  />
+                </div>
+
+                <button
                   onClick={() => handleConfirm('remove')}
-                  className="w-full py-2.5 rounded-xl bg-gray-100 text-gray-600 text-xs font-bold hover:bg-gray-200 active:scale-95 transition-all"
+                  className="w-full py-2.5 rounded-xl bg-gray-100 text-gray-600 text-[10px] font-bold hover:bg-gray-200 active:scale-95 transition-all uppercase"
                 >
                   Xóa chấm công
                 </button>

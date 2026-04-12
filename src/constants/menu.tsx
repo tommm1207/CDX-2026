@@ -50,6 +50,7 @@ export const getMenuGroups = (pendingCount: number) => [
     items: [
       { id: 'production-list', label: 'Lệnh sản xuất', icon: ClipboardList },
       { id: 'production-bom', label: 'Định mức sản xuất', icon: Settings },
+      { id: 'construction-diary', label: 'Nhật ký thi công', icon: FileText },
     ],
   },
   {
@@ -70,7 +71,7 @@ export const getMenuGroups = (pendingCount: number) => [
     items: [
       { id: 'hr-records', label: 'Quản lý nhân sự', icon: UserCircle },
       { id: 'notes', label: 'Ghi chú', icon: FileText },
-      { id: 'reminders', label: 'Thiết lập Lịch nhắc', icon: Bell },
+      { id: 'reminders', label: 'Thiết lập Thông báo', icon: Bell },
       { id: 'database-setup', label: 'Cấu hình Database', icon: Settings2 },
       { id: 'trash', label: 'Thùng rác', icon: Trash2 },
     ],
@@ -78,7 +79,7 @@ export const getMenuGroups = (pendingCount: number) => [
   {
     title: 'CÔNG CỤ SAO LƯU',
     items: [
-      { id: 'backup-settings', label: 'Backup', icon: Settings },
+      { id: 'backup-settings', label: 'Sao lưu qua email', icon: Settings },
       { id: 'backup-now', label: 'Sao lưu nhanh', icon: Download },
     ],
   },

@@ -30,12 +30,14 @@ export const BOMConfig = ({
 
   const [formData, setFormData] = useState<{
     id?: string;
+    bom_code: string;
     product_item_id: string;
     name: string;
     is_two_stage?: boolean;
     notes: string;
     items: { material_item_id: string; quantity_per_unit: number; unit: string }[];
   }>({
+    bom_code: '',
     product_item_id: '',
     name: '',
     is_two_stage: false,
@@ -74,6 +76,7 @@ export const BOMConfig = ({
 
     setFormData({
       id: bom.id,
+      bom_code: bom.bom_code || '',
       product_item_id: bom.product_item_id,
       name: bom.name,
       is_two_stage: bom.is_two_stage,
@@ -115,6 +118,13 @@ export const BOMConfig = ({
     setFormData({ ...formData, items: newItems });
   };
 
+  const generateBOMCode = () => {
+    const d = new Date();
+    const dateStr = d.toISOString().slice(2, 10).replace(/-/g, '');
+    const random = Math.floor(100 + Math.random() * 900);
+    return `ĐMSX-${dateStr}-${random}`;
+  };
+
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     if (!formData.product_item_id || formData.items.length === 0) {
@@ -131,6 +141,7 @@ export const BOMConfig = ({
         await supabase
           .from('bom_configs')
           .update({
+            bom_code: formData.bom_code,
             product_item_id: formData.product_item_id,
             name: formData.name,
             is_two_stage: formData.is_two_stage,
@@ -142,10 +153,12 @@ export const BOMConfig = ({
         await supabase.from('bom_items').delete().eq('bom_id', bomId);
       } else {
         // Insert header
+        const code = formData.bom_code || generateBOMCode();
         const { data: newBom, error: headError } = await supabase
           .from('bom_configs')
           .insert([
             {
+              bom_code: code,
               product_item_id: formData.product_item_id,
               name: formData.name,
               is_two_stage: formData.is_two_stage,
@@ -224,12 +237,12 @@ export const BOMConfig = ({
   };
 
   return (
-    <div className="p-4 md:p-6 space-y-6 pb-44">
+    <div className="p-4 md:p-6 space-y-6 pb-24">
       <PageBreadcrumb title="Định mức sản xuất" onBack={onBack} />
 
       <FAB
         onClick={() => {
-          setFormData({ product_item_id: '', name: '', notes: '', items: [] });
+          setFormData({ bom_code: '', product_item_id: '', name: '', notes: '', items: [] });
           setIsEditing(false);
           setShowModal(true);
         }}
@@ -393,6 +406,15 @@ export const BOMConfig = ({
               </div>
 
               <div className="flex-1 overflow-y-auto p-6 space-y-6">
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">
+                    Mã tham chiếu (Định mức)
+                  </label>
+                  <div className="bg-primary/5 px-5 py-3.5 rounded-2xl border border-primary/10 text-sm font-black text-primary uppercase shadow-inner italic">
+                    {formData.bom_code || '(Hệ thống tự tạo)'}
+                  </div>
+                </div>
+
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-1">
                     <label className="text-[10px] font-bold text-gray-400 uppercase">

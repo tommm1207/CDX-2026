@@ -13,11 +13,18 @@ import { motion, AnimatePresence } from 'motion/react';
 import { supabase } from '@/lib/supabase';
 import { Employee } from '@/types';
 import { PageBreadcrumb } from '../shared/PageBreadcrumb';
-import { isActiveWarehouse } from '@/utils/inventory';
+import {
+  isActiveWarehouse,
+  generateNextMaterialCode,
+  generateNextGroupCode,
+} from '@/utils/inventory';
+import { isUUID } from '@/utils/helpers';
 import { CreatableSelect } from '../shared/CreatableSelect';
+import { ImageCapture } from '../shared/ImageCapture';
 import { ToastType } from '../shared/Toast';
 import { Button } from '../shared/Button';
 import { FAB } from '../shared/FAB';
+import { SortButton, SortOption } from '../shared/SortButton';
 import { checkUsage } from '@/utils/dataIntegrity';
 
 export const MaterialCatalog = ({
@@ -43,6 +50,9 @@ export const MaterialCatalog = ({
   const [showFilter, setShowFilter] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [groupFilter, setGroupFilter] = useState('');
+  const [sortBy, setSortBy] = useState<SortOption>(
+    (localStorage.getItem(`sort_pref_mat_catalog_${user.id}`) as SortOption) || 'newest',
+  );
 
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [itemToDelete, setItemToDelete] = useState<string | null>(null);
@@ -105,46 +115,6 @@ export const MaterialCatalog = ({
     }
   };
 
-  const generateNextMaterialCode = async (groupId: string) => {
-    if (!groupId) return '';
-    try {
-      // Get the group code first
-      const { data: groupData } = await supabase
-        .from('material_groups')
-        .select('code')
-        .eq('id', groupId)
-        .single();
-
-      if (!groupData || !groupData.code) return '';
-
-      const groupPrefix = groupData.code;
-      const { data } = await supabase
-        .from('materials')
-        .select('code')
-        .eq('group_id', groupId)
-        .order('code', { ascending: false })
-        .limit(1);
-
-      if (data && data.length > 0 && data[0].code) {
-        const lastCode = data[0].code;
-        const parts = lastCode.split('-');
-        const lastNum = parseInt(parts[parts.length - 1]);
-        if (!isNaN(lastNum)) {
-          return `${groupPrefix}-${(lastNum + 1).toString().padStart(3, '0')}`;
-        }
-      }
-      return `${groupPrefix}-001`;
-    } catch (err) {
-      console.error('Error generating material code:', err);
-      return '';
-    }
-  };
-
-  const isUUID = (str: string) => {
-    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-    return uuidRegex.test(str);
-  };
-
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setSubmitting(true);
@@ -157,9 +127,10 @@ export const MaterialCatalog = ({
         if (groupByName) {
           finalGroupId = groupByName.id;
         } else {
+          const generatedGroupCode = await generateNextGroupCode();
           const { data: newGroup, error: groupErr } = await supabase
             .from('material_groups')
-            .insert([{ name: formData.group_id }])
+            .insert([{ name: formData.group_id, code: generatedGroupCode }])
             .select();
           if (groupErr) throw groupErr;
           if (newGroup) {
@@ -169,11 +140,33 @@ export const MaterialCatalog = ({
         }
       }
 
+      let finalWarehouseId = formData.warehouse_id;
+      if (formData.warehouse_id && !isUUID(formData.warehouse_id)) {
+        const whByName = warehouses.find(
+          (w) => w.name.toLowerCase() === formData.warehouse_id.toLowerCase(),
+        );
+        if (whByName) {
+          finalWarehouseId = whByName.id;
+        } else {
+          const random = Math.floor(100 + Math.random() * 900);
+          const code = `K${(warehouses.length + 1).toString().padStart(2, '0')}-${random}`;
+          const { data: newWh, error: whErr } = await supabase
+            .from('warehouses')
+            .insert([{ name: formData.warehouse_id, code }])
+            .select();
+          if (whErr) throw whErr;
+          if (newWh) {
+            finalWarehouseId = newWh[0].id;
+            fetchWarehouses();
+          }
+        }
+      }
+
       const dbPayload = {
         code: formData.code,
         name: formData.name,
         group_id: finalGroupId || null,
-        warehouse_id: formData.warehouse_id || null,
+        warehouse_id: finalWarehouseId || null,
         specification: formData.specification,
         unit: formData.unit,
         description: formData.description,
@@ -251,41 +244,50 @@ export const MaterialCatalog = ({
     setShowDeleteModal(false);
   };
 
-  const handleImageUpload = (e: ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setFormData({ ...formData, image_url: reader.result as string });
-      };
-      reader.readAsDataURL(file);
-    }
-  };
-
-  const filteredMaterials = materials.filter((m) => {
-    const name = m.name || '';
-    const code = m.code || '';
-    const matchesSearch =
-      name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      code.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesGroup = groupFilter === '' || m.group_id === groupFilter;
-    return matchesSearch && matchesGroup;
-  });
+  const filteredMaterials = materials
+    .filter((m) => {
+      const name = m.name || '';
+      const code = m.code || '';
+      const matchesSearch =
+        name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        code.toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesGroup = groupFilter === '' || m.group_id === groupFilter;
+      return matchesSearch && matchesGroup;
+    })
+    .sort((a, b) => {
+      if (sortBy === 'newest')
+        return new Date(b.created_at || '').getTime() - new Date(a.created_at || '').getTime();
+      if (sortBy === 'code') return (a.code || '').localeCompare(b.code || '');
+      return 0;
+    });
 
   return (
-    <div className="p-4 md:p-6 space-y-6 pb-44">
+    <div className="p-4 md:p-6 space-y-6 pb-24">
       <div className="flex items-center justify-between gap-2">
         <PageBreadcrumb title="Danh mục Vật tư" onBack={onBack} />
-        <button
-          onClick={() => setShowFilter((f) => !f)}
-          className={`p-2.5 rounded-xl border transition-colors ${
-            showFilter
-              ? 'bg-primary text-white border-primary'
-              : 'bg-white text-gray-500 border-gray-200 hover:border-primary/40'
-          }`}
-        >
-          <Search size={16} />
-        </button>
+        <div className="flex items-center gap-2">
+          <SortButton
+            currentSort={sortBy}
+            onSortChange={(val) => {
+              setSortBy(val);
+              localStorage.setItem(`sort_pref_mat_catalog_${user.id}`, val);
+            }}
+            options={[
+              { value: 'code', label: 'Mã hiệu' },
+              { value: 'newest', label: 'Mới nhất' },
+            ]}
+          />
+          <button
+            onClick={() => setShowFilter((f) => !f)}
+            className={`p-2.5 rounded-xl border transition-colors ${
+              showFilter
+                ? 'bg-primary text-white border-primary'
+                : 'bg-white text-gray-500 border-gray-200 hover:border-primary/40'
+            }`}
+          >
+            <Search size={16} />
+          </button>
+        </div>
       </div>
 
       <AnimatePresence>
@@ -451,7 +453,7 @@ export const MaterialCatalog = ({
               initial={{ opacity: 0, scale: 0.95, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 20 }}
-              className="bg-white rounded-[2rem] md:rounded-[2.5rem] shadow-2xl p-8 max-w-sm w-full text-center m-4 relative z-10"
+              className="bg-white rounded-[2rem] md:rounded-[2.5rem] shadow-2xl p-8 max-w-sm w-full text-center relative z-10"
               onClick={(e) => e.stopPropagation()}
             >
               <div className="w-16 h-16 bg-red-50 text-red-600 rounded-2xl flex items-center justify-center mx-auto mb-4 border border-red-100">
@@ -499,7 +501,7 @@ export const MaterialCatalog = ({
               initial={{ opacity: 0, scale: 0.95, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 20 }}
-              className="bg-white rounded-[2rem] md:rounded-[2.5rem] shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col my-8 m-4 overflow-hidden relative z-10"
+              className="bg-white rounded-[2rem] md:rounded-[2.5rem] shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden relative z-10"
               onClick={(e) => e.stopPropagation()}
             >
               <div className="bg-primary p-6 text-white flex items-center justify-between rounded-t-[2rem] md:rounded-t-[2.5rem] flex-shrink-0">
@@ -528,20 +530,15 @@ export const MaterialCatalog = ({
               <div className="flex-1 overflow-y-auto custom-scrollbar">
                 <form onSubmit={handleSubmit} className="p-6">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div className="space-y-4">
-                      <div className="space-y-1">
-                        <label className="text-[10px] font-bold text-gray-400 uppercase">
-                          Mã vật tư
-                        </label>
-                        <input
-                          required
-                          type="text"
-                          disabled
-                          value={formData.code}
-                          onChange={(e) => setFormData({ ...formData, code: e.target.value })}
-                          className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20 disabled:bg-gray-50"
-                        />
+                    <div className="md:col-span-2 space-y-2 mb-2">
+                      <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">
+                        Mã tham chiếu (Vật tư)
+                      </label>
+                      <div className="bg-primary/5 px-5 py-3.5 rounded-2xl border border-primary/10 text-sm font-black text-primary uppercase shadow-inner italic">
+                        {formData.code || (formData.group_id ? 'VAT-001' : 'VAT-[NHÓM]-001')}
                       </div>
+                    </div>
+                    <div className="space-y-4">
                       <div className="space-y-1">
                         <label className="text-[10px] font-bold text-gray-400 uppercase">
                           Tên vật tư *
@@ -618,55 +615,17 @@ export const MaterialCatalog = ({
                         />
                       </div>
                     </div>
-                    <div className="col-span-1 md:col-span-2 space-y-3">
-                      <label className="text-[10px] font-bold text-gray-400 uppercase">
-                        Hình ảnh vật tư
-                      </label>
-                      <div className="flex items-center gap-4">
-                        <div className="w-20 h-20 rounded-2xl bg-gray-50 border-2 border-dashed border-gray-200 flex items-center justify-center overflow-hidden group relative">
-                          {formData.image_url ? (
-                            <>
-                              <img
-                                src={formData.image_url}
-                                alt="Preview"
-                                className="w-full h-full object-cover"
-                                referrerPolicy="no-referrer"
-                              />
-                              <button
-                                type="button"
-                                onClick={() => setFormData({ ...formData, image_url: '' })}
-                                className="absolute inset-0 bg-black/40 text-white opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center"
-                              >
-                                <X size={16} />
-                              </button>
-                            </>
-                          ) : (
-                            <ImageIcon className="text-gray-300" size={24} />
-                          )}
-                        </div>
-                        <div className="flex-1 space-y-2">
-                          <input
-                            type="file"
-                            id="material-image"
-                            accept="image/*"
-                            onChange={handleImageUpload}
-                            className="hidden"
-                          />
-                          <label
-                            htmlFor="material-image"
-                            className="inline-flex items-center gap-2 px-4 py-2 bg-gray-100 text-gray-600 rounded-xl text-xs font-bold hover:bg-gray-200 cursor-pointer transition-colors"
-                          >
-                            <ImageIcon size={14} /> Tải ảnh từ máy
-                          </label>
-                          <p className="text-[10px] text-gray-400 italic">
-                            Dung lượng tối đa 2MB. Hỗ trợ JPG, PNG.
-                          </p>
-                        </div>
-                      </div>
+                    <div className="col-span-1 md:col-span-2 space-y-4 pt-4 border-t border-gray-100">
+                      <ImageCapture
+                        maxImages={1}
+                        existingImages={formData.image_url ? [formData.image_url] : []}
+                        onUpload={(urls) => setFormData({ ...formData, image_url: urls[0] || '' })}
+                        label="Hình ảnh vật tư"
+                      />
                     </div>
                   </div>
 
-                  <div className="mt-8 flex justify-end gap-3 flex-shrink-0">
+                  <div className="mt-8 flex justify-end gap-3 pt-6 border-t border-gray-100 flex-shrink-0">
                     <Button variant="outline" onClick={() => setShowModal(false)}>
                       Hủy
                     </Button>
@@ -691,7 +650,7 @@ export const MaterialCatalog = ({
               initial={{ opacity: 0, scale: 0.95, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 20 }}
-              className="bg-white rounded-[2rem] md:rounded-[2.5rem] shadow-2xl w-full max-w-3xl max-h-[90vh] flex flex-col my-8 m-4 overflow-hidden relative z-10"
+              className="bg-white rounded-[2rem] md:rounded-[2.5rem] shadow-2xl w-full max-w-3xl max-h-[90vh] flex flex-col overflow-hidden relative z-10"
               onClick={(e) => e.stopPropagation()}
             >
               <div className="bg-primary p-6 text-white flex items-center justify-between rounded-t-[2rem] md:rounded-t-[2.5rem] flex-shrink-0">

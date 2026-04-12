@@ -13,7 +13,12 @@ import {
   Info,
   Settings,
   Calculator,
+  Image as ImageIcon,
+  RefreshCw,
+  Camera,
 } from 'lucide-react';
+import { ChangeEvent } from 'react';
+import { compressImage, uploadToImgBB } from '@/utils/imageUpload';
 import { motion, AnimatePresence } from 'motion/react';
 import { supabase } from '@/lib/supabase';
 import { Employee, Material, BOMConfig, BOMItem, ProductionOrder } from '@/types';
@@ -48,6 +53,7 @@ export const ProductionOrderDetail = ({
     status: 'Mới',
     quantity: 0,
     planned_date: new Date().toISOString().split('T')[0],
+    image_url: '',
   });
 
   const [bomItems, setBomItems] = useState<
@@ -57,6 +63,27 @@ export const ProductionOrderDetail = ({
   useEffect(() => {
     fetchInitialData();
   }, [orderId]);
+
+  const [uploading, setUploading] = useState(false);
+
+  const handleImageUpload = async (e: ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setUploading(true);
+      try {
+        if (addToast) addToast('Đang xử lý và tải ảnh hiện trường...', 'info');
+        const compressedBlob = await compressImage(file);
+        const url = await uploadToImgBB(compressedBlob);
+        setOrder({ ...order, image_url: url });
+        if (addToast) addToast('Tải ảnh hiện trường thành công!', 'success');
+      } catch (err: any) {
+        console.error('Upload error:', err);
+        if (addToast) addToast('Lỗi tải ảnh: ' + err.message, 'error');
+      } finally {
+        setUploading(false);
+      }
+    }
+  };
 
   const fetchInitialData = async () => {
     setLoading(true);
@@ -420,7 +447,7 @@ export const ProductionOrderDetail = ({
   const isViewOnly = order.status !== 'Mới';
 
   return (
-    <div className="p-4 md:p-6 space-y-6 pb-44 overflow-y-auto max-h-screen overflow-x-hidden">
+    <div className="p-4 md:p-6 space-y-6 pb-24 overflow-y-auto max-h-screen overflow-x-hidden">
       <PageBreadcrumb
         title={orderId ? `Chi tiết lệnh ${order.order_code}` : 'Tạo lệnh sản xuất'}
         onBack={onBack}
@@ -525,9 +552,21 @@ export const ProductionOrderDetail = ({
         <div className="lg:col-span-2 space-y-6">
           {/* Main Info */}
           <div className="bg-white rounded-3xl p-6 shadow-sm border border-gray-100 space-y-6">
-            <h3 className="text-sm font-bold text-gray-400 uppercase tracking-widest flex items-center gap-2">
-              <Info size={14} /> Thông tin chung
-            </h3>
+            <div className="space-y-2 mb-4">
+              <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">
+                Mã tham chiếu (Lệnh sản xuất)
+              </label>
+              <div className="bg-indigo-50/50 px-5 py-3.5 rounded-2xl border border-indigo-100 text-sm font-black text-indigo-600 uppercase shadow-inner italic">
+                {order.order_code ||
+                  `LSX-${new Date().toISOString().slice(2, 10).replace(/-/g, '')}-001`}
+              </div>
+            </div>
+
+            <div className="flex items-center justify-between border-b border-gray-50 pb-4">
+              <h3 className="text-sm font-bold text-gray-400 uppercase tracking-widest flex items-center gap-2">
+                <Info size={14} /> Thông tin chung
+              </h3>
+            </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-1.5">

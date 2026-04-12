@@ -58,25 +58,35 @@ export const Advances = ({
       .from('users')
       .select('*')
       .neq('status', 'Nghỉ việc')
+      .neq('status', 'Đã xóa')
       .neq('role', 'Admin App')
+      .eq('has_salary', true)
       .order('full_name');
-    if (empData) setEmployees(empData);
+
+    let activeEmpIds: string[] = [];
+    if (empData) {
+      setEmployees(empData);
+      activeEmpIds = empData.map((e) => e.id);
+    }
 
     const { data: advData } = await supabase
       .from('advances')
       .select('*, users(full_name)')
       .order('date', { ascending: false });
-    if (advData) setAdvances(advData);
+    if (advData) {
+      setAdvances(advData.filter((a) => activeEmpIds.includes(a.employee_id)));
+    }
 
     const { data: allData } = await supabase
       .from('allowances')
       .select('*, users(full_name)')
       .order('date', { ascending: false });
     if (allData) {
-      setAllowances(allData);
+      const filteredAll = allData.filter((a) => activeEmpIds.includes(a.employee_id));
+      setAllowances(filteredAll);
 
       // Extract unique types for the dropdown
-      const dbTypes = allData
+      const dbTypes = filteredAll
         .map((t) => t.type)
         .filter(Boolean)
         .map((t) => {
@@ -192,7 +202,7 @@ export const Advances = ({
     setShowDeleteModal(true);
   };
   return (
-    <div className="p-4 md:p-6 space-y-6 pb-44 overflow-x-hidden">
+    <div className="p-4 md:p-6 space-y-6 pb-24 overflow-x-hidden">
       <PageBreadcrumb title="Tạm ứng & Phụ cấp" onBack={onBack} />
       <div className="flex items-center justify-between">
         <div className="flex gap-2 bg-white p-1 rounded-2xl shadow-sm border border-gray-100">
@@ -215,6 +225,9 @@ export const Advances = ({
         <table className="w-full text-left border-collapse min-w-[600px] whitespace-nowrap">
           <thead>
             <tr className="bg-primary text-white">
+              <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider w-24">
+                Mã hiệu
+              </th>
               <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider">Ngày</th>
               <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider">
                 Nhân viên
@@ -248,6 +261,11 @@ export const Advances = ({
                   className="hover:bg-gray-50 transition-colors group cursor-pointer"
                   onClick={() => handleEdit(item)}
                 >
+                  <td className="px-4 py-3 text-xs font-black text-primary">
+                    {activeTab === 'advances' ? 'TU-' : 'PC-'}
+                    {new Date(item.date).toISOString().slice(2, 10).replace(/-/g, '')}-
+                    {item.id.slice(0, 3).toUpperCase()}
+                  </td>
                   <td className="px-4 py-3 text-xs text-gray-600">{formatDate(item.date)}</td>
                   <td className="px-4 py-3 text-xs font-bold text-gray-800">
                     {item.users?.full_name}
@@ -318,7 +336,7 @@ export const Advances = ({
               initial={{ opacity: 0, scale: 0.95, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 20 }}
-              className="bg-white rounded-[2rem] md:rounded-[2.5rem] shadow-2xl w-full max-w-md overflow-hidden m-4 flex flex-col"
+              className="bg-white rounded-[2rem] md:rounded-[2.5rem] shadow-2xl w-full max-w-md overflow-hidden flex flex-col"
               onClick={(e) => e.stopPropagation()}
             >
               <div className="bg-primary p-6 text-white flex items-center justify-between rounded-t-[2rem] md:rounded-t-[2.5rem] flex-shrink-0">
@@ -349,75 +367,87 @@ export const Advances = ({
                   <X size={24} />
                 </button>
               </div>
-              <form onSubmit={handleSubmit} className="p-6 space-y-4">
-                <div className="space-y-1">
-                  <label className="text-[10px] font-bold text-gray-400 uppercase">
-                    Nhân viên *
+              <div className="p-6 space-y-4">
+                <div className="space-y-2 mb-2">
+                  <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">
+                    Mã tham chiếu ({activeTab === 'advances' ? 'Tạm ứng' : 'Phụ cấp'})
                   </label>
-                  <select
+                  <div className="bg-primary/5 px-5 py-3.5 rounded-2xl border border-primary/10 text-sm font-black text-primary uppercase shadow-inner italic">
+                    {activeTab === 'advances' ? 'TU-' : 'PC-'}
+                    {new Date(formData.date).toISOString().slice(2, 10).replace(/-/g, '')}-
+                    {isEditing ? selectedItem?.id?.slice(0, 3).toUpperCase() : '001'}
+                  </div>
+                </div>
+                <form onSubmit={handleSubmit} className="space-y-4">
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-gray-400 uppercase">
+                      Nhân viên *
+                    </label>
+                    <select
+                      required
+                      value={formData.employee_id}
+                      onChange={(e) => setFormData({ ...formData, employee_id: e.target.value })}
+                      className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20"
+                    >
+                      <option value="">-- Chọn nhân viên --</option>
+                      {employees.map((e) => (
+                        <option key={e.id} value={e.id}>
+                          {e.full_name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-gray-400 uppercase">Ngày *</label>
+                    <input
+                      type="date"
+                      required
+                      value={formData.date}
+                      onChange={(e) => setFormData({ ...formData, date: e.target.value })}
+                      className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20"
+                    />
+                  </div>
+                  <NumericInput
+                    label="Số tiền *"
                     required
-                    value={formData.employee_id}
-                    onChange={(e) => setFormData({ ...formData, employee_id: e.target.value })}
-                    className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20"
+                    value={formData.amount}
+                    onChange={(val) => setFormData({ ...formData, amount: val })}
+                  />
+                  {activeTab === 'allowances' && (
+                    <CreatableSelect
+                      label="Loại phụ cấp"
+                      value={formData.type}
+                      options={allowanceOptions}
+                      onChange={(val) => setFormData({ ...formData, type: val })}
+                      onCreate={(val) => {
+                        if (!allowanceOptions.find((o) => o.id === val)) {
+                          setAllowanceOptions((prev) => [...prev, { id: val, name: val }]);
+                        }
+                        setFormData({ ...formData, type: val });
+                      }}
+                      placeholder="Chọn hoặc nhập loại mới..."
+                    />
+                  )}
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-gray-400 uppercase">
+                      Ghi chú / Lý do
+                    </label>
+                    <textarea
+                      rows={3}
+                      value={formData.notes}
+                      onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+                      className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20 resize-none"
+                    />
+                  </div>
+                  <button
+                    type="submit"
+                    disabled={submitting}
+                    className="w-full py-3 bg-primary text-white rounded-xl font-bold hover:bg-primary-hover transition-colors shadow-lg shadow-primary/20 disabled:opacity-50"
                   >
-                    <option value="">-- Chọn nhân viên --</option>
-                    {employees.map((e) => (
-                      <option key={e.id} value={e.id}>
-                        {e.full_name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div className="space-y-1">
-                  <label className="text-[10px] font-bold text-gray-400 uppercase">Ngày *</label>
-                  <input
-                    type="date"
-                    required
-                    value={formData.date}
-                    onChange={(e) => setFormData({ ...formData, date: e.target.value })}
-                    className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20"
-                  />
-                </div>
-                <NumericInput
-                  label="Số tiền *"
-                  required
-                  value={formData.amount}
-                  onChange={(val) => setFormData({ ...formData, amount: val })}
-                />
-                {activeTab === 'allowances' && (
-                  <CreatableSelect
-                    label="Loại phụ cấp"
-                    value={formData.type}
-                    options={allowanceOptions}
-                    onChange={(val) => setFormData({ ...formData, type: val })}
-                    onCreate={(val) => {
-                      if (!allowanceOptions.find((o) => o.id === val)) {
-                        setAllowanceOptions((prev) => [...prev, { id: val, name: val }]);
-                      }
-                      setFormData({ ...formData, type: val });
-                    }}
-                    placeholder="Chọn hoặc nhập loại mới..."
-                  />
-                )}
-                <div className="space-y-1">
-                  <label className="text-[10px] font-bold text-gray-400 uppercase">
-                    Ghi chú / Lý do
-                  </label>
-                  <textarea
-                    rows={3}
-                    value={formData.notes}
-                    onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-                    className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20 resize-none"
-                  />
-                </div>
-                <button
-                  type="submit"
-                  disabled={submitting}
-                  className="w-full py-3 bg-primary text-white rounded-xl font-bold hover:bg-primary-hover transition-colors shadow-lg shadow-primary/20 disabled:opacity-50"
-                >
-                  {submitting ? 'Đang lưu...' : 'Lưu dữ liệu'}
-                </button>
-              </form>
+                    {submitting ? 'Đang lưu...' : 'Lưu dữ liệu'}
+                  </button>
+                </form>
+              </div>
             </motion.div>
           </div>
         )}

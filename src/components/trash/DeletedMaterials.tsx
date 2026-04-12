@@ -205,7 +205,7 @@ export const DeletedMaterials = ({
   };
 
   return (
-    <div className="p-4 md:p-6 space-y-6 pb-44">
+    <div className="p-4 md:p-6 space-y-6 pb-24">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <PageBreadcrumb title="Vật tư & Nhóm đã xóa" onBack={onBack} />
 

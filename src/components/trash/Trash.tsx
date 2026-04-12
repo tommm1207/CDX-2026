@@ -49,7 +49,7 @@ export const Trash = ({
   ];
 
   return (
-    <div className="p-4 md:p-6 space-y-6 pb-44">
+    <div className="p-4 md:p-6 space-y-6 pb-24">
       <PageBreadcrumb title="Thùng rác" onBack={onBack} />
 
       <div className="flex flex-wrap gap-6">

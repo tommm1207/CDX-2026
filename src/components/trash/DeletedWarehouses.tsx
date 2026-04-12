@@ -161,7 +161,7 @@ export const DeletedWarehouses = ({
   };
 
   return (
-    <div className="p-4 md:p-6 space-y-6 pb-44">
+    <div className="p-4 md:p-6 space-y-6 pb-24">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <PageBreadcrumb title="Kho đã xóa" onBack={onBack} />
         {warehouses.length > 0 && (

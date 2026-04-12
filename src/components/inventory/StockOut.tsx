@@ -12,13 +12,19 @@ import {
   PackagePlus,
   ChevronDown,
   Check,
+  Image as ImageIcon,
+  RefreshCw,
+  Camera,
 } from 'lucide-react';
+import { ChangeEvent } from 'react';
+import { compressImage, uploadToImgBB } from '@/utils/imageUpload';
 import { motion, AnimatePresence } from 'motion/react';
 import { supabase } from '@/lib/supabase';
 import { Employee } from '@/types';
 import { PageBreadcrumb } from '../shared/PageBreadcrumb';
 import { NumericInput } from '../shared/NumericInput';
 import { CreatableSelect } from '../shared/CreatableSelect';
+import { ImageCapture } from '../shared/ImageCapture';
 import { ToastType } from '../shared/Toast';
 import { ConfirmModal } from '../shared/ConfirmModal';
 import { QuickAddMaterialModal } from '../shared/QuickAddMaterialModal';
@@ -28,6 +34,7 @@ import { formatDate, formatCurrency, formatNumber } from '@/utils/format';
 import { isUUID, generateCode, getAllowedWarehouses } from '@/utils/helpers';
 import { Button } from '../shared/Button';
 import { getAvailableStock, validateFutureImpact } from '@/utils/inventory';
+import { SortButton, SortOption } from '../shared/SortButton';
 
 export const StockOut = ({
   user,
@@ -65,6 +72,9 @@ export const StockOut = ({
   const [filterEndDate, setFilterEndDate] = useState('');
   const [filterWarehouseId, setFilterWarehouseId] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
+  const [sortBy, setSortBy] = useState<SortOption>(
+    (localStorage.getItem(`sort_pref_stockout_${user.id}`) as SortOption) || 'newest',
+  );
 
   const { warehouses, materials, groups, refreshAll, fetchWarehouses } = useInventoryData(
     user.data_view_permission,
@@ -79,6 +89,7 @@ export const StockOut = ({
     notes: '',
     status: 'Chờ duyệt',
     export_code: generateCode('XK'),
+    image_url: '',
   };
 
   const [stockLoading, setStockLoading] = useState(false);
@@ -137,13 +148,13 @@ export const StockOut = ({
         query = query.in('warehouse_id', allowedWhIds);
       }
 
-      const { data, error } = await query.order('created_at', { ascending: false });
+      const { data, error } = await query.order('export_code', { ascending: false });
       if (error) {
         console.error('Error fetching stock_out:', error);
         const { data: fallbackData, error: fallbackError } = await supabase
           .from('stock_out')
           .select('*')
-          .order('created_at', { ascending: false });
+          .order('export_code', { ascending: false });
         if (fallbackError) throw fallbackError;
         setSlips(fallbackData || []);
       } else {
@@ -454,6 +465,7 @@ export const StockOut = ({
       notes: selectedSlip.notes?.replace(/^\[SỬA lúc .*?\]\s*/, '') || '',
       export_code: selectedSlip.export_code || formData.export_code,
       status: selectedSlip.status,
+      image_url: selectedSlip.image_url || '',
     });
     setIsEditing(true);
     setEditingId(selectedSlip.id); // lưu id để loại trừ khỏi tính tồn
@@ -462,10 +474,23 @@ export const StockOut = ({
   };
 
   return (
-    <div className="p-4 md:p-6 space-y-6 pb-44 overflow-x-hidden">
+    <div className="p-4 md:p-6 space-y-6 pb-24 overflow-x-hidden">
       <div className="flex items-center justify-between gap-2">
         <PageBreadcrumb title="Xuất kho" onBack={onBack} />
         <div className="flex items-center gap-2">
+          <SortButton
+            currentSort={sortBy}
+            onSortChange={(val) => {
+              setSortBy(val);
+              localStorage.setItem(`sort_pref_stockout_${user.id}`, val);
+            }}
+            options={[
+              { value: 'code', label: 'Mã chứng từ' },
+              { value: 'newest', label: 'Mới nhất' },
+              { value: 'price', label: 'Thành tiền' },
+              { value: 'date', label: 'Ngày tạo' },
+            ]}
+          />
           <Button
             size="icon"
             variant={showFilter ? 'primary' : 'outline'}
@@ -552,20 +577,29 @@ export const StockOut = ({
       </AnimatePresence>
 
       {(() => {
-        const filteredSlips = slips.filter((item) => {
-          let match = true;
-          if (filterStartDate && item.date < filterStartDate) match = false;
-          if (filterEndDate && item.date > filterEndDate) match = false;
-          if (filterWarehouseId && item.warehouse_id !== filterWarehouseId) match = false;
-          if (searchTerm) {
-            const s = searchTerm.toLowerCase();
-            const nameMatch = (item.materials?.name || '').toLowerCase().includes(s);
-            const codeMatch = (item.export_code || '').toLowerCase().includes(s);
-            const noteMatch = (item.notes || '').toLowerCase().includes(s);
-            if (!nameMatch && !codeMatch && !noteMatch) match = false;
-          }
-          return match;
-        });
+        const filteredSlips = slips
+          .filter((item) => {
+            let match = true;
+            if (filterStartDate && item.date < filterStartDate) match = false;
+            if (filterEndDate && item.date > filterEndDate) match = false;
+            if (filterWarehouseId && item.warehouse_id !== filterWarehouseId) match = false;
+            if (searchTerm) {
+              const s = searchTerm.toLowerCase();
+              const nameMatch = (item.materials?.name || '').toLowerCase().includes(s);
+              const codeMatch = (item.export_code || '').toLowerCase().includes(s);
+              const noteMatch = (item.notes || '').toLowerCase().includes(s);
+              if (!nameMatch && !codeMatch && !noteMatch) match = false;
+            }
+            return match;
+          })
+          .sort((a, b) => {
+            if (sortBy === 'newest')
+              return (b.export_code || '').localeCompare(a.export_code || '');
+            if (sortBy === 'code') return (a.export_code || '').localeCompare(b.export_code || '');
+            if (sortBy === 'price') return (b.total_amount || 0) - (a.total_amount || 0);
+            if (sortBy === 'date') return new Date(b.date).getTime() - new Date(a.date).getTime();
+            return 0;
+          });
         return (
           <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
             <div className="overflow-x-auto">
@@ -714,12 +748,29 @@ export const StockOut = ({
                   >
                     <span className="text-[11px] text-gray-500 font-medium shrink-0">{label}</span>
                     <p
-                      className={`text-sm text-right ${highlight ? 'text-red-600 font-bold' : 'text-gray-900'}`}
+                      className={`text-sm text-right ${highlight ? 'text-primary font-bold' : 'text-gray-900'}`}
                     >
                       {value || '—'}
                     </p>
                   </div>
                 ))}
+
+                {/* Proof Image display */}
+                {selectedSlip.image_url && (
+                  <div className="space-y-3 pt-2">
+                    <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">
+                      Ảnh minh chứng xuất kho
+                    </p>
+                    <div className="rounded-2xl overflow-hidden border border-gray-100 shadow-sm bg-gray-50">
+                      <img
+                        src={selectedSlip.image_url}
+                        alt="Proof"
+                        className="w-full h-auto object-contain max-h-[300px]"
+                      />
+                    </div>
+                  </div>
+                )}
+
                 {selectedSlip.status !== 'Đã xóa' &&
                   (user.role === 'Admin' || user.role === 'Admin App') &&
                   selectedSlip.status === 'Chờ duyệt' && (
@@ -790,7 +841,7 @@ export const StockOut = ({
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.9, y: 20 }}
               transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-              className="bg-white rounded-[2rem] md:rounded-[2.5rem] shadow-2xl w-[calc(100%-32px)] md:w-full max-w-4xl max-h-[calc(100vh-40px)] flex flex-col overflow-hidden m-4"
+              className="bg-white rounded-[2rem] md:rounded-[2.5rem] shadow-2xl w-full max-w-4xl max-h-[calc(100vh-40px)] flex flex-col overflow-hidden"
               onClick={(e) => e.stopPropagation()}
             >
               <div className="bg-red-600 p-6 text-white flex items-center justify-between rounded-t-[2rem] md:rounded-t-[2.5rem] flex-shrink-0 relative">
@@ -819,6 +870,16 @@ export const StockOut = ({
                   onSubmit={handleSubmit}
                   className="grid grid-cols-1 md:grid-cols-2 gap-6 pb-32"
                 >
+                  <div className="md:col-span-2 space-y-2 mb-2">
+                    <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">
+                      Mã tham chiếu (Phiếu xuất)
+                    </label>
+                    <div className="bg-red-50/50 px-5 py-3.5 rounded-2xl border border-red-100 text-sm font-black text-red-600 uppercase shadow-inner italic">
+                      {formData.export_code ||
+                        `XK-${new Date().toISOString().slice(2, 10).replace(/-/g, '')}-001`}
+                    </div>
+                  </div>
+
                   <div className="space-y-4">
                     <div className="space-y-1">
                       <label className="text-[10px] font-bold text-gray-400 uppercase">
@@ -831,12 +892,7 @@ export const StockOut = ({
                         onChange={(e) => setFormData({ ...formData, date: e.target.value })}
                         className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-red-600/20"
                       />
-                      <p className="text-[10px] text-gray-400">
-                        Tồn kho sẽ được kiểm tra tại ngày này
-                      </p>
                     </div>
-
-                    {/* Moved Kho xuất to the right column */}
 
                     <div className="relative z-[120]">
                       <div className="flex items-center justify-between mb-1">
@@ -940,23 +996,50 @@ export const StockOut = ({
                       required
                     />
 
-                    <NumericInput
-                      label="Số lượng xuất *"
-                      required
-                      value={formData.quantity}
-                      onChange={(val) => setFormData({ ...formData, quantity: val })}
-                      showControls
-                    />
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-bold text-gray-400 uppercase">
+                          Số lượng xuất
+                        </label>
+                        <NumericInput
+                          value={formData.quantity}
+                          onChange={(val) => setFormData({ ...formData, quantity: val })}
+                          placeholder="Nhập SL..."
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-bold text-gray-400 uppercase">
+                          Đơn giá (vốn)
+                        </label>
+                        <NumericInput
+                          value={formData.unit_price}
+                          onChange={(val) => setFormData({ ...formData, unit_price: val })}
+                          placeholder="Vốn/giá..."
+                        />
+                      </div>
+                    </div>
 
-                    <NumericInput
-                      label="Đơn giá bán"
-                      value={formData.unit_price}
-                      onChange={(val) => setFormData({ ...formData, unit_price: val })}
-                      step={1000}
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-bold text-gray-400 uppercase">
+                        Thành tiền tự động
+                      </label>
+                      <div className="w-full px-4 py-3 rounded-xl bg-gray-50 border border-gray-100 text-sm font-bold text-red-600 shadow-inner">
+                        {formatCurrency(formData.quantity * formData.unit_price)}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Image section at the bottom */}
+                  <div className="md:col-span-2 pt-4 border-t border-gray-100">
+                    <ImageCapture
+                      maxImages={1}
+                      existingImages={formData.image_url ? [formData.image_url] : []}
+                      onUpload={(urls) => setFormData({ ...formData, image_url: urls[0] || '' })}
+                      label="Ảnh minh chứng (Phiếu xuất, Vật tư đã bàn giao...)"
                     />
                   </div>
 
-                  <div className="md:col-span-2 flex justify-end gap-3 mt-4">
+                  <div className="md:col-span-2 flex justify-end gap-3 mt-4 pt-6 border-t border-gray-100">
                     <Button variant="outline" onClick={() => setShowModal(false)}>
                       Hủy
                     </Button>

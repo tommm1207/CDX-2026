@@ -63,13 +63,20 @@ export const COLUMN_MAP: Record<string, string> = {
   hours_worked: 'Số giờ làm việc',
   overtime_hours: 'Số giờ tăng ca',
 
-  // BOM / Production
-  bom_id: 'Định mức sản xuất (BOM)',
-  output_warehouse_id: 'Kho thành phẩm',
-  order_code: 'Mã Lệnh',
+  // BOM / Production Additions
   quantity_per_unit: 'Định lượng/SP',
   product_item_id: 'Sản phẩm đầu ra',
   material_item_id: 'Vật tư tiêu hao',
+
+  // Construction Diary
+  diary_code: 'Mã Nhật ký',
+  weather: 'Thời tiết',
+  temperature: 'Nhiệt độ',
+  labor_info: 'Nhân sự & Tổ đội',
+  equipment_info: 'Máy móc & Thiết bị',
+  work_progress: 'Diễn biến thi công',
+  quality_issues: 'Chất lượng & An toàn',
+  supervision_comments: 'Ý kiến Giám sát',
 };
 
 /**

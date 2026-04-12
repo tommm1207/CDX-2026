@@ -31,12 +31,6 @@ export const Trash = ({
       color: 'bg-emerald-50 text-emerald-600',
     },
     {
-      id: 'deleted-production-orders',
-      label: 'Sản xuất & Định mức đã xóa',
-      icon: Layers,
-      color: 'bg-indigo-50 text-indigo-600',
-    },
-    {
       id: 'deleted-employees',
       label: 'Hồ sơ nhân sự đã xóa',
       icon: UserCircle,

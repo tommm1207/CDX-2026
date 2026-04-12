@@ -228,13 +228,16 @@ export const MonthlySalary = ({
     if (billRef.current === null) return;
 
     try {
+      // Add a small delay to ensure all micro-layouts and heavy images are fully rendered
+      await new Promise(resolve => setTimeout(resolve, 200));
+
       const dataUrl = await toPng(billRef.current, {
         cacheBust: true,
         backgroundColor: '#fff',
         quality: 1,
-        pixelRatio: 2, // Double resolution for crystal clear image
+        pixelRatio: 3, // Premium 3x resolution for saved images
         skipFonts: false,
-        fontEmbedCSS: '', // Ensure fonts are embedded
+        fontEmbedCSS: '', 
       });
       const link = document.createElement('a');
       link.download = `Phieu_Luong_${selectedSalary.full_name}_T${selectedMonth}_${selectedYear}.png`;
@@ -599,7 +602,29 @@ export const MonthlySalary = ({
               {/* Bill table */}
               <div className="max-h-[55dvh] overflow-y-auto custom-scrollbar">
                 <div ref={billRef} className="bg-white">
-                  {/* Bill header for image */}
+                  {/* Explicit style block for perfect image capture consistency (fixes missing bold/italic/colors) */}
+                  <style>{`
+                    .bill-capture { font-family: 'Inter', system-ui, sans-serif !important; }
+                    .bill-capture .font-bold { font-weight: 700 !important; }
+                    .bill-capture .font-black { font-weight: 900 !important; }
+                    .bill-capture .font-extrabold { font-weight: 800 !important; }
+                    .bill-capture .italic { font-style: italic !important; }
+                    .bill-capture .uppercase { text-transform: uppercase !important; }
+                    .bill-capture .text-primary { color: #2D5A27 !important; }
+                    .bill-capture .text-gray-400 { color: #9CA3AF !important; }
+                    .bill-capture .text-gray-500 { color: #6B7280 !important; }
+                    .bill-capture .text-gray-700 { color: #374151 !important; }
+                    .bill-capture .text-gray-800 { color: #1F2937 !important; }
+                    .bill-capture .text-gray-900 { color: #111827 !important; }
+                    .bill-capture .bg-primary\\/5 { background-color: rgba(45, 90, 39, 0.05) !important; }
+                    .bill-capture .bg-gray-50\\/30 { background-color: rgba(249, 250, 251, 0.3) !important; }
+                    .bill-capture .border-gray-100 { border-color: #F3F4F6 !important; }
+                    .bill-capture .border-primary\\/20 { border-color: rgba(45, 90, 39, 0.2) !important; }
+                    .bill-capture .whitespace-nowrap { white-space: nowrap !important; }
+                  `}</style>
+                  
+                  <div className="bill-capture">
+                    {/* Bill header for image */}
                   <div className="px-5 pt-5 pb-4 border-b border-gray-100">
                     {/* Logo row */}
                     <div className="flex items-center gap-2 mb-3">
@@ -784,6 +809,7 @@ export const MonthlySalary = ({
                     </div>
                   </div>
                 </div>
+              </div>
               </div>
 
               {/* Actions */}

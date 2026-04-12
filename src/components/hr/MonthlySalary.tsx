@@ -650,152 +650,109 @@ export const MonthlySalary = ({
                     </div>
                   </div>
 
-                  <div className="p-6 space-y-6">
-                    {/* Attendance summary */}
-                    <div className="grid grid-cols-2 gap-3">
-                      <div className="bg-gray-50/80 rounded-xl p-2.5 border border-gray-100 flex flex-col items-center justify-center space-y-0.5">
-                        <span className="text-[8px] font-black text-gray-400 uppercase tracking-widest">
-                          Công chuẩn
-                        </span>
-                        <div className="flex items-baseline gap-1">
-                          <span className="text-base font-black text-gray-800">
-                            {(selectedSalary.totalDays * 8).toFixed(0)}
-                          </span>
-                          <span className="text-[9px] font-bold text-gray-400">giờ</span>
-                        </div>
-                        <span className="text-[9px] text-gray-400">
-                          ({selectedSalary.totalDays.toFixed(1)} công)
+                  <div className="px-5 pb-6">
+                    {/* Minimalist Bill List */}
+                    <div className="border-t border-gray-100">
+                      {/* Attendance rows */}
+                      <div className="flex justify-between items-center py-2.5 border-b border-gray-100 gap-2">
+                        <span className="text-[11px] font-bold text-gray-500 whitespace-nowrap">Giờ công:</span>
+                        <span className="text-[11px] font-bold text-gray-800 whitespace-nowrap">
+                          {(selectedSalary.totalDays * 8).toFixed(0)} giờ ({selectedSalary.totalDays.toFixed(1)} công)
                         </span>
                       </div>
-                      <div className="bg-gray-50/50 rounded-xl p-2.5 border border-gray-100 flex flex-col items-center justify-center space-y-0.5">
-                        <span className="text-[8px] font-black text-gray-400 uppercase tracking-widest">
-                          Tăng ca
+                      <div className="flex justify-between items-center py-2.5 border-b border-gray-100 gap-2">
+                        <span className="text-[11px] font-bold text-gray-500 whitespace-nowrap">Tăng ca:</span>
+                        <span className="text-[11px] font-bold text-gray-800 whitespace-nowrap">
+                          {selectedSalary.totalOT.toFixed(1)} giờ
                         </span>
-                        <div className="flex items-baseline gap-1">
-                          <span className="text-base font-black text-gray-800">
-                            {selectedSalary.totalOT.toFixed(1)}
-                          </span>
-                          <span className="text-[9px] font-bold text-gray-400">giờ</span>
-                        </div>
+                      </div>
+
+                      {/* Financial rows */}
+                      <div className="flex justify-between items-center py-2.5 border-b border-gray-100 gap-2">
+                        <span className="text-[11px] font-bold text-gray-500 whitespace-nowrap">Lương cơ bản:</span>
+                        <span className="text-[11px] font-bold text-gray-800 whitespace-nowrap">
+                          {formatCurrency(selectedSalary.earnedSalary)}
+                        </span>
+                      </div>
+                      <div className="flex justify-between items-center py-2.5 border-b border-gray-100 gap-2">
+                        <span className="text-[11px] font-bold text-gray-500 whitespace-nowrap">Tiền tăng ca:</span>
+                        <span className="text-[11px] font-bold text-gray-800 whitespace-nowrap">
+                          {formatCurrency(selectedSalary.dayOTSalary + selectedSalary.monthOTSalary)}
+                        </span>
+                      </div>
+                      <div className="flex justify-between items-center py-2.5 border-b border-gray-100 gap-2">
+                        <span className="text-[11px] font-bold text-gray-500 whitespace-nowrap">Phụ cấp:</span>
+                        <span className="text-[11px] font-bold text-gray-800 whitespace-nowrap">
+                          {formatCurrency(selectedSalary.totalAll)}
+                        </span>
+                      </div>
+                      <div className="flex justify-between items-center py-2.5 border-b border-gray-100 gap-2">
+                        <span className="text-[11px] font-bold text-gray-500 whitespace-nowrap">Thưởng:</span>
+                        <span className="text-[11px] font-bold text-gray-800 whitespace-nowrap">0 đ</span>
+                      </div>
+
+                      {/* Total Earnings */}
+                      <div className="flex justify-between items-center py-3 border-b border-gray-100 gap-2 bg-gray-50/30 px-2 -mx-2">
+                        <span className="text-[11px] font-black text-gray-900 uppercase tracking-wide whitespace-nowrap">TỔNG THU NHẬP:</span>
+                        <span className="text-[11px] font-black text-gray-900 whitespace-nowrap">
+                          {formatCurrency(
+                            selectedSalary.earnedSalary +
+                              selectedSalary.dayOTSalary +
+                              selectedSalary.monthOTSalary +
+                              selectedSalary.totalAll,
+                          )}
+                        </span>
+                      </div>
+
+                      {/* Deductions rows */}
+                      <div className="flex justify-between items-center py-2.5 border-b border-gray-100 gap-2">
+                        <span className="text-[11px] font-bold text-gray-500 whitespace-nowrap">Tạm ứng:</span>
+                        <span className="text-[11px] font-bold text-gray-800 whitespace-nowrap">
+                          -{formatCurrency(selectedSalary.totalAdv)}
+                        </span>
+                      </div>
+                      <div className="flex justify-between items-center py-2.5 border-b border-gray-100 gap-2">
+                        <span className="text-[11px] font-bold text-gray-500 whitespace-nowrap">Bảo hiểm:</span>
+                        <span className="text-[11px] font-bold text-gray-800 whitespace-nowrap">
+                          -{formatCurrency(selectedSalary.insuranceDeduction)}
+                        </span>
+                      </div>
+                      <div className="flex justify-between items-center py-2.5 border-b border-gray-100 gap-2">
+                        <span className="text-[11px] font-bold text-gray-500 whitespace-nowrap">Giảm trừ:</span>
+                        <span className="text-[11px] font-bold text-gray-800 whitespace-nowrap">0 đ</span>
+                      </div>
+
+                      {/* Total Deductions */}
+                      <div className="flex justify-between items-center py-3 border-b border-gray-100 gap-2 bg-gray-50/30 px-2 -mx-2">
+                        <span className="text-[11px] font-black text-gray-900 uppercase tracking-wide whitespace-nowrap">TỔNG GIẢM:</span>
+                        <span className="text-[11px] font-black text-gray-900 whitespace-nowrap">
+                          -{formatCurrency(selectedSalary.totalAdv + selectedSalary.insuranceDeduction)}
+                        </span>
+                      </div>
+
+                      {/* Net Pay (RENAMED) */}
+                      <div className="flex justify-between items-center py-4 border-b-2 border-primary/20 gap-2 bg-primary/5 px-2 -mx-2">
+                        <span className="text-xs font-black text-primary uppercase tracking-wider whitespace-nowrap italic">CÒN ĐƯỢC NHẬN:</span>
+                        <span className="text-sm font-black text-primary whitespace-nowrap">
+                          {formatCurrency(selectedSalary.netSalary)}
+                        </span>
+                      </div>
+
+                      <div className="flex justify-between items-center py-2.5 border-b border-gray-100 gap-2">
+                        <span className="text-[11px] font-bold text-gray-500 whitespace-nowrap">Bằng chữ:</span>
+                        <span className="text-[11px] font-extrabold italic text-gray-700 leading-relaxed text-right">
+                          {numberToVietnamese(selectedSalary.netSalary)}
+                        </span>
+                      </div>
+
+                      <div className="flex justify-between items-center py-2.5 gap-2">
+                        <span className="text-[11px] font-bold text-gray-500 whitespace-nowrap">Ghi chú:</span>
+                        <span className="text-[11px] font-bold text-gray-800 whitespace-nowrap">
+                          {isCustomRange ? `${customRange.start} đến ${customRange.end}` : `Tháng ${selectedMonth}/${selectedYear}`}
+                        </span>
                       </div>
                     </div>
 
-                    {/* Earnings */}
-                    <div className="space-y-3">
-                      <div className="flex items-center gap-2 mb-1">
-                        <div className="h-4 w-1 bg-primary rounded-full" />
-                        <h3 className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">
-                          CÁC KHOẢN THU NHẬP
-                        </h3>
-                      </div>
-                      <div className="space-y-2">
-                        <div className="flex justify-between text-xs items-center gap-2">
-                          <span className="font-bold text-gray-500 whitespace-nowrap">Lương cơ bản</span>
-                          <span className="font-bold text-gray-800 whitespace-nowrap">
-                            {formatCurrency(selectedSalary.earnedSalary)}
-                          </span>
-                        </div>
-                        <div className="flex justify-between text-xs items-center gap-2">
-                          <span className="font-bold text-gray-500 whitespace-nowrap">Tiền tăng ca</span>
-                          <span className="font-bold text-gray-800 whitespace-nowrap">
-                            {formatCurrency(
-                              selectedSalary.dayOTSalary + selectedSalary.monthOTSalary,
-                            )}
-                          </span>
-                        </div>
-                        <div className="flex justify-between text-xs items-center gap-2">
-                          <span className="font-bold text-gray-500 whitespace-nowrap">Phụ cấp</span>
-                          <span className="font-bold text-gray-800 whitespace-nowrap">
-                            +{formatCurrency(selectedSalary.totalAll)}
-                          </span>
-                        </div>
-                        <div className="pt-2 border-t border-gray-100">
-                          <div className="flex justify-between items-center gap-2">
-                            <span className="text-xs font-black text-gray-800 uppercase tracking-wide whitespace-nowrap">
-                              TỔNG THU NHẬP
-                            </span>
-                            <span className="text-base font-black text-gray-900 tracking-tight whitespace-nowrap">
-                              {formatCurrency(
-                                selectedSalary.earnedSalary +
-                                  selectedSalary.dayOTSalary +
-                                  selectedSalary.monthOTSalary +
-                                  selectedSalary.totalAll,
-                              )}
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Deductions */}
-                    <div className="space-y-3">
-                      <div className="flex items-center gap-2 mb-1">
-                        <div className="h-4 w-1 bg-gray-300 rounded-full" />
-                        <h3 className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">
-                          CÁC KHOẢN KHẤU TRỪ
-                        </h3>
-                      </div>
-                      <div className="space-y-2">
-                        <div className="flex justify-between text-xs items-center gap-2">
-                          <span className="font-bold text-gray-500 whitespace-nowrap">Tạm ứng</span>
-                          <span className="font-bold text-gray-800 whitespace-nowrap">
-                            -{formatCurrency(selectedSalary.totalAdv)}
-                          </span>
-                        </div>
-                        <div className="flex justify-between text-xs items-center gap-2">
-                          <span className="font-bold text-gray-500 whitespace-nowrap">Bảo hiểm</span>
-                          <span className="font-bold text-gray-800 whitespace-nowrap">
-                            -{formatCurrency(selectedSalary.insuranceDeduction)}
-                          </span>
-                        </div>
-                        <div className="pt-2 border-t border-gray-100">
-                          <div className="flex justify-between items-center gap-2">
-                            <span className="text-xs font-black text-gray-800 uppercase tracking-wide whitespace-nowrap">
-                              TỔNG GIẢM TRỪ
-                            </span>
-                            <span className="text-base font-black tracking-tight text-gray-900 whitespace-nowrap">
-                              -{formatCurrency(
-                                selectedSalary.totalAdv + selectedSalary.insuranceDeduction,
-                              )}
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Net Pay */}
-                    <div className="bg-gradient-to-br from-primary to-primary-dark p-4 rounded-2xl shadow-lg text-white relative overflow-hidden group">
-                      <div className="absolute top-0 right-0 w-24 h-24 bg-white/10 rounded-full -translate-y-1/2 translate-x-1/2 blur-2xl group-hover:scale-110 transition-transform duration-700" />
-
-                      <div className="relative z-10">
-                        <div className="flex justify-between items-center mb-1">
-                          <span className="text-[9px] font-black uppercase tracking-[0.25em] opacity-80 italic whitespace-nowrap">
-                            THỰC LĨNH :
-                          </span>
-                          <div className="w-6 h-6 rounded-full bg-white/20 flex items-center justify-center backdrop-blur-md border border-white/20">
-                            <Wallet size={11} className="text-white" />
-                          </div>
-                        </div>
-
-                        {/* Auto-scaling font size for currency */}
-                        <div className="mt-1">
-                          <span
-                            className={`font-black tracking-tighter block leading-none whitespace-nowrap ${selectedSalary.netSalary.toString().length > 9 ? 'text-2xl' : 'text-3xl'}`}
-                          >
-                            {formatCurrency(selectedSalary.netSalary)}
-                          </span>
-                        </div>
-
-                        <div className="mt-3 pt-3 border-t border-white/20">
-                          <p className="text-[8px] font-black uppercase tracking-widest opacity-60 mb-1">
-                            Bằng chữ:
-                          </p>
-                          <p className="text-[10px] font-extrabold italic leading-relaxed text-white/90">
-                            {numberToVietnamese(selectedSalary.netSalary)}
-                          </p>
-                        </div>
-                      </div>
-                    </div>
 
                     {/* Footer */}
                     <div className="pt-2 flex justify-between items-center">

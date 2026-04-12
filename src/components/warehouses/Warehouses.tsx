@@ -100,7 +100,6 @@ export const Warehouses = ({
         .from('warehouses')
         .select('code')
         .like('code', 'KH%')
-        .or('status.is.null,status.neq.Đã xóa')
         .order('code', { ascending: false })
         .limit(1);
 

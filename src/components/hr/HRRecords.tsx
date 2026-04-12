@@ -26,6 +26,8 @@ export const HRRecords = ({
   const [submitting, setSubmitting] = useState(false);
   const [showFilter, setShowFilter] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [itemToDelete, setItemToDelete] = useState('');
   const [sortBy, setSortBy] = useState<SortOption>(
     (localStorage.getItem(`sort_pref_hr_${user.id}`) as SortOption) || 'newest',
   );

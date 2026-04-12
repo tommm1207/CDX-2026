@@ -230,14 +230,15 @@ export const MonthlySalary = ({
 
     try {
       setIsCapturing(true);
-      // Wait longer for Safari to render everything properly
+      // Wait for Safari to fully render the layout
       await new Promise((resolve) => setTimeout(resolve, 1500));
 
-      const dataUrl = await toPng(billRef.current, {
+      // Step 1: Capture the bill without logo
+      const rawDataUrl = await toPng(billRef.current, {
         cacheBust: true,
         backgroundColor: '#FCFCFC',
         quality: 1,
-        pixelRatio: 3, // Balanced resolution for mobile performance
+        pixelRatio: 3,
         skipFonts: false,
         style: {
           transform: 'scale(1)',
@@ -245,10 +246,41 @@ export const MonthlySalary = ({
         },
       });
 
+      // Step 2: Manually draw logo on top of the canvas
+      const finalDataUrl = await new Promise<string>((resolve) => {
+        const billImg = new Image();
+        billImg.onload = () => {
+          const canvas = document.createElement('canvas');
+          canvas.width = billImg.width;
+          canvas.height = billImg.height;
+          const ctx = canvas.getContext('2d')!;
+
+          // Draw the captured bill
+          ctx.drawImage(billImg, 0, 0);
+
+          // Draw logo manually on top (position matches px-5=20px, pt-5=20px)
+          const logoImg = new Image();
+          logoImg.onload = () => {
+            const scale = 3; // matches pixelRatio
+            const logoX = 20 * scale;
+            const logoY = 20 * scale;
+            const logoSize = 36 * scale;
+            ctx.drawImage(logoImg, logoX, logoY, logoSize, logoSize);
+            resolve(canvas.toDataURL('image/png'));
+          };
+          logoImg.onerror = () => {
+            // If logo fails, still save the image without logo
+            resolve(rawDataUrl);
+          };
+          logoImg.src = logoBase64;
+        };
+        billImg.src = rawDataUrl;
+      });
+
       setIsCapturing(false);
       const link = document.createElement('a');
       link.download = `Phieu_Luong_${selectedSalary.full_name}_T${selectedMonth}_${selectedYear}.png`;
-      link.href = dataUrl;
+      link.href = finalDataUrl;
       link.click();
       if (addToast) addToast('Đã lưu ảnh phiếu lương thành công!', 'success');
     } catch (err) {
@@ -639,14 +671,11 @@ export const MonthlySalary = ({
                     <div className="px-5 pt-5 pb-4 border-b border-gray-100">
                       {/* Logo row */}
                       <div className="flex items-center gap-2 mb-3">
-                        <div
+                        <img
+                          src={logoBase64}
+                          alt="Logo"
                           className="logo-img rounded-lg flex-shrink-0"
-                          style={{
-                            backgroundImage: `url(${logoBase64})`,
-                            backgroundSize: 'contain',
-                            backgroundRepeat: 'no-repeat',
-                            backgroundPosition: 'center',
-                          }}
+                          style={{ objectFit: 'contain' }}
                         />
                         <div>
                           <p className="text-[9px] font-black text-gray-700 uppercase tracking-wider">

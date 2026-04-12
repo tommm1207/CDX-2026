@@ -19,6 +19,10 @@ import { Warehouses } from '@/components/warehouses/Warehouses';
 import { MaterialGroups } from '@/components/materials/MaterialGroups';
 import { MaterialCatalog } from '@/components/materials/MaterialCatalog';
 import { ConstructionDiaryComponent } from '@/components/production/ConstructionDiary';
+import { BomManager } from '@/components/production/BomManager';
+import { ProductionOrders } from '@/components/production/ProductionOrders';
+import { FinishedGoodsIntake } from '@/components/production/FinishedGoodsIntake';
+import { MaterialSplitMerge } from '@/components/production/MaterialSplitMerge';
 import { PlaceholderPage } from '@/components/materials/PlaceholderPage';
 import { Trash } from '@/components/trash/Trash';
 import { DeletedWarehouses } from '@/components/trash/DeletedWarehouses';
@@ -188,6 +192,34 @@ export const AppRouter = ({
           addToast={addToast}
           setHideBottomNav={setHideBottomNav}
         />
+      );
+
+    case 'xasa-gop':
+      return (
+        <ErrorBoundary onBack={goBack}>
+          <MaterialSplitMerge user={user} onBack={goBack} addToast={addToast} />
+        </ErrorBoundary>
+      );
+
+    case 'bom-lenh-sx':
+      return (
+        <ErrorBoundary onBack={goBack}>
+          <BomManager user={user} onBack={goBack} addToast={addToast} />
+        </ErrorBoundary>
+      );
+
+    case 'lenh-san-xuat':
+      return (
+        <ErrorBoundary onBack={goBack}>
+          <ProductionOrders user={user} onBack={goBack} addToast={addToast} />
+        </ErrorBoundary>
+      );
+
+    case 'nhap-thanh-pham':
+      return (
+        <ErrorBoundary onBack={goBack}>
+          <FinishedGoodsIntake user={user} onBack={goBack} addToast={addToast} />
+        </ErrorBoundary>
       );
 
     case 'trash':

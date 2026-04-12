@@ -1,0 +1,619 @@
+import { useState, useEffect } from 'react';
+import {
+  Plus,
+  Search,
+  X,
+  Edit,
+  Trash2,
+  ChevronRight,
+  Copy,
+  Package,
+  Layers,
+  ClipboardList,
+} from 'lucide-react';
+import { motion, AnimatePresence } from 'motion/react';
+import { supabase } from '@/lib/supabase';
+import { Employee } from '@/types';
+import { PageBreadcrumb } from '../shared/PageBreadcrumb';
+import { NumericInput } from '../shared/NumericInput';
+import { CreatableSelect } from '../shared/CreatableSelect';
+import { ToastType } from '../shared/Toast';
+import { FAB } from '../shared/FAB';
+import { Button } from '../shared/Button';
+import { formatNumber } from '@/utils/format';
+
+// ============================
+// BOM Manager Component
+// ============================
+export const BomManager = ({
+  user,
+  onBack,
+  addToast,
+}: {
+  user: Employee;
+  onBack?: () => void;
+  addToast?: (message: string, type?: ToastType) => void;
+}) => {
+  const [boms, setBoms] = useState<any[]>([]);
+  const [materials, setMaterials] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [showModal, setShowModal] = useState(false);
+  const [selectedBom, setSelectedBom] = useState<any>(null);
+  const [isEditing, setIsEditing] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+
+  // Form state
+  const [formData, setFormData] = useState({
+    ten_san_pham: '',
+    mo_ta: '',
+  });
+  const [bomItems, setBomItems] = useState<any[]>([]);
+  const [showItemForm, setShowItemForm] = useState(false);
+  const [itemForm, setItemForm] = useState({
+    material_id: '',
+    material_name: '',
+    dinh_muc: 0,
+    don_vi: '',
+  });
+
+  useEffect(() => {
+    fetchBoms();
+    fetchMaterials();
+  }, []);
+
+  const fetchBoms = async () => {
+    setLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from('san_pham_bom')
+        .select('*, san_pham_bom_chi_tiet(*, materials(name, code, unit))')
+        .eq('dang_hoat_dong', true)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      setBoms(data || []);
+    } catch (err: any) {
+      console.error('Error fetching BOMs:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchMaterials = async () => {
+    const { data } = await supabase
+      .from('materials')
+      .select('id, name, code, unit, group_id')
+      .or('status.is.null,status.neq.Đã xóa')
+      .order('name');
+    if (data) setMaterials(data);
+  };
+
+  const handleAddNew = () => {
+    setFormData({ ten_san_pham: '', mo_ta: '' });
+    setBomItems([]);
+    setIsEditing(false);
+    setShowModal(true);
+  };
+
+  const handleEdit = (bom: any) => {
+    setFormData({
+      ten_san_pham: bom.ten_san_pham,
+      mo_ta: bom.mo_ta || '',
+    });
+    setBomItems(
+      (bom.san_pham_bom_chi_tiet || []).map((item: any) => ({
+        id: item.id,
+        material_id: item.material_id,
+        material_name: item.materials?.name || '',
+        dinh_muc: item.dinh_muc,
+        don_vi: item.don_vi,
+      })),
+    );
+    setIsEditing(true);
+    setSelectedBom(bom);
+    setShowModal(true);
+  };
+
+  const handleDuplicate = (bom: any) => {
+    setFormData({
+      ten_san_pham: `${bom.ten_san_pham} (bản sao)`,
+      mo_ta: bom.mo_ta || '',
+    });
+    setBomItems(
+      (bom.san_pham_bom_chi_tiet || []).map((item: any) => ({
+        material_id: item.material_id,
+        material_name: item.materials?.name || '',
+        dinh_muc: item.dinh_muc,
+        don_vi: item.don_vi,
+      })),
+    );
+    setIsEditing(false);
+    setSelectedBom(null);
+    setShowModal(true);
+  };
+
+  const handleAddItem = () => {
+    setItemForm({ material_id: '', material_name: '', dinh_muc: 0, don_vi: '' });
+    setShowItemForm(true);
+  };
+
+  const handleSaveItem = () => {
+    if (!itemForm.material_id || itemForm.dinh_muc <= 0) {
+      if (addToast) addToast('Vui lòng chọn vật tư và nhập định mức', 'error');
+      return;
+    }
+    // Check duplicate material
+    if (bomItems.some((i) => i.material_id === itemForm.material_id)) {
+      if (addToast) addToast('Vật tư này đã có trong BOM', 'warning');
+      return;
+    }
+    setBomItems([...bomItems, { ...itemForm }]);
+    setShowItemForm(false);
+  };
+
+  const handleRemoveItem = (index: number) => {
+    setBomItems(bomItems.filter((_, i) => i !== index));
+  };
+
+  const handleSave = async () => {
+    if (!formData.ten_san_pham.trim()) {
+      if (addToast) addToast('Vui lòng nhập tên sản phẩm', 'error');
+      return;
+    }
+    if (bomItems.length === 0) {
+      if (addToast) addToast('Vui lòng thêm ít nhất 1 vật tư vào BOM', 'error');
+      return;
+    }
+
+    setSubmitting(true);
+    try {
+      let bomId: string;
+
+      if (isEditing && selectedBom) {
+        // Update BOM header
+        const { error } = await supabase
+          .from('san_pham_bom')
+          .update({
+            ten_san_pham: formData.ten_san_pham.trim(),
+            mo_ta: formData.mo_ta.trim() || null,
+          })
+          .eq('id', selectedBom.id);
+        if (error) throw error;
+        bomId = selectedBom.id;
+
+        // Delete old items
+        await supabase.from('san_pham_bom_chi_tiet').delete().eq('bom_id', bomId);
+      } else {
+        // Insert new BOM header
+        const { data, error } = await supabase
+          .from('san_pham_bom')
+          .insert([
+            {
+              ten_san_pham: formData.ten_san_pham.trim(),
+              mo_ta: formData.mo_ta.trim() || null,
+            },
+          ])
+          .select()
+          .single();
+        if (error) throw error;
+        bomId = data.id;
+      }
+
+      // Insert BOM items
+      const items = bomItems.map((item) => ({
+        bom_id: bomId,
+        material_id: item.material_id,
+        dinh_muc: item.dinh_muc,
+        don_vi: item.don_vi,
+      }));
+      const { error: itemsError } = await supabase.from('san_pham_bom_chi_tiet').insert(items);
+      if (itemsError) throw itemsError;
+
+      if (addToast)
+        addToast(isEditing ? 'Cập nhật BOM thành công!' : 'Tạo BOM thành công!', 'success');
+      setShowModal(false);
+      fetchBoms();
+    } catch (err: any) {
+      if (addToast) addToast('Lỗi: ' + err.message, 'error');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleDelete = async (bom: any) => {
+    if (!window.confirm(`Bạn có chắc muốn xóa BOM "${bom.ten_san_pham}"?`)) return;
+    try {
+      await supabase.from('san_pham_bom').update({ dang_hoat_dong: false }).eq('id', bom.id);
+      if (addToast) addToast('Đã xóa BOM', 'success');
+      if (selectedBom?.id === bom.id) setSelectedBom(null);
+      fetchBoms();
+    } catch (err: any) {
+      if (addToast) addToast('Lỗi: ' + err.message, 'error');
+    }
+  };
+
+  const filteredBoms = boms.filter((bom) => {
+    if (!searchTerm) return true;
+    const s = searchTerm.toLowerCase();
+    return (
+      bom.ten_san_pham.toLowerCase().includes(s) || (bom.mo_ta || '').toLowerCase().includes(s)
+    );
+  });
+
+  const materialOptions = materials.map((m) => ({
+    id: m.id,
+    name: `${m.name}${m.code ? ` (${m.code})` : ''}`,
+  }));
+
+  return (
+    <div className="p-4 md:p-6 space-y-6 pb-24">
+      <div className="flex items-center justify-between gap-2">
+        <PageBreadcrumb title="BOM & Lệnh sản xuất" onBack={onBack} />
+      </div>
+
+      {/* Search */}
+      <div className="relative">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
+        <input
+          type="text"
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          placeholder="Tìm kiếm sản phẩm..."
+          className="w-full pl-10 pr-4 py-3 rounded-2xl border border-gray-200 text-sm focus:ring-2 focus:ring-primary/20 outline-none bg-white"
+        />
+      </div>
+
+      {/* BOM List + Detail split view */}
+      <div className="flex flex-col lg:flex-row gap-6">
+        {/* Left: BOM list */}
+        <div className="flex-1 space-y-3">
+          {loading ? (
+            <div className="flex flex-col items-center py-12 text-gray-400">
+              <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin mb-2" />
+              <p className="text-sm">Đang tải...</p>
+            </div>
+          ) : filteredBoms.length === 0 ? (
+            <div className="flex flex-col items-center py-12 text-gray-400 bg-white rounded-2xl border border-dashed border-gray-200">
+              <Package size={48} className="mb-3 text-gray-300" />
+              <p className="font-medium">Chưa có BOM nào</p>
+              <p className="text-xs mt-1">Bấm nút + để tạo công thức sản phẩm</p>
+            </div>
+          ) : (
+            filteredBoms.map((bom) => (
+              <motion.div
+                key={bom.id}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                onClick={() => setSelectedBom(bom)}
+                className={`bg-white rounded-2xl p-4 border cursor-pointer transition-all hover:shadow-md ${
+                  selectedBom?.id === bom.id
+                    ? 'border-primary shadow-md ring-2 ring-primary/10'
+                    : 'border-gray-100'
+                }`}
+              >
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3 flex-1 min-w-0">
+                    <div className="w-10 h-10 bg-primary/10 rounded-xl flex items-center justify-center shrink-0">
+                      <Layers size={20} className="text-primary" />
+                    </div>
+                    <div className="min-w-0">
+                      <h3 className="font-bold text-gray-800 text-sm truncate">
+                        {bom.ten_san_pham}
+                      </h3>
+                      <p className="text-[10px] text-gray-400">
+                        {(bom.san_pham_bom_chi_tiet || []).length} vật tư
+                        {bom.mo_ta ? ` • ${bom.mo_ta}` : ''}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDuplicate(bom);
+                      }}
+                      className="p-1.5 hover:bg-gray-100 rounded-lg text-gray-400 transition-colors"
+                      title="Nhân bản"
+                    >
+                      <Copy size={14} />
+                    </button>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleEdit(bom);
+                      }}
+                      className="p-1.5 hover:bg-blue-50 rounded-lg text-blue-500 transition-colors"
+                    >
+                      <Edit size={14} />
+                    </button>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDelete(bom);
+                      }}
+                      className="p-1.5 hover:bg-red-50 rounded-lg text-red-400 transition-colors"
+                    >
+                      <Trash2 size={14} />
+                    </button>
+                    <ChevronRight size={16} className="text-gray-300 ml-1" />
+                  </div>
+                </div>
+              </motion.div>
+            ))
+          )}
+        </div>
+
+        {/* Right: BOM Detail */}
+        {selectedBom && (
+          <motion.div
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            className="flex-1 bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden"
+          >
+            <div className="bg-primary/5 p-4 border-b border-gray-100 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-primary/10 rounded-xl flex items-center justify-center">
+                  <ClipboardList size={20} className="text-primary" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-gray-800">{selectedBom.ten_san_pham}</h3>
+                  {selectedBom.mo_ta && (
+                    <p className="text-[10px] text-gray-500">{selectedBom.mo_ta}</p>
+                  )}
+                </div>
+              </div>
+              <button
+                onClick={() => setSelectedBom(null)}
+                className="p-1 hover:bg-gray-200 rounded-full lg:block hidden"
+              >
+                <X size={16} className="text-gray-500" />
+              </button>
+            </div>
+
+            <div className="p-4">
+              <table className="w-full text-left">
+                <thead>
+                  <tr className="border-b border-gray-100">
+                    <th className="py-2 text-[10px] font-bold text-gray-400 uppercase">Vật tư</th>
+                    <th className="py-2 text-[10px] font-bold text-gray-400 uppercase text-right">
+                      Định mức
+                    </th>
+                    <th className="py-2 text-[10px] font-bold text-gray-400 uppercase text-right">
+                      ĐVT
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-50">
+                  {(selectedBom.san_pham_bom_chi_tiet || []).map((item: any) => (
+                    <tr key={item.id}>
+                      <td className="py-3 text-sm text-gray-800">
+                        {item.materials?.name || 'N/A'}
+                        {item.materials?.code && (
+                          <span className="text-[10px] text-gray-400 ml-1">
+                            ({item.materials.code})
+                          </span>
+                        )}
+                      </td>
+                      <td className="py-3 text-sm font-bold text-primary text-right">
+                        {formatNumber(item.dinh_muc)}
+                      </td>
+                      <td className="py-3 text-xs text-gray-500 text-right">{item.don_vi}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              {(selectedBom.san_pham_bom_chi_tiet || []).length === 0 && (
+                <p className="text-center text-gray-400 text-sm py-8 italic">
+                  BOM chưa có vật tư nào
+                </p>
+              )}
+            </div>
+          </motion.div>
+        )}
+      </div>
+
+      <FAB onClick={handleAddNew} label="Tạo BOM mới" />
+
+      {/* Create/Edit BOM Modal */}
+      <AnimatePresence>
+        {showModal && (
+          <div
+            className="fixed inset-0 z-[150] flex md:items-center justify-center p-0 md:p-4 bg-black/60 backdrop-blur-sm overflow-y-auto"
+            onClick={() => setShowModal(false)}
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="bg-white rounded-none md:rounded-3xl shadow-2xl w-full max-w-2xl h-full md:h-auto md:max-h-[90vh] flex flex-col mt-auto md:mt-0"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* Modal Header */}
+              <div className="bg-primary p-6 pt-[calc(1.5rem+env(safe-area-inset-top))] md:pt-6 text-white flex items-center justify-between rounded-none md:rounded-t-3xl shrink-0">
+                <div className="flex items-center gap-3">
+                  <button
+                    onClick={() => setShowModal(false)}
+                    className="p-1 hover:bg-white/20 rounded-full"
+                  >
+                    <X size={20} />
+                  </button>
+                  <div>
+                    <h2 className="font-bold text-lg">{isEditing ? 'Sửa BOM' : 'Tạo BOM mới'}</h2>
+                    <p className="text-xs text-white/70">Công thức sản phẩm & định mức vật tư</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Modal Body */}
+              <div className="p-6 space-y-6 overflow-y-auto flex-1">
+                {/* Product info */}
+                <div className="space-y-4">
+                  <div>
+                    <label className="text-[10px] font-bold text-gray-400 uppercase block mb-1">
+                      Tên sản phẩm *
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.ten_san_pham}
+                      onChange={(e) => setFormData({ ...formData, ten_san_pham: e.target.value })}
+                      placeholder="VD: Cọc C40-4B1"
+                      className="w-full px-4 py-3 rounded-xl border border-gray-200 text-sm focus:ring-2 focus:ring-primary/20 outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-[10px] font-bold text-gray-400 uppercase block mb-1">
+                      Mô tả
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.mo_ta}
+                      onChange={(e) => setFormData({ ...formData, mo_ta: e.target.value })}
+                      placeholder="VD: Cọc bê tông ly tâm D400"
+                      className="w-full px-4 py-3 rounded-xl border border-gray-200 text-sm focus:ring-2 focus:ring-primary/20 outline-none"
+                    />
+                  </div>
+                </div>
+
+                {/* BOM Items */}
+                <div>
+                  <div className="flex items-center justify-between mb-3">
+                    <h3 className="text-xs font-bold text-gray-600 uppercase">
+                      Danh sách vật tư ({bomItems.length})
+                    </h3>
+                    <Button size="sm" variant="outline" icon={Plus} onClick={handleAddItem}>
+                      Thêm vật tư
+                    </Button>
+                  </div>
+
+                  {bomItems.length === 0 ? (
+                    <div className="border-2 border-dashed border-gray-200 rounded-xl p-6 text-center text-gray-400">
+                      <Package size={32} className="mx-auto mb-2 text-gray-300" />
+                      <p className="text-sm">Chưa có vật tư nào</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      {bomItems.map((item, index) => (
+                        <div
+                          key={index}
+                          className="flex items-center justify-between bg-gray-50 rounded-xl px-4 py-3"
+                        >
+                          <div className="min-w-0 flex-1">
+                            <p className="text-sm font-medium text-gray-800 truncate">
+                              {item.material_name}
+                            </p>
+                            <p className="text-[10px] text-gray-400">
+                              Định mức: {formatNumber(item.dinh_muc)} {item.don_vi}
+                            </p>
+                          </div>
+                          <button
+                            onClick={() => handleRemoveItem(index)}
+                            className="p-1.5 hover:bg-red-100 rounded-lg text-red-400 shrink-0 ml-2"
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Modal Footer */}
+              <div className="p-6 border-t border-gray-100 flex justify-end gap-3 shrink-0">
+                <button
+                  onClick={() => setShowModal(false)}
+                  className="px-6 py-2.5 rounded-xl text-sm font-bold text-gray-500 hover:bg-gray-100"
+                >
+                  Hủy
+                </button>
+                <button
+                  onClick={handleSave}
+                  disabled={submitting}
+                  className="px-8 py-2.5 rounded-xl text-sm font-bold bg-primary text-white hover:bg-primary/90 shadow-lg shadow-primary/20 disabled:opacity-50"
+                >
+                  {submitting ? 'Đang lưu...' : isEditing ? 'Cập nhật' : 'Tạo BOM'}
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Add Item sub-modal */}
+      <AnimatePresence>
+        {showItemForm && (
+          <div
+            className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/50"
+            onClick={() => setShowItemForm(false)}
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 space-y-4"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <h3 className="font-bold text-gray-800">Thêm vật tư vào BOM</h3>
+
+              <div>
+                <label className="text-[10px] font-bold text-gray-400 uppercase block mb-1">
+                  Chọn vật tư *
+                </label>
+                <CreatableSelect
+                  value={itemForm.material_id}
+                  options={materialOptions}
+                  onChange={(val) => {
+                    const mat = materials.find((m) => m.id === val);
+                    setItemForm({
+                      ...itemForm,
+                      material_id: val,
+                      material_name: mat?.name || val,
+                      don_vi: mat?.unit || itemForm.don_vi,
+                    });
+                  }}
+                  placeholder="Tìm & chọn vật tư..."
+                  allowCreate={false}
+                />
+              </div>
+
+              <NumericInput
+                label="Định mức / 1 sản phẩm *"
+                value={itemForm.dinh_muc}
+                onChange={(val) => setItemForm({ ...itemForm, dinh_muc: val })}
+              />
+
+              <div>
+                <label className="text-[10px] font-bold text-gray-400 uppercase block mb-1">
+                  Đơn vị tính
+                </label>
+                <input
+                  type="text"
+                  value={itemForm.don_vi}
+                  onChange={(e) => setItemForm({ ...itemForm, don_vi: e.target.value })}
+                  placeholder="VD: kg, m³, cây..."
+                  className="w-full px-4 py-3 rounded-xl border border-gray-200 text-sm focus:ring-2 focus:ring-primary/20 outline-none"
+                />
+              </div>
+
+              <div className="flex justify-end gap-3 pt-2">
+                <button
+                  onClick={() => setShowItemForm(false)}
+                  className="px-5 py-2 rounded-xl text-sm font-bold text-gray-500 hover:bg-gray-100"
+                >
+                  Hủy
+                </button>
+                <button
+                  onClick={handleSaveItem}
+                  className="px-6 py-2 rounded-xl text-sm font-bold bg-primary text-white hover:bg-primary/90 shadow-lg shadow-primary/20"
+                >
+                  Thêm
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+};

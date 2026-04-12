@@ -47,7 +47,12 @@ export const getMenuGroups = (pendingCount: number) => [
   },
   {
     title: 'SẢN XUẤT',
-    items: [{ id: 'construction-diary', label: 'Nhật ký thi công', icon: FileText }],
+    items: [
+      { id: 'construction-diary', label: 'Nhật ký thi công', icon: FileText },
+      { id: 'xasa-gop', label: 'Xả / Gộp vật tư', icon: Layers },
+      { id: 'bom-lenh-sx', label: 'BOM & Lệnh sản xuất', icon: ClipboardList },
+      { id: 'nhap-thanh-pham', label: 'Nhập kho thành phẩm', icon: Package },
+    ],
   },
   {
     title: 'TIỀN LƯƠNG',

@@ -173,14 +173,12 @@ export const Costs = ({
   };
 
   const generateNextCostCode = async () => {
-    try {
-      const { data } = await supabase.from('costs').select('cost_code').like('cost_code', 'PC%');
-      const codes = data?.map((c) => c.cost_code) || [];
-      return generateSmartCode(codes, 'PC', 3);
-    } catch (err) {
-      console.error('Error generating cost code:', err);
-      return 'PC001';
-    }
+    const today = new Date();
+    const yyyy = today.getFullYear();
+    const mm = String(today.getMonth() + 1).padStart(2, '0');
+    const dd = String(today.getDate()).padStart(2, '0');
+    const random = Math.floor(1000 + Math.random() * 9000);
+    return `CP${yyyy}${mm}${dd}-${random}`;
   };
 
   useEffect(() => {

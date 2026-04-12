@@ -23,7 +23,10 @@ const TABLE_LABELS: Record<string, string> = {
   production_orders: 'Lệnh sản xuất',
   materials: 'Danh mục vật tư',
   users: 'Phân quyền kho (Nhân sự)',
-  inventory: 'Tồn kho thực tế',
+  salary_settings: 'Cài đặt lương',
+  advances: 'Tạm ứng',
+  attendance: 'Chấm công',
+  warehouses: 'Danh sách kho',
 };
 
 export const checkUsage = async (type: UsageType, id: string): Promise<UsageResult> => {
@@ -46,7 +49,17 @@ export const checkUsage = async (type: UsageType, id: string): Promise<UsageResu
   } else if (type === 'warehouse') {
     tablesToCheck.push('stock_in', 'stock_out', 'transfers', 'costs', 'materials', 'users');
   } else if (type === 'employee') {
-    tablesToCheck.push('stock_in', 'stock_out', 'transfers', 'costs', 'production_orders');
+    tablesToCheck.push(
+      'stock_in',
+      'stock_out',
+      'transfers',
+      'costs',
+      'production_orders',
+      'salary_settings',
+      'advances',
+      'attendance',
+      'warehouses'
+    );
   } else if (type === 'bom') {
     tablesToCheck.push('production_orders');
   }
@@ -75,6 +88,8 @@ export const checkUsage = async (type: UsageType, id: string): Promise<UsageResu
           if (type === 'material') queryBase = queryBase.eq('material_item_id', id);
         } else if (table === 'bom_configs') {
           if (type === 'material') queryBase = queryBase.eq('product_item_id', id);
+        } else if (table === 'warehouses') {
+          if (type === 'employee') queryBase = queryBase.eq('manager_id', id);
         } else {
           let field = 'material_id';
           if (type === 'warehouse') field = 'warehouse_id';

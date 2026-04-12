@@ -33,6 +33,7 @@ import { BackupNow } from '@/components/settings/BackupNow';
 import { Notifications } from '@/components/notifications/Notifications';
 import { DatabaseSetup } from '@/components/settings/DatabaseSetup';
 import { Employee } from '@/types';
+import { ErrorBoundary } from '@/components/shared/ErrorBoundary';
 
 interface AppRouterProps {
   currentPage: string;
@@ -73,7 +74,14 @@ export const AppRouter = ({
       return <Attendance user={user} onBack={goBack} addToast={addToast} />;
     case 'costs':
       return (
-        <Costs user={user} onBack={goBack} addToast={addToast} initialAction={pageParams?.action} />
+        <ErrorBoundary onBack={goBack}>
+          <Costs
+            user={user}
+            onBack={goBack}
+            addToast={addToast}
+            initialAction={pageParams?.action}
+          />
+        </ErrorBoundary>
       );
     case 'warehouses':
       return <Warehouses user={user} onBack={goBack} addToast={addToast} />;

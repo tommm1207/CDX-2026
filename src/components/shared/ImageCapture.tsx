@@ -12,10 +12,11 @@ interface ImageCaptureProps {
 
 export const ImageCapture = ({
   onUpload,
-  existingImages = [],
+  existingImages: propImages = [],
   maxImages = 10,
   label = 'Ảnh minh chứng / Hiện trường',
 }: ImageCaptureProps) => {
+  const existingImages = propImages || [];
   const [uploading, setUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);

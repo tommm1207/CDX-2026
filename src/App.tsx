@@ -14,6 +14,7 @@ import { ToastContainer, ToastMessage, ToastType } from '@/components/shared/Toa
 import { MainLayout } from '@/layouts/MainLayout';
 import { AppRouter } from '@/routes/AppRouter';
 import { ReloadPrompt } from '@/components/shared/ReloadPrompt';
+import { ErrorBoundary } from '@/components/shared/ErrorBoundary';
 
 // Auth
 import { LoginPage } from '@/components/auth/LoginPage';
@@ -313,17 +314,19 @@ export default function App() {
         }}
         hideBottomNav={hideBottomNav}
       >
-        <AppRouter
-          currentPage={currentPage}
-          pageParams={pageParams}
-          user={user}
-          pendingCount={pendingCount}
-          navigateTo={navigateTo}
-          goBack={goBack}
-          addToast={addToast}
-          fetchPendingCount={fetchPendingCount}
-          setHideBottomNav={setHideBottomNav}
-        />
+        <ErrorBoundary onBack={() => navigateTo('dashboard')}>
+          <AppRouter
+            currentPage={currentPage}
+            pageParams={pageParams}
+            user={user}
+            pendingCount={pendingCount}
+            navigateTo={navigateTo}
+            goBack={goBack}
+            addToast={addToast}
+            fetchPendingCount={fetchPendingCount}
+            setHideBottomNav={setHideBottomNav}
+          />
+        </ErrorBoundary>
       </MainLayout>
       <ToastContainer toasts={toasts} removeToast={removeToast} />
       <ReloadPrompt currentPage={currentPage} />

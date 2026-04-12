@@ -5,6 +5,7 @@ interface ExcelButtonProps {
   loading?: boolean;
   label?: string;
   className?: string;
+  size?: 'xs' | 'sm' | 'md' | 'lg' | 'icon';
 }
 
 export const ExcelButton = ({
@@ -12,18 +13,20 @@ export const ExcelButton = ({
   loading = false,
   label = 'Xuất Excel',
   className = '',
+  size = 'md',
 }: ExcelButtonProps) => (
   <Button
     onClick={onClick}
     isLoading={loading}
     variant="white"
-    className={`!border-primary/30 !text-primary hover:!bg-primary/5 shadow-md ${className}`}
+    size={size}
+    className={`!border-primary/30 !text-primary hover:!bg-primary/5 shadow-md px-3 sm:px-5 ${className}`}
   >
-    <div className="flex items-center gap-2 whitespace-nowrap">
+    <div className="flex items-center gap-1.5 whitespace-nowrap">
       {/* Brighter integrated Excel SVG */}
       <svg
-        width="20"
-        height="20"
+        width="18"
+        height="18"
         viewBox="0 0 24 24"
         fill="none"
         aria-hidden="true"
@@ -35,7 +38,7 @@ export const ExcelButton = ({
           fill="white"
         />
       </svg>
-      <span className="font-black text-[10px] uppercase tracking-wider">
+      <span className="hidden sm:inline font-black text-[10px] uppercase tracking-wider">
         {loading ? 'Đang xuất...' : label}
       </span>
     </div>

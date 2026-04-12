@@ -151,6 +151,32 @@ export const Costs = ({
       .neq('status', 'Nghỉ việc');
     if (data) setEmployees(data);
   };
+ 
+  const generateNextCostCode = async () => {
+    try {
+      const today = new Date().toISOString().slice(2, 10).replace(/-/g, '');
+      const prefix = `CP-${today}-`;
+      
+      const { data } = await supabase
+        .from('costs')
+        .select('cost_code')
+        .like('cost_code', `${prefix}%`)
+        .order('cost_code', { ascending: false })
+        .limit(1);
+
+      if (data && data.length > 0 && data[0].cost_code) {
+        const lastCode = data[0].cost_code;
+        const lastNumber = parseInt(lastCode.split('-').pop() || '0');
+        if (!isNaN(lastNumber)) {
+          return `${prefix}${(lastNumber + 1).toString().padStart(3, '0')}`;
+        }
+      }
+      return `${prefix}001`;
+    } catch (err) {
+      console.error('Error generating cost code:', err);
+      return `CP-${new Date().toISOString().slice(2, 10).replace(/-/g, '')}-001`;
+    }
+  };
 
   const fetchCosts = async () => {
     setLoading(true);
@@ -270,10 +296,12 @@ export const Costs = ({
       );
 
       const payload = {
-        cost_code: isEditing
-          ? formData.cost_code
-          : `CP-${new Date().toISOString().slice(2, 10).replace(/-/g, '')}-${Math.floor(100 + Math.random() * 900)}`,
-        date: formData.date,
+      const cost_code = isEditing
+        ? formData.cost_code
+        : (await generateNextCostCode());
+
+      const payload = {
+        cost_code,
         transaction_type: formData.transaction_type,
         cost_type: formData.cost_type, // Nhóm
         content: formData.content, // Chi tiết
@@ -625,22 +653,27 @@ export const Costs = ({
 
       <AnimatePresence>
         {showDeleteModal && (
-          <div className="fixed inset-0 z-[130] flex items-center justify-center p-4">
-            <div
-              className="fixed inset-0 bg-black/40 backdrop-blur-sm"
-              onClick={() => setShowDeleteModal(false)}
-            />
+          <div className="fixed inset-0 z-[130] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm" onClick={() => setShowDeleteModal(false)}>
             <motion.div
-              initial={{ scale: 0.9 }}
-              animate={{ scale: 1 }}
-              className="bg-white rounded-3xl p-6 shadow-2xl z-10 text-center"
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              className="bg-white rounded-[2rem] p-8 shadow-2xl z-10 text-center max-w-sm w-full"
+              onClick={(e) => e.stopPropagation()}
             >
-              <h3 className="font-bold text-lg mb-2">Xác nhận xóa?</h3>
-              <p className="text-sm text-gray-500 mb-6">Hành động này không thể hoàn tác.</p>
-              <div className="flex gap-3">
-                <Button onClick={() => setShowDeleteModal(false)}>Hủy</Button>
-                <Button variant="danger" onClick={confirmDelete}>
-                  Xóa
+              <div className="w-20 h-20 bg-red-50 text-red-600 rounded-full flex items-center justify-center mx-auto mb-6">
+                <Trash2 size={40} />
+              </div>
+              <h3 className="font-black text-xl mb-2 text-gray-800">Xác nhận xóa?</h3>
+              <p className="text-sm text-gray-500 mb-8 px-4">
+                Bản ghi <span className="font-bold text-primary">{costs.find(c => c.id === itemToDelete)?.cost_code}</span> sẽ được đưa vào <span className="font-bold text-red-500">thùng rác</span>.
+              </p>
+              <div className="grid grid-cols-2 gap-3">
+                <Button variant="outline" fullWidth onClick={() => setShowDeleteModal(false)}>
+                  Hủy bỏ
+                </Button>
+                <Button variant="danger" fullWidth onClick={confirmDelete} icon={Trash2}>
+                  Xác nhận
                 </Button>
               </div>
             </motion.div>
@@ -795,9 +828,10 @@ export const Costs = ({
       </AnimatePresence>
 
       <FAB
-        onClick={() => {
+        onClick={async () => {
           setIsEditing(false);
-          setFormData(initialFormState);
+          const nextCode = await generateNextCostCode();
+          setFormData({ ...initialFormState, cost_code: nextCode });
           setShowModal(true);
         }}
         label="Thêm chi phí"

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Filter, ChevronDown, Check } from 'lucide-react';
+import { Filter, ChevronDown, Check, ArrowUpDown } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Button } from './Button';
 
@@ -26,11 +26,11 @@ export const SortButton = ({ currentSort, onSortChange, options }: SortButtonPro
   return (
     <div className="relative">
       <Button
-        variant={isOpen ? 'primary' : 'outline'}
         size="icon"
+        variant="outline"
         onClick={() => setIsOpen(!isOpen)}
         icon={Filter}
-        className="relative"
+        className="border-gray-200"
       />
 
       <AnimatePresence>

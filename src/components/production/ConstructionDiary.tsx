@@ -1,3 +1,4 @@
+import { exportTableImage } from '../../utils/reportExport';
 import { useState, useEffect } from 'react';
 import {
   ClipboardList,
@@ -16,7 +17,11 @@ import {
   ChevronRight,
   Image as ImageIcon,
   CheckCircle,
+  Share2,
 } from 'lucide-react';
+import { useRef } from 'react';
+
+import { SaveImageButton } from '../shared/SaveImageButton';
 import { motion, AnimatePresence } from 'motion/react';
 import { supabase } from '@/lib/supabase';
 import { Employee, ConstructionDiary, Warehouse } from '@/types';
@@ -65,6 +70,10 @@ export const ConstructionDiaryComponent = ({
   const [sortBy, setSortBy] = useState<SortOption>(
     (localStorage.getItem(`sort_pref_diary_${user.id}`) as SortOption) || 'newest',
   );
+  const [isCapturingTable, setIsCapturingTable] = useState(false);
+
+  const reportRef = useRef<HTMLDivElement>(null);
+  const logoBase64 = '/logo.png';
 
   const initialFormState: Partial<ConstructionDiary> = {
     date: new Date().toISOString().split('T')[0],
@@ -85,6 +94,25 @@ export const ConstructionDiaryComponent = ({
   useEffect(() => {
     fetchData();
   }, []);
+
+  const handleAddNew = () => {
+    setFormData(initialFormState);
+    setEditingId(null);
+    setShowAddNew(true);
+  };
+
+  const handleSaveTableImage = () => {
+    const reportElem = reportRef.current || tableBillRef.current;
+    if (reportElem) {
+      exportTableImage({
+        element: reportElem,
+        fileName: 'Bao_Cao.png',
+        addToast,
+        onStart: () => setIsCapturingTable(true),
+        onEnd: () => setIsCapturingTable(false),
+      });
+    }
+  };
 
   const fetchData = async () => {
     setLoading(true);
@@ -291,6 +319,11 @@ export const ConstructionDiaryComponent = ({
             onClick={() => setShowFilter((f) => !f)}
             icon={Search}
           />
+          <SaveImageButton
+            onClick={handleSaveTableImage}
+            isCapturing={isCapturingTable}
+            title="Lưu ảnh báo cáo A4"
+          />
         </div>
       </div>
 
@@ -301,7 +334,7 @@ export const ConstructionDiaryComponent = ({
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: 'auto' }}
             exit={{ opacity: 0, height: 0 }}
-            className="overflow-hidden"
+            className="z-10"
           >
             <div className="bg-white/80 backdrop-blur-md p-5 rounded-3xl shadow-sm border border-gray-100 mb-4 space-y-4">
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -945,6 +978,129 @@ export const ConstructionDiaryComponent = ({
         onConfirm={handleDelete}
         onCancel={() => setDeletingId(null)}
       />
+      <FAB onClick={handleAddNew} label="Viết nhật ký" />
+
+      {/* Hidden Report Template (A4 Landscape) */}
+      <div className="fixed -left-[4000px] -top-[4000px] no-print">
+        <div
+          ref={reportRef}
+          className="bg-white p-12 w-[1123px] min-h-[794px] font-sans text-gray-900 border"
+          style={{ width: '1123px' }}
+        >
+          {/* Company Header */}
+          <div className="flex justify-between items-start mb-10 pb-6 border-b-2 border-indigo-200">
+            <div className="flex items-center gap-6">
+              <div className="bg-indigo-50 p-4 rounded-3xl border border-indigo-100">
+                <img
+                  src={logoBase64}
+                  alt="Company Logo"
+                  className="w-20 h-20 object-contain rounded-full"
+                />
+              </div>
+              <div className="space-y-1">
+                <h1 className="text-3xl font-black text-indigo-600 tracking-tighter uppercase italic">
+                  CDX ERP SYSTEM
+                </h1>
+                <p className="text-[10px] text-gray-400 font-bold uppercase tracking-[0.3em]">
+                  Smart Construction Management • 2026 Edition
+                </p>
+                <div className="flex items-center gap-3 mt-2">
+                  <span className="px-3 py-1 bg-indigo-50 text-indigo-600 rounded-full text-[10px] font-black uppercase tracking-widest border border-indigo-100 italic">
+                    Construction Diary Log
+                  </span>
+                  <span className="w-1.5 h-1.5 bg-gray-200 rounded-full" />
+                  <span className="text-[10px] text-gray-500 font-bold italic tracking-wide">
+                    Ref ID: DIARY_POOL_{new Date().getTime().toString(36).toUpperCase()}
+                  </span>
+                </div>
+              </div>
+            </div>
+            <div className="text-right">
+              <h2 className="text-3xl font-black text-gray-900 uppercase tracking-tighter mb-1">
+                Tổng Hợp Nhật Ký Thi Công
+              </h2>
+              <p className="text-xs text-gray-500 font-bold italic">
+                Thời gian xuất: {new Date().toLocaleString('vi-VN')}
+              </p>
+              <div className="mt-4 flex flex-col items-end gap-1">
+                <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest font-mono">
+                  STATUS: FIELD_AUDITED
+                </p>
+                <div className="h-0.5 w-12 bg-indigo-200 rounded-full" />
+              </div>
+            </div>
+          </div>
+
+          {/* Table */}
+          <table className="w-full text-left border-collapse rounded-3xl overflow-hidden shadow-sm border border-gray-100">
+            <thead>
+              <tr className="bg-indigo-600 text-white text-[10px] font-black uppercase tracking-widest italic">
+                <th className="px-4 py-4 border-r border-white/10">Ngày</th>
+                <th className="px-4 py-4 border-r border-white/10 text-center">Mã hiệu</th>
+                <th className="px-4 py-4 border-r border-white/10">Địa điểm / Dự án</th>
+                <th className="px-4 py-4 border-r border-white/10">Nhân sự chính</th>
+                <th className="px-4 py-4 border-r border-white/10">Diễn biến thi công</th>
+                <th className="px-4 py-4 text-center">Ảnh</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-100 text-[11px]">
+              {filteredDiaries.map((diary, idx) => (
+                <tr key={idx} className={idx % 2 === 0 ? 'bg-white' : 'bg-indigo-50/10'}>
+                  <td className="px-4 py-3 font-bold text-gray-600">{formatDate(diary.date)}</td>
+                  <td className="px-4 py-3 text-center">
+                    <span className="font-black text-indigo-600 font-mono tracking-tighter">
+                      #{diary.diary_code}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3 font-black text-gray-900 uppercase tracking-tight">
+                    {(diary as any).warehouses?.name}
+                  </td>
+                  <td className="px-4 py-3 text-gray-600 italic font-medium">
+                    {diary.labor_info || '—'}
+                  </td>
+                  <td className="px-4 py-3 text-gray-800 leading-relaxed max-w-[400px] break-words">
+                    {diary.work_progress}
+                  </td>
+                  <td className="px-4 py-3 text-center">
+                    {diary.image_urls && diary.image_urls.length > 0 ? (
+                      <span className="px-2 py-0.5 bg-indigo-100 text-indigo-600 rounded-full font-black tracking-widest uppercase">
+                        {diary.image_urls.length} PIC
+                      </span>
+                    ) : (
+                      <span className="text-gray-300 font-bold uppercase tracking-widest">
+                        NONE
+                      </span>
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+
+          {/* Footer Branding */}
+          <div className="mt-12 flex justify-between items-end border-t border-gray-100 pt-6">
+            <div className="space-y-1">
+              <p className="text-xs font-black text-gray-300 uppercase tracking-[0.2em] italic">
+                CDX ERP SYSTEM
+              </p>
+              <p className="text-[9px] text-gray-300 font-bold uppercase tracking-widest">
+                End of construction log report • Safety & Quality First
+              </p>
+            </div>
+            <div className="text-right">
+              <p className="text-[9px] font-black text-gray-300 uppercase tracking-[0.3em] mb-1">
+                Operational Protocol Verified
+              </p>
+              <div className="text-[10px] text-gray-400 font-bold bg-gray-50 px-3 py-1 rounded-full border border-gray-100">
+                Log Integrity:{' '}
+                <span className="text-indigo-500 font-black tracking-widest italic ml-1 underline">
+                  {new Date().getTime().toString(16).toUpperCase()}
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   );
 };

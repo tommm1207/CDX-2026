@@ -13,10 +13,17 @@ import {
   ArrowUpCircle,
   ArrowDownCircle,
   Wallet,
+  ImageIcon,
+  Check,
+  Filter,
+  Share2,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { supabase } from '@/lib/supabase';
 import * as xlsx from 'xlsx';
+import { useRef } from 'react';
+import { exportTableImage } from '../../utils/reportExport';
+
 import { Employee } from '@/types';
 import { PageBreadcrumb } from '../shared/PageBreadcrumb';
 import { isActiveWarehouse } from '@/utils/inventory';
@@ -29,6 +36,9 @@ import { isUUID, getAllowedWarehouses } from '@/utils/helpers';
 import { Button } from '../shared/Button';
 import { FAB } from '../shared/FAB';
 import { ExcelButton } from '../shared/ExcelButton';
+import { SortButton } from '../shared/SortButton';
+import { SaveImageButton } from '../shared/SaveImageButton';
+import { ReportPreviewModal } from '../shared/ReportPreviewModal';
 
 export const CostReport = ({
   user,
@@ -52,13 +62,20 @@ export const CostReport = ({
   const [materials, setMaterials] = useState<any[]>([]);
   const [costTypes, setCostTypes] = useState<any[]>([]);
   const [units, setUnits] = useState<any[]>([]);
-
   const [showFilter, setShowFilter] = useState(false);
   const [filters, setFilters] = useState({
     fromDate: '',
     toDate: '',
     search: '',
   });
+
+  const [sortBy, setSortBy] = useState<'newest' | 'price' | 'date'>('newest');
+  const [showSortMenu, setShowSortMenu] = useState(false);
+
+  const [isCapturingTable, setIsCapturingTable] = useState(false);
+  const [showReportPreview, setShowReportPreview] = useState(false);
+  const reportRef = useRef<HTMLDivElement>(null);
+  const logoBase64 = '/logo.png';
 
   const [masterForm, setMasterForm] = useState({
     date: new Date().toISOString().split('T')[0],
@@ -357,7 +374,7 @@ export const CostReport = ({
     return acc;
   }, {});
 
-  const groupedData = Object.values(groupedDataObj)
+  const filteredHistory = Object.values(groupedDataObj)
     .filter((group: any) => {
       if (filters.fromDate && group.date < filters.fromDate) return false;
       if (filters.toDate && group.date > filters.toDate) return false;
@@ -376,7 +393,18 @@ export const CostReport = ({
       }
       return true;
     })
-    .sort((a: any, b: any) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    .sort((a: any, b: any) => {
+      if (sortBy === 'price') return b.total_amount - a.total_amount;
+      if (sortBy === 'date') return new Date(b.date).getTime() - new Date(a.date).getTime();
+      return (
+        new Date(b.date).getTime() - new Date(a.date).getTime() ||
+        (b.cost_code || '').localeCompare(a.cost_code || '')
+      );
+    });
+
+  const handleExportImage = () => {
+    setShowReportPreview(true);
+  };
 
   const handleExportExcel = () => {
     if (costs.length === 0) {
@@ -419,20 +447,105 @@ export const CostReport = ({
 
   return (
     <div className="p-4 md:p-6 space-y-6 pb-24 overflow-x-hidden">
-      <div className="flex items-center justify-between gap-2">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <PageBreadcrumb title="Báo cáo chi phí" onBack={onBack} />
-        <div className="flex items-center gap-2 justify-end flex-1">
+        <div className="flex items-center gap-1.5 justify-end flex-1">
           <ExcelButton onClick={handleExportExcel} />
-          {groupedData.length > 0 && (
+
+          <div className="flex items-center gap-1.5 ml-1">
+            <SortButton
+              currentSort={sortBy}
+              onSortChange={(val) => setSortBy(val as any)}
+              options={[
+                { value: 'newest', label: 'Sắp xếp: Mới nhất' },
+                { value: 'price', label: 'Sắp xếp: Thành tiền' },
+                { value: 'date', label: 'Sắp xếp: Ngày chi' },
+              ]}
+            />
             <Button
               size="icon"
               variant={showFilter ? 'primary' : 'outline'}
               onClick={() => setShowFilter((f) => !f)}
               icon={Search}
+              className={showFilter ? '' : 'border-gray-200'}
             />
-          )}
+            <SaveImageButton
+              onClick={handleExportImage}
+              isCapturing={isCapturingTable}
+              title="Lưu ảnh báo cáo chi phí"
+            />
+          </div>
         </div>
       </div>
+
+      <AnimatePresence>
+        {showFilter && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
+            className="z-20"
+            style={{ overflow: showFilter ? 'visible' : 'hidden' }}
+          >
+            <div className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 mb-4 space-y-5">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {/* 1. Chọn thời gian */}
+                <div className="bg-gray-50/50 p-4 rounded-2xl border border-gray-100 space-y-4">
+                  <p className="text-[10px] font-black text-primary/40 uppercase tracking-widest text-center">
+                    Khoảng thời gian
+                  </p>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-bold text-gray-400 uppercase ml-1">
+                        Từ ngày
+                      </label>
+                      <input
+                        type="date"
+                        value={filters.fromDate}
+                        onChange={(e) => setFilters((f) => ({ ...f, fromDate: e.target.value }))}
+                        className="w-full px-3 py-2.5 rounded-xl border border-gray-200 text-xs outline-none focus:ring-4 focus:ring-primary/10 transition-all font-mono"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-bold text-gray-400 uppercase ml-1">
+                        Đến ngày
+                      </label>
+                      <input
+                        type="date"
+                        value={filters.toDate}
+                        onChange={(e) => setFilters((f) => ({ ...f, toDate: e.target.value }))}
+                        className="w-full px-3 py-2.5 rounded-xl border border-gray-200 text-xs outline-none focus:ring-4 focus:ring-primary/10 transition-all font-mono"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* 2. Tìm kiếm */}
+                <div className="space-y-4">
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-gray-400 uppercase ml-1">
+                      Tìm kiếm báo cáo
+                    </label>
+                    <div className="relative group">
+                      <Search
+                        className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-primary transition-colors"
+                        size={16}
+                      />
+                      <input
+                        type="text"
+                        value={filters.search}
+                        onChange={(e) => setFilters((f) => ({ ...f, search: e.target.value }))}
+                        placeholder="Mã phí, tên nhân viên, nội dung..."
+                        className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-gray-200 text-sm outline-none focus:ring-4 focus:ring-primary/10 transition-all"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Financial Dashboard - Moved from Costs.tsx */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-2">
@@ -488,728 +601,408 @@ export const CostReport = ({
         ))}
       </div>
 
-      <AnimatePresence>
-        {showFilter && (
-          <motion.div
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: 'auto' }}
-            exit={{ opacity: 0, height: 0 }}
-            className="overflow-hidden"
-          >
-            <div className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 space-y-4">
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <div>
-                  <label className="text-[10px] font-bold text-gray-400 uppercase">Từ ngày</label>
-                  <input
-                    type="date"
-                    value={filters.fromDate}
-                    onChange={(e) => setFilters({ ...filters, fromDate: e.target.value })}
-                    className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm focus:ring-2 focus:ring-primary/20 outline-none mt-1"
-                  />
-                </div>
-                <div>
-                  <label className="text-[10px] font-bold text-gray-400 uppercase">Đến ngày</label>
-                  <input
-                    type="date"
-                    value={filters.toDate}
-                    onChange={(e) => setFilters({ ...filters, toDate: e.target.value })}
-                    className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm focus:ring-2 focus:ring-primary/20 outline-none mt-1"
-                  />
-                </div>
-                <div>
-                  <label className="text-[10px] font-bold text-gray-400 uppercase">
-                    Tìm kiếm nhanh
-                  </label>
-                  <div className="relative mt-1">
-                    <Search
-                      className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
-                      size={16}
-                    />
-                    <input
-                      type="text"
-                      placeholder="Tra ID, Nội dung, Loại chi phí..."
-                      value={filters.search}
-                      onChange={(e) => setFilters({ ...filters, search: e.target.value })}
-                      className="w-full pl-10 pr-4 py-2 rounded-xl border border-gray-200 text-sm focus:ring-2 focus:ring-primary/20 outline-none"
-                    />
-                  </div>
-                </div>
-              </div>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      <FAB onClick={handleAddReport} />
-
-      <div className="flex flex-col lg:flex-row gap-6">
-        <div
-          className={`flex-1 bg-white rounded-2xl shadow-sm border border-gray-100 hidden lg:block`}
-        >
-          <div className="overflow-x-auto custom-scrollbar pb-2">
-            <table className="w-full text-left border-collapse min-w-[500px] whitespace-nowrap">
-              <thead>
-                <tr className="bg-gray-50 border-b border-gray-100">
-                  <th className="px-4 py-3 text-[10px] font-bold text-gray-400 uppercase tracking-wider">
-                    Mã / Ngày
-                  </th>
-                  <th className="px-4 py-3 text-[10px] font-bold text-gray-400 uppercase tracking-wider">
-                    Người báo cáo
-                  </th>
-                  <th className="px-4 py-3 text-[10px] font-bold text-gray-400 uppercase tracking-wider text-right">
-                    Tổng số tiền
-                  </th>
-                  <th className="px-4 py-3 text-[10px] font-bold text-gray-400 uppercase tracking-wider text-center">
-                    Trạng thái
-                  </th>
-                  <th className="px-4 py-3 w-10"></th>
+      <div className="bg-white rounded-[2rem] shadow-xl border border-gray-100 overflow-hidden">
+        <div className="overflow-x-auto custom-scrollbar">
+          <table className="w-full text-left border-collapse min-w-[1000px] whitespace-nowrap">
+            <thead>
+              <tr className="bg-primary/5 text-primary border-b border-primary/10">
+                <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest italic border-r border-primary/5 w-16 text-center">
+                  STT
+                </th>
+                <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest italic border-r border-primary/5">
+                  Mã phí
+                </th>
+                <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest italic border-r border-primary/5">
+                  Ngày ghi
+                </th>
+                <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest italic border-r border-primary/5">
+                  Nhân sự
+                </th>
+                <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest italic border-r border-primary/5">
+                  Nội dung chính
+                </th>
+                <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest italic border-r border-primary/5 text-center">
+                  Hạng mục
+                </th>
+                <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest italic border-r border-primary/5 text-right">
+                  Tổng tiền
+                </th>
+                <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest italic text-center">
+                  Thao tác
+                </th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-100">
+              {loading ? (
+                <tr>
+                  <td colSpan={8} className="px-6 py-12 text-center text-gray-400 font-bold italic">
+                    Đang tải báo cáo...
+                  </td>
                 </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-50">
-                {loading ? (
-                  <tr>
-                    <td colSpan={4} className="px-4 py-12 text-center text-gray-400 italic">
-                      <div className="flex flex-col items-center justify-center">
-                        <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin mb-2"></div>
-                        <p className="text-sm">Đang tải báo cáo chi phí...</p>
+              ) : filteredHistory.length === 0 ? (
+                <tr>
+                  <td colSpan={8} className="px-6 py-12 text-center text-gray-400 font-bold italic">
+                    Chưa có dữ liệu nào phù hợp với bộ lọc
+                  </td>
+                </tr>
+              ) : (
+                filteredHistory.map((group: any, idx) => (
+                  <tr
+                    key={group.cost_code}
+                    className="hover:bg-primary/5 transition-all group cursor-pointer"
+                    onClick={() => handleEditReport(group)}
+                  >
+                    <td className="px-6 py-4 text-center">
+                      <span className="text-[10px] font-black text-gray-300 group-hover:text-primary/40 transition-colors">
+                        {(idx + 1).toString().padStart(2, '0')}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4">
+                      <span className="px-3 py-1 bg-primary/5 text-primary rounded-lg text-[10px] font-black uppercase tracking-widest border border-primary/10 group-hover:bg-primary group-hover:text-white transition-all">
+                        {group.cost_code}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 text-xs font-bold text-gray-600 italic">
+                      {formatDate(group.date)}
+                    </td>
+                    <td className="px-6 py-4">
+                      <div className="flex items-center gap-2">
+                        <div className="w-8 h-8 rounded-full bg-primary/10 text-primary flex items-center justify-center text-[10px] font-black uppercase border border-primary/20">
+                          {group.employee_name?.charAt(0) || 'U'}
+                        </div>
+                        <span className="text-xs font-black text-gray-800 tracking-tight">
+                          {group.employee_name}
+                        </span>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 text-xs font-bold text-gray-500 break-words whitespace-normal max-w-xs line-clamp-1">
+                      {group.items[0]?.content || '-'}
+                    </td>
+                    <td className="px-6 py-4 text-center">
+                      <span className="px-2 py-0.5 bg-gray-100 text-gray-400 rounded-md text-[10px] font-black">
+                        {group.items.length} mục
+                      </span>
+                    </td>
+                    <td
+                      className={`px-6 py-4 text-sm font-black text-right ${group.total_amount >= 0 ? 'text-red-600' : 'text-green-600'}`}
+                    >
+                      {formatCurrency(group.total_amount)}
+                    </td>
+                    <td className="px-6 py-4 text-center">
+                      <div className="flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleEditReport(group);
+                          }}
+                          className="p-2 text-primary hover:bg-primary/10 rounded-xl transition-colors border border-primary/10"
+                        >
+                          <Search size={14} />
+                        </button>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation(); /* TODO: Delete report logic */
+                          }}
+                          className="p-2 text-red-600 hover:bg-red-50 rounded-xl transition-colors border border-red-100"
+                        >
+                          <Trash2 size={14} />
+                        </button>
                       </div>
                     </td>
                   </tr>
-                ) : groupedData.length === 0 ? (
-                  <tr>
-                    <td colSpan={4} className="px-4 py-8 text-center text-gray-400 italic">
-                      Chưa có dữ liệu chi phí
-                    </td>
-                  </tr>
-                ) : (
-                  groupedData.map((group: any, idx: number) => (
-                    <tr
-                      key={`${group.cost_code}-${idx}`}
-                      onClick={() => {
-                        setSelectedGroup(group);
-                        setSelectedItem(null);
-                      }}
-                      className={`hover:bg-primary/5 cursor-pointer transition-colors ${selectedGroup?.cost_code === group.cost_code ? 'bg-primary/5' : ''}`}
-                    >
-                      <td className="px-4 py-3">
-                        <div className="text-xs font-bold text-primary">{group.cost_code}</div>
-                        <div className="text-[10px] text-gray-500">{formatDate(group.date)}</div>
-                      </td>
-                      <td className="px-4 py-3 text-sm font-medium text-gray-800">
-                        {group.employee_name}
-                      </td>
-                      <td className="px-4 py-3 text-sm font-bold text-red-600 text-right">
-                        {formatCurrency(group.total_amount)}
-                      </td>
-                      <td className="px-4 py-3 text-center">
-                        <span
-                          className={`px-2 py-1 rounded-lg text-[10px] font-bold ${
-                            group.status === 'Đã duyệt'
-                              ? 'bg-green-100 text-green-700'
-                              : group.status === 'Từ chối'
-                                ? 'bg-red-100 text-red-700'
-                                : group.status === 'Đã hoàn thành'
-                                  ? 'bg-blue-100 text-blue-700'
-                                  : 'bg-amber-100 text-amber-700'
-                          }`}
-                        >
-                          {group.status}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3 text-gray-400 flex items-center gap-2">
-                        {group.status !== 'Đã duyệt' &&
-                          group.status !== 'Từ chối' &&
-                          group.status !== 'Đã hoàn thành' && (
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleEditReport(group);
-                              }}
-                              className="p-1.5 hover:bg-blue-50 text-blue-500 rounded-lg transition-colors"
-                            >
-                              <Edit size={16} />
-                            </button>
-                          )}
-                        <ChevronRight size={16} />
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
+                ))
+              )}
+            </tbody>
+          </table>
         </div>
-
-        {selectedGroup && (
-          <div className="flex-1 space-y-6">
-            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-              <div className="p-4 border-b border-gray-100 flex items-center justify-between bg-gray-50/50">
-                <div className="flex items-center gap-3">
-                  <button
-                    onClick={() => setSelectedGroup(null)}
-                    className="lg:hidden p-1 hover:bg-gray-200 rounded-full transition-colors"
-                  >
-                    <ArrowLeft size={18} className="text-gray-500" />
-                  </button>
-                  <div>
-                    <h3 className="text-sm font-bold text-gray-800">Hạng mục chi</h3>
-                    <p className="text-[10px] text-gray-500">
-                      {formatDate(selectedGroup.date)} - {selectedGroup.employee_name}
-                    </p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="px-2 py-1 bg-primary/10 text-primary text-[10px] font-bold rounded-lg">
-                    {selectedGroup.items.length} mục
-                  </span>
-                  <button
-                    onClick={() => setSelectedGroup(null)}
-                    className="hidden lg:block p-1 hover:bg-gray-200 rounded-full transition-colors"
-                  >
-                    <X size={16} className="text-gray-500" />
-                  </button>
-                </div>
-              </div>
-
-              <div className="overflow-x-auto custom-scrollbar pb-2">
-                <table className="w-full text-left border-collapse min-w-[400px] whitespace-nowrap">
-                  <thead>
-                    <tr className="bg-white border-b border-gray-100">
-                      <th className="px-4 py-2 text-[10px] font-bold text-gray-400 uppercase tracking-wider">
-                        Ngày chi
-                      </th>
-                      <th className="px-4 py-2 text-[10px] font-bold text-gray-400 uppercase tracking-wider">
-                        Loại chi phí
-                      </th>
-                      <th className="px-4 py-2 text-[10px] font-bold text-gray-400 uppercase tracking-wider">
-                        Trạng thái
-                      </th>
-                      <th className="px-4 py-2 text-[10px] font-bold text-gray-400 uppercase tracking-wider text-right">
-                        Số tiền
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-50">
-                    {selectedGroup.items.map((item: any) => (
-                      <tr
-                        key={item.id}
-                        onClick={() => setSelectedItem(item)}
-                        className={`hover:bg-gray-50 cursor-pointer transition-colors ${selectedItem?.id === item.id ? 'bg-gray-50' : ''}`}
-                      >
-                        <td className="px-4 py-3 text-xs text-gray-500">{formatDate(item.date)}</td>
-                        <td className="px-4 py-3 text-xs text-gray-700 font-medium">
-                          {item.cost_type}
-                          <span
-                            className={`ml-2 px-1.5 py-0.5 rounded text-[8px] font-bold ${item.transaction_type === 'Thu' ? 'bg-green-100 text-green-600' : 'bg-red-100 text-red-600'}`}
-                          >
-                            {item.transaction_type === 'Thu' ? 'Thu' : 'Chi'}
-                          </span>
-                        </td>
-                        <td className="px-4 py-3 text-xs">
-                          <span
-                            className={`px-2 py-0.5 rounded text-[9px] font-bold ${
-                              item.status === 'Đã duyệt'
-                                ? 'bg-green-100 text-green-700'
-                                : item.status === 'Từ chối'
-                                  ? 'bg-red-100 text-red-700'
-                                  : item.status === 'Đã hoàn thành'
-                                    ? 'bg-blue-100 text-blue-700'
-                                    : 'bg-amber-100 text-amber-700'
-                            }`}
-                          >
-                            {item.status || 'Chờ duyệt'}
-                          </span>
-                        </td>
-                        <td
-                          className={`px-4 py-3 text-xs font-bold text-right ${item.transaction_type === 'Thu' ? 'text-green-600' : 'text-red-600'}`}
-                        >
-                          {item.transaction_type === 'Thu' ? '+' : '-'}
-                          {formatCurrency(item.total_amount)}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-
-            {selectedItem && (
-              <motion.div
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 space-y-6"
-              >
-                <div className="flex items-center justify-between border-b border-gray-100 pb-4">
-                  <div className="flex items-center gap-3">
-                    <div className="p-2 bg-primary/10 rounded-xl">
-                      <FileText size={20} className="text-primary" />
-                    </div>
-                    <div>
-                      <h3 className="font-bold text-gray-800">Chi tiết khoản chi</h3>
-                      <p className="text-[10px] text-gray-400 uppercase tracking-wider">
-                        {selectedItem.cost_code}-
-                        {String(selectedGroup.items.indexOf(selectedItem) + 1).padStart(2, '0')}
-                      </p>
-                    </div>
-                  </div>
-                  <button
-                    onClick={() => setSelectedItem(null)}
-                    className="p-1 hover:bg-gray-100 rounded-full transition-colors"
-                  >
-                    <X size={16} className="text-gray-500" />
-                  </button>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-y-6 gap-x-12">
-                  <DetailItem
-                    label="ID_ChiTiet"
-                    value={`${selectedItem.cost_code}-${String(selectedGroup.items.indexOf(selectedItem) + 1).padStart(2, '0')}`}
-                  />
-                  <DetailItem label="ID_ChiPhi" value={selectedItem.cost_code} />
-                  <DetailItem label="Nội dung chi" value={selectedItem.content} />
-                  <DetailItem
-                    label="Đơn giá"
-                    value={formatCurrency(selectedItem.total_amount / (selectedItem.quantity || 1))}
-                  />
-                  <DetailItem label="Số lượng" value={selectedItem.quantity} />
-                  <DetailItem
-                    label="Số tiền"
-                    value={formatCurrency(selectedItem.total_amount)}
-                    color="text-red-600 font-bold text-lg"
-                  />
-                  <DetailItem label="Ngày chi" value={formatDate(selectedItem.date)} />
-                  <DetailItem label="Loại chi phí" value={selectedItem.cost_type} />
-                  <DetailItem label="Đơn vị tính" value={selectedItem.unit} />
-                  <DetailItem label="Tên kho" value={selectedItem.warehouses?.name || 'N/A'} />
-                  <DetailItem label="Người chi" value={selectedItem.users?.full_name} />
-                  <DetailItem
-                    label="TT"
-                    value={String(selectedGroup.items.indexOf(selectedItem) + 1).padStart(2, '0')}
-                  />
-                  <DetailItem label="Loại hình chi" value={selectedItem.cost_type || 'N/A'} />
-                  <DetailItem
-                    label="Tình trạng nhập kho"
-                    value={selectedItem.stock_status || 'N/A'}
-                  />
-                  <DetailItem
-                    label="Trạng thái duyệt"
-                    value={selectedItem.status || 'Chờ duyệt'}
-                    color={
-                      selectedItem.status === 'Đã duyệt'
-                        ? 'text-green-600 font-bold'
-                        : selectedItem.status === 'Từ chối'
-                          ? 'text-red-600 font-bold'
-                          : 'text-amber-600 font-bold'
-                    }
-                  />
-                  <DetailItem
-                    label="Ghi chú"
-                    value={selectedItem.notes || 'Không có ghi chú'}
-                    className="col-span-full"
-                  />
-                  <div className="col-span-full pt-4 border-t border-gray-50 flex items-center justify-between gap-3">
-                    <Button
-                      variant="danger"
-                      icon={Trash2}
-                      onClick={() => {
-                        setSelectedItem(null);
-                        handleEditReport(selectedGroup);
-                      }}
-                      className="flex-1 text-xs"
-                    >
-                      Xóa / Thùng rác
-                    </Button>
-                    <Button
-                      variant="warning"
-                      icon={Edit}
-                      onClick={() => {
-                        setSelectedItem(null);
-                        handleEditReport(selectedGroup);
-                      }}
-                      className="flex-1 text-xs"
-                    >
-                      Sửa báo cáo
-                    </Button>
-                  </div>
-                </div>
-              </motion.div>
-            )}
-          </div>
-        )}
       </div>
 
-      <AnimatePresence>
-        {showMasterModal && (
-          <div
-            className="fixed inset-0 z-[150] flex md:items-center justify-center p-0 md:p-4 bg-black/60 backdrop-blur-sm overflow-y-auto"
-            onClick={() => setShowMasterModal(false)}
-          >
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.95 }}
-              className="bg-white rounded-none md:rounded-3xl shadow-2xl w-full max-w-4xl h-full md:h-auto md:max-h-[90vh] flex flex-col mt-auto md:mt-0"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <div className="bg-primary p-6 pt-[calc(1.5rem+env(safe-area-inset-top))] md:pt-6 text-white flex items-center justify-between rounded-none md:rounded-t-3xl">
-                <div className="flex items-center gap-3">
-                  <button
-                    onClick={() => setShowMasterModal(false)}
-                    className="p-2 bg-white/20 hover:bg-white/30 rounded-xl transition-colors cursor-pointer"
+      {/* Hidden Ref for Report Capture */}
+      <div style={{ position: 'absolute', left: '-9999px', top: 0 }}>
+        <div ref={reportRef} className="p-8 bg-white" style={{ width: '1400px' }}>
+          {/* Premium Branding Header */}
+          <div className="flex items-center gap-6 mb-10">
+            <img
+              src={logoBase64}
+              alt="Logo"
+              className="w-24 h-24 rounded-3xl object-contain shadow-sm"
+              onError={(e) => (e.currentTarget.style.display = 'none')}
+            />
+            <div className="space-y-1">
+              <h2 className="text-3xl font-black text-gray-800 tracking-tighter uppercase leading-none">
+                CDX - CON ĐƯỜNG XANH
+              </h2>
+              <p className="text-sm font-bold text-gray-400 uppercase tracking-[0.3em] mt-2">
+                Hệ thống quản lý kho và nhân sự
+              </p>
+            </div>
+          </div>
+
+          <div className="mb-6">
+            <h1 className="text-3xl font-black italic text-[#2D5A27] tracking-tighter mb-1">
+              BÁO CÁO CHI PHÍ
+            </h1>
+            <p className="text-sm font-bold text-gray-500 italic">
+              Dữ liệu vận hành hệ thống CDX-2026 • {new Date().toLocaleDateString('vi-VN')}
+            </p>
+          </div>
+
+          <table className="w-full text-left border-collapse whitespace-nowrap">
+            <thead>
+              <tr className="bg-primary text-white">
+                <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider">Mã phí</th>
+                <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider">Ngày</th>
+                <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider">
+                  Nội dung
+                </th>
+                <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider">
+                  Chứng từ
+                </th>
+                <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-right">
+                  Thành tiền
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {filteredHistory.map((group: any) => (
+                <tr key={group.cost_code} className="border-b border-gray-100">
+                  <td className="px-4 py-3.5 text-xs font-black text-primary uppercase">
+                    {group.cost_code}
+                  </td>
+                  <td className="px-4 py-3.5 text-xs font-bold text-gray-600">
+                    {formatDate(group.date)}
+                  </td>
+                  <td className="px-4 py-3.5 text-xs font-bold text-gray-800 truncate max-w-xs">
+                    {group.items[0]?.content}
+                  </td>
+                  <td className="px-4 py-3.5 text-xs font-bold text-gray-400 uppercase tracking-tighter">
+                    {group.items.length} hạng mục
+                  </td>
+                  <td
+                    className={`px-4 py-3.5 text-xs font-black text-right ${group.total_amount >= 0 ? 'text-red-600' : 'text-green-600'}`}
                   >
-                    <FileText size={24} />
-                  </button>
-                  <div>
-                    <h3 className="font-bold text-lg">Chi phí không xóa</h3>
-                    <p className="text-xs text-white/70">
-                      Mã: {generateCostCode(masterForm.date, masterForm.employee_id)}
-                    </p>
-                  </div>
+                    {formatCurrency(group.total_amount)}
+                  </td>
+                </tr>
+              ))}
+              <tr className="bg-gray-50 font-black">
+                <td colSpan={4} className="px-4 py-4 text-xs text-right italic">
+                  TỔNG CHI PHÍ THỰC TẾ:
+                </td>
+                <td className="px-4 py-4 text-sm text-red-600 text-right">
+                  {formatCurrency(filteredHistory.reduce((s, g) => s + g.total_amount, 0))}
+                </td>
+              </tr>
+            </tbody>
+          </table>
+
+          <div className="mt-8 pt-6 border-t border-gray-100 flex justify-between items-end">
+            <div className="text-[10px] text-gray-400 font-bold">
+              Ngày xuất: {new Date().toLocaleDateString('vi-VN')} •{' '}
+              {new Date().toLocaleTimeString('vi-VN')}
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-[10px] font-black text-gray-300 uppercase italic">
+                CDX ERP SYSTEM
+              </span>
+              <div className="w-1 h-1 bg-gray-200 rounded-full"></div>
+              <span className="text-[10px] font-bold text-gray-300 uppercase">
+                Financial Integrity
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <ReportPreviewModal
+        isOpen={showReportPreview}
+        onClose={() => setShowReportPreview(false)}
+        title="Báo cáo chi phí tổng hợp"
+        isCapturing={isCapturingTable}
+        onExport={() => {
+          if (reportRef.current) {
+            exportTableImage({
+              element: reportRef.current,
+              fileName: `Bao_Cao_Chi_Phi_Tong_Hop_${new Date().toLocaleDateString('vi-VN').replace(/\//g, '-')}.png`,
+              addToast,
+              onStart: () => setIsCapturingTable(true),
+              onEnd: () => {
+                setIsCapturingTable(false);
+                setShowReportPreview(false);
+              },
+            });
+          }
+        }}
+      >
+        <div className="p-12 bg-white">
+          {/* Logo & Header */}
+          <div className="flex items-center gap-6 mb-10">
+            <img
+              src={logoBase64}
+              alt="Logo"
+              className="w-24 h-24 rounded-3xl object-contain shadow-sm"
+              onError={(e) => (e.currentTarget.style.display = 'none')}
+            />
+            <div className="space-y-1">
+              <h2 className="text-3xl font-black text-gray-800 tracking-tighter uppercase leading-none">
+                CDX - CON ĐƯỜNG XANH
+              </h2>
+              <p className="text-sm font-bold text-gray-400 uppercase tracking-[0.3em] mt-2">
+                Hệ thống quản lý kho và nhân sự
+              </p>
+            </div>
+          </div>
+
+          <div className="mb-6">
+            <h1 className="text-3xl font-black italic text-[#245D51] tracking-tighter mb-1 uppercase">
+              BÁO CÁO TỔNG HỢP
+            </h1>
+            <p className="text-sm font-bold text-gray-500 italic uppercase">
+              Operational Cost Summary • CDX ERP v2026
+            </p>
+          </div>
+
+          {/* Filters Info */}
+          <div className="grid grid-cols-2 gap-8 mb-8 bg-gray-50/50 p-6 rounded-3xl border border-gray-100">
+            <div className="space-y-3">
+              <div className="flex items-center gap-2">
+                <div className="w-1.5 h-4 bg-primary rounded-full" />
+                <p className="text-[11px] text-gray-400 font-black uppercase tracking-[0.2em]">
+                  Cấu hình báo cáo
+                </p>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <p className="text-[12px] text-gray-500 font-bold">Từ ngày:</p>
+                  <p className="text-md font-black text-gray-900">
+                    {filters.fromDate ? formatDate(filters.fromDate) : '—'}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-[12px] text-gray-500 font-bold">Đến ngày:</p>
+                  <p className="text-md font-black text-gray-900">
+                    {filters.toDate ? formatDate(filters.toDate) : '—'}
+                  </p>
                 </div>
               </div>
-
-              <div className="flex-1 overflow-y-auto p-6 custom-scrollbar space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                  <div className="space-y-1">
-                    <label className="text-[10px] font-bold text-gray-400 uppercase">
-                      ID_ChiPhi
-                    </label>
-                    <input
-                      type="text"
-                      readOnly
-                      value={generateCostCode(masterForm.date, masterForm.employee_id)}
-                      className="w-full px-4 py-2 rounded-xl border border-gray-100 bg-gray-50 text-sm text-gray-500 outline-none"
-                    />
-                  </div>
-                  <div className="space-y-1">
-                    <label className="text-[10px] font-bold text-gray-400 uppercase">
-                      Ngày chi
-                    </label>
-                    <input
-                      type="date"
-                      value={masterForm.date}
-                      onChange={(e) => setMasterForm({ ...masterForm, date: e.target.value })}
-                      className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20"
-                    />
-                  </div>
-                  <div className="space-y-1">
-                    <label className="text-[10px] font-bold text-gray-400 uppercase">
-                      Người chi
-                    </label>
-                    <input
-                      type="text"
-                      readOnly
-                      value={masterForm.employee_name}
-                      className="w-full px-4 py-2 rounded-xl border border-gray-100 bg-gray-50 text-sm text-gray-500 outline-none"
-                    />
-                  </div>
+            </div>
+            <div className="space-y-3">
+              <div className="flex items-center gap-2">
+                <div className="w-1.5 h-4 bg-gray-800 rounded-full" />
+                <p className="text-[11px] text-gray-400 font-black uppercase tracking-[0.2em]">
+                  Thông số hệ thống
+                </p>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <p className="text-[12px] text-gray-500 font-bold">Tổng lô:</p>
+                  <p className="text-md font-black text-primary italic">
+                    {filteredHistory.length} cụm phí
+                  </p>
                 </div>
-
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <h4 className="text-sm font-bold text-gray-800 uppercase tracking-wider">
-                      Hạng mục chi
-                    </h4>
-                    <button
-                      onClick={handleAddItem}
-                      className="flex items-center gap-1 text-primary hover:text-primary-hover font-bold text-sm transition-colors"
-                    >
-                      <PlusCircle size={18} /> Mới
-                    </button>
-                  </div>
-
-                  <div className="bg-gray-50 rounded-2xl border border-gray-100 overflow-hidden">
-                    <table className="w-full text-left border-collapse whitespace-nowrap">
-                      <thead>
-                        <tr className="bg-gray-100/50">
-                          <th className="px-4 py-2 text-[10px] font-bold text-gray-400 uppercase">
-                            TT
-                          </th>
-                          <th className="px-4 py-2 text-[10px] font-bold text-gray-400 uppercase">
-                            Nội dung
-                          </th>
-                          <th className="px-4 py-2 text-[10px] font-bold text-gray-400 uppercase text-right">
-                            Số tiền
-                          </th>
-                          <th className="px-4 py-2 w-20"></th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-gray-200">
-                        {masterForm.items.length === 0 ? (
-                          <tr>
-                            <td
-                              colSpan={4}
-                              className="px-4 py-8 text-center text-gray-400 italic text-xs"
-                            >
-                              Chưa có hạng mục nào. Nhấn "Mới" để thêm.
-                            </td>
-                          </tr>
-                        ) : (
-                          masterForm.items.map((item, idx) => (
-                            <tr key={idx} className="hover:bg-white transition-colors group">
-                              <td className="px-4 py-2 text-xs text-gray-500">{idx + 1}</td>
-                              <td className="px-4 py-2 text-xs font-medium text-gray-700">
-                                {item.content}
-                              </td>
-                              <td className="px-4 py-2 text-xs font-bold text-primary text-right">
-                                {formatCurrency(item.total_amount)}
-                              </td>
-                              <td className="px-4 py-2 flex items-center justify-end gap-2">
-                                <button
-                                  onClick={() => handleEditItem(idx)}
-                                  className="p-1 text-blue-500 hover:bg-blue-50 rounded-lg transition-colors"
-                                >
-                                  <Edit size={14} />
-                                </button>
-                                <button
-                                  onClick={() => handleRemoveItem(idx)}
-                                  className="p-1 text-red-500 hover:bg-red-50 rounded-lg transition-colors"
-                                >
-                                  <Trash2 size={14} />
-                                </button>
-                              </td>
-                            </tr>
-                          ))
-                        )}
-                      </tbody>
-                    </table>
-                  </div>
+                <div>
+                  <p className="text-[12px] text-gray-500 font-bold">Người xuất:</p>
+                  <p className="text-md font-black text-gray-900">{user.full_name}</p>
                 </div>
+              </div>
+            </div>
+          </div>
 
-                <div className="bg-primary/5 p-6 rounded-2xl space-y-2">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-bold text-gray-500 uppercase">Tổng số tiền</span>
-                    <span className="text-xl font-black text-primary">
-                      {formatCurrency(
-                        masterForm.items.reduce((sum, item) => sum + item.total_amount, 0),
-                      )}
+          {/* Table */}
+          <table className="w-full text-left border-collapse min-w-[1000px] whitespace-nowrap">
+            <thead>
+              <tr className="bg-primary/5 text-primary border-b-2 border-primary/20">
+                <th className="px-6 py-4 text-[11px] font-black uppercase tracking-widest italic border-r border-primary/5 w-16 text-center">
+                  STT
+                </th>
+                <th className="px-6 py-4 text-[11px] font-black uppercase tracking-widest italic border-r border-primary/5">
+                  Mã phí
+                </th>
+                <th className="px-6 py-4 text-[11px] font-black uppercase tracking-widest italic border-r border-primary/5">
+                  Ngày ghi
+                </th>
+                <th className="px-6 py-4 text-[11px] font-black uppercase tracking-widest italic border-r border-primary/5">
+                  Nhân sự
+                </th>
+                <th className="px-6 py-4 text-[11px] font-black uppercase tracking-widest italic border-r border-primary/5">
+                  Nội dung chính
+                </th>
+                <th className="px-6 py-4 text-[11px] font-black uppercase tracking-widest italic border-r border-primary/5 text-center">
+                  Hạng mục
+                </th>
+                <th className="px-6 py-4 text-[11px] font-black uppercase tracking-widest italic text-right">
+                  Tổng tiền
+                </th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-100">
+              {filteredHistory.map((group: any, idx) => (
+                <tr key={group.cost_code} className="hover:bg-primary/5 transition-all group">
+                  <td className="px-6 py-4 text-center">
+                    <span className="text-xs font-black text-gray-300">
+                      {(idx + 1).toString().padStart(2, '0')}
                     </span>
-                  </div>
-                  <div className="pt-2 border-t border-primary/10">
-                    <p className="text-[10px] font-bold text-gray-400 uppercase mb-1">
-                      Tổng tiền bằng chữ
-                    </p>
-                    <p className="text-xs font-medium text-primary italic">
-                      {numberToWords(
-                        masterForm.items.reduce((sum, item) => sum + item.total_amount, 0),
-                      )}
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              <div className="p-6 border-t border-gray-100 flex justify-end gap-3">
-                <Button variant="outline" onClick={() => setShowMasterModal(false)}>
-                  Hủy
-                </Button>
-                <Button onClick={handleSaveAll} isLoading={submitting} className="min-w-[140px]">
-                  Lưu báo cáo
-                </Button>
-              </div>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
-
-      <AnimatePresence>
-        {showDetailModal && (
-          <div className="fixed inset-0 z-[200] flex md:items-center justify-center p-0 md:p-4 bg-black/60 backdrop-blur-sm overflow-y-auto">
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: 20 }}
-              className="bg-white rounded-none md:rounded-3xl shadow-2xl w-full max-w-2xl h-full md:h-auto md:max-h-[90vh] flex flex-col mt-auto md:mt-0"
-            >
-              <div className="bg-primary p-6 pt-[calc(1.5rem+env(safe-area-inset-top))] md:pt-6 text-white flex items-center justify-between rounded-none md:rounded-t-3xl">
-                <div className="flex items-center gap-3">
-                  <button
-                    onClick={() => setShowDetailModal(false)}
-                    className="p-2 bg-white/20 hover:bg-white/30 rounded-xl transition-colors cursor-pointer"
-                  >
-                    <PlusCircle size={24} />
-                  </button>
-                  <h3 className="font-bold text-lg">Chi phí chi tiết</h3>
-                </div>
-              </div>
-
-              <div className="flex-1 overflow-y-auto p-6 custom-scrollbar">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="space-y-4">
-                    <div className="space-y-1">
-                      <label className="text-[10px] font-bold text-gray-400 uppercase">
-                        ID_ChiPhi
-                      </label>
-                      <input
-                        type="text"
-                        readOnly
-                        value={generateCostCode(masterForm.date, masterForm.employee_id)}
-                        className="w-full px-4 py-2 rounded-xl border border-gray-100 bg-gray-50 text-sm text-gray-500 outline-none"
-                      />
-                    </div>
-
-                    <CreatableSelect
-                      label={
-                        detailForm.transaction_type === 'Thu' ? 'Nội dung thu *' : 'Nội dung chi *'
-                      }
-                      value={detailForm.content}
-                      options={materials}
-                      onChange={(val) => setDetailForm({ ...detailForm, content: val })}
-                      onCreate={(val) => setDetailForm({ ...detailForm, content: val })}
-                      placeholder="Chọn nội dung..."
-                      required
-                    />
-
-                    <div className="grid grid-cols-2 gap-4">
-                      <NumericInput
-                        label="Đơn giá"
-                        value={detailForm.unit_price}
-                        onChange={(val) => setDetailForm({ ...detailForm, unit_price: val })}
-                      />
-                      <NumericInput
-                        label="Số lượng"
-                        value={detailForm.quantity}
-                        onChange={(val) => setDetailForm({ ...detailForm, quantity: val })}
-                      />
-                    </div>
-
-                    <div className="space-y-1">
-                      <label className="text-[10px] font-bold text-gray-400 uppercase">
-                        Số tiền
-                      </label>
-                      <div className="w-full px-4 py-2 rounded-xl border border-gray-100 bg-gray-50 text-sm font-bold text-primary">
-                        {formatCurrency(detailForm.quantity * detailForm.unit_price)}
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="space-y-4">
-                    <CreatableSelect
-                      label="Loại chi phí *"
-                      value={detailForm.cost_type}
-                      options={costTypes}
-                      onChange={(val) => setDetailForm({ ...detailForm, cost_type: val })}
-                      onCreate={(val) => setDetailForm({ ...detailForm, cost_type: val })}
-                      placeholder="Chọn loại chi phí..."
-                      required
-                    />
-
-                    <div className="grid grid-cols-2 gap-4">
-                      <CreatableSelect
-                        label="Đơn vị tính"
-                        value={detailForm.unit}
-                        options={units}
-                        onChange={(val) => setDetailForm({ ...detailForm, unit: val })}
-                        onCreate={(val) => setDetailForm({ ...detailForm, unit: val })}
-                        placeholder="Chọn/Nhập..."
-                      />
-                      <CreatableSelect
-                        label="Tên kho"
-                        value={detailForm.warehouse_name}
-                        options={warehouses}
-                        onChange={(val) => setDetailForm({ ...detailForm, warehouse_name: val })}
-                        onCreate={(val) => setDetailForm({ ...detailForm, warehouse_name: val })}
-                        placeholder="Chọn kho..."
-                      />
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="space-y-1">
-                        <label className="text-[10px] font-bold text-gray-400 uppercase">
-                          Loại hình chi
-                        </label>
-                        <div className="flex gap-2">
-                          {['Chi phí', 'Nhập kho'].map((cat) => (
-                            <button
-                              key={cat}
-                              type="button"
-                              onClick={() => setDetailForm({ ...detailForm, cost_type: cat })}
-                              className={`flex-1 py-1.5 rounded-lg text-[10px] font-bold transition-colors ${detailForm.cost_type === cat ? 'bg-primary text-white' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'}`}
-                            >
-                              {cat}
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-                      <div className="space-y-1">
-                        <label className="text-[10px] font-bold text-gray-400 uppercase">
-                          Tình trạng nhập kho
-                        </label>
-                        <select
-                          value={detailForm.stock_status}
-                          onChange={(e) =>
-                            setDetailForm({ ...detailForm, stock_status: e.target.value })
-                          }
-                          className="w-full px-3 py-2 rounded-xl border border-gray-200 text-xs outline-none focus:ring-2 focus:ring-primary/20"
-                        >
-                          <option value="Chưa nhập">Chưa nhập</option>
-                          <option value="Đã nhập">Đã nhập</option>
-                        </select>
-                      </div>
-                    </div>
-
-                    <div className="space-y-1">
-                      <label className="text-[10px] font-bold text-gray-400 uppercase">
-                        Loại giao dịch
-                      </label>
-                      <div className="flex gap-2">
-                        {['Chi', 'Thu'].map((type) => (
-                          <button
-                            key={type}
-                            type="button"
-                            onClick={() => setDetailForm({ ...detailForm, transaction_type: type })}
-                            className={`flex-1 py-1.5 rounded-lg text-[10px] font-bold transition-colors ${detailForm.transaction_type === type ? (type === 'Thu' ? 'bg-green-600 text-white' : 'bg-red-600 text-white') : 'bg-gray-100 text-gray-500 hover:bg-gray-200'}`}
-                          >
-                            {type === 'Thu' ? 'Phiếu Cộng (+)' : 'Phiếu Trừ (-)'}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-
-                    <div className="space-y-1">
-                      <label className="text-[10px] font-bold text-gray-400 uppercase">
-                        Ghi chú
-                      </label>
-                      <textarea
-                        rows={3}
-                        value={detailForm.notes}
-                        onChange={(e) => setDetailForm({ ...detailForm, notes: e.target.value })}
-                        className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20 resize-none"
-                        placeholder="Ghi chú thêm..."
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                <div className="mt-6 p-4 bg-gray-50 rounded-2xl">
-                  <p className="text-[10px] font-bold text-gray-400 uppercase mb-1">
-                    Số tiền bằng chữ
-                  </p>
-                  <p className="text-xs font-medium text-gray-600 italic">
-                    {numberToWords(detailForm.quantity * detailForm.unit_price)}
-                  </p>
-                </div>
-              </div>
-
-              <div className="p-6 border-t border-gray-100 flex justify-end gap-3">
-                <button
-                  type="button"
-                  onClick={() => setShowDetailModal(false)}
-                  className="px-6 py-2 rounded-xl text-sm font-bold text-gray-500 hover:bg-gray-100 transition-colors"
+                  </td>
+                  <td className="px-6 py-4">
+                    <span className="px-3 py-1 bg-primary/5 text-primary rounded-lg text-[11px] font-black uppercase tracking-widest border border-primary/10">
+                      {group.cost_code}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4 text-xs font-bold text-gray-600 italic">
+                    {formatDate(group.date)}
+                  </td>
+                  <td className="px-6 py-4">
+                    <span className="text-xs font-black text-gray-900 uppercase">
+                      {group.employee_name}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4">
+                    <span className="text-xs font-bold text-gray-500 truncate max-w-[200px] block">
+                      {group.items[0]?.content || 'Chi phí hệ thống'}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4 text-center">
+                    <span className="px-2 py-1 bg-gray-100 text-gray-600 rounded-md text-[10px] font-black font-mono">
+                      {group.items.length} mục
+                    </span>
+                  </td>
+                  <td className="px-6 py-4 text-right">
+                    <span className="text-xs font-black text-gray-900 tabular-nums">
+                      {formatCurrency(group.total_amount)}
+                    </span>
+                  </td>
+                </tr>
+              ))}
+              <tr className="bg-primary/5 font-black border-t-2 border-primary/20">
+                <td
+                  colSpan={6}
+                  className="px-6 py-4 text-xs uppercase tracking-widest italic text-right"
                 >
-                  Hủy
-                </button>
-                <button
-                  type="button"
-                  onClick={handleSaveDetail}
-                  className="px-8 py-2 rounded-xl bg-primary text-white text-sm font-bold hover:bg-primary-hover transition-all shadow-lg shadow-primary/20"
-                >
-                  Xác nhận
-                </button>
-              </div>
-            </motion.div>
+                  Tổng phát sinh ròng:
+                </td>
+                <td className="px-6 py-4 text-sm text-right tabular-nums text-primary underline decoration-double">
+                  {formatCurrency(filteredHistory.reduce((s, g) => s + g.total_amount, 0))}
+                </td>
+              </tr>
+            </tbody>
+          </table>
+
+          <div className="mt-8 pt-6 border-t border-gray-100 flex justify-between items-end">
+            <div className="text-[10px] text-gray-400 font-bold">
+              Ngày xuất: {new Date().toLocaleDateString('vi-VN')} •{' '}
+              {new Date().toLocaleTimeString('vi-VN')}
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-[10px] font-black text-gray-300 uppercase italic">
+                CDX ERP SYSTEM
+              </span>
+              <div className="w-1 h-1 bg-gray-200 rounded-full"></div>
+              <span className="text-[10px] font-bold text-gray-300 uppercase">
+                Operational Excellence
+              </span>
+            </div>
           </div>
-        )}
-      </AnimatePresence>
+        </div>
+      </ReportPreviewModal>
     </div>
   );
 };

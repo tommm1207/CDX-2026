@@ -1,3 +1,4 @@
+import { exportTableImage } from '../../utils/reportExport';
 import { useState, useEffect } from 'react';
 import {
   ClipboardCheck,
@@ -14,7 +15,12 @@ import {
   Edit,
   ChevronDown,
   CheckCircle,
+  Image as ImageIcon,
+  Share2,
 } from 'lucide-react';
+import { useRef } from 'react';
+
+import { SaveImageButton } from '../shared/SaveImageButton';
 import { motion, AnimatePresence } from 'motion/react';
 import { supabase } from '@/lib/supabase';
 import { Employee } from '@/types';
@@ -64,12 +70,29 @@ export const PendingApprovals = ({
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [selectedSlip, setSelectedSlip] = useState<any | null>(null);
   const [deleteLoading, setDeleteLoading] = useState(false);
+  const [isCapturingTable, setIsCapturingTable] = useState(false);
+
+  const reportRef = useRef<HTMLDivElement>(null);
+  const logoBase64 = '/logo.png';
 
   const displayCount = slips.length;
 
   useEffect(() => {
     fetchPendingSlips();
   }, []);
+
+  const handleSaveTableImage = () => {
+    const reportElem = reportRef.current || tableBillRef.current;
+    if (reportElem) {
+      exportTableImage({
+        element: reportElem,
+        fileName: 'Bao_Cao.png',
+        addToast,
+        onStart: () => setIsCapturingTable(true),
+        onEnd: () => setIsCapturingTable(false),
+      });
+    }
+  };
 
   const fetchPendingSlips = async (silent = false) => {
     if (!silent) setLoading(true);
@@ -182,14 +205,21 @@ export const PendingApprovals = ({
     <div className="p-4 md:p-6 space-y-4 pb-24">
       <div className="flex items-center justify-between gap-2">
         <PageBreadcrumb title="Phê duyệt phiếu" onBack={onBack} />
-        <Button
-          variant="ghost"
-          icon={RefreshCw}
-          onClick={() => fetchPendingSlips()}
-          className="bg-gray-100 text-gray-600 hover:bg-gray-200"
-        >
-          Làm mới
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="ghost"
+            icon={RefreshCw}
+            onClick={() => fetchPendingSlips()}
+            className="bg-gray-100 text-gray-600 hover:bg-gray-200"
+          >
+            Làm mới
+          </Button>
+          <SaveImageButton
+            onClick={handleSaveTableImage}
+            isCapturing={isCapturingTable}
+            title="Lưu ảnh danh sách chờ duyệt"
+          />
+        </div>
       </div>
 
       {/* Error display */}
@@ -264,6 +294,220 @@ export const PendingApprovals = ({
           </div>
         </div>
       )}
+
+      {/* Hidden Report Template (A4 Landscape) */}
+      <div className="fixed -left-[4000px] -top-[4000px] no-print">
+        <div
+          ref={reportRef}
+          className="bg-white p-12 w-[1400px] min-h-[794px] font-sans text-gray-900 border"
+          style={{ width: '1400px' }}
+        >
+          {/* Premium Branding Header */}
+          <div className="flex items-center gap-6 mb-10">
+            <img
+              src={logoBase64}
+              alt="Logo"
+              className="w-24 h-24 rounded-3xl object-contain shadow-sm"
+              onError={(e) => (e.currentTarget.style.display = 'none')}
+            />
+            <div className="space-y-1">
+              <h2 className="text-3xl font-black text-gray-800 tracking-tighter uppercase leading-none">
+                CDX - CON ĐƯỜNG XANH
+              </h2>
+              <p className="text-sm font-bold text-gray-400 uppercase tracking-[0.3em] mt-2">
+                Hệ thống quản lý kho và nhân sự
+              </p>
+            </div>
+          </div>
+
+          <div className="mb-6">
+            <h1 className="text-3xl font-black italic text-[#2D5A27] tracking-tighter mb-1 uppercase">
+              DANH SÁCH CHỜ DUYỆT
+            </h1>
+            <p className="text-sm font-bold text-gray-500 italic uppercase">
+              Management Audit Pool • Total: {slips.length} Slips
+            </p>
+          </div>
+          {/* Old Header Hidden */}
+          <div
+            className="flex justify-between items-start mb-10 pb-6 border-b-2 border-primary/20"
+            style={{ display: 'none' }}
+          >
+            <div className="flex items-center gap-6">
+              <div className="bg-primary/5 p-4 rounded-3xl border border-primary/10">
+                <img
+                  src={logoBase64}
+                  alt="Company Logo"
+                  className="w-20 h-20 object-contain rounded-full"
+                />
+              </div>
+              <div className="space-y-1">
+                <h1 className="text-3xl font-black text-primary tracking-tighter uppercase italic">
+                  CDX ERP SYSTEM
+                </h1>
+                <p className="text-[10px] text-gray-400 font-bold uppercase tracking-[0.3em]">
+                  Smart Construction Management • 2026 Edition
+                </p>
+                <div className="flex items-center gap-3 mt-2">
+                  <span className="px-3 py-1 bg-amber-50 text-amber-600 rounded-full text-[10px] font-black uppercase tracking-widest border border-amber-100 italic">
+                    Management Audit Pool
+                  </span>
+                  <span className="w-1.5 h-1.5 bg-gray-200 rounded-full" />
+                  <span className="text-[10px] text-gray-500 font-bold italic tracking-wide">
+                    Ref ID: PENDING_POOL_{new Date().getTime().toString(36).toUpperCase()}
+                  </span>
+                </div>
+              </div>
+            </div>
+            <div className="text-right">
+              <h2 className="text-3xl font-black text-gray-900 uppercase tracking-tighter mb-1">
+                Danh Sách Phiếu Chờ Duyệt
+              </h2>
+              <p className="text-xs text-gray-500 font-bold italic">
+                Thời gian xuất: {new Date().toLocaleString('vi-VN')}
+              </p>
+              <div className="mt-4 flex flex-col items-end gap-1">
+                <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest font-mono">
+                  STATUS: HIGH_PRIORITY
+                </p>
+                <div className="h-0.5 w-12 bg-primary/20 rounded-full" />
+              </div>
+            </div>
+          </div>
+
+          {/* Statistics Info */}
+          <div className="grid grid-cols-4 gap-6 mb-8 bg-gray-50/50 p-6 rounded-3xl border border-gray-100">
+            <div className="space-y-1 border-r border-gray-100">
+              <p className="text-[10px] text-gray-400 font-black uppercase tracking-widest">
+                Tổng lượt duyệt
+              </p>
+              <p className="text-2xl font-black text-gray-900">
+                {slips.length} <span className="text-xs font-bold text-gray-400">phiếu</span>
+              </p>
+            </div>
+            <div className="space-y-1 border-r border-gray-100 px-4">
+              <p className="text-[10px] text-gray-400 font-black uppercase tracking-widest">
+                Nhập kho
+              </p>
+              <p className="text-2xl font-black text-blue-600">
+                {slips.filter((s) => s.type === 'Nhập kho').length}
+              </p>
+            </div>
+            <div className="space-y-1 border-r border-gray-100 px-4">
+              <p className="text-[10px] text-gray-400 font-black uppercase tracking-widest">
+                Xuất kho
+              </p>
+              <p className="text-2xl font-black text-red-600">
+                {slips.filter((s) => s.type === 'Xuất kho').length}
+              </p>
+            </div>
+            <div className="space-y-1 px-4">
+              <p className="text-[10px] text-gray-400 font-black uppercase tracking-widest">
+                Chi phí/Khác
+              </p>
+              <p className="text-2xl font-black text-emerald-600">
+                {slips.filter((s) => s.type === 'Chi phí').length}
+              </p>
+            </div>
+          </div>
+
+          {/* Table */}
+          <table className="w-full text-left border-collapse rounded-3xl overflow-hidden shadow-sm border border-gray-100">
+            <thead>
+              <tr className="bg-gray-800 text-white">
+                <th className="px-4 py-4 text-[10px] font-black uppercase tracking-widest italic border-r border-white/10">
+                  Loại phiếu
+                </th>
+                <th className="px-4 py-4 text-[10px] font-black uppercase tracking-widest italic border-r border-white/10">
+                  Người tạo / Ngày
+                </th>
+                <th className="px-4 py-4 text-[10px] font-black uppercase tracking-widest italic border-r border-white/10">
+                  Mã phiếu / Nội dung
+                </th>
+                <th className="px-4 py-4 text-[10px] font-black uppercase tracking-widest italic border-r border-white/10">
+                  Đơn vị / Kho
+                </th>
+                <th className="px-4 py-4 text-[10px] font-black uppercase tracking-widest italic text-right">
+                  Số lượng / Thành tiền
+                </th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-100 text-xs">
+              {slips.map((item, idx) => (
+                <tr key={idx} className={idx % 2 === 0 ? 'bg-white' : 'bg-gray-50/30'}>
+                  <td className="px-4 py-3">
+                    <div
+                      className={`inline-block px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-tighter italic ${item.type === 'Nhập kho' ? 'bg-blue-50 text-blue-600' : item.type === 'Xuất kho' ? 'bg-red-50 text-red-600' : 'bg-emerald-50 text-emerald-600'}`}
+                    >
+                      {item.type}
+                    </div>
+                  </td>
+                  <td className="px-4 py-3">
+                    <p className="font-black text-gray-900 uppercase tracking-tight">
+                      {item.users?.full_name}
+                    </p>
+                    <p className="text-[10px] text-gray-400 italic mt-0.5">
+                      {formatDate(item.date)}
+                    </p>
+                  </td>
+                  <td className="px-4 py-3">
+                    <p className="font-black text-primary font-mono tracking-tighter uppercase underline mb-0.5">
+                      #{slipCode(item)}
+                    </p>
+                    <p className="text-[10px] text-gray-600 font-bold truncate max-w-[200px] italic">
+                      {item.materials?.name || item.content}
+                    </p>
+                  </td>
+                  <td className="px-4 py-3">
+                    <p className="text-[10px] text-gray-500 font-bold uppercase tracking-tight">
+                      {item.type === 'Luân chuyển'
+                        ? `${item.from_wh?.name} → ${item.to_wh?.name}`
+                        : item.warehouses?.name || '—'}
+                    </p>
+                  </td>
+                  <td className="px-4 py-3 text-right">
+                    {item.quantity > 0 && (
+                      <p className="font-black text-gray-900 tracking-tighter tabular-nums px-2 py-1 bg-gray-100/50 inline-block rounded-lg mb-1 italic">
+                        {formatNumber(item.quantity)} {item.materials?.unit || item.unit || ''}
+                      </p>
+                    )}
+                    {item.total_amount > 0 && (
+                      <p
+                        className={`text-[11px] font-black tracking-widest ${item.type === 'Chi phí' ? 'text-red-600 underline decoration-double' : 'text-gray-400 italic'}`}
+                      >
+                        {formatCurrency(item.total_amount)}
+                      </p>
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+
+          {/* Footer Branding */}
+          <div className="mt-12 flex justify-between items-end border-t border-gray-100 pt-6">
+            <div className="space-y-1">
+              <p className="text-xs font-black text-gray-300 uppercase tracking-[0.2em] italic">
+                CDX ERP SYSTEM
+              </p>
+              <p className="text-[9px] text-gray-300 font-bold uppercase tracking-widest">
+                End of pending pool report • Secure Operational Oversight
+              </p>
+            </div>
+            <div className="text-right">
+              <p className="text-[9px] font-black text-gray-300 uppercase tracking-[0.3em] mb-1">
+                Audit Trail Verified
+              </p>
+              <div className="text-[10px] text-gray-400 font-bold bg-gray-50 px-3 py-1 rounded-full border border-gray-100">
+                Oversight Integrity:{' '}
+                <span className="text-amber-500 font-black tracking-widest italic ml-1 underline">
+                  SECURED_VAULT
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
 
       {/* Detail Modal */}
       <AnimatePresence>

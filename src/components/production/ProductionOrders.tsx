@@ -11,7 +11,12 @@ import {
   PackageCheck,
   Loader2,
   Ban,
+  Image as LucideImageIcon,
+  Share2,
 } from 'lucide-react';
+import { useRef } from 'react';
+import { exportTableImage } from '../../utils/reportExport';
+import { SaveImageButton } from '../shared/SaveImageButton';
 import { motion, AnimatePresence } from 'motion/react';
 import { supabase } from '@/lib/supabase';
 import { Employee } from '@/types';
@@ -53,6 +58,9 @@ export const ProductionOrders = ({
     (localStorage.getItem(`sort_pref_prodOrders_${user.id}`) as SortOption) || 'newest',
   );
   const [showFilter, setShowFilter] = useState(true);
+  const [isCapturingTable, setIsCapturingTable] = useState(false);
+  const reportRef = useRef<HTMLDivElement>(null);
+  const logoBase64 = '/logo.png';
 
   // Form
   const [formData, setFormData] = useState({
@@ -399,9 +407,9 @@ export const ProductionOrders = ({
 
   return (
     <div className="p-4 md:p-6 space-y-6 pb-24">
-      <div className="flex items-center justify-between gap-2">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <PageBreadcrumb title="Lệnh sản xuất" onBack={onBack} />
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 justify-end flex-1">
           <ExcelButton onClick={exportToExcel} />
           <SortButton
             currentSort={sortBy}
@@ -419,6 +427,21 @@ export const ProductionOrders = ({
             variant={showFilter ? 'primary' : 'outline'}
             onClick={() => setShowFilter((f) => !f)}
             icon={Search}
+          />
+          <SaveImageButton
+            onClick={() => {
+              if (reportRef.current) {
+                exportTableImage({
+                  element: reportRef.current,
+                  fileName: `Lenh_San_Xuat_${new Date().toLocaleDateString('vi-VN').replace(/\//g, '-')}.png`,
+                  addToast,
+                  onStart: () => setIsCapturingTable(true),
+                  onEnd: () => setIsCapturingTable(false),
+                });
+              }
+            }}
+            isCapturing={isCapturingTable}
+            title="Lưu ảnh báo cáo"
           />
         </div>
       </div>
@@ -639,7 +662,108 @@ export const ProductionOrders = ({
         )}
       </div>
 
-      <FAB onClick={handleAddNew} label="Phát lệnh SX" />
+      {/* FAB — Thêm lệnh mới */}
+      <div className="fixed bottom-6 right-6 flex flex-col gap-3">
+        <SaveImageButton
+          onCapture={() => exportTableImage(reportRef, 'Danh_sach_lenh_san_xuat')}
+          label="Xuất báo cáo"
+        />
+        <FAB onClick={() => setShowModal(true)} label="Phát lệnh mới" />
+      </div>
+
+      {/* Hidden Ref for Report Capture */}
+      <div style={{ position: 'absolute', left: '-9999px', top: 0 }}>
+        <div ref={reportRef} className="p-8 bg-white" style={{ width: '1200px' }}>
+          <div className="flex items-center justify-between mb-8 pb-4 border-b-2 border-primary/20">
+            <div className="flex items-center gap-4">
+              <div className="w-16 h-16 bg-primary rounded-2xl flex items-center justify-center shadow-lg">
+                <Factory size={32} className="text-white" />
+              </div>
+              <div>
+                <h1 className="text-2xl font-black text-gray-800 tracking-tight uppercase">
+                  DANH SÁCH LỆNH SẢN XUẤT
+                </h1>
+                <p className="text-sm text-gray-500 font-bold uppercase tracking-widest mt-1">
+                  Hệ thống CDX-2026 • {new Date().toLocaleDateString('vi-VN')}
+                </p>
+              </div>
+            </div>
+            <div className="text-right">
+              <p className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] mb-1">
+                Xác nhận bởi
+              </p>
+              <p className="text-xs font-bold text-gray-800 uppercase bg-gray-50 px-3 py-1 rounded-lg border border-gray-100 italic">
+                {user.full_name}
+              </p>
+            </div>
+          </div>
+
+          <table className="w-full text-left border-collapse whitespace-nowrap">
+            <thead>
+              <tr className="bg-primary text-white">
+                <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider">
+                  Mã lệnh
+                </th>
+                <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider">
+                  Sản phẩm
+                </th>
+                <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-center">
+                  SL Kế hoạch
+                </th>
+                <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-center">
+                  Hoàn thành
+                </th>
+                <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider">
+                  Kho vật tư
+                </th>
+                <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-right">
+                  Ngày phát
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {filteredOrders.map((order) => (
+                <tr key={order.id} className="border-b border-gray-100">
+                  <td className="px-4 py-3.5 text-xs font-black text-primary uppercase">
+                    {order.ma_lenh}
+                  </td>
+                  <td className="px-4 py-3.5 text-xs font-bold text-gray-800">
+                    {order.san_pham_bom?.ten_san_pham}
+                  </td>
+                  <td className="px-4 py-3.5 text-xs font-black text-center text-gray-700">
+                    {order.so_luong_ke_hoach}
+                  </td>
+                  <td className="px-4 py-3.5 text-xs font-black text-center text-green-600">
+                    {order.so_luong_hoan_thanh}
+                  </td>
+                  <td className="px-4 py-3.5 text-xs font-bold text-gray-500">
+                    {order.warehouses?.name}
+                  </td>
+                  <td className="px-4 py-3.5 text-xs text-right text-gray-400 italic">
+                    {formatDate(order.ngay_phat_lenh)}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+
+          <div className="mt-8 pt-6 border-t border-gray-100 flex justify-between items-end">
+            <div className="text-[10px] text-gray-400 font-bold">
+              Ngày xuất: {new Date().toLocaleDateString('vi-VN')} •{' '}
+              {new Date().toLocaleTimeString('vi-VN')}
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-[10px] font-black text-gray-300 uppercase italic">
+                CDX ERP SYSTEM
+              </span>
+              <div className="w-1 h-1 bg-gray-200 rounded-full"></div>
+              <span className="text-[10px] font-bold text-gray-300 uppercase">
+                Operational Excellence
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
 
       {/* Create Order Modal */}
       <AnimatePresence>

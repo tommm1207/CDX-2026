@@ -49,6 +49,12 @@ export const MonthlySalary = ({
   // Refs
   const mainTableRef = useRef<HTMLDivElement>(null);
 
+  const formatDate = (dateStr: string) => {
+    if (!dateStr) return '';
+    const [y, m, d] = dateStr.split('-');
+    return `${parseInt(d)}/${parseInt(m)}/${y}`;
+  };
+
   useEffect(() => {
     fetchSalaries();
   }, [selectedMonth, selectedYear, isMainCustomRange, filterStartDate, filterEndDate]);
@@ -498,7 +504,7 @@ export const MonthlySalary = ({
             reportTitle: 'BẢNG TÍNH LƯƠNG',
             subtitle:
               isMainCustomRange && filterStartDate && filterEndDate
-                ? `Từ ngày: ${filterStartDate} - Đến ngày: ${filterEndDate}`
+                ? `Kỳ lương: ${formatDate(filterStartDate)} - ${formatDate(filterEndDate)}`
                 : `Kỳ lương: Tháng ${selectedMonth}/${selectedYear}`,
             showNetSalary: true,
           }}
@@ -899,7 +905,7 @@ export const MonthlySalary = ({
                       </h1>
                       <p className="text-[11px] font-bold text-gray-500 mt-0.5 whitespace-nowrap">
                         {isCustomRange
-                          ? `Kỳ lương: ${customRange.start} — ${customRange.end}`
+                          ? `Kỳ lương: ${formatDate(customRange.start)} — ${formatDate(customRange.end)}`
                           : (() => {
                               const dates = (selectedSalary.attendanceDetails || [])
                                 .map((a: any) => a.date)

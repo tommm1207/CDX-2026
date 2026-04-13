@@ -145,7 +145,7 @@ export const ReportExportFooter = ({ showNetSalary = false }: { showNetSalary?: 
             letterSpacing: '0.12em',
           }}
         >
-          Xuất lúc: {timeStr}
+          {timeStr}
         </span>
       </div>
     </div>

@@ -107,7 +107,7 @@ export const useTableCapture = () => {
             ${showNetSalary ? '<p style="margin:0 0 6px;font-size:8px;font-weight:700;color:#9CA3AF;letter-spacing:0.2em;text-transform:uppercase;">NET SALARY DETAILS</p>' : ''}
             <div style="display:flex;justify-content:space-between;align-items:center;border-top:1px solid #F3F4F6;padding-top:6px;">
               <span style="font-size:9px;font-weight:700;color:#D1D5DB;text-transform:uppercase;letter-spacing:0.12em;">CDX ERP SYSTEM</span>
-              <span style="font-size:9px;font-weight:700;color:#D1D5DB;text-transform:uppercase;letter-spacing:0.12em;">Xuất lúc: ${timeStr}</span>
+              <span style="font-size:9px;font-weight:700;color:#D1D5DB;text-transform:uppercase;letter-spacing:0.12em;">${timeStr}</span>
             </div>
           </div>
         `;

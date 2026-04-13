@@ -12,6 +12,7 @@ interface QuickAddMaterialModalProps {
   onSuccess: (newMaterial: any) => void;
   addToast?: (message: string, type?: any) => void;
   groups: any[];
+  color?: 'blue' | 'orange' | 'green';
 }
 
 export const QuickAddMaterialModal = ({
@@ -20,6 +21,7 @@ export const QuickAddMaterialModal = ({
   onSuccess,
   addToast,
   groups,
+  color = 'blue',
 }: QuickAddMaterialModalProps) => {
   const [name, setName] = useState('');
   const [unit, setUnit] = useState('');
@@ -116,7 +118,9 @@ export const QuickAddMaterialModal = ({
             className="bg-white rounded-3xl shadow-2xl w-full max-w-lg overflow-hidden flex flex-col max-h-[90vh]"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="bg-blue-600 p-6 text-white flex items-center justify-between">
+            <div
+              className={`p-6 text-white flex items-center justify-between ${color === 'orange' ? 'bg-orange-500' : color === 'green' ? 'bg-green-600' : 'bg-blue-600'}`}
+            >
               <div className="flex items-center gap-3">
                 <button
                   onClick={onClose}
@@ -165,7 +169,7 @@ export const QuickAddMaterialModal = ({
                     value={name}
                     onChange={(e) => setName(e.target.value)}
                     placeholder="VD: Xi măng Hà Tiên..."
-                    className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-blue-600/20"
+                    className={`w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 ${color === 'orange' ? 'focus:ring-orange-600/20' : color === 'green' ? 'focus:ring-green-600/20' : 'focus:ring-blue-600/20'}`}
                   />
                 </div>
                 <div className="space-y-1">
@@ -177,7 +181,7 @@ export const QuickAddMaterialModal = ({
                     value={unit}
                     onChange={(e) => setUnit(e.target.value)}
                     placeholder="VD: Cái, Kg, Bao..."
-                    className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-blue-600/20"
+                    className={`w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 ${color === 'orange' ? 'focus:ring-orange-600/20' : color === 'green' ? 'focus:ring-green-600/20' : 'focus:ring-blue-600/20'}`}
                   />
                 </div>
                 <div className="space-y-1">
@@ -187,7 +191,7 @@ export const QuickAddMaterialModal = ({
                     value={spec}
                     onChange={(e) => setSpec(e.target.value)}
                     placeholder="VD: 50kg, Φ12..."
-                    className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-blue-600/20"
+                    className={`w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 ${color === 'orange' ? 'focus:ring-orange-600/20' : color === 'green' ? 'focus:ring-green-600/20' : 'focus:ring-blue-600/20'}`}
                   />
                 </div>
                 <div className="md:col-span-2 space-y-1">
@@ -199,7 +203,7 @@ export const QuickAddMaterialModal = ({
                     value={desc}
                     onChange={(e) => setDesc(e.target.value)}
                     placeholder="Mô tả thêm về vật tư nếu cần..."
-                    className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-blue-600/20 resize-none"
+                    className={`w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 resize-none ${color === 'orange' ? 'focus:ring-orange-600/20' : color === 'green' ? 'focus:ring-green-600/20' : 'focus:ring-blue-600/20'}`}
                   />
                 </div>
               </form>
@@ -217,7 +221,7 @@ export const QuickAddMaterialModal = ({
                 form="quick-add-material-form"
                 type="submit"
                 disabled={loading}
-                className="px-8 py-2 bg-blue-600 text-white rounded-xl text-sm font-bold hover:bg-blue-700 transition-all shadow-lg shadow-blue-600/20 disabled:opacity-50"
+                className={`px-8 py-2 text-white rounded-xl text-sm font-bold transition-all shadow-lg disabled:opacity-50 ${color === 'orange' ? 'bg-orange-600 hover:bg-orange-700 shadow-orange-600/20' : color === 'green' ? 'bg-green-600 hover:bg-green-700 shadow-green-600/20' : 'bg-blue-600 hover:bg-blue-700 shadow-blue-600/20'}`}
               >
                 {loading ? 'Đang lưu...' : 'Lưu vật tư'}
               </button>

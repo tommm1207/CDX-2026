@@ -265,9 +265,11 @@ export default function App() {
                 'transfer',
                 'costs',
                 'construction-diary',
+                'xasa-gop',
+                'bom-lenh-sx',
+                'nhap-thanh-pham',
                 'attendance',
                 'payroll',
-                'hr-records',
                 'notes',
                 'reminders',
               ].includes(item.id);

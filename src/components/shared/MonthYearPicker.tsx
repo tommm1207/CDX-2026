@@ -41,7 +41,7 @@ export const MonthYearPicker = ({
       {/* Month Picker */}
       <div className="relative" ref={monthRef}>
         <div
-          className="flex flex-col items-start px-3 py-1 bg-gray-50 rounded-xl border border-gray-100 cursor-pointer hover:bg-white hover:border-gray-200 transition-all min-w-[100px]"
+          className="flex flex-col items-start px-2 py-1 bg-gray-50 rounded-xl border border-gray-100 cursor-pointer hover:bg-white hover:border-gray-200 transition-all"
           onClick={() => setIsMonthOpen(!isMonthOpen)}
         >
           <span className="text-[8px] font-black text-gray-400 uppercase tracking-widest">
@@ -86,7 +86,7 @@ export const MonthYearPicker = ({
       {/* Year Picker */}
       <div className="relative" ref={yearRef}>
         <div
-          className="flex flex-col items-start px-3 py-1 bg-gray-50 rounded-xl border border-gray-100 cursor-pointer hover:bg-white hover:border-gray-200 transition-all min-w-[100px]"
+          className="flex flex-col items-start px-2 py-1 bg-gray-50 rounded-xl border border-gray-100 cursor-pointer hover:bg-white hover:border-gray-200 transition-all"
           onClick={() => setIsYearOpen(!isYearOpen)}
         >
           <span className="text-[8px] font-black text-gray-400 uppercase tracking-widest">Năm</span>

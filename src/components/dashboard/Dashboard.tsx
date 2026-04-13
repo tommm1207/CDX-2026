@@ -134,7 +134,7 @@ export const Dashboard = ({ user, onNavigate, addToast, pendingApprovals = 0 }: 
     },
     {
       id: 'reminders',
-      label: 'Lời nhắc',
+      label: 'Thông báo',
       icon: Bell,
       color: 'bg-primary',
       description: 'Xem thông báo và nhắc nhở',
@@ -165,7 +165,7 @@ export const Dashboard = ({ user, onNavigate, addToast, pendingApprovals = 0 }: 
       <div className="flex flex-col gap-4">
         <div className="space-y-0.5">
           <h1 className="text-2xl md:text-3xl font-black text-gray-900 tracking-tight flex items-center gap-3">
-            Chào {user.full_name.split(' ').pop()}! 👋
+            Chào {user.full_name}! 👋
           </h1>
           <p className="text-gray-500 font-medium text-sm">
             Chúc bạn một ngày làm việc hiệu quả tại CDX.

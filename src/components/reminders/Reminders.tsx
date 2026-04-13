@@ -281,7 +281,7 @@ export const Reminders = ({
   return (
     <div className="p-4 md:p-6 space-y-6 pb-24">
       <div className="flex items-center justify-between gap-2">
-        <PageBreadcrumb title="Thiết lập Thông báo" onBack={onBack} />
+        <PageBreadcrumb title="Thông báo" onBack={onBack} />
         <div className="flex items-center gap-2 justify-end flex-1">
           {filteredReminders.length > 0 && (
             <Button

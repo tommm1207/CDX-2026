@@ -42,29 +42,35 @@ export const Attendance = ({
     try {
       const isAdmin = ['admin', 'develop'].includes(user.role?.toLowerCase() || '');
 
-      let query = supabase
-        .from('users')
-        .select('*')
-        .neq('status', 'Nghỉ việc')
-        .neq('status', 'Đã xóa')
-        .neq('role', 'Develop')
-        .eq('has_salary', true);
+      let query = supabase.from('users').select('*');
 
       if (!isAdmin) {
         query = query.eq('id', user.id);
+      } else {
+        query = query
+          .neq('status', 'Nghỉ việc')
+          .neq('status', 'Đã xóa')
+          .neq('role', 'Develop')
+          .eq('has_salary', true);
       }
 
       const { data: empData } = await query.order('code');
       if (empData) setEmployees(empData);
 
       const startDate = `${selectedYear}-${String(selectedMonth).padStart(2, '0')}-01`;
-      const endDate = new Date(selectedYear, selectedMonth, 0).toISOString().split('T')[0];
+      const endDate = `${selectedYear}-${String(selectedMonth).padStart(2, '0')}-${String(daysInMonth).padStart(2, '0')}`;
 
-      const { data: attData } = await supabase
+      let attQuery = supabase
         .from('attendance')
         .select('*')
         .gte('date', startDate)
         .lte('date', endDate);
+
+      if (!isAdmin) {
+        attQuery = attQuery.eq('employee_id', user.id);
+      }
+
+      const { data: attData } = await attQuery;
 
       if (attData) setAttendance(attData);
     } catch (err) {

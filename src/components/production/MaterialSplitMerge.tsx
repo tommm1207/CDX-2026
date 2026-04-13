@@ -25,6 +25,8 @@ import { formatDate, formatNumber } from '@/utils/format';
 import { isActiveWarehouse, getAvailableStock } from '@/utils/inventory';
 import { getAllowedWarehouses } from '@/utils/helpers';
 import { utils, writeFile } from 'xlsx';
+import { QuickAddMaterialModal } from '../shared/QuickAddMaterialModal';
+import { useInventoryData } from '@/hooks/useInventoryData';
 
 // ============================
 // Material Split / Merge
@@ -39,9 +41,14 @@ export const MaterialSplitMerge = ({
   addToast?: (message: string, type?: ToastType) => void;
 }) => {
   const [history, setHistory] = useState<any[]>([]);
-  const [materials, setMaterials] = useState<any[]>([]);
-  const [warehouses, setWarehouses] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loadingHistory, setLoadingHistory] = useState(true);
+  const {
+    warehouses,
+    materials: inventoryMaterials,
+    groups,
+    refreshAll,
+  } = useInventoryData(user.data_view_permission);
+  const materials = inventoryMaterials || [];
   const [showModal, setShowModal] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [mode, setMode] = useState<'xa' | 'gop'>('xa');
@@ -50,6 +57,9 @@ export const MaterialSplitMerge = ({
     (localStorage.getItem(`sort_pref_splitMerge_${user.id}`) as SortOption) || 'newest',
   );
   const [showFilter, setShowFilter] = useState(false);
+  const [showAddMaterial, setShowAddMaterial] = useState(false);
+  const [showDetailPhieu, setShowDetailPhieu] = useState(false);
+  const [selectedPhieu, setSelectedPhieu] = useState<any>(null);
 
   // Form
   const [kho_id, setKhoId] = useState('');
@@ -76,12 +86,10 @@ export const MaterialSplitMerge = ({
 
   useEffect(() => {
     fetchHistory();
-    fetchMaterials();
-    fetchWarehouses();
   }, []);
 
   const fetchHistory = async () => {
-    setLoading(true);
+    setLoadingHistory(true);
     try {
       const { data, error } = await supabase
         .from('xasa_gop_phieu')
@@ -95,28 +103,15 @@ export const MaterialSplitMerge = ({
     } catch (err: any) {
       console.error('Error:', err);
     } finally {
-      setLoading(false);
+      setLoadingHistory(false);
     }
   };
 
   const fetchMaterials = async () => {
-    const { data } = await supabase
-      .from('materials')
-      .select('id, name, code, unit')
-      .or('status.is.null,status.neq.Đã xóa')
-      .order('name');
-    if (data) setMaterials(data);
+    /* Removed, use hook instead */
   };
-
   const fetchWarehouses = async () => {
-    let query = supabase
-      .from('warehouses')
-      .select('id, name, status')
-      .or('status.is.null,status.neq.Đã xóa');
-    const allowed = getAllowedWarehouses(user.data_view_permission);
-    if (allowed) query = query.in('id', allowed);
-    const { data } = await query;
-    if (data) setWarehouses(data.filter(isActiveWarehouse));
+    /* Removed, use hook instead */
   };
 
   const generateCode = (type: 'xa' | 'gop') => {
@@ -509,7 +504,7 @@ export const MaterialSplitMerge = ({
       </AnimatePresence>
 
       <div className="space-y-3">
-        {loading ? (
+        {loadingHistory ? (
           <div className="flex flex-col items-center py-12 text-gray-400">
             <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin mb-2" />
             <p className="text-sm">Đang tải...</p>
@@ -529,85 +524,55 @@ export const MaterialSplitMerge = ({
             return (
               <div
                 key={item.id}
-                className="bg-white rounded-2xl p-4 border border-gray-100 shadow-sm transition-all hover:shadow-md"
+                onClick={() => {
+                  setSelectedPhieu(item);
+                  setShowDetailPhieu(true);
+                }}
+                className="bg-white rounded-xl py-1.5 px-3 border border-gray-100 shadow-sm transition-all hover:shadow-md cursor-pointer group active:scale-[0.99] flex items-center justify-between gap-2"
               >
-                <div className="flex items-center justify-between mb-2">
-                  <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2 min-w-0 flex-1">
+                  <div className="relative shrink-0">
                     <div
-                      className={`w-10 h-10 rounded-xl flex items-center justify-center ${item.loai === 'xa' ? 'bg-orange-100' : 'bg-blue-100'}`}
+                      className={`w-7 h-7 rounded-lg flex items-center justify-center ${item.loai === 'xa' ? 'bg-orange-50' : 'bg-blue-50'}`}
                     >
                       {item.loai === 'xa' ? (
-                        <Scissors size={20} className="text-orange-600" />
+                        <Scissors size={14} className="text-orange-500" />
                       ) : (
-                        <Merge size={20} className="text-blue-600" />
+                        <Merge size={14} className="text-blue-500" />
                       )}
                     </div>
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <h4 className="font-bold text-gray-800 text-sm">{item.ma_phieu}</h4>
-                        {(() => {
-                          const badge = getStatusBadge(item.trang_thai);
-                          return (
-                            <span
-                              className={`px-2 py-0.5 rounded-lg text-[10px] font-bold ${badge.bg} ${badge.text}`}
-                            >
-                              {badge.label}
-                            </span>
-                          );
-                        })()}
-                      </div>
-                      <p className="text-[10px] text-gray-400">
-                        {formatDate(item.ngay)} • {item.warehouses?.name} • {item.users?.full_name}
-                      </p>
-                    </div>
                   </div>
-                  <span
-                    className={`px-2 py-0.5 rounded-lg text-[10px] font-bold ${item.loai === 'xa' ? 'bg-orange-100 text-orange-700' : 'bg-blue-100 text-blue-700'}`}
-                  >
-                    {item.loai === 'xa' ? 'Xả' : 'Gộp'}
-                  </span>
-                </div>
-
-                {/* Brief summary */}
-                <div className="flex items-center gap-2 text-xs text-gray-500 bg-gray-50 rounded-xl px-3 py-2">
-                  <span className="truncate">
-                    {nguonItems.map((n: any) => n.materials?.name || 'N/A').join(', ')}
-                  </span>
-                  <ArrowRight size={12} className="shrink-0 text-gray-400" />
-                  <span className="truncate">
-                    {raItems.map((r: any) => r.materials?.name || 'N/A').join(', ')}
-                  </span>
-                </div>
-
-                {item.ghi_chu && (
-                  <p className="mt-2 text-[10px] text-gray-400 italic px-1">“{item.ghi_chu}”</p>
-                )}
-
-                {item.trang_thai === 'cho_duyet' &&
-                  (user.role === 'Admin' || user.role === 'Develop') && (
-                    <div className="mt-4 flex gap-2">
-                      <Button
-                        variant="success"
-                        size="sm"
-                        icon={Package}
-                        onClick={() => handleApprovePhieu(item)}
-                        className="flex-1"
-                        isLoading={submitting}
-                      >
-                        Duyệt phiếu
-                      </Button>
-                      <Button
-                        variant="danger"
-                        size="sm"
-                        icon={Trash2}
-                        onClick={() => handleRejectPhieu(item)}
-                        className="flex-1"
-                        isLoading={submitting}
-                      >
-                        Từ chối
-                      </Button>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-1.5 no-wrap overflow-hidden">
+                      <h4 className="font-bold text-gray-800 text-[11px] truncate shrink min-w-0">
+                        {nguonItems.map((n: any) => n.materials?.name || '...').join(', ')}
+                        <ArrowRight size={10} className="inline mx-1 text-gray-400" />
+                        {raItems.map((r: any) => r.materials?.name || '...').join(', ')}
+                      </h4>
+                      <span className="text-[7px] font-normal text-gray-200 shrink-0">
+                        {item.ma_phieu.split('-')[1] || item.ma_phieu}
+                      </span>
+                      {(() => {
+                        const badge = getStatusBadge(item.trang_thai);
+                        return (
+                          <span
+                            className={`px-1 rounded text-[7px] font-bold shrink-0 ${badge.bg} ${badge.text}`}
+                          >
+                            {badge.label}
+                          </span>
+                        );
+                      })()}
                     </div>
-                  )}
+                    <p className="text-[8px] text-gray-400/40 font-medium truncate">
+                      {formatDate(item.ngay)} • {item.warehouses?.name} • {item.users?.full_name}
+                    </p>
+                  </div>
+                </div>
+                <span
+                  className={`px-1 py-0.5 rounded text-[7px] font-black shrink-0 ${item.loai === 'xa' ? 'text-orange-400 border border-orange-100' : 'text-blue-400 border border-blue-100'}`}
+                >
+                  {item.loai === 'xa' ? 'Xả' : 'Gộp'}
+                </span>
               </div>
             );
           })
@@ -670,9 +635,18 @@ export const MaterialSplitMerge = ({
                   <>
                     {/* Nguồn xả */}
                     <div className="bg-orange-50 rounded-2xl p-4 border border-orange-100">
-                      <h4 className="text-xs font-bold text-orange-700 uppercase mb-3">
-                        📦 Vật tư nguồn
-                      </h4>
+                      <div className="flex items-center justify-between mb-1">
+                        <h4 className="text-xs font-bold text-orange-700 uppercase">
+                          📦 Vật tư nguồn
+                        </h4>
+                        <button
+                          type="button"
+                          onClick={() => setShowAddMaterial(true)}
+                          className="text-[10px] font-bold text-orange-600 flex items-center gap-1 hover:underline"
+                        >
+                          <Plus size={12} /> Thêm vật tư mới
+                        </button>
+                      </div>
                       <CreatableSelect
                         value={nguonXa.material_id}
                         options={materialOptions}
@@ -681,13 +655,15 @@ export const MaterialSplitMerge = ({
                         allowCreate={false}
                       />
                       {nguonXa.material_id && (
-                        <div className="mt-3 grid grid-cols-2 gap-3">
-                          <NumericInput
-                            label="Số lượng xả"
-                            value={nguonXa.so_luong}
-                            onChange={(val) => setNguonXa({ ...nguonXa, so_luong: val })}
-                          />
-                          <div>
+                        <div className="mt-3 grid grid-cols-12 gap-3">
+                          <div className="col-span-8">
+                            <NumericInput
+                              label="Số lượng xả"
+                              value={nguonXa.so_luong}
+                              onChange={(val) => setNguonXa({ ...nguonXa, so_luong: val })}
+                            />
+                          </div>
+                          <div className="col-span-4">
                             <label className="text-[10px] font-bold text-gray-400 uppercase block mb-1">
                               ĐVT
                             </label>
@@ -695,7 +671,7 @@ export const MaterialSplitMerge = ({
                               type="text"
                               value={nguonXa.don_vi}
                               onChange={(e) => setNguonXa({ ...nguonXa, don_vi: e.target.value })}
-                              className="w-full px-3 py-2.5 rounded-xl border border-gray-200 text-sm"
+                              className="w-full px-3 py-2.5 rounded-xl border border-gray-200 text-sm bg-gray-50/50"
                             />
                           </div>
                           {kho_id && (
@@ -744,7 +720,7 @@ export const MaterialSplitMerge = ({
                               allowCreate={false}
                             />
                           </div>
-                          <div className="w-24">
+                          <div className="w-20 md:w-24">
                             <NumericInput
                               label=""
                               value={o.so_luong}
@@ -778,10 +754,7 @@ export const MaterialSplitMerge = ({
                         </Button>
                       </div>
                       {nguonGop.map((n, idx) => (
-                        <div
-                          key={idx}
-                          className="flex items-center gap-2 mb-2 bg-blue-50 rounded-xl p-3"
-                        >
+                        <div className="flex items-center gap-2 mb-2 bg-blue-50 rounded-xl p-3">
                           <div className="flex-1">
                             <CreatableSelect
                               value={n.material_id}
@@ -801,7 +774,7 @@ export const MaterialSplitMerge = ({
                               allowCreate={false}
                             />
                           </div>
-                          <div className="w-24">
+                          <div className="w-20 md:w-24">
                             <NumericInput
                               label=""
                               value={n.so_luong}
@@ -823,10 +796,19 @@ export const MaterialSplitMerge = ({
                     </div>
 
                     {/* Output gộp */}
-                    <div className="bg-green-50 rounded-2xl p-4 border border-green-100">
-                      <h4 className="text-xs font-bold text-green-700 uppercase mb-3">
-                        🔗 Vật tư gộp ra
-                      </h4>
+                    <div className="bg-blue-50 rounded-2xl p-4 border border-blue-100">
+                      <div className="flex items-center justify-between mb-1">
+                        <h4 className="text-xs font-bold text-blue-700 uppercase">
+                          🔗 Vật tư gộp ra
+                        </h4>
+                        <button
+                          type="button"
+                          onClick={() => setShowAddMaterial(true)}
+                          className="text-[10px] font-bold text-blue-600 flex items-center gap-1 hover:underline"
+                        >
+                          <Plus size={12} /> Thêm vật tư mới
+                        </button>
+                      </div>
                       <CreatableSelect
                         value={outputGop.material_id}
                         options={materialOptions}
@@ -843,13 +825,15 @@ export const MaterialSplitMerge = ({
                         allowCreate={false}
                       />
                       {outputGop.material_id && (
-                        <div className="mt-3 grid grid-cols-2 gap-3">
-                          <NumericInput
-                            label="Số lượng"
-                            value={outputGop.so_luong}
-                            onChange={(val) => setOutputGop({ ...outputGop, so_luong: val })}
-                          />
-                          <div>
+                        <div className="mt-3 grid grid-cols-12 gap-3">
+                          <div className="col-span-8">
+                            <NumericInput
+                              label="Số lượng"
+                              value={outputGop.so_luong}
+                              onChange={(val) => setOutputGop({ ...outputGop, so_luong: val })}
+                            />
+                          </div>
+                          <div className="col-span-4">
                             <label className="text-[10px] font-bold text-gray-400 uppercase block mb-1">
                               ĐVT
                             </label>
@@ -903,6 +887,198 @@ export const MaterialSplitMerge = ({
           </div>
         )}
       </AnimatePresence>
+
+      <AnimatePresence>
+        {showDetailPhieu && selectedPhieu && (
+          <div
+            className="fixed inset-0 z-[150] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
+            onClick={() => setShowDetailPhieu(false)}
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              className="bg-white rounded-[2rem] md:rounded-[2.5rem] shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div
+                className={`p-6 text-white flex items-center justify-between rounded-t-[2rem] md:rounded-t-[2.5rem] flex-shrink-0 ${selectedPhieu.loai === 'xa' ? 'bg-orange-500' : 'bg-blue-500'}`}
+              >
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-white/20 rounded-xl">
+                    {selectedPhieu.loai === 'xa' ? <Scissors size={24} /> : <Merge size={24} />}
+                  </div>
+                  <div>
+                    <h2 className="font-bold text-lg">Chi tiết phiếu {selectedPhieu.ma_phieu}</h2>
+                    <p className="text-xs text-white/70">
+                      Loại: {selectedPhieu.loai === 'xa' ? 'Xả vật tư' : 'Gộp vật tư'}
+                    </p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setShowDetailPhieu(false)}
+                  className="p-2 hover:bg-white/20 rounded-xl transition-all"
+                >
+                  <X size={24} />
+                </button>
+              </div>
+
+              <div className="flex-1 overflow-y-auto p-6 space-y-6">
+                {/* Meta info */}
+                <div className="grid grid-cols-2 gap-4 bg-gray-50 p-4 rounded-2xl">
+                  <div>
+                    <p className="text-[10px] text-gray-400 font-bold uppercase">Ngày thực hiện</p>
+                    <p className="text-sm font-bold text-gray-800">
+                      {formatDate(selectedPhieu.ngay)}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-[10px] text-gray-400 font-bold uppercase">Kho xử lý</p>
+                    <p className="text-sm font-bold text-gray-800">
+                      {selectedPhieu.warehouses?.name}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-[10px] text-gray-400 font-bold uppercase">Người tạo</p>
+                    <p className="text-sm font-bold text-gray-800">
+                      {selectedPhieu.users?.full_name}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-[10px] text-gray-400 font-bold uppercase">Trạng thái</p>
+                    <span
+                      className={`px-2 py-0.5 rounded-lg text-xs font-bold ${getStatusBadge(selectedPhieu.trang_thai).bg} ${getStatusBadge(selectedPhieu.trang_thai).text}`}
+                    >
+                      {getStatusBadge(selectedPhieu.trang_thai).label}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Groups */}
+                <div className="space-y-4">
+                  <div>
+                    <h4 className="text-xs font-bold text-gray-400 uppercase mb-2 ml-1">
+                      📦 Vật tư nguồn
+                    </h4>
+                    <div className="bg-blue-50/50 border border-blue-100 rounded-2xl overflow-hidden">
+                      <table className="w-full text-left text-xs">
+                        <thead className="bg-blue-100/50">
+                          <tr>
+                            <th className="px-4 py-2 font-bold text-blue-800">Tên vật tư</th>
+                            <th className="px-4 py-2 font-bold text-blue-800 text-center">
+                              Số lượng
+                            </th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-blue-100">
+                          {(selectedPhieu.xasa_gop_chi_tiet || [])
+                            .filter((d: any) => d.vai_tro === 'nguon')
+                            .map((d: any, i: number) => (
+                              <tr key={i}>
+                                <td className="px-4 py-3">
+                                  <p className="font-bold text-gray-800">{d.materials?.name}</p>
+                                  <p className="text-[10px] text-gray-400">{d.materials?.code}</p>
+                                </td>
+                                <td className="px-4 py-3 text-center font-bold text-blue-700">
+                                  {formatNumber(d.so_luong)} {d.don_vi}
+                                </td>
+                              </tr>
+                            ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+
+                  <div>
+                    <h4 className="text-xs font-bold text-gray-400 uppercase mb-2 ml-1">
+                      {selectedPhieu.loai === 'xa' ? '✂️ Mảnh xả ra' : '🔗 Vật tư gộp lại'}
+                    </h4>
+                    <div className="bg-green-50/50 border border-green-100 rounded-2xl overflow-hidden">
+                      <table className="w-full text-left text-xs">
+                        <thead className="bg-green-100/50">
+                          <tr>
+                            <th className="px-4 py-2 font-bold text-green-800">Tên vật tư</th>
+                            <th className="px-4 py-2 font-bold text-green-800 text-center">
+                              Số lượng
+                            </th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-green-100">
+                          {(selectedPhieu.xasa_gop_chi_tiet || [])
+                            .filter((d: any) => d.vai_tro === 'ra')
+                            .map((d: any, i: number) => (
+                              <tr key={i}>
+                                <td className="px-4 py-3">
+                                  <p className="font-bold text-gray-800">{d.materials?.name}</p>
+                                  <p className="text-[10px] text-gray-400">{d.materials?.code}</p>
+                                </td>
+                                <td className="px-4 py-3 text-center font-bold text-green-700">
+                                  {formatNumber(d.so_luong)} {d.don_vi}
+                                </td>
+                              </tr>
+                            ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                </div>
+
+                {selectedPhieu.ghi_chu && (
+                  <div className="bg-gray-50 p-4 rounded-2xl">
+                    <p className="text-[10px] text-gray-400 font-bold uppercase mb-1">Ghi chú</p>
+                    <p className="text-sm text-gray-600 italic">“{selectedPhieu.ghi_chu}”</p>
+                  </div>
+                )}
+              </div>
+
+              {selectedPhieu.trang_thai === 'cho_duyet' &&
+                (user.role === 'Admin' || user.role === 'Develop') && (
+                  <div className="p-6 border-t border-gray-100 bg-gray-50 flex gap-3">
+                    <Button
+                      variant="danger"
+                      className="flex-1 rounded-2xl"
+                      icon={Trash2}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleRejectPhieu(selectedPhieu);
+                        setShowDetailPhieu(false);
+                      }}
+                      isLoading={submitting}
+                    >
+                      Từ chối
+                    </Button>
+                    <Button
+                      variant="success"
+                      className="flex-1 rounded-2xl"
+                      icon={Package}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleApprovePhieu(selectedPhieu);
+                        setShowDetailPhieu(false);
+                      }}
+                      isLoading={submitting}
+                    >
+                      Duyệt phiếu
+                    </Button>
+                  </div>
+                )}
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      <QuickAddMaterialModal
+        show={showAddMaterial}
+        onClose={() => setShowAddMaterial(false)}
+        onSuccess={(newMat) => {
+          refreshAll();
+          setShowAddMaterial(false);
+          if (addToast) addToast(`Đã thêm vật tư mới: ${newMat.name}`, 'success');
+        }}
+        groups={groups}
+        color={mode === 'xa' ? 'orange' : 'blue'}
+        addToast={addToast}
+      />
     </div>
   );
 };

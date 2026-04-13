@@ -63,6 +63,8 @@ export const AppRouter = ({
   fetchPendingCount,
   setHideBottomNav,
 }: AppRouterProps) => {
+  const isAdmin = ['admin', 'develop'].includes(user.role?.toLowerCase() || '');
+
   switch (currentPage) {
     case 'dashboard':
       return (
@@ -74,6 +76,16 @@ export const AppRouter = ({
         />
       );
     case 'hr-records':
+      if (!isAdmin) {
+        return (
+          <Dashboard
+            user={user}
+            onNavigate={navigateTo}
+            addToast={addToast}
+            pendingApprovals={pendingCount}
+          />
+        );
+      }
       return <HRRecords user={user} onBack={goBack} addToast={addToast} />;
     case 'attendance':
       return <Attendance user={user} onBack={goBack} addToast={addToast} />;
@@ -137,7 +149,7 @@ export const AppRouter = ({
         />
       );
     case 'cost-report':
-      if (!['admin', 'develop'].includes(user.role?.toLowerCase() || '')) {
+      if (!isAdmin) {
         return (
           <Dashboard
             user={user}
@@ -162,7 +174,7 @@ export const AppRouter = ({
     case 'payroll':
       return <MonthlySalary user={user} onBack={goBack} addToast={addToast} />;
     case 'salary-settings':
-      if (!['admin', 'develop'].includes(user.role?.toLowerCase() || ''))
+      if (!isAdmin) {
         return (
           <Dashboard
             user={user}
@@ -171,6 +183,7 @@ export const AppRouter = ({
             pendingApprovals={pendingCount}
           />
         );
+      }
       return <SalarySettings user={user} onBack={goBack} addToast={addToast} />;
     case 'notes':
       return (
@@ -193,7 +206,7 @@ export const AppRouter = ({
     case 'partners':
       return <PlaceholderPage title="Khách hàng & nhà cung cấp" onBack={goBack} />;
     case 'inventory-report':
-      if (!['admin', 'develop'].includes(user.role?.toLowerCase() || '')) {
+      if (!isAdmin) {
         return (
           <Dashboard
             user={user}
@@ -244,7 +257,7 @@ export const AppRouter = ({
       );
 
     case 'trash':
-      if (!['admin', 'develop'].includes(user.role?.toLowerCase() || '')) {
+      if (!isAdmin) {
         return (
           <Dashboard
             user={user}

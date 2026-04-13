@@ -39,16 +39,16 @@ export const MonthlySalary = ({
     try {
       const isAdmin = ['admin', 'develop'].includes(user.role?.toLowerCase() || '');
 
-      let query = supabase
-        .from('users')
-        .select('*')
-        .neq('status', 'Nghỉ việc')
-        .neq('status', 'Đã xóa')
-        .neq('role', 'Develop')
-        .eq('has_salary', true);
+      let query = supabase.from('users').select('*');
 
       if (!isAdmin) {
         query = query.eq('id', user.id);
+      } else {
+        query = query
+          .neq('status', 'Nghỉ việc')
+          .neq('status', 'Đã xóa')
+          .neq('role', 'Develop')
+          .eq('has_salary', true);
       }
 
       const { data: employees } = await query.order('code');
@@ -58,22 +58,31 @@ export const MonthlySalary = ({
 
       const startDate = `${selectedYear}-${String(selectedMonth).padStart(2, '0')}-01`;
       const endDate = new Date(selectedYear, selectedMonth, 0).toISOString().split('T')[0];
-      const { data: att } = await supabase
+      let attQuery = supabase
         .from('attendance')
         .select('*')
         .gte('date', startDate)
         .lte('date', endDate);
-
-      const { data: adv } = await supabase
+      let advQuery = supabase
         .from('advances')
         .select('*')
         .gte('date', startDate)
         .lte('date', endDate);
-      const { data: all } = await supabase
+      let allQuery = supabase
         .from('allowances')
         .select('*')
         .gte('date', startDate)
         .lte('date', endDate);
+
+      if (!isAdmin) {
+        attQuery = attQuery.eq('employee_id', user.id);
+        advQuery = advQuery.eq('employee_id', user.id);
+        allQuery = allQuery.eq('employee_id', user.id);
+      }
+
+      const { data: att } = await attQuery;
+      const { data: adv } = await advQuery;
+      const { data: all } = await allQuery;
 
       const calculated = employees.map((emp) => {
         const set = settings

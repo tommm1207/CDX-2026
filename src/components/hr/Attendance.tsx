@@ -1,5 +1,6 @@
-import { useState, useEffect } from 'react';
-import { CalendarCheck, Plus, X, Users, Check, RefreshCw, Search } from 'lucide-react';
+import { useState, useEffect, useRef, useCallback } from 'react';
+import * as XLSX from 'xlsx';
+import { CalendarCheck, Plus, X, Users, Check, RefreshCw, Search, Camera } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { supabase } from '@/lib/supabase';
 import { Employee } from '@/types';
@@ -9,9 +10,9 @@ import { ToastType } from '../shared/Toast';
 import { MonthYearPicker } from '../shared/MonthYearPicker';
 import { Button } from '../shared/Button';
 import { SortButton, SortOption } from '../shared/SortButton';
-
 import { AttendanceTable } from './AttendanceTable';
-import { FAB } from '../shared/FAB';
+import { ReportImagePreviewModal } from '../shared/ReportImagePreviewModal';
+import { useTableCapture } from '../shared/useTableCapture';
 
 export const Attendance = ({
   user,
@@ -32,6 +33,9 @@ export const Attendance = ({
   const [loading, setLoading] = useState(true);
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1);
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
+  const [previewImageUrl, setPreviewImageUrl] = useState<string | null>(null);
+  const tableRef = useRef<HTMLDivElement>(null);
+  const { captureElement, isCapturing: isCapturingTable } = useTableCapture();
 
   useEffect(() => {
     fetchData();
@@ -349,11 +353,99 @@ export const Attendance = ({
       return 0;
     });
 
+  const handleCaptureTable = useCallback(async () => {
+    if (!tableRef.current) return;
+    const subtitle = `Ngày: ${String(new Date().getDate()).padStart(2, '0')}/${String(new Date().getMonth() + 1).padStart(2, '0')}/${new Date().getFullYear()}`;
+    const dataUrl = await captureElement(tableRef.current, {
+      reportTitle: 'BẢNG CHẤM CÔNG',
+      subtitle,
+      fileName: `CDX_ChamCong_T${selectedMonth}_${selectedYear}.png`,
+    });
+    if (dataUrl) setPreviewImageUrl(dataUrl);
+    else if (addToast) addToast('Lỗi khi tạo ảnh chấm công', 'error');
+  }, [tableRef, selectedMonth, selectedYear, captureElement, addToast]);
+
+  const handleExportExcel = useCallback(() => {
+    const data: any[][] = [
+      [
+        'Mã NV',
+        'Họ tên',
+        ...Array.from(
+          { length: new Date(selectedYear, selectedMonth, 0).getDate() },
+          (_, i) => `${i + 1}`,
+        ),
+        'Tổng công',
+      ],
+    ];
+    employees.forEach((emp) => {
+      const row: any[] = [emp.code || emp.id.slice(0, 8), emp.full_name];
+      let total = 0;
+      const daysCount = new Date(selectedYear, selectedMonth, 0).getDate();
+      for (let d = 1; d <= daysCount; d++) {
+        const dateStr = `${selectedYear}-${String(selectedMonth).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+        const att = attendance.find((a) => a.employee_id === emp.id && a.date === dateStr);
+        const val =
+          att?.status === 'present'
+            ? 1
+            : att?.status === 'half-day'
+              ? 0.5
+              : att?.status === 'absent'
+                ? 0
+                : '';
+        if (typeof val === 'number') total += val;
+        row.push(val === '' ? '' : val);
+      }
+      row.push(total);
+      data.push(row);
+    });
+    const ws = XLSX.utils.aoa_to_sheet(data);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, `ChamCong_T${selectedMonth}_${selectedYear}`);
+    XLSX.writeFile(wb, `CDX_ChamCong_T${selectedMonth}_${selectedYear}.xlsx`);
+  }, [employees, attendance, selectedMonth, selectedYear]);
+
   return (
     <div className="p-4 md:p-6 space-y-6 pb-24 overflow-x-hidden">
-      <div className="flex items-center justify-between gap-2">
+      <div className="flex items-center justify-between gap-2 flex-wrap">
         <PageBreadcrumb title="Chấm công" onBack={onBack} />
-        <div className="flex items-center gap-2">
+        {/* Toolbar: [Chấm công] [Lưu ảnh] [Excel] [Sắp xếp] [Lọc] */}
+        <div className="flex items-center gap-1.5 flex-nowrap min-w-0 justify-end ml-auto">
+          {/* Nút Chấm công */}
+          {user.role !== 'User' && (
+            <Button
+              size="sm"
+              variant="primary"
+              onClick={openBulkModal}
+              className="flex items-center gap-1.5 flex-shrink min-w-0"
+              title="Chấm công hàng loạt"
+            >
+              <Users size={14} className="flex-shrink-0" />
+              <span className="hidden sm:inline text-[10px] font-black uppercase tracking-wider whitespace-nowrap">
+                Chấm công
+              </span>
+            </Button>
+          )}
+          {/* Lưu ảnh */}
+          <Button
+            size="icon"
+            variant="outline"
+            onClick={handleCaptureTable}
+            isLoading={isCapturingTable}
+            title="Lưu ảnh bảng chấm công"
+          >
+            {!isCapturingTable && <Camera size={16} />}
+          </Button>
+          {/* Xuất Excel */}
+          <Button size="icon" variant="outline" onClick={handleExportExcel} title="Xuất Excel">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none">
+              <rect width="24" height="24" rx="5" fill="#2D5A27" />
+              <path
+                d="M7.5 6L11 12l-3.5 6h3.5l1.5-3.5 1.5 3.5h3.5L14 12l3.5-6h-3.5L12.5 9.5 11 6z"
+                fill="white"
+              />
+            </svg>
+          </Button>
+          {/* Sắp xếp */}
           <SortButton
             currentSort={sortBy}
             onSortChange={(val) => {
@@ -365,18 +457,15 @@ export const Attendance = ({
               { value: 'newest', label: 'Tên A-Z' },
             ]}
           />
+          {/* Lọc */}
           <Button
             size="icon"
             variant={showFilter ? 'primary' : 'outline'}
             onClick={() => setShowFilter((f) => !f)}
-            icon={Search}
-          />
-          <MonthYearPicker
-            selectedMonth={selectedMonth}
-            selectedYear={selectedYear}
-            onMonthChange={setSelectedMonth}
-            onYearChange={setSelectedYear}
-          />
+            title="Lọc"
+          >
+            <Search size={16} />
+          </Button>
         </div>
       </div>
 
@@ -388,44 +477,83 @@ export const Attendance = ({
             exit={{ opacity: 0, height: 0 }}
             className="overflow-hidden"
           >
-            <div className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 space-y-2">
-              <label className="text-[10px] font-bold text-gray-400 uppercase">Tìm nhân viên</label>
-              <input
-                type="text"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                placeholder="Tên, mã NV..."
-                className="w-full px-3 py-2 rounded-lg border border-gray-200 text-xs outline-none focus:ring-2 focus:ring-primary/20"
-              />
+            <div className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 space-y-3">
+              <div className="flex items-center justify-between">
+                <label className="text-[10px] font-bold text-gray-400 uppercase">Bộ lọc</label>
+                <button
+                  onClick={() => {
+                    setSearchTerm('');
+                  }}
+                  className="text-[10px] font-bold text-primary hover:underline"
+                >
+                  Đặt lại
+                </button>
+              </div>
+              {/* Tháng/Năm */}
+              <div className="flex items-center gap-3">
+                <label className="text-[10px] font-bold text-gray-400 uppercase whitespace-nowrap">
+                  Kỳ:
+                </label>
+                <MonthYearPicker
+                  selectedMonth={selectedMonth}
+                  selectedYear={selectedYear}
+                  onMonthChange={setSelectedMonth}
+                  onYearChange={setSelectedYear}
+                />
+              </div>
+              {/* Tìm kiếm */}
+              <div className="relative">
+                <Search
+                  size={14}
+                  className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
+                />
+                <input
+                  type="text"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  placeholder="Tìm nhân viên..."
+                  className="w-full pl-8 pr-8 py-2 rounded-xl border border-gray-200 text-xs outline-none focus:ring-2 focus:ring-primary/20"
+                />
+                {searchTerm && (
+                  <button
+                    onClick={() => setSearchTerm('')}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                  >
+                    <X size={14} />
+                  </button>
+                )}
+              </div>
             </div>
           </motion.div>
         )}
       </AnimatePresence>
 
-      <AttendanceTable
-        employees={filteredEmployees}
-        days={days}
-        attendance={attendance}
-        loading={loading}
-        user={user}
-        selectedMonth={selectedMonth}
-        selectedYear={selectedYear}
-        onToggleAttendance={toggleAttendance}
-        onOpenEditModal={openEditModal}
-      />
+      <div ref={tableRef}>
+        <AttendanceTable
+          employees={filteredEmployees}
+          days={days}
+          attendance={attendance}
+          loading={loading}
+          user={user}
+          selectedMonth={selectedMonth}
+          selectedYear={selectedYear}
+          onToggleAttendance={toggleAttendance}
+          onOpenEditModal={openEditModal}
+        />
+      </div>
 
       {/* Edit Attendance Modal */}
       <AnimatePresence>
         {showEditModal && editingAtt && (
           <div
-            className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/50 backdrop-blur-md overflow-hidden"
+            className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center p-4 bg-black/50 backdrop-blur-md overflow-hidden"
             onClick={() => setShowEditModal(false)}
           >
             <motion.div
-              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              initial={{ opacity: 0, scale: 0.95, y: 30 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.95, y: 20 }}
-              className="bg-white rounded-[2rem] md:rounded-[2.5rem] shadow-2xl w-full max-w-sm overflow-hidden"
+              exit={{ opacity: 0, scale: 0.95, y: 30 }}
+              className="bg-white rounded-[2rem] md:rounded-[2.5rem] shadow-2xl w-full max-w-sm overflow-hidden max-h-[90dvh] flex flex-col"
               onClick={(e) => e.stopPropagation()}
             >
               <div className="bg-primary p-6 text-white flex items-center justify-between transition-colors">
@@ -455,7 +583,7 @@ export const Attendance = ({
                   <div className="grid grid-cols-1 gap-3">
                     <button
                       onClick={() => setEditFormData({ ...editFormData, status: 'present' })}
-                      className={`py-4 rounded-2xl text-sm font-bold border transition-all active:scale-95 flex items-center justify-center gap-2 ${editFormData.status === 'present' ? 'bg-green-500 text-white border-green-500 shadow-lg shadow-green-200' : 'bg-gray-50 text-gray-400 border-gray-100 hover:bg-gray-100'}`}
+                      className={`py-4 rounded-2xl text-sm font-bold border transition-all active:scale-95 flex items-center justify-center gap-2 min-h-[52px] ${editFormData.status === 'present' ? 'bg-primary text-white border-primary shadow-lg shadow-primary/20' : 'bg-gray-50 text-gray-400 border-gray-100 hover:bg-gray-100'}`}
                     >
                       <Check size={18} /> ✓ 1 công
                     </button>
@@ -820,13 +948,13 @@ export const Attendance = ({
           </div>
         )}
       </AnimatePresence>
-      {user.role !== 'User' && (
-        <FAB
-          onClick={openBulkModal}
-          label="Chấm công"
-          icon={Users}
-          showLabel={true}
-          color="bg-primary"
+
+      {/* Preview modal */}
+      {previewImageUrl && (
+        <ReportImagePreviewModal
+          imageDataUrl={previewImageUrl}
+          fileName={`CDX_ChamCong_T${selectedMonth}_${selectedYear}.png`}
+          onClose={() => setPreviewImageUrl(null)}
         />
       )}
     </div>

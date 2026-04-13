@@ -1,19 +1,26 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import * as XLSX from 'xlsx';
-import { Wallet, X, Eye, Printer, Download, Image as ImageIcon } from 'lucide-react';
-import { motion, AnimatePresence } from 'motion/react';
+import { Wallet, X, Image as ImageIcon, Camera, Search } from 'lucide-react';
 import { toPng } from 'html-to-image';
 import { logoBase64 } from '../../utils/logoBase64';
-import { useRef } from 'react';
+import { motion, AnimatePresence } from 'motion/react';
 import { supabase } from '@/lib/supabase';
 import { Employee } from '@/types';
 import { PageBreadcrumb } from '../shared/PageBreadcrumb';
 import { ToastType } from '../shared/Toast';
-import { formatCurrency, formatDate } from '@/utils/format';
+import { formatCurrency } from '@/utils/format';
 import { MonthYearPicker } from '../shared/MonthYearPicker';
 import { Button } from '../shared/Button';
-import { ExcelButton } from '../shared/ExcelButton';
+import { SortOption } from '../shared/SortButton';
 import { slugify, numberToVietnamese } from '@/utils/helpers';
+import { ReportImagePreviewModal } from '../shared/ReportImagePreviewModal';
+import {
+  PageToolbar,
+  FilterPanel,
+  HideZeroToggle,
+  FilterSearchInput,
+  DateRangeFilter,
+} from '../shared/PageToolbar';
 
 export const MonthlySalary = ({
   user,
@@ -29,10 +36,22 @@ export const MonthlySalary = ({
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1);
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
   const [isCapturing, setIsCapturing] = useState(false);
+  const [hideZero, setHideZero] = useState(false);
+  const [showFilter, setShowFilter] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [sortBy, setSortBy] = useState<SortOption>('date');
+  const [previewImageUrl, setPreviewImageUrl] = useState<string | null>(null);
+
+  const [isMainCustomRange, setIsMainCustomRange] = useState(false);
+  const [filterStartDate, setFilterStartDate] = useState('');
+  const [filterEndDate, setFilterEndDate] = useState('');
+
+  // Refs
+  const mainTableRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     fetchSalaries();
-  }, [selectedMonth, selectedYear]);
+  }, [selectedMonth, selectedYear, isMainCustomRange, filterStartDate, filterEndDate]);
 
   const fetchSalaries = async () => {
     setLoading(true);
@@ -56,23 +75,32 @@ export const MonthlySalary = ({
 
       const { data: settings } = await supabase.from('salary_settings').select('*');
 
-      const startDate = `${selectedYear}-${String(selectedMonth).padStart(2, '0')}-01`;
-      const endDate = new Date(selectedYear, selectedMonth, 0).toISOString().split('T')[0];
+      let queryStart = '';
+      let queryEnd = '';
+
+      if (isMainCustomRange && filterStartDate && filterEndDate) {
+        queryStart = filterStartDate;
+        queryEnd = filterEndDate;
+      } else {
+        queryStart = `${selectedYear}-${String(selectedMonth).padStart(2, '0')}-01`;
+        queryEnd = new Date(selectedYear, selectedMonth, 0).toISOString().split('T')[0];
+      }
+
       let attQuery = supabase
         .from('attendance')
         .select('*')
-        .gte('date', startDate)
-        .lte('date', endDate);
+        .gte('date', queryStart)
+        .lte('date', queryEnd);
       let advQuery = supabase
         .from('advances')
         .select('*')
-        .gte('date', startDate)
-        .lte('date', endDate);
+        .gte('date', queryStart)
+        .lte('date', queryEnd);
       let allQuery = supabase
         .from('allowances')
         .select('*')
-        .gte('date', startDate)
-        .lte('date', endDate);
+        .gte('date', queryStart)
+        .lte('date', queryEnd);
 
       if (!isAdmin) {
         attQuery = attQuery.eq('employee_id', user.id);
@@ -351,18 +379,39 @@ export const MonthlySalary = ({
     }
   };
 
-  const totalDaysAll = salaries.reduce((sum, s) => sum + s.totalDays, 0);
-  const totalOTAll = salaries.reduce((sum, s) => sum + s.totalOT, 0);
-  const totalMonthOTAll = salaries.reduce((sum, s) => sum + s.monthOTSalary, 0);
-  const earnedSalaryAll = salaries.reduce(
+  // --- Computed display data ---
+  const displaySalaries = salaries
+    .filter((s) => {
+      if (hideZero && s.netSalary === 0) return false;
+      if (searchTerm) {
+        const t = searchTerm.toLowerCase();
+        return (
+          (s.full_name || '').toLowerCase().includes(t) || (s.code || '').toLowerCase().includes(t)
+        );
+      }
+      return true;
+    })
+    .sort((a, b) => {
+      if (sortBy === 'newest') return (b.full_name || '').localeCompare(a.full_name || '');
+      if (sortBy === 'price') return b.netSalary - a.netSalary;
+      if (sortBy === 'date') return a.netSalary - b.netSalary;
+      if (sortBy === 'code') return (a.code || '').localeCompare(b.code || '');
+      return 0;
+    });
+
+  const totalDaysAll = displaySalaries.reduce((sum, s) => sum + s.totalDays, 0);
+  const totalOTAll = displaySalaries.reduce((sum, s) => sum + s.totalOT, 0);
+  const totalMonthOTAll = displaySalaries.reduce((sum, s) => sum + s.monthOTSalary, 0);
+  const earnedSalaryAll = displaySalaries.reduce(
     (sum, s) => sum + s.earnedSalary + s.dayOTSalary + s.monthOTSalary,
     0,
   );
-  const totalAllAll = salaries.reduce((sum, s) => sum + s.totalAll, 0);
-  const totalAdvAll = salaries.reduce((sum, s) => sum + s.totalAdv, 0);
-  const insuranceDeductionAll = salaries.reduce((sum, s) => sum + s.insuranceDeduction, 0);
-  const netSalaryAll = salaries.reduce((sum, s) => sum + s.netSalary, 0);
+  const totalAllAll = displaySalaries.reduce((sum, s) => sum + s.totalAll, 0);
+  const totalAdvAll = displaySalaries.reduce((sum, s) => sum + s.totalAdv, 0);
+  const insuranceDeductionAll = displaySalaries.reduce((sum, s) => sum + s.insuranceDeduction, 0);
+  const netSalaryAll = displaySalaries.reduce((sum, s) => sum + s.netSalary, 0);
 
+  // Excel always exports full data (not affected by hideZero)
   const handleExportExcel = () => {
     const data = [
       [
@@ -373,7 +422,8 @@ export const MonthlySalary = ({
         'Lương/Ngày',
         'Hệ số',
         'TC Tháng',
-        'Tổng Lương',
+        'TC Ngày',
+        'Lương Công',
         'Phụ cấp',
         'Tạm ứng',
         'Bảo hiểm',
@@ -390,6 +440,7 @@ export const MonthlySalary = ({
         s.dailyRate,
         s.monthlyCoeff,
         s.monthOTSalary,
+        s.dayOTSalary,
         s.earnedSalary + s.monthOTSalary + s.dayOTSalary,
         s.totalAll,
         s.totalAdv,
@@ -398,34 +449,112 @@ export const MonthlySalary = ({
       ]);
     });
 
+    const allTotal = {
+      days: salaries.reduce((sum, s) => sum + s.totalDays, 0),
+      ot: salaries.reduce((sum, s) => sum + s.totalOT, 0),
+      monthOT: salaries.reduce((sum, s) => sum + s.monthOTSalary, 0),
+      dayOT: salaries.reduce((sum, s) => sum + s.dayOTSalary, 0),
+      earned: salaries.reduce(
+        (sum, s) => sum + s.earnedSalary + s.monthOTSalary + s.dayOTSalary,
+        0,
+      ),
+      all: salaries.reduce((sum, s) => sum + s.totalAll, 0),
+      adv: salaries.reduce((sum, s) => sum + s.totalAdv, 0),
+      ins: salaries.reduce((sum, s) => sum + s.insuranceDeduction, 0),
+      net: salaries.reduce((sum, s) => sum + s.netSalary, 0),
+    };
     data.push([
       '',
       'TỔNG CỘNG',
-      Number(totalDaysAll.toFixed(1)),
-      `${totalOTAll.toFixed(1)}h`,
+      Number(allTotal.days.toFixed(1)),
+      `${allTotal.ot.toFixed(1)}h`,
       '',
       '',
-      salaries.reduce((sum, s) => sum + s.monthOTSalary, 0),
-      salaries.reduce((sum, s) => sum + s.earnedSalary + s.dayOTSalary, 0),
-      totalAllAll,
-      totalAdvAll,
-      insuranceDeductionAll,
-      netSalaryAll,
+      allTotal.monthOT,
+      allTotal.dayOT,
+      allTotal.earned,
+      allTotal.all,
+      allTotal.adv,
+      allTotal.ins,
+      allTotal.net,
     ]);
 
     const ws = XLSX.utils.aoa_to_sheet(data);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, `Luong T${selectedMonth}-${selectedYear}`);
-    XLSX.writeFile(wb, `Bang_Luong_Thang_${selectedMonth}_${selectedYear}.xlsx`);
+    XLSX.writeFile(wb, `CDX_BangLuong_T${selectedMonth}_${selectedYear}.xlsx`);
   };
+
+  // Note: image capture handled by PageToolbar via captureOptions
 
   return (
     <div className="p-4 md:p-6 space-y-6 pb-24 overflow-x-hidden">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      {/* Header + Toolbar */}
+      <div className="flex items-center justify-between gap-2 flex-wrap">
         <PageBreadcrumb title="Bảng lương" onBack={onBack} />
-        <div className="flex flex-nowrap items-center gap-2 whitespace-nowrap">
-          <ExcelButton onClick={handleExportExcel} loading={salaries.length === 0} />
-          <div className="flex items-center gap-2 justify-end flex-1">
+        <PageToolbar
+          tableRef={mainTableRef}
+          captureOptions={{
+            reportTitle: 'BẢNG TÍNH LƯƠNG',
+            subtitle:
+              isMainCustomRange && filterStartDate && filterEndDate
+                ? `Từ ngày: ${filterStartDate} - Đến ngày: ${filterEndDate}`
+                : `Kỳ lương: Tháng ${selectedMonth}/${selectedYear}`,
+            showNetSalary: true,
+          }}
+          onImageCaptured={setPreviewImageUrl}
+          onExportExcel={handleExportExcel}
+          sortOptions={[
+            { value: 'code', label: 'Mã NV (A→Z)' },
+            { value: 'newest', label: 'Tên (A→Z)' },
+            { value: 'price', label: 'Thực lĩnh (cao→thấp)' },
+            { value: 'date', label: 'Thực lĩnh (thấp→cao)' },
+          ]}
+          currentSort={sortBy}
+          onSortChange={(v) => setSortBy(v as SortOption)}
+          showFilter={showFilter}
+          onFilterToggle={() => setShowFilter((f) => !f)}
+        />
+      </div>
+
+      <FilterPanel
+        show={showFilter}
+        onReset={() => {
+          setSearchTerm('');
+          setHideZero(false);
+          setIsMainCustomRange(false);
+          setFilterStartDate('');
+          setFilterEndDate('');
+          setSelectedMonth(new Date().getMonth() + 1);
+          setSelectedYear(new Date().getFullYear());
+        }}
+      >
+        <div className="flex items-center justify-between border-b border-gray-100 pb-2">
+          <label className="text-[10px] font-bold text-gray-400 uppercase">
+            Khoảng ngày tùy chọn
+          </label>
+          <button
+            onClick={() => setIsMainCustomRange(!isMainCustomRange)}
+            className={`relative inline-flex items-center w-11 h-6 rounded-full transition-all duration-300 shadow-inner ${isMainCustomRange ? 'bg-primary' : 'bg-gray-200'}`}
+          >
+            <span
+              className={`inline-block w-4 h-4 bg-white rounded-full shadow-md transform transition-transform duration-300 ml-1 ${isMainCustomRange ? 'translate-x-5' : 'translate-x-0'}`}
+            />
+          </button>
+        </div>
+
+        {isMainCustomRange ? (
+          <DateRangeFilter
+            startDate={filterStartDate}
+            endDate={filterEndDate}
+            onStartChange={setFilterStartDate}
+            onEndChange={setFilterEndDate}
+          />
+        ) : (
+          <div className="flex items-center gap-3">
+            <label className="text-[10px] font-bold text-gray-400 uppercase whitespace-nowrap">
+              Kỳ lương:
+            </label>
             <MonthYearPicker
               selectedMonth={selectedMonth}
               selectedYear={selectedYear}
@@ -433,10 +562,19 @@ export const MonthlySalary = ({
               onYearChange={setSelectedYear}
             />
           </div>
-        </div>
-      </div>
+        )}
+        <HideZeroToggle value={hideZero} onChange={setHideZero} label="Ẩn dòng thực lĩnh = 0" />
+        <FilterSearchInput
+          value={searchTerm}
+          onChange={setSearchTerm}
+          placeholder="Tìm theo tên, mã NV..."
+        />
+      </FilterPanel>
 
-      <div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden overflow-x-auto custom-scrollbar pb-2">
+      <div
+        ref={mainTableRef}
+        className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden overflow-x-auto custom-scrollbar pb-2"
+      >
         <table className="w-full text-left border-collapse min-w-[1100px] whitespace-nowrap">
           <thead>
             <tr className="bg-primary text-white">
@@ -498,7 +636,7 @@ export const MonthlySalary = ({
                 </td>
               </tr>
             ) : (
-              salaries.map((s) => (
+              displaySalaries.map((s) => (
                 <tr
                   key={s.id}
                   onClick={() => {
@@ -560,7 +698,7 @@ export const MonthlySalary = ({
               ))
             )}
           </tbody>
-          {!loading && salaries.length > 0 && (
+          {!loading && displaySalaries.length > 0 && (
             <tfoot className="bg-gray-50/80 border-t-2 border-primary/20">
               <tr>
                 <td className="px-4 py-4 text-xs font-black text-gray-800 uppercase" colSpan={2}>
@@ -597,8 +735,10 @@ export const MonthlySalary = ({
                 <td className="px-4 py-4 text-right text-xs font-black text-red-600">
                   -{formatCurrency(insuranceDeductionAll)}
                 </td>
-                <td className="px-4 py-4 text-right text-base font-black text-primary">
-                  {formatCurrency(netSalaryAll)}
+                <td className="px-4 py-4 text-right text-lg font-black text-primary">
+                  <span className="underline decoration-double decoration-primary decoration-1 underline-offset-2">
+                    {formatCurrency(netSalaryAll)}
+                  </span>
                 </td>
               </tr>
             </tfoot>
@@ -1005,6 +1145,15 @@ export const MonthlySalary = ({
           </div>
         )}
       </AnimatePresence>
+
+      {/* Preview modal */}
+      {previewImageUrl && (
+        <ReportImagePreviewModal
+          imageDataUrl={previewImageUrl}
+          fileName={`CDX_BangLuong_T${selectedMonth}_${selectedYear}.png`}
+          onClose={() => setPreviewImageUrl(null)}
+        />
+      )}
     </div>
   );
 };

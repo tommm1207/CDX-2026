@@ -41,7 +41,9 @@ export const AttendanceTable = ({
   } | null>(null);
 
   const [otInput, setOtInput] = useState<string>('');
-  const [selectedAction, setSelectedAction] = useState<'present' | 'half-day' | 'absent' | null>(null);
+  const [selectedAction, setSelectedAction] = useState<'present' | 'half-day' | 'absent' | null>(
+    null,
+  );
 
   const getStatus = (empId: string, day: number) => {
     const dateStr = `${selectedYear}-${String(selectedMonth).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
@@ -51,7 +53,7 @@ export const AttendanceTable = ({
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'present':
-        return 'bg-green-500 text-white';
+        return 'bg-primary text-white';
       case 'half-day':
         return 'bg-amber-500 text-white';
       case 'absent':
@@ -232,10 +234,10 @@ export const AttendanceTable = ({
                       className={`py-2 rounded-xl text-xs font-bold transition-all active:scale-95 border-2 ${
                         selectedAction === s
                           ? s === 'present'
-                            ? 'bg-green-500 border-green-500 text-white'
+                            ? 'bg-primary border-primary text-white'
                             : s === 'half-day'
-                            ? 'bg-amber-500 border-amber-500 text-white'
-                            : 'bg-red-500 border-red-500 text-white'
+                              ? 'bg-amber-500 border-amber-500 text-white'
+                              : 'bg-red-500 border-red-500 text-white'
                           : 'bg-gray-50 border-transparent text-gray-400 hover:bg-gray-100'
                       }`}
                     >
@@ -244,7 +246,13 @@ export const AttendanceTable = ({
                   ))}
                 </div>
                 <p className="text-[9px] text-center text-gray-300">
-                  {selectedAction === 'present' ? '1 công' : selectedAction === 'half-day' ? 'Nửa công' : selectedAction === 'absent' ? 'Vắng mặt' : 'Chọn trạng thái'}
+                  {selectedAction === 'present'
+                    ? '1 công'
+                    : selectedAction === 'half-day'
+                      ? 'Nửa công'
+                      : selectedAction === 'absent'
+                        ? 'Vắng mặt'
+                        : 'Chọn trạng thái'}
                 </p>
 
                 <div className="border-t border-gray-100 pt-1.5">

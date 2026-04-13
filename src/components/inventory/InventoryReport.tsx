@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { BarChart3, RefreshCw, EyeOff, Download, Search } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { supabase } from '@/lib/supabase';
@@ -10,8 +10,14 @@ import { ToastType } from '../shared/Toast';
 import { formatNumber } from '@/utils/format';
 import { getTonKhoTable, TonKhoRow } from '@/utils/inventory';
 import { getAllowedWarehouses } from '@/utils/helpers';
-import { Button } from '../shared/Button';
-import { ExcelButton } from '../shared/ExcelButton';
+import {
+  PageToolbar,
+  FilterPanel,
+  HideZeroToggle,
+  FilterSearchInput,
+  DateRangeFilter,
+} from '../shared/PageToolbar';
+import { ReportImagePreviewModal } from '../shared/ReportImagePreviewModal';
 
 interface ReportRow extends TonKhoRow {
   materialName: string;
@@ -44,6 +50,8 @@ export const InventoryReport = ({
   const [hideEmpty, setHideEmpty] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [showFilter, setShowFilter] = useState(false);
+  const [previewImageUrl, setPreviewImageUrl] = useState<string | null>(null);
+  const mainTableRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     Promise.all([
@@ -204,126 +212,95 @@ export const InventoryReport = ({
 
   return (
     <div className="p-4 md:p-6 space-y-6 pb-24">
-      <div className="flex items-center justify-between gap-2">
+      {previewImageUrl && (
+        <ReportImagePreviewModal
+          imageDataUrl={previewImageUrl}
+          onClose={() => setPreviewImageUrl(null)}
+          fileName="TonKho.png"
+        />
+      )}
+
+      <div className="flex items-center justify-between gap-2 flex-wrap">
         <PageBreadcrumb title="Kiểm tra tồn kho" onBack={onBack} />
-        <div className="flex items-center gap-2 justify-end flex-1">
-          <ExcelButton onClick={handleExportExcel} />
-          <Button
-            size="icon"
-            variant={showFilter ? 'primary' : 'outline'}
-            onClick={() => setShowFilter((f) => !f)}
-            icon={Search}
-          />
-        </div>
+        <PageToolbar
+          tableRef={mainTableRef}
+          captureOptions={{
+            reportTitle: 'KIỂM TRA TỒN KHO',
+            subtitle: `Từ ngày: ${startDate} - Đến ngày: ${endDate}`,
+          }}
+          onImageCaptured={setPreviewImageUrl}
+          onExportExcel={handleExportExcel}
+          showFilter={showFilter}
+          onFilterToggle={() => setShowFilter((f) => !f)}
+        />
       </div>
 
-      <div className="flex justify-end">
-        <button
-          onClick={() => setHideEmpty(!hideEmpty)}
-          className={`group flex items-center gap-2 px-4 py-2 rounded-2xl border transition-all duration-300 ${
-            hideEmpty
-              ? 'bg-amber-50 text-amber-600 border-amber-200 shadow-sm shadow-amber-100/50'
-              : 'bg-white text-gray-400 border-gray-100 hover:bg-gray-50'
-          }`}
-        >
-          {hideEmpty ? (
-            <EyeOff size={16} className="animate-pulse" />
-          ) : (
-            <BarChart3 size={16} className="group-hover:scale-110 transition-transform" />
-          )}
-          <span className="text-[11px] font-black uppercase tracking-tight">
-            (Ẩn vật tư tồn bằng 0)
-          </span>
-          <div
-            className={`w-8 h-4 rounded-full relative transition-colors duration-200 ${hideEmpty ? 'bg-amber-400' : 'bg-gray-200'}`}
-          >
-            <div
-              className={`absolute top-0.5 w-3 h-3 bg-white rounded-full transition-all duration-200 ${hideEmpty ? 'left-4.5' : 'left-0.5'}`}
-            />
+      <FilterPanel
+        show={showFilter}
+        onReset={() => {
+          setStartDate(firstOfYear);
+          setEndDate(today);
+          setSelectedWarehouse('');
+          setSearchTerm('');
+          setHideEmpty(true);
+        }}
+      >
+        <DateRangeFilter
+          startDate={startDate}
+          endDate={endDate}
+          onStartChange={setStartDate}
+          onEndChange={setEndDate}
+        />
+
+        <div className="flex flex-col gap-2 min-w-[200px]">
+          <label className="text-[10px] font-bold text-gray-400 border-l-2 border-primary/20 pl-2 uppercase tracking-wider">
+            Kho hàng
+          </label>
+          <div className="relative">
+            <select
+              value={selectedWarehouse}
+              onChange={(e) => setSelectedWarehouse(e.target.value)}
+              className="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-sm font-medium focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all appearance-none cursor-pointer bg-white"
+            >
+              <option value="">Tất cả kho được phép</option>
+              {warehouses.map((wh) => (
+                <option key={wh.id} value={wh.id}>
+                  {wh.name}
+                </option>
+              ))}
+            </select>
+            <div className="absolute top-1/2 right-3 -translate-y-1/2 pointer-events-none text-gray-400">
+              <svg
+                width="12"
+                height="12"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="m6 9 6 6 6-6" />
+              </svg>
+            </div>
           </div>
-        </button>
-      </div>
+        </div>
 
-      {/* Bộ lọc */}
-      <AnimatePresence>
-        {showFilter && (
-          <motion.div
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: 'auto' }}
-            exit={{ opacity: 0, height: 0 }}
-            className="overflow-hidden"
-          >
-            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 flex flex-col md:flex-row gap-4 mb-4">
-              <div className="flex-1">
-                <label className="text-[10px] font-bold text-gray-400 uppercase mb-1 block">
-                  Từ ngày (đầu kỳ)
-                </label>
-                <input
-                  type="date"
-                  value={startDate}
-                  onChange={(e) => setStartDate(e.target.value)}
-                  className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20"
-                />
-              </div>
-              <div className="flex-1">
-                <label className="text-[10px] font-bold text-gray-400 uppercase mb-1 block">
-                  Đến ngày (cuối kỳ)
-                </label>
-                <input
-                  type="date"
-                  value={endDate}
-                  onChange={(e) => setEndDate(e.target.value)}
-                  className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20"
-                />
-              </div>
-              <div className="flex-1">
-                <label className="text-[10px] font-bold text-gray-400 uppercase mb-1 block">
-                  Kho hàng
-                </label>
-                <select
-                  value={selectedWarehouse}
-                  onChange={(e) => setSelectedWarehouse(e.target.value)}
-                  className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20"
-                >
-                  <option value="">Tất cả các kho</option>
-                  {warehouses.map((wh) => (
-                    <option key={wh.id} value={wh.id}>
-                      {wh.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div className="flex-[2]">
-                <label className="text-[10px] font-bold text-gray-400 uppercase mb-1 block">
-                  Tìm kiếm vật tư
-                </label>
-                <div className="relative">
-                  <Search
-                    size={14}
-                    className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
-                  />
-                  <input
-                    type="text"
-                    placeholder="Nhập tên hoặc mã vật tư cần tìm..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="w-full pl-9 pr-3 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20"
-                  />
-                </div>
-              </div>
-            </div>
-            <div className="flex items-center justify-end px-4 pb-2">
-              <div className="text-[10px] text-gray-400 font-medium">
-                Tìm thấy {report.length} kết quả phù hợp
-              </div>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+        <HideZeroToggle value={hideEmpty} onChange={setHideEmpty} label="Ẩn vật tư tồn = 0" />
 
-      {/* Bảng tồn kho — giống bảng Tonkho app cũ */}
-      <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-        <div className="overflow-x-auto">
+        <FilterSearchInput
+          value={searchTerm}
+          onChange={setSearchTerm}
+          placeholder="Tên, mã vật tư..."
+        />
+      </FilterPanel>
+
+      {/* Bảng tồn kho */}
+      <div
+        ref={mainTableRef}
+        className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden"
+      >
+        <div className="overflow-x-auto custom-scrollbar">
           <table className="w-full text-left border-collapse min-w-[900px] whitespace-nowrap">
             <thead>
               <tr className="bg-primary text-white">
@@ -357,13 +334,13 @@ export const InventoryReport = ({
                   className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-right"
                   title="Số lượng chuyển từ kho khác đến kho này"
                 >
-                  Chuyển kho đến
+                  Chuyển đến
                 </th>
                 <th
                   className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-right"
                   title="Số lượng chuyển từ kho này đi kho khác"
                 >
-                  Chuyển kho đi
+                  Chuyển đi
                 </th>
                 <th
                   className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-right"
@@ -377,13 +354,13 @@ export const InventoryReport = ({
               {loading ? (
                 <tr>
                   <td colSpan={9} className="px-4 py-12 text-center text-gray-400 italic">
-                    Đang tải...
+                    Đang tải dữ liệu...
                   </td>
                 </tr>
               ) : report.length === 0 ? (
                 <tr>
                   <td colSpan={9} className="px-4 py-12 text-center text-gray-400 italic">
-                    Không có dữ liệu trong kỳ này
+                    Không có kết quả nào. {hideEmpty && 'Gợi ý: Hãy tắt "Ẩn vật tư tồn = 0"'}
                   </td>
                 </tr>
               ) : (

@@ -1,4 +1,5 @@
-import { useState, useEffect, FormEvent } from 'react';
+import { useState, useEffect, FormEvent, useRef, useCallback } from 'react';
+import * as XLSX from 'xlsx';
 import {
   Plus,
   Search,
@@ -33,6 +34,13 @@ import { isUUID, getAllowedWarehouses } from '@/utils/helpers';
 import { getAvailableStock, validateFutureImpact } from '@/utils/inventory';
 import { Button } from '../shared/Button';
 import { SortButton, SortOption } from '../shared/SortButton';
+import {
+  PageToolbar,
+  FilterPanel,
+  FilterSearchInput,
+  DateRangeFilter,
+} from '../shared/PageToolbar';
+import { ReportImagePreviewModal } from '../shared/ReportImagePreviewModal';
 
 export const StockIn = ({
   user,
@@ -75,6 +83,8 @@ export const StockIn = ({
   const [sortBy, setSortBy] = useState<SortOption>(
     (localStorage.getItem(`sort_pref_stockin_${user.id}`) as SortOption) || 'newest',
   );
+  const [previewImageUrl, setPreviewImageUrl] = useState<string | null>(null);
+  const tableRef = useRef<HTMLDivElement>(null);
 
   const { warehouses, materials, groups, refreshAll, fetchWarehouses } = useInventoryData(
     user.data_view_permission,
@@ -429,32 +439,102 @@ export const StockIn = ({
     }
   };
 
+  const handleExportExcel = useCallback(() => {
+    const data: any[][] = [
+      ['Ngày', 'Mã phiếu', 'Vật tư', 'Kho', 'Số lượng', 'Đơn giá', 'Thành tiền', 'Trạng thái'],
+    ];
+    slips.forEach((item) => {
+      data.push([
+        item.date,
+        item.import_code,
+        item.materials?.name || '',
+        item.warehouses?.name || '',
+        item.quantity,
+        item.unit_price,
+        item.total_amount || 0,
+        item.status,
+      ]);
+    });
+    const ws = XLSX.utils.aoa_to_sheet(data);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'NhapKho');
+    XLSX.writeFile(wb, `CDX_NhapKho_${new Date().toISOString().slice(0, 10)}.xlsx`);
+  }, [slips]);
+
   return (
     <div className="p-4 md:p-6 space-y-6 pb-24 overflow-x-hidden">
-      <div className="flex items-center justify-between gap-2">
+      <div className="flex items-center justify-between gap-2 flex-wrap">
         <PageBreadcrumb title="Nhập kho" onBack={onBack} />
-        <div className="flex items-center gap-2 justify-end flex-1">
-          <SortButton
-            currentSort={sortBy}
-            onSortChange={(val) => {
-              setSortBy(val);
-              localStorage.setItem(`sort_pref_stockin_${user.id}`, val);
-            }}
-            options={[
-              { value: 'code', label: 'Mã chứng từ' },
-              { value: 'newest', label: 'Mới nhất' },
-              { value: 'price', label: 'Thành tiền' },
-              { value: 'date', label: 'Ngày tạo' },
-            ]}
-          />
-          <Button
-            size="icon"
-            variant={showFilter ? 'primary' : 'outline'}
-            onClick={() => setShowFilter((f) => !f)}
-            icon={Search}
-          />
-        </div>
+        <PageToolbar
+          tableRef={tableRef}
+          captureOptions={{ reportTitle: 'BẢNG NHẬP KHO' }}
+          onImageCaptured={setPreviewImageUrl}
+          onExportExcel={handleExportExcel}
+          sortOptions={[
+            { value: 'code', label: 'Mã chứng từ' },
+            { value: 'newest', label: 'Mới nhất' },
+            { value: 'price', label: 'Thành tiền' },
+            { value: 'date', label: 'Ngày tạo' },
+          ]}
+          currentSort={sortBy}
+          onSortChange={(v) => {
+            setSortBy(v as SortOption);
+            localStorage.setItem(`sort_pref_stockin_${user.id}`, v);
+          }}
+          showFilter={showFilter}
+          onFilterToggle={() => setShowFilter((f) => !f)}
+        />
       </div>
+
+      <FilterPanel
+        show={showFilter}
+        onReset={() => {
+          setFilterStartDate('');
+          setFilterEndDate('');
+          setFilterWarehouseId('');
+          setSearchTerm('');
+          setStatusFilter('Tất cả');
+        }}
+      >
+        <DateRangeFilter
+          startDate={filterStartDate}
+          endDate={filterEndDate}
+          onStartChange={setFilterStartDate}
+          onEndChange={setFilterEndDate}
+        />
+        <div className="space-y-1">
+          <label className="text-[10px] font-bold text-gray-400 uppercase">Kho</label>
+          <select
+            value={filterWarehouseId}
+            onChange={(e) => setFilterWarehouseId(e.target.value)}
+            className="w-full px-3 py-2 rounded-xl border border-gray-200 text-xs outline-none focus:ring-2 focus:ring-primary/20"
+          >
+            <option value="">Tất cả kho</option>
+            {warehouses.map((w) => (
+              <option key={w.id} value={w.id}>
+                {w.name}
+              </option>
+            ))}
+          </select>
+        </div>
+        <FilterSearchInput
+          value={searchTerm}
+          onChange={setSearchTerm}
+          placeholder="Vật tư, mã phiếu..."
+        />
+        <div className="flex items-center gap-2 overflow-x-auto no-scrollbar">
+          {['Tất cả', 'Chờ duyệt', 'Đã duyệt', 'Từ chối'].map((status) => (
+            <Button
+              key={status}
+              size="sm"
+              variant={statusFilter === status ? 'primary' : 'outline'}
+              onClick={() => setStatusFilter(status)}
+            >
+              {status}
+            </Button>
+          ))}
+        </div>
+      </FilterPanel>
 
       <AnimatePresence>
         {showFilter && (
@@ -532,6 +612,7 @@ export const StockIn = ({
         )}
       </AnimatePresence>
 
+      {/* Table with ref for image capture */}
       {(() => {
         const filteredSlips = slips
           .filter((item) => {
@@ -557,7 +638,10 @@ export const StockIn = ({
             return 0;
           });
         return (
-          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+          <div
+            ref={tableRef}
+            className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden"
+          >
             <div className="overflow-x-auto">
               <table className="w-full text-left border-collapse whitespace-nowrap">
                 <thead>
@@ -972,6 +1056,7 @@ export const StockIn = ({
                           }))}
                           value={formData.unit}
                           onChange={(val) => setFormData({ ...formData, unit: val })}
+                          onCreate={(val) => setFormData({ ...formData, unit: val })}
                           placeholder="ĐVT..."
                         />
                       </div>
@@ -1048,7 +1133,6 @@ export const StockIn = ({
         onCancel={() => setShowDeleteConfirm(false)}
       />
 
-      {/* FAB — Lập phiếu nhập */}
       <FAB
         onClick={() => {
           setFormData({
@@ -1061,6 +1145,14 @@ export const StockIn = ({
         label="Lập phiếu nhập"
         color="bg-blue-500"
       />
+
+      {previewImageUrl && (
+        <ReportImagePreviewModal
+          imageDataUrl={previewImageUrl}
+          fileName={`CDX_NhapKho_${new Date().toISOString().slice(0, 10)}.png`}
+          onClose={() => setPreviewImageUrl(null)}
+        />
+      )}
     </div>
   );
 };

@@ -15,11 +15,13 @@ import {
   ClipboardCheck,
   ClipboardList,
   BarChart3,
+  Download,
 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { Employee } from '@/types';
 import { parseReminderContent } from '@/utils/reminderUtils';
 import { ToastType } from '../shared/Toast';
+import { AppInstructionsModal } from '../shared/AppInstructionsModal';
 
 interface DashboardProps {
   user: Employee;
@@ -30,6 +32,7 @@ interface DashboardProps {
 
 export const Dashboard = ({ user, onNavigate, addToast, pendingApprovals = 0 }: DashboardProps) => {
   const [reminderCount, setReminderCount] = useState(0);
+  const [showDownloadInstructions, setShowDownloadInstructions] = useState(false);
 
   useEffect(() => {
     const fetchReminderCount = async () => {
@@ -173,13 +176,30 @@ export const Dashboard = ({ user, onNavigate, addToast, pendingApprovals = 0 }: 
         </div>
 
         <div className="flex items-center justify-between gap-3">
-          <div className="inline-flex items-center gap-2 bg-primary px-4 py-2.5 rounded-xl shadow-lg shadow-primary/20 h-[46px]">
-            <div className="text-left">
-              <p className="text-[9px] font-bold text-white/70 uppercase tracking-widest leading-none mb-1">
-                Vai trò
-              </p>
-              <p className="text-sm font-black text-white leading-none uppercase">{user.role}</p>
+          <div className="flex items-center gap-2">
+            <div className="inline-flex items-center gap-2 bg-primary px-4 py-2.5 rounded-xl shadow-lg shadow-primary/20 h-[46px]">
+              <div className="text-left">
+                <p className="text-[9px] font-bold text-white/70 uppercase tracking-widest leading-none mb-1">
+                  Vai trò
+                </p>
+                <p className="text-sm font-black text-white leading-none uppercase">{user.role}</p>
+              </div>
             </div>
+
+            <button
+              onClick={() => setShowDownloadInstructions(true)}
+              className="flex items-center gap-2 bg-amber-500 hover:bg-amber-600 text-white px-4 h-[46px] rounded-xl transition-all shadow-lg shadow-amber-500/20 group"
+            >
+              <Download size={18} className="group-hover:scale-110 transition-transform" />
+              <div className="text-left">
+                <p className="text-[8px] font-bold text-white/70 uppercase tracking-widest leading-none mb-1">
+                  Cài đặt
+                </p>
+                <p className="text-xs font-black text-white leading-none uppercase">
+                  Hướng dẫn tải App
+                </p>
+              </div>
+            </button>
           </div>
 
           <button
@@ -249,6 +269,11 @@ export const Dashboard = ({ user, onNavigate, addToast, pendingApprovals = 0 }: 
       </div>
 
       <RadialMenu onNavigate={onNavigate} />
+
+      <AppInstructionsModal
+        isOpen={showDownloadInstructions}
+        onClose={() => setShowDownloadInstructions(false)}
+      />
     </div>
   );
 };

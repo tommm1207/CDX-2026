@@ -1,4 +1,5 @@
-import { useState, useEffect, FormEvent } from 'react';
+import { useState, useEffect, FormEvent, useRef, useCallback } from 'react';
+import * as XLSX from 'xlsx';
 import {
   Users,
   Plus,
@@ -16,9 +17,10 @@ import { supabase } from '@/lib/supabase';
 import { Employee } from '@/types';
 import { PageBreadcrumb } from '../shared/PageBreadcrumb';
 import { ToastType } from '../shared/Toast';
-import { FAB } from '../shared/FAB';
 import { Button } from '../shared/Button';
 import { SortButton, SortOption } from '../shared/SortButton';
+import { PageToolbar, FilterPanel, FilterSearchInput } from '../shared/PageToolbar';
+import { ReportImagePreviewModal } from '../shared/ReportImagePreviewModal';
 import { checkUsage } from '@/utils/dataIntegrity';
 import { generateSmartCode } from '@/utils/codeGenerator';
 
@@ -43,6 +45,8 @@ export const HRRecords = ({
   const [sortBy, setSortBy] = useState<SortOption>(
     (localStorage.getItem(`sort_pref_hr_${user.id}`) as SortOption) || 'newest',
   );
+  const [previewImageUrl, setPreviewImageUrl] = useState<string | null>(null);
+  const tableRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     localStorage.setItem(`sort_pref_hr_${user.id}`, sortBy);
@@ -301,77 +305,91 @@ export const HRRecords = ({
       return 0;
     });
 
+  const handleExportExcel = useCallback(() => {
+    const data: any[][] = [
+      [
+        'Mã NV',
+        'Họ tên',
+        'Email',
+        'Điện thoại',
+        'Bộ phận',
+        'Chức vụ',
+        'Ngày vào làm',
+        'Trạng thái',
+        'Phân quyền',
+      ],
+    ];
+    filteredEmployees.forEach((emp) => {
+      data.push([
+        emp.code || emp.id.slice(0, 8),
+        emp.full_name,
+        emp.email || '',
+        emp.phone || '',
+        emp.department || '',
+        emp.position || '',
+        emp.join_date || '',
+        emp.status,
+        emp.role,
+      ]);
+    });
+    const ws = XLSX.utils.aoa_to_sheet(data);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'DanhSachNhanSu');
+    XLSX.writeFile(wb, `CDX_HoSoNhanSu_${new Date().toISOString().slice(0, 10)}.xlsx`);
+  }, [filteredEmployees]);
+
   return (
     <div className="p-4 md:p-6 space-y-6 pb-24 overflow-x-hidden">
-      <PageBreadcrumb title="Hồ sơ Nhân sự" onBack={onBack} />
-      <div className="flex items-center justify-between">
-        <h2 className="text-lg font-bold text-gray-800 flex items-center gap-2 truncate">
-          <Users size={20} className="text-primary flex-shrink-0" />{' '}
-          <span className="truncate">Hồ sơ Nhân sự</span>
-        </h2>
-        <div className="flex items-center gap-2 justify-end flex-1">
-          <SortButton
-            currentSort={sortBy}
-            onSortChange={(val) => {
-              setSortBy(val);
-              localStorage.setItem(`sort_pref_hr_${user.id}`, val);
-            }}
-            options={[
-              { value: 'code', label: 'Mã hiệu' },
-              { value: 'newest', label: 'Mới nhất' },
-              { value: 'date', label: 'Ngày vào làm' },
-            ]}
-          />
-          <Button
-            size="icon"
-            variant={showFilter ? 'primary' : 'outline'}
-            onClick={() => setShowFilter((f) => !f)}
-            icon={Search}
-          />
-        </div>
+      <div className="flex items-center justify-between gap-2 flex-wrap">
+        <PageBreadcrumb title="Hồ sơ Nhân sự" onBack={onBack} />
+        <PageToolbar
+          tableRef={tableRef}
+          captureOptions={{ reportTitle: 'HỔ SƠ NHÂN SỰ', subtitle: undefined }}
+          onImageCaptured={setPreviewImageUrl}
+          onExportExcel={handleExportExcel}
+          sortOptions={[
+            { value: 'code', label: 'Mã hiệu' },
+            { value: 'newest', label: 'Mới nhất' },
+            { value: 'date', label: 'Ngày vào làm' },
+          ]}
+          currentSort={sortBy}
+          onSortChange={(v) => {
+            setSortBy(v as SortOption);
+            localStorage.setItem(`sort_pref_hr_${user.id}`, v);
+          }}
+          showFilter={showFilter}
+          onFilterToggle={() => setShowFilter((f) => !f)}
+          extraButtons={
+            user.role !== 'User' ? (
+              <Button
+                size="icon"
+                variant="primary"
+                onClick={() => {
+                  setIsEditing(false);
+                  setFormData(initialFormState);
+                  setShowModal(true);
+                }}
+                title="Thêm nhân sự"
+              >
+                <Plus size={16} />
+              </Button>
+            ) : undefined
+          }
+        />
       </div>
 
-      <div className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 space-y-4">
-        <AnimatePresence>
-          {showFilter && (
-            <motion.div
-              initial={{ opacity: 0, height: 0 }}
-              animate={{ opacity: 1, height: 'auto' }}
-              exit={{ opacity: 0, height: 0 }}
-              className="overflow-hidden"
-            >
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 mb-4">
-                <div className="relative lg:col-span-1">
-                  <Search
-                    className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
-                    size={16}
-                  />
-                  <input
-                    type="text"
-                    placeholder="Tìm kiếm nhanh..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="w-full pl-10 pr-4 py-2 rounded-lg border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
-                  />
-                </div>
-                <select className="px-4 py-2 rounded-lg border border-gray-200 text-sm outline-none">
-                  <option>-- Nhân sự --</option>
-                </select>
-                <select className="px-4 py-2 rounded-lg border border-gray-200 text-sm outline-none">
-                  <option>-- Kho --</option>
-                </select>
-                <input
-                  type="date"
-                  className="px-4 py-2 rounded-lg border border-gray-200 text-sm outline-none"
-                />
-                <input
-                  type="date"
-                  className="px-4 py-2 rounded-lg border border-gray-200 text-sm outline-none"
-                />
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
+      <FilterPanel show={showFilter} onReset={() => setSearchTerm('')}>
+        <FilterSearchInput
+          value={searchTerm}
+          onChange={setSearchTerm}
+          placeholder="Tìm theo tên, mã NV..."
+        />
+      </FilterPanel>
+
+      <div
+        ref={tableRef}
+        className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 space-y-4"
+      >
         <div className="overflow-x-auto custom-scrollbar pb-2">
           <table className="w-full text-left border-separate border-spacing-0 whitespace-nowrap">
             <thead>
@@ -848,17 +866,14 @@ export const HRRecords = ({
           </div>
         )}
       </AnimatePresence>
-      {/* FAB — Thêm nhân sự */}
-      <FAB
-        onClick={async () => {
-          const nextCode = await generateNextEmployeeCode();
-          setFormData({ ...initialFormState, code: nextCode });
-          setIsEditing(false);
-          setShowModal(true);
-        }}
-        label="Thêm nhân sự"
-        color="bg-primary"
-      />
+
+      {previewImageUrl && (
+        <ReportImagePreviewModal
+          imageDataUrl={previewImageUrl}
+          fileName={`CDX_HoSoNhanSu_${new Date().toISOString().slice(0, 10)}.png`}
+          onClose={() => setPreviewImageUrl(null)}
+        />
+      )}
     </div>
   );
 };

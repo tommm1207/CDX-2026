@@ -75,7 +75,6 @@ export const CostReport = ({
   const [isCapturingTable, setIsCapturingTable] = useState(false);
   const [showReportPreview, setShowReportPreview] = useState(false);
   const reportRef = useRef<HTMLDivElement>(null);
-  const logoBase64 = '/logo.png';
 
   const [masterForm, setMasterForm] = useState({
     date: new Date().toISOString().split('T')[0],
@@ -722,12 +721,7 @@ export const CostReport = ({
         <div ref={reportRef} className="p-8 bg-white" style={{ width: '1400px' }}>
           {/* Premium Branding Header */}
           <div className="flex items-center gap-6 mb-10">
-            <img
-              src={logoBase64}
-              alt="Logo"
-              className="w-24 h-24 rounded-3xl object-contain shadow-sm"
-              onError={(e) => (e.currentTarget.style.display = 'none')}
-            />
+            <CanvasLogo size={96} className="w-24 h-24 rounded-3xl object-contain shadow-sm" />
             <div className="space-y-1">
               <h2 className="text-3xl font-black text-gray-800 tracking-tighter uppercase leading-none">
                 CDX - CON ĐƯỜNG XANH
@@ -836,12 +830,7 @@ export const CostReport = ({
         <div className="p-12 bg-white">
           {/* Logo & Header */}
           <div className="flex items-center gap-6 mb-10">
-            <img
-              src={logoBase64}
-              alt="Logo"
-              className="w-24 h-24 rounded-3xl object-contain shadow-sm"
-              onError={(e) => (e.currentTarget.style.display = 'none')}
-            />
+            <CanvasLogo size={96} className="w-24 h-24 rounded-3xl object-contain shadow-sm" />
             <div className="space-y-1">
               <h2 className="text-3xl font-black text-gray-800 tracking-tighter uppercase leading-none">
                 CDX - CON ĐƯỜNG XANH

@@ -73,7 +73,6 @@ export const PendingApprovals = ({
   const [isCapturingTable, setIsCapturingTable] = useState(false);
 
   const reportRef = useRef<HTMLDivElement>(null);
-  const logoBase64 = '/logo.png';
 
   const displayCount = slips.length;
 
@@ -304,12 +303,7 @@ export const PendingApprovals = ({
         >
           {/* Premium Branding Header */}
           <div className="flex items-center gap-6 mb-10">
-            <img
-              src={logoBase64}
-              alt="Logo"
-              className="w-24 h-24 rounded-3xl object-contain shadow-sm"
-              onError={(e) => (e.currentTarget.style.display = 'none')}
-            />
+            <CanvasLogo size={96} className="w-24 h-24 rounded-3xl object-contain shadow-sm" />
             <div className="space-y-1">
               <h2 className="text-3xl font-black text-gray-800 tracking-tighter uppercase leading-none">
                 CDX - CON ĐƯỜNG XANH
@@ -335,11 +329,7 @@ export const PendingApprovals = ({
           >
             <div className="flex items-center gap-6">
               <div className="bg-primary/5 p-4 rounded-3xl border border-primary/10">
-                <img
-                  src={logoBase64}
-                  alt="Company Logo"
-                  className="w-20 h-20 object-contain rounded-full"
-                />
+                <CanvasLogo size={96} className="w-24 h-24 rounded-3xl object-contain shadow-sm" />
               </div>
               <div className="space-y-1">
                 <h1 className="text-3xl font-black text-primary tracking-tighter uppercase italic">

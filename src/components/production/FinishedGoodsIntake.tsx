@@ -45,7 +45,6 @@ export const FinishedGoodsIntake = ({
   const [isCapturingTable, setIsCapturingTable] = useState(false);
 
   const reportRef = useRef<HTMLDivElement>(null);
-  const logoBase64 = '/logo.png';
 
   const [formData, setFormData] = useState({
     so_luong: 0,
@@ -664,11 +663,7 @@ export const FinishedGoodsIntake = ({
           <div className="flex justify-between items-start mb-10 pb-6 border-b-2 border-primary/20">
             <div className="flex items-center gap-6">
               <div className="bg-primary/5 p-4 rounded-3xl border border-primary/10">
-                <img
-                  src={logoBase64}
-                  alt="Company Logo"
-                  className="w-20 h-20 object-contain rounded-full"
-                />
+                <CanvasLogo size={96} className="w-24 h-24 rounded-3xl object-contain shadow-sm" />
               </div>
               <div className="space-y-1">
                 <h1 className="text-3xl font-black text-primary tracking-tighter uppercase italic">

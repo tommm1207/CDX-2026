@@ -82,7 +82,6 @@ export const StockOut = ({
   );
   const [isCapturingTable, setIsCapturingTable] = useState(false);
   const reportRef = useRef<HTMLDivElement>(null);
-  const logoBase64 = '/logo.png';
 
   const { warehouses, materials, groups, refreshAll, fetchWarehouses } = useInventoryData(
     user.data_view_permission,
@@ -1149,11 +1148,7 @@ export const StockOut = ({
           <div className="flex justify-between items-start mb-10 pb-6 border-b-2 border-red-200">
             <div className="flex items-center gap-6">
               <div className="bg-red-50 p-4 rounded-3xl border border-red-100">
-                <img
-                  src={logoBase64}
-                  alt="Company Logo"
-                  className="w-20 h-20 object-contain rounded-full"
-                />
+                <CanvasLogo size={96} className="w-24 h-24 rounded-3xl object-contain shadow-sm" />
               </div>
               <div className="space-y-1">
                 <h1 className="text-3xl font-black text-red-600 tracking-tighter uppercase italic">

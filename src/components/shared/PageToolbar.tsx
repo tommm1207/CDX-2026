@@ -230,7 +230,14 @@ export const DateRangeFilter: React.FC<DateRangeFilterProps> = ({
       <input
         type="date"
         value={startDate}
-        onChange={(e) => onStartChange(e.target.value)}
+        max={endDate || undefined}
+        onChange={(e) => {
+          const val = e.target.value;
+          onStartChange(val);
+          if (val && endDate && val > endDate) {
+            onEndChange(val);
+          }
+        }}
         className="w-full px-3 py-2 rounded-xl border border-gray-200 text-xs outline-none focus:ring-2 focus:ring-primary/20"
       />
     </div>
@@ -239,7 +246,14 @@ export const DateRangeFilter: React.FC<DateRangeFilterProps> = ({
       <input
         type="date"
         value={endDate}
-        onChange={(e) => onEndChange(e.target.value)}
+        min={startDate || undefined}
+        onChange={(e) => {
+          const val = e.target.value;
+          onEndChange(val);
+          if (val && startDate && val < startDate) {
+            onStartChange(val);
+          }
+        }}
         className="w-full px-3 py-2 rounded-xl border border-gray-200 text-xs outline-none focus:ring-2 focus:ring-primary/20"
       />
     </div>

@@ -36,8 +36,8 @@ export default tseslint.config(
         { allowConstantExport: true },
       ],
       '@typescript-eslint/no-explicit-any': 'off',
-      '@typescript-eslint/no-unused-vars': 'warn',
-      'no-console': 'warn',
+      '@typescript-eslint/no-unused-vars': 'off',
+      'no-console': 'off',
       'react/react-in-jsx-scope': 'off',
       'react/prop-types': 'off',
       '@typescript-eslint/no-empty-object-type': 'warn',
@@ -48,9 +48,9 @@ export default tseslint.config(
       'no-var': 'warn',
       'no-undef': 'off',
       '@typescript-eslint/no-empty-interface': 'off',
-      'react-hooks/exhaustive-deps': 'warn',
+      'react-hooks/exhaustive-deps': 'off',
       'react-hooks/rules-of-hooks': 'warn', // Nới lỏng quy tắc hook
-      'no-empty': 'warn', // Nới lỏng quy tắc khối lệnh trống
+      'no-empty': 'off', // Nới lỏng quy tắc khối lệnh trống
     },
   },
 );

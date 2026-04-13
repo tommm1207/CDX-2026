@@ -52,6 +52,24 @@ import { generateSmartCode } from '@/utils/codeGenerator';
 import { checkUsage } from '@/utils/dataIntegrity';
 import { ReportPreviewModal } from '../shared/ReportPreviewModal';
 
+const initialFormState = {
+  date: new Date().toISOString().split('T')[0],
+  cost_code: '',
+  employee_id: '',
+  transaction_type: 'Chi',
+  cost_type: 'Chi phí',
+  content: '',
+  warehouse_id: '',
+  material_id: null,
+  quantity: 1,
+  unit: 'Lần',
+  unit_price: 0,
+  total_amount: 0,
+  notes: '',
+  status: 'Chờ duyệt',
+  stock_status: 'Chưa nhập',
+};
+
 export const Costs = ({
   user,
   onBack,

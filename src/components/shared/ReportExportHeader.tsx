@@ -1,4 +1,63 @@
 import { logoBase64 } from '@/utils/logoBase64';
+import { useRef, useEffect } from 'react';
+
+const CanvasLogo = () => {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    // Kích thước canvas 4K (gấp 4 lần kích thước hiển thị)
+    const size = 44;
+    const scale = 4;
+    canvas.width = size * scale;
+    canvas.height = size * scale;
+
+    const img = new Image();
+    img.src = logoBase64;
+    img.onload = () => {
+      // Làm mịn ảnh
+      ctx.imageSmoothingEnabled = true;
+      ctx.imageSmoothingQuality = 'high';
+
+      // Bo góc (chuẩn gấp 4)
+      const radius = 10 * scale;
+      ctx.beginPath();
+      ctx.moveTo(radius, 0);
+      ctx.lineTo(canvas.width - radius, 0);
+      ctx.arcTo(canvas.width, 0, canvas.width, radius, radius);
+      ctx.lineTo(canvas.width, canvas.height - radius);
+      ctx.arcTo(canvas.width, canvas.height, canvas.width - radius, canvas.height, radius);
+      ctx.lineTo(radius, canvas.height);
+      ctx.arcTo(0, canvas.height, 0, canvas.height - radius, radius);
+      ctx.lineTo(0, radius);
+      ctx.arcTo(0, 0, radius, 0, radius);
+      ctx.closePath();
+      ctx.clip();
+
+      // Nền trắng dự phòng nếu logo PNG trong suốt
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+    };
+  }, []);
+
+  return (
+    <canvas
+      ref={canvasRef}
+      style={{
+        width: 44,
+        height: 44,
+        flexShrink: 0,
+        display: 'block',
+      }}
+    />
+  );
+};
 
 interface ReportExportHeaderProps {
   /** Tên báo cáo, VD: "BẢNG TÍNH LƯƠNG", "BẢNG CHẤM CÔNG" */
@@ -22,14 +81,9 @@ export const ReportExportHeader = ({ reportTitle, subtitle }: ReportExportHeader
         fontFamily: "'Inter', system-ui, sans-serif",
       }}
     >
-      {/* Row 1: Logo + company */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
-        <img
-          src={logoBase64}
-          alt="Logo CDX"
-          style={{ width: 44, height: 44, borderRadius: 10, objectFit: 'contain', flexShrink: 0 }}
-        />
-        <div>
+      <div style={{ display: 'flex', alignItems: 'center', marginBottom: 12 }}>
+        <CanvasLogo />
+        <div style={{ marginLeft: 10 }}>
           <p
             style={{
               margin: 0,

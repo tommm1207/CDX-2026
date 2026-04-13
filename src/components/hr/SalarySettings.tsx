@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Settings2, X, Edit, Plus, Trash2 } from 'lucide-react';
+import { Settings2, X, Edit, Plus, Trash2, Search, Filter, Check, Image as ImageIcon } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { supabase } from '@/lib/supabase';
 import { Employee } from '@/types';
@@ -36,6 +36,11 @@ export const SalarySettings = ({
   const [newForm, setNewForm] = useState({ ...emptyForm });
   const [submitting, setSubmitting] = useState(false);
   const [dateError, setDateError] = useState('');
+  const [showFilter, setShowFilter] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [sortBy, setBy] = useState<'name' | 'code' | 'salary'>('code');
+  const [sortOrder, setOrder] = useState<'asc' | 'desc'>('asc');
+  const [showSortMenu, setShowSortMenu] = useState(false);
 
   const fetchData = async () => {
     setLoading(true);
@@ -171,9 +176,154 @@ export const SalarySettings = ({
       });
   };
 
+  const filteredEmployees = employees
+    .filter((emp) => {
+      if (!searchTerm) return true;
+      const term = searchTerm.toLowerCase();
+      return (
+        emp.full_name?.toLowerCase().includes(term) ||
+        emp.code?.toLowerCase().includes(term)
+      );
+    })
+    .sort((a, b) => {
+      let comp = 0;
+      if (sortBy === 'name') {
+        comp = (a.full_name || '').localeCompare(b.full_name || '');
+      } else if (sortBy === 'code') {
+        comp = (a.code || '').localeCompare(b.code || '');
+      } else if (sortBy === 'salary') {
+        const sA = getCurrentSetting(a.id)?.daily_rate || 0;
+        const sB = getCurrentSetting(b.id)?.daily_rate || 0;
+        comp = sA - sB;
+      }
+      return sortOrder === 'asc' ? comp : -comp;
+    });
+
   return (
     <div className="p-4 md:p-6 space-y-6 pb-24">
-      <PageBreadcrumb title="Cài đặt lương" onBack={onBack} />
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <PageBreadcrumb title="Cài đặt lương" onBack={onBack} />
+        
+        <div className="flex items-center gap-2 relative">
+          {/* Action Buttons - 4-Button Sync Layout */}
+          <button
+            disabled
+            title="Báo cáo cài đặt (Sắp ra mắt)"
+            className="w-11 h-11 flex items-center justify-center bg-gray-50 border border-gray-100 shadow-sm rounded-2xl text-gray-300 cursor-not-allowed opacity-50 transition-all"
+          >
+            <ImageIcon size={22} />
+          </button>
+
+          <button
+            onClick={() => {
+              if (addToast) addToast('Tính năng Xuất Excel cài đặt đang được phát triển...', 'info');
+            }}
+            title="Xuất Excel"
+            className="w-11 h-11 flex items-center justify-center bg-white border border-gray-100 shadow-sm rounded-2xl text-green-600 hover:bg-gray-50 active:scale-90 transition-all font-black text-xs"
+          >
+            <div className="w-5 h-5 bg-[#1D6F42] rounded-md flex items-center justify-center text-white text-[10px]">X</div>
+          </button>
+
+          <div className="relative">
+            <button
+              onClick={() => setShowSortMenu(!showSortMenu)}
+              title="Sắp xếp"
+              className={`w-11 h-11 flex items-center justify-center border shadow-sm rounded-2xl active:scale-90 transition-all ${
+                showSortMenu ? 'bg-primary text-white border-primary shadow-primary/20' : 'bg-white text-blue-600 border-gray-100'
+              }`}
+            >
+              <Filter size={22} />
+            </button>
+
+            <AnimatePresence>
+              {showSortMenu && (
+                <>
+                  <div className="fixed inset-0 z-40" onClick={() => setShowSortMenu(false)} />
+                  <motion.div
+                    initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                    className="absolute right-0 mt-2 w-52 bg-white/80 backdrop-blur-xl border border-white/20 shadow-2xl rounded-2xl py-2 z-50 overflow-hidden"
+                  >
+                    {[
+                      { id: 'code-asc', label: 'Mã nhân viên (Thấp → Cao)', by: 'code', order: 'asc' },
+                      { id: 'code-desc', label: 'Mã nhân viên (Cao → Thấp)', by: 'code', order: 'desc' },
+                      { id: 'name-asc', label: 'Tên nhân viên (A → Z)', by: 'name', order: 'asc' },
+                      { id: 'name-desc', label: 'Tên nhân viên (Z → A)', by: 'name', order: 'desc' },
+                      { id: 'salary-desc', label: 'Mức lương: Cao → Thấp', by: 'salary', order: 'desc' },
+                      { id: 'salary-asc', label: 'Mức lương: Thấp → Cao', by: 'salary', order: 'asc' },
+                    ].map((opt) => {
+                      const isActive = sortBy === opt.by && sortOrder === opt.order;
+                      return (
+                        <button
+                          key={opt.id}
+                          onClick={() => {
+                            setBy(opt.by as any);
+                            setOrder(opt.order as any);
+                            setShowSortMenu(false);
+                            if (addToast) addToast(`Sắp xếp: ${opt.label}`, 'info');
+                          }}
+                          className={`w-full px-4 py-2.5 text-left text-xs font-bold transition-colors flex items-center justify-between ${
+                            isActive ? 'bg-primary text-white' : 'text-gray-600 hover:bg-primary/10'
+                          }`}
+                        >
+                          {opt.label}
+                          {isActive && <Check size={14} />}
+                        </button>
+                      );
+                    })}
+                  </motion.div>
+                </>
+              )}
+            </AnimatePresence>
+          </div>
+
+          <button
+            onClick={() => setShowFilter(!showFilter)}
+            title="Tìm kiếm"
+            className={`w-11 h-11 flex items-center justify-center border shadow-sm rounded-2xl active:scale-90 transition-all ${
+              showFilter || searchTerm
+                ? 'bg-primary text-white border-primary shadow-primary/20'
+                : 'bg-white text-gray-600 border-gray-100'
+            }`}
+          >
+            <Search size={22} />
+          </button>
+        </div>
+      </div>
+
+      {/* Search Input Panel */}
+      <AnimatePresence>
+        {showFilter && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            className="z-10"
+          >
+            <div className="bg-white p-4 rounded-3xl shadow-sm border border-gray-100 mb-2">
+              <div className="relative">
+                <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
+                <input
+                  type="text"
+                  placeholder="Tìm theo tên hoặc mã nhân viên..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="w-full pl-12 pr-4 py-3 bg-gray-50 border border-gray-100 rounded-2xl text-sm font-bold outline-none focus:ring-2 focus:ring-primary/20 transition-all"
+                />
+                {searchTerm && (
+                  <button 
+                    onClick={() => setSearchTerm('')}
+                    className="absolute right-4 top-1/2 -translate-y-1/2 p-1 hover:bg-gray-200 rounded-lg text-gray-400"
+                  >
+                    <X size={14} />
+                  </button>
+                )}
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       <div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden overflow-x-auto custom-scrollbar pb-2">
         <table className="w-full text-left border-collapse min-w-[700px] whitespace-nowrap">
@@ -207,7 +357,7 @@ export const SalarySettings = ({
                 </td>
               </tr>
             ) : (
-              employees.map((emp) => {
+              filteredEmployees.map((emp) => {
                 const cur = getCurrentSetting(emp.id);
                 const histCount = getHistory(emp.id).length;
                 return (

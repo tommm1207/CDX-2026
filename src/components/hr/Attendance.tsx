@@ -1,5 +1,16 @@
-import { useState, useEffect } from 'react';
-import { CalendarCheck, Plus, X, Users, Check, RefreshCw, Search } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
+import {
+  CalendarCheck,
+  Plus,
+  X,
+  Users,
+  Check,
+  RefreshCw,
+  Search,
+  Filter,
+  Image as LucideImageIcon,
+  Share2
+} from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { supabase } from '@/lib/supabase';
 import { Employee } from '@/types';
@@ -9,9 +20,14 @@ import { ToastType } from '../shared/Toast';
 import { MonthYearPicker } from '../shared/MonthYearPicker';
 import { Button } from '../shared/Button';
 import { SortButton, SortOption } from '../shared/SortButton';
+import { ExcelButton } from '../shared/ExcelButton';
+import { exportTableImage } from '../../utils/reportExport';
+import { SaveImageButton } from '../shared/SaveImageButton';
+import { ReportPreviewModal } from '../shared/ReportPreviewModal';
 
 import { AttendanceTable } from './AttendanceTable';
 import { FAB } from '../shared/FAB';
+import { utils, writeFile } from 'xlsx';
 
 export const Attendance = ({
   user,
@@ -32,10 +48,24 @@ export const Attendance = ({
   const [loading, setLoading] = useState(true);
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1);
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
+  const [isCustomRange, setIsCustomRange] = useState(false);
+  const [hideZero, setHideZero] = useState(false);
+
+  const today = new Date();
+  const firstDayOfMonth = new Date(today.getFullYear(), today.getMonth(), 1).toISOString().split('T')[0];
+  const lastDayOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0).toISOString().split('T')[0];
+
+  const [startDate, setStartDate] = useState(firstDayOfMonth);
+  const [endDate, setEndDate] = useState(lastDayOfMonth);
+
+  const [isCapturingTable, setIsCapturingTable] = useState(false);
+  const [showReportPreview, setShowReportPreview] = useState(false);
+  const logoBase64 = '/logo.png';
+  const reportRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     fetchData();
-  }, [selectedMonth, selectedYear]);
+  }, [selectedMonth, selectedYear, isCustomRange, startDate, endDate]);
 
   const fetchData = async () => {
     setLoading(true);
@@ -57,14 +87,18 @@ export const Attendance = ({
       const { data: empData } = await query.order('code');
       if (empData) setEmployees(empData);
 
-      const startDate = `${selectedYear}-${String(selectedMonth).padStart(2, '0')}-01`;
-      const endDate = `${selectedYear}-${String(selectedMonth).padStart(2, '0')}-${String(daysInMonth).padStart(2, '0')}`;
+      const fetchStartDate = isCustomRange
+        ? startDate
+        : `${selectedYear}-${String(selectedMonth).padStart(2, '0')}-01`;
+      const fetchEndDate = isCustomRange
+        ? endDate
+        : new Date(selectedYear, selectedMonth, 0).toISOString().split('T')[0];
 
       let attQuery = supabase
         .from('attendance')
         .select('*')
-        .gte('date', startDate)
-        .lte('date', endDate);
+        .gte('date', fetchStartDate)
+        .lte('date', fetchEndDate);
 
       if (!isAdmin) {
         attQuery = attQuery.eq('employee_id', user.id);
@@ -80,11 +114,36 @@ export const Attendance = ({
     }
   };
 
-  const daysInMonth = new Date(selectedYear, selectedMonth, 0).getDate();
-  const days = Array.from({ length: daysInMonth }, (_, i) => i + 1);
+  const getDaysArray = () => {
+    if (!isCustomRange) {
+      const daysInMonth = new Date(selectedYear, selectedMonth, 0).getDate();
+      return Array.from({ length: daysInMonth }, (_, i) => {
+        const d = i + 1;
+        return {
+          day: d,
+          dateStr: `${selectedYear}-${String(selectedMonth).padStart(2, '0')}-${String(d).padStart(2, '0')}`
+        };
+      });
+    }
 
-  const getStatus = (empId: string, day: number) => {
-    const dateStr = `${selectedYear}-${String(selectedMonth).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+    const result = [];
+    const current = new Date(start);
+    while (current <= end) {
+      result.push({
+        day: current.getDate(),
+        dateStr: current.toISOString().split('T')[0]
+      });
+      current.setDate(current.getDate() + 1);
+    }
+    return result;
+  };
+
+  const daysData = getDaysArray();
+  const days = daysData.map(d => d.day);
+
+  const getStatus = (empId: string, dateStr: string) => {
     return attendance.find((a) => a.employee_id === empId && a.date === dateStr);
   };
 
@@ -337,11 +396,22 @@ export const Attendance = ({
 
   const filteredEmployees = employees
     .filter((e) => {
-      if (!searchTerm) return true;
-      const s = searchTerm.toLowerCase();
-      return (
-        (e.full_name || '').toLowerCase().includes(s) || (e.code || '').toLowerCase().includes(s)
-      );
+      // Search filter
+      if (searchTerm) {
+        const s = searchTerm.toLowerCase();
+        const matches = (e.full_name || '').toLowerCase().includes(s) ||
+          (e.code || '').toLowerCase().includes(s);
+        if (!matches) return false;
+      }
+
+      // Zero work days filter
+      if (hideZero) {
+        const hasAttendance = attendance.some(a => a.employee_id === e.id &&
+          (a.status === 'present' || a.status === 'half-day'));
+        if (!hasAttendance) return false;
+      }
+
+      return true;
     })
     .sort((a, b) => {
       if (sortBy === 'code') return (a.code || '').localeCompare(b.code || '');
@@ -349,34 +419,77 @@ export const Attendance = ({
       return 0;
     });
 
+  const exportExcel = () => {
+    try {
+      if (attendance.length === 0) {
+        if (addToast) addToast('Không có dữ liệu để xuất', 'warning');
+        return;
+      }
+
+      const daysInMonth = new Date(selectedYear, selectedMonth, 0).getDate();
+      const exportData = filteredEmployees.map((emp) => {
+        const row: any = {
+          'Mã NV': emp.code,
+          'Nhân viên': emp.full_name,
+        };
+        for (let d = 1; d <= daysInMonth; d++) {
+          const status = getStatus(emp.id, `${selectedYear}-${String(selectedMonth).padStart(2, '0')}-${String(d).padStart(2, '0')}`);
+          row[d.toString()] = status ? (status.status === 'present' ? 'X' : status.status === 'half-day' ? '1/2' : 'V') : '';
+        }
+        return row;
+      });
+
+      const ws = utils.json_to_sheet(exportData);
+      const wb = utils.book_new();
+      utils.book_append_sheet(wb, ws, 'Chấm công');
+      writeFile(wb, `ChamCong_T${selectedMonth}_${selectedYear}.xlsx`);
+      if (addToast) addToast('Xuất Excel thành công!', 'success');
+    } catch (err: any) {
+      if (addToast) addToast('Lỗi xuất Excel: ' + err.message, 'error');
+    }
+  };
+
   return (
     <div className="p-4 md:p-6 space-y-6 pb-24 overflow-x-hidden">
-      <div className="flex items-center justify-between gap-2">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <PageBreadcrumb title="Chấm công" onBack={onBack} />
-        <div className="flex items-center gap-2">
-          <SortButton
-            currentSort={sortBy}
-            onSortChange={(val) => {
-              setSortBy(val);
-              localStorage.setItem(`sort_pref_attendance_${user.id}`, val);
-            }}
-            options={[
-              { value: 'code', label: 'Mã NV' },
-              { value: 'newest', label: 'Tên A-Z' },
-            ]}
-          />
-          <Button
-            size="icon"
-            variant={showFilter ? 'primary' : 'outline'}
-            onClick={() => setShowFilter((f) => !f)}
-            icon={Search}
-          />
-          <MonthYearPicker
-            selectedMonth={selectedMonth}
-            selectedYear={selectedYear}
-            onMonthChange={setSelectedMonth}
-            onYearChange={setSelectedYear}
-          />
+        <div className="flex items-center gap-1.5 justify-end flex-1">
+          {user.role !== 'User' && (
+            <Button
+              onClick={openBulkModal}
+              className="bg-[#05503b] hover:bg-[#044030] text-white border-none shadow-md flex items-center gap-2 px-3 sm:px-4 shrink-0 transition-all font-bold"
+              icon={Users}
+            >
+              <span className="hidden sm:inline">Chấm công</span>
+            </Button>
+          )}
+
+          <div className="flex items-center gap-1.5 ml-1">
+            <ExcelButton onClick={exportExcel} />
+            <SortButton
+              currentSort={sortBy}
+              onSortChange={(val) => {
+                setSortBy(val);
+                localStorage.setItem(`sort_pref_attendance_${user.id}`, val);
+              }}
+              options={[
+                { value: 'code', label: 'Sắp xếp: Mã NV' },
+                { value: 'newest', label: 'Sắp xếp: Tên A-Z' },
+              ]}
+            />
+            <Button
+              size="icon"
+              variant={showFilter ? 'primary' : 'outline'}
+              onClick={() => setShowFilter((f) => !f)}
+              icon={Search}
+              className={showFilter ? '' : 'border-gray-200'}
+            />
+            <SaveImageButton
+              onClick={() => setShowReportPreview(true)}
+              isCapturing={isCapturingTable}
+              title="Lưu ảnh chấm công"
+            />
+          </div>
         </div>
       </div>
 
@@ -386,33 +499,168 @@ export const Attendance = ({
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: 'auto' }}
             exit={{ opacity: 0, height: 0 }}
-            className="overflow-hidden"
+            className="z-20"
+            style={{ overflow: showFilter ? 'visible' : 'hidden' }}
           >
-            <div className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 space-y-2">
-              <label className="text-[10px] font-bold text-gray-400 uppercase">Tìm nhân viên</label>
-              <input
-                type="text"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                placeholder="Tên, mã NV..."
-                className="w-full px-3 py-2 rounded-lg border border-gray-200 text-xs outline-none focus:ring-2 focus:ring-primary/20"
-              />
+            <div className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 space-y-5 mb-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {/* 1. Chọn thời kỳ */}
+                <div className="bg-gray-50/50 p-4 rounded-2xl border border-gray-100 space-y-3">
+                  <p className="text-[10px] font-black text-primary/40 uppercase tracking-widest text-center">Chọn thời kỳ</p>
+                  <MonthYearPicker
+                    selectedMonth={selectedMonth}
+                    selectedYear={selectedYear}
+                    onMonthChange={setSelectedMonth}
+                    onYearChange={setSelectedYear}
+                  />
+                </div>
+
+                {/* 2. Tìm kiếm */}
+                <div className="space-y-4">
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-bold text-gray-400 uppercase ml-1">Tìm kiếm nhân viên</label>
+                    <div className="relative group">
+                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-primary transition-colors" size={16} />
+                      <input
+                        type="text"
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        placeholder="Họ tên hoặc mã nhân viên..."
+                        className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-gray-200 text-sm outline-none focus:ring-4 focus:ring-primary/10 transition-all"
+                      />
+                    </div>
+                  </div>
+
+                </div>
+
+                {/* 3. Tùy chọn hiển thị */}
+                <div className="space-y-3">
+                  <p className="text-[10px] font-bold text-gray-400 uppercase ml-1">Tùy chọn hiển thị</p>
+                  <div className="grid grid-cols-1 gap-2">
+                    <button
+                      onClick={() => setHideZero(!hideZero)}
+                      className={`flex items-center justify-between px-4 py-3 rounded-xl border-2 transition-all ${hideZero ? 'bg-amber-50 border-amber-200 text-amber-700 shadow-sm' : 'bg-white border-gray-100 text-gray-500'
+                        }`}
+                    >
+                      <span className="text-xs font-bold uppercase">Ẩn công = 0</span>
+                      <div className={`w-10 h-5 rounded-full relative transition-colors ${hideZero ? 'bg-amber-400' : 'bg-gray-200'}`}>
+                        <div className={`absolute top-1 w-3 h-3 bg-white rounded-full transition-all ${hideZero ? 'left-6' : 'left-1'}`} />
+                      </div>
+                    </button>
+
+                    <button
+                      onClick={() => setIsCustomRange(!isCustomRange)}
+                      className={`flex items-center justify-between px-4 py-3 rounded-xl border-2 transition-all ${isCustomRange ? 'bg-blue-50 border-blue-200 text-blue-700 shadow-sm' : 'bg-white border-gray-100 text-gray-500'
+                        }`}
+                    >
+                      <span className="text-xs font-bold uppercase">Khoảng ngày tùy chỉnh</span>
+                      <div className={`w-10 h-5 rounded-full relative transition-colors ${isCustomRange ? 'bg-blue-400' : 'bg-gray-200'}`}>
+                        <div className={`absolute top-1 w-3 h-3 bg-white rounded-full transition-all ${isCustomRange ? 'left-6' : 'left-1'}`} />
+                      </div>
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {/* Custom Date Range Picker */}
+              <AnimatePresence>
+                {isCustomRange && (
+                  <motion.div
+                    initial={{ opacity: 0, y: -10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -10 }}
+                    className="pt-4 border-t border-dashed border-gray-100 mt-4"
+                  >
+                    <div className="flex items-center flex-wrap gap-4">
+                      <div className="flex-1 min-w-[150px] space-y-1.5">
+                        <label className="text-[10px] font-bold text-gray-400 uppercase ml-1">Từ ngày</label>
+                        <input
+                          type="date"
+                          value={startDate}
+                          onChange={(e) => setStartDate(e.target.value)}
+                          className="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-sm outline-none focus:ring-4 focus:ring-blue-100"
+                        />
+                      </div>
+                      <div className="flex-1 min-w-[150px] space-y-1.5">
+                        <label className="text-[10px] font-bold text-gray-400 uppercase ml-1">Đến ngày</label>
+                        <input
+                          type="date"
+                          value={endDate}
+                          onChange={(e) => setEndDate(e.target.value)}
+                          className="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-sm outline-none focus:ring-4 focus:ring-blue-100"
+                        />
+                      </div>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </div>
           </motion.div>
         )}
       </AnimatePresence>
 
-      <AttendanceTable
-        employees={filteredEmployees}
-        days={days}
-        attendance={attendance}
-        loading={loading}
-        user={user}
-        selectedMonth={selectedMonth}
-        selectedYear={selectedYear}
-        onToggleAttendance={toggleAttendance}
-        onOpenEditModal={openEditModal}
-      />
+      <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+        <AttendanceTable
+          employees={filteredEmployees}
+          days={days}
+          attendance={attendance}
+          loading={loading}
+          user={user}
+          selectedMonth={selectedMonth}
+          selectedYear={selectedYear}
+          onToggleAttendance={toggleAttendance}
+          onOpenEditModal={openEditModal}
+        />
+      </div>
+
+      {/* Hidden Ref for Report Capture */}
+      <div style={{ position: 'absolute', left: '-9999px', top: 0 }}>
+        <div ref={reportRef} className="p-8 bg-white" style={{ width: '1400px' }}>
+          {/* Premium Branding Header */}
+          <div className="flex items-center gap-6 mb-10">
+            <img
+              src={logoBase64}
+              alt="Logo"
+              className="w-24 h-24 rounded-3xl object-contain shadow-sm"
+              onError={(e) => (e.currentTarget.style.display = 'none')}
+            />
+            <div className="space-y-1">
+              <h2 className="text-3xl font-black text-gray-800 tracking-tighter uppercase leading-none">CDX - CON ĐƯỜNG XANH</h2>
+              <p className="text-sm font-bold text-gray-400 uppercase tracking-[0.3em] mt-2">Hệ thống quản lý kho và nhân sự</p>
+            </div>
+          </div>
+
+          <div className="mb-6">
+            <h1 className="text-3xl font-black italic text-[#2D5A27] tracking-tighter mb-1">BẢNG CHẤM CÔNG</h1>
+            <p className="text-sm font-bold text-gray-500 italic">
+              Thượng tuần/Hạ tuần: Tháng {selectedMonth}/{selectedYear} • CDX-2026 Edition
+            </p>
+          </div>
+
+          <AttendanceTable
+            employees={filteredEmployees}
+            days={days}
+            attendance={attendance}
+            loading={false}
+            user={user}
+            selectedMonth={selectedMonth}
+            selectedYear={selectedYear}
+            onToggleAttendance={() => { }}
+            onOpenEditModal={() => { }}
+          />
+
+          <div className="mt-8 pt-6 border-t border-gray-100 flex justify-between items-end">
+            <div className="text-[10px] text-gray-400 font-bold">
+              Ngày xuất: {new Date().toLocaleDateString('vi-VN')} • {new Date().toLocaleTimeString('vi-VN')}
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-[10px] font-black text-gray-300 uppercase italic">CDX ERP SYSTEM</span>
+              <div className="w-1 h-1 bg-gray-200 rounded-full"></div>
+              <span className="text-[10px] font-bold text-gray-300 uppercase">Operational Excellence</span>
+            </div>
+          </div>
+        </div>
+      </div>
 
       {/* Edit Attendance Modal */}
       <AnimatePresence>
@@ -425,80 +673,112 @@ export const Attendance = ({
               initial={{ opacity: 0, scale: 0.95, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 20 }}
-              className="bg-white rounded-[2rem] md:rounded-[2.5rem] shadow-2xl w-full max-w-sm overflow-hidden"
+              className="bg-white rounded-[2.5rem] md:rounded-[3rem] shadow-2xl w-full max-w-2xl overflow-hidden"
               onClick={(e) => e.stopPropagation()}
             >
-              <div className="bg-primary p-6 text-white flex items-center justify-between transition-colors">
-                <div className="flex items-center gap-3">
+              <div className="bg-primary p-8 text-white flex items-center justify-between transition-colors">
+                <div className="flex items-center gap-4">
                   <div
-                    className="p-2 bg-white/20 rounded-xl cursor-pointer hover:bg-white/30 transition-all active:scale-95"
+                    className="p-3 bg-white/20 rounded-2xl cursor-pointer hover:bg-white/30 transition-all active:scale-95"
                     onClick={() => setShowEditModal(false)}
                   >
-                    <CalendarCheck size={20} />
+                    <CalendarCheck size={28} />
                   </div>
-                  <h3 className="font-bold text-lg">
-                    Ngày {editingAtt.day} - {editingAtt.empName}
-                  </h3>
+                  <div>
+                    <h3 className="font-bold text-2xl">
+                      NGÀY {editingAtt.day} - THÁNG {selectedMonth}
+                    </h3>
+                    <p className="text-white/70 font-bold uppercase tracking-widest text-sm mt-1">
+                      {editingAtt.empName}
+                    </p>
+                  </div>
                 </div>
                 <button
                   onClick={() => setShowEditModal(false)}
                   className="p-2 hover:bg-white/20 rounded-xl transition-all"
                 >
-                  <X size={24} />
+                  <X size={32} />
                 </button>
               </div>
-              <div className="p-6 space-y-6">
-                <div>
-                  <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1 mb-2 block">
-                    Trạng thái công
+              <div className="p-10 space-y-10">
+                <div className="space-y-6 text-center">
+                  <label className="text-xs font-black text-gray-400 uppercase tracking-[0.3em] block">
+                    Chọn trạng thái công
                   </label>
-                  <div className="grid grid-cols-1 gap-3">
+                  <div className="grid grid-cols-3 gap-6">
                     <button
                       onClick={() => setEditFormData({ ...editFormData, status: 'present' })}
-                      className={`py-4 rounded-2xl text-sm font-bold border transition-all active:scale-95 flex items-center justify-center gap-2 ${editFormData.status === 'present' ? 'bg-green-500 text-white border-green-500 shadow-lg shadow-green-200' : 'bg-gray-50 text-gray-400 border-gray-100 hover:bg-gray-100'}`}
+                      className={`flex flex-col items-center justify-center p-8 rounded-[2.5rem] border-2 transition-all active:scale-95 gap-3 ${editFormData.status === 'present' ? 'bg-green-500 text-white border-green-500 shadow-2xl shadow-green-200 ring-4 ring-green-100' : 'bg-gray-50 text-gray-400 border-gray-100 hover:bg-gray-100 opacity-60'}`}
                     >
-                      <Check size={18} /> ✓ 1 công
+                      <span className="text-4xl font-black">X</span>
+                      <span className="text-xs font-bold uppercase tracking-widest">1 công</span>
                     </button>
                     <button
                       onClick={() => setEditFormData({ ...editFormData, status: 'half-day' })}
-                      className={`py-4 rounded-2xl text-sm font-bold border transition-all active:scale-95 ${editFormData.status === 'half-day' ? 'bg-amber-500 text-white border-amber-500 shadow-lg shadow-amber-200' : 'bg-gray-50 text-gray-400 border-gray-100 hover:bg-gray-100'}`}
+                      className={`flex flex-col items-center justify-center p-8 rounded-[2.5rem] border-2 transition-all active:scale-95 gap-3 ${editFormData.status === 'half-day' ? 'bg-amber-500 text-white border-amber-500 shadow-2xl shadow-amber-200 ring-4 ring-amber-100' : 'bg-gray-50 text-gray-400 border-gray-100 hover:bg-gray-100 opacity-60'}`}
                     >
-                      ½ công
+                      <span className="text-4xl font-black">½</span>
+                      <span className="text-xs font-bold uppercase tracking-widest">½ công</span>
                     </button>
                     <button
                       onClick={() => setEditFormData({ ...editFormData, status: 'absent' })}
-                      className={`py-4 rounded-2xl text-sm font-bold border transition-all active:scale-95 ${editFormData.status === 'absent' ? 'bg-red-500 text-white border-red-500 shadow-lg shadow-red-200' : 'bg-gray-50 text-gray-400 border-gray-100 hover:bg-gray-100'}`}
+                      className={`flex flex-col items-center justify-center p-8 rounded-[2.5rem] border-2 transition-all active:scale-95 gap-3 ${editFormData.status === 'absent' ? 'bg-red-500 text-white border-red-500 shadow-2xl shadow-red-200 ring-4 ring-red-100' : 'bg-gray-50 text-gray-400 border-gray-100 hover:bg-gray-100 opacity-60'}`}
                     >
-                      Vắng (Nghỉ)
-                    </button>
-                    <button
-                      onClick={async () => {
-                        if (editingAtt?.id) {
-                          await supabase.from('attendance').delete().eq('id', editingAtt.id);
-                          fetchData();
-                        }
-                        setShowEditModal(false);
-                      }}
-                      className="py-4 rounded-2xl text-sm font-bold bg-gray-100 text-gray-500 border border-gray-200 hover:bg-gray-200 transition-all active:scale-95"
-                    >
-                      Xóa chấm công
+                      <span className="text-4xl font-black">V</span>
+                      <span className="text-xs font-bold uppercase tracking-widest">Vắng</span>
                     </button>
                   </div>
                 </div>
-                <NumericInput
-                  label="Giờ tăng ca (h)"
-                  value={editFormData.overtime}
-                  onChange={(val) => setEditFormData({ ...editFormData, overtime: val })}
-                  placeholder="Ví dụ: 1.5"
-                  isDecimal={true}
-                />
-                <div className="flex gap-3 pt-2">
-                  <Button variant="outline" fullWidth onClick={() => setShowEditModal(false)}>
-                    Hủy bỏ
-                  </Button>
-                  <Button variant="primary" fullWidth onClick={saveEdit}>
-                    Cập nhật
-                  </Button>
+
+                <div className="bg-gray-50 p-8 rounded-[2.5rem] border border-gray-100 shadow-inner space-y-4">
+                  <div className="flex items-center justify-between px-2">
+                    <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest flex items-center gap-2">
+                      <Plus size={12} /> Giờ tăng ca (TC)
+                    </label>
+                    {editFormData.overtime > 0 && (
+                      <span className="text-xs font-black text-amber-600 bg-amber-50 px-3 py-1 rounded-full border border-amber-100 animation-pulse">
+                        +{editFormData.overtime}h
+                      </span>
+                    )}
+                  </div>
+                  <input
+                    type="number"
+                    step="0.5"
+                    min="0"
+                    value={editFormData.overtime}
+                    onChange={(e) => setEditFormData({ ...editFormData, overtime: parseFloat(e.target.value) || 0 })}
+                    placeholder="Nhập giờ TC..."
+                    className="w-full bg-white px-8 py-5 rounded-[2rem] border-2 border-transparent focus:border-amber-500 text-center text-2xl font-black text-amber-600 outline-none transition-all placeholder:text-gray-200 shadow-sm"
+                  />
+                </div>
+
+                <div className="flex flex-col gap-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <button
+                      onClick={() => setShowEditModal(false)}
+                      className="px-8 py-5 rounded-[2rem] text-sm font-black text-gray-400 bg-gray-100 hover:bg-gray-200 transition-all active:scale-95 uppercase tracking-widest"
+                    >
+                      Hủy bỏ
+                    </button>
+                    <button
+                      onClick={saveEdit}
+                      className="px-8 py-5 rounded-[2rem] text-sm font-black text-white bg-primary hover:bg-primary-hover shadow-xl shadow-primary/20 transition-all active:scale-95 uppercase tracking-widest"
+                    >
+                      CẬP NHẬT
+                    </button>
+                  </div>
+                  <button
+                    onClick={async () => {
+                      if (editingAtt?.id) {
+                        await supabase.from('attendance').delete().eq('id', editingAtt.id);
+                        fetchData();
+                      }
+                      setShowEditModal(false);
+                    }}
+                    className="w-full px-8 py-5 rounded-[2rem] text-xs font-black text-red-400 border-2 border-red-50 hover:bg-red-50 transition-all active:scale-95 uppercase tracking-widest"
+                  >
+                    XÓA CHẤM CÔNG
+                  </button>
                 </div>
               </div>
             </motion.div>
@@ -572,11 +852,10 @@ export const Attendance = ({
                         <button
                           key={s}
                           onClick={() => setBulkStatus(s)}
-                          className={`flex-1 py-1.5 rounded-lg text-[10px] font-bold transition-all ${
-                            bulkStatus === s
+                          className={`flex-1 py-1.5 rounded-lg text-[10px] font-bold transition-all ${bulkStatus === s
                               ? 'bg-primary text-white'
                               : 'text-gray-400 hover:bg-gray-50'
-                          }`}
+                            }`}
                         >
                           {s === 'present' ? '1 Công' : s === 'half-day' ? '½ Công' : 'Vắng'}
                         </button>
@@ -619,18 +898,16 @@ export const Attendance = ({
                                 : [...prev, emp.id],
                             )
                           }
-                          className={`flex items-center gap-3 p-3 rounded-xl cursor-pointer transition-all border ${
-                            selectedEmployees.includes(emp.id)
+                          className={`flex items-center gap-3 p-3 rounded-xl cursor-pointer transition-all border ${selectedEmployees.includes(emp.id)
                               ? 'bg-white border-primary shadow-sm'
                               : 'bg-white/50 border-transparent opacity-60 hover:opacity-100'
-                          }`}
+                            }`}
                         >
                           <div
-                            className={`w-5 h-5 rounded-md border flex items-center justify-center ${
-                              selectedEmployees.includes(emp.id)
+                            className={`w-5 h-5 rounded-md border flex items-center justify-center ${selectedEmployees.includes(emp.id)
                                 ? 'bg-primary border-primary text-white'
                                 : 'bg-white border-gray-200'
-                            }`}
+                              }`}
                           >
                             {selectedEmployees.includes(emp.id) && (
                               <Check size={12} strokeWidth={4} />
@@ -763,7 +1040,7 @@ export const Attendance = ({
               initial={{ opacity: 0, scale: 0.95, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 20 }}
-              className="bg-white rounded-[2rem] md:rounded-[2.5rem] shadow-2xl max-w-sm w-full overflow-hidden"
+              className="bg-white rounded-[2rem] md:rounded-[2.5rem] shadow-2xl max-w-lg w-full overflow-hidden"
               onClick={(e) => e.stopPropagation()}
             >
               <div className="p-6 bg-amber-500 text-white flex items-center justify-between transition-colors">
@@ -820,15 +1097,74 @@ export const Attendance = ({
           </div>
         )}
       </AnimatePresence>
-      {user.role !== 'User' && (
-        <FAB
-          onClick={openBulkModal}
-          label="Chấm công"
-          icon={Users}
-          showLabel={true}
-          color="bg-primary"
-        />
-      )}
+      {/* Removed FAB per user request to move to top */}
+      <ReportPreviewModal
+        isOpen={showReportPreview}
+        onClose={() => setShowReportPreview(false)}
+        title="Bảng chấm công tháng"
+        isCapturing={isCapturingTable}
+        onExport={() => {
+          if (reportRef.current) {
+            exportTableImage({
+              element: reportRef.current,
+              fileName: `Bang_Cham_Cong_T${selectedMonth}_${selectedYear}.png`,
+              addToast,
+              onStart: () => setIsCapturingTable(true),
+              onEnd: () => {
+                setIsCapturingTable(false);
+                setShowReportPreview(false);
+              },
+            });
+          }
+        }}
+      >
+        <div className="p-12 bg-white">
+          {/* Logo & Header */}
+          <div className="flex items-center gap-6 mb-10">
+            <img
+              src={logoBase64}
+              alt="Logo"
+              className="w-24 h-24 rounded-3xl object-contain shadow-sm"
+              onError={(e) => (e.currentTarget.style.display = 'none')}
+            />
+            <div className="space-y-1">
+              <h2 className="text-3xl font-black text-gray-800 tracking-tighter uppercase leading-none">CDX - CON ĐƯỜNG XANH</h2>
+              <p className="text-sm font-bold text-gray-400 uppercase tracking-[0.3em] mt-2">Hệ thống quản lý kho và nhân sự</p>
+            </div>
+          </div>
+
+          <div className="mb-6">
+            <h1 className="text-3xl font-black italic text-[#2D5A27] tracking-tighter mb-1 uppercase">BẢNG CHẤM CÔNG</h1>
+            <p className="text-sm font-bold text-gray-500 italic uppercase">
+              Kỳ chấm công: {isCustomRange ? `${startDate} - ${endDate}` : `Tháng ${selectedMonth}/${selectedYear}`} • CDX-2026 ERP
+            </p>
+          </div>
+
+          {/* Table */}
+          <AttendanceTable
+            employees={filteredEmployees}
+            days={days}
+            attendance={attendance}
+            loading={false}
+            user={user}
+            selectedMonth={selectedMonth}
+            selectedYear={selectedYear}
+            onToggleAttendance={() => { }}
+            onOpenEditModal={() => { }}
+          />
+
+          <div className="mt-8 pt-6 border-t border-gray-100 flex justify-between items-end">
+            <div className="text-[10px] text-gray-400 font-bold">
+              Ngày xuất: {new Date().toLocaleDateString('vi-VN')} • {new Date().toLocaleTimeString('vi-VN')}
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-[10px] font-black text-gray-300 uppercase italic">CDX ERP SYSTEM</span>
+              <div className="w-1 h-1 bg-gray-200 rounded-full"></div>
+              <span className="text-[10px] font-bold text-gray-300 uppercase">Operational Excellence</span>
+            </div>
+          </div>
+        </div>
+      </ReportPreviewModal>
     </div>
   );
 };

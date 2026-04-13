@@ -19,6 +19,7 @@ interface AttendanceTableProps {
     otHours?: number | '',
   ) => void;
   onOpenEditModal?: (empId: string, day: number) => void;
+  hideZeroRows?: boolean;
 }
 
 export const AttendanceTable = ({
@@ -31,6 +32,7 @@ export const AttendanceTable = ({
   selectedYear,
   onToggleAttendance,
   onOpenEditModal,
+  hideZeroRows,
 }: AttendanceTableProps) => {
   const [confirmPopup, setConfirmPopup] = useState<{
     empId: string;
@@ -51,7 +53,7 @@ export const AttendanceTable = ({
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'present':
-        return 'bg-green-500 text-white';
+        return 'bg-[#05503b] text-white';
       case 'half-day':
         return 'bg-amber-500 text-white';
       case 'absent':
@@ -155,10 +157,18 @@ export const AttendanceTable = ({
                   </td>
                 </tr>
               ) : (
-                employees.map((emp) => {
-                  const empAtt = attendance.filter((a) => a.employee_id === emp.id);
-                  const totalDays =
-                    empAtt.reduce((sum, a) => sum + Number(a.hours_worked || 0), 0) / 8;
+                employees
+                  .filter((emp) => {
+                    if (!hideZeroRows) return true;
+                    const empAtt = attendance.filter((a) => a.employee_id === emp.id);
+                    const totalDays = empAtt.reduce((sum, a) => sum + Number(a.hours_worked || 0), 0) / 8;
+                    const totalOT = empAtt.reduce((sum, a) => sum + Number(a.overtime_hours || 0), 0);
+                    return totalDays > 0 || totalOT > 0;
+                  })
+                  .map((emp) => {
+                    const empAtt = attendance.filter((a) => a.employee_id === emp.id);
+                    const totalDays =
+                      empAtt.reduce((sum, a) => sum + Number(a.hours_worked || 0), 0) / 8;
                   return (
                     <tr key={emp.id} className="hover:bg-gray-50 transition-colors group">
                       <td className="px-4 py-3 sticky left-0 z-[30] bg-white group-hover:bg-gray-50 border-r border-gray-100">

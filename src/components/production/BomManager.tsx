@@ -1,3 +1,4 @@
+import { exportTableImage } from '../../utils/reportExport';
 import { useState, useEffect } from 'react';
 import {
   Plus,
@@ -10,7 +11,13 @@ import {
   Package,
   Layers,
   ClipboardList,
+  Image as LucideImageIcon,
+  Share2,
 } from 'lucide-react';
+import { useRef } from 'react';
+
+
+import { SaveImageButton } from '../shared/SaveImageButton';
 import { motion, AnimatePresence } from 'motion/react';
 import { supabase } from '@/lib/supabase';
 import { Employee } from '@/types';
@@ -47,6 +54,10 @@ export const BomManager = ({
     (localStorage.getItem(`sort_pref_bom_${user.id}`) as SortOption) || 'newest',
   );
   const [showFilter, setShowFilter] = useState(false);
+  const [isCapturingTable, setIsCapturingTable] = useState(false);
+  
+  const reportRef = useRef<HTMLDivElement>(null);
+  const logoBase64 = '/logo.png';
 
   // Form state
   const [formData, setFormData] = useState({
@@ -66,6 +77,21 @@ export const BomManager = ({
     fetchBoms();
     fetchMaterials();
   }, []);
+
+      const handleSaveTableImage = () => {
+    const reportElem = reportRef.current || tableBillRef.current;
+    if (reportElem) {
+      exportTableImage({
+        element: reportElem,
+        fileName: 'Bao_Cao.png',
+        addToast,
+        onStart: () => setIsCapturingTable(true),
+        onEnd: () => setIsCapturingTable(false),
+      });
+    }
+  };
+
+  
 
   const fetchBoms = async () => {
     setLoading(true);
@@ -282,6 +308,11 @@ export const BomManager = ({
             onClick={() => setShowFilter((f) => !f)}
             icon={Search}
           />
+          <SaveImageButton 
+            onClick={handleSaveTableImage} 
+            isCapturing={isCapturingTable} 
+            title="Lưu ảnh danh mục định mức" 
+          />
         </div>
       </div>
 
@@ -458,6 +489,79 @@ export const BomManager = ({
       </div>
 
       <FAB onClick={handleAddNew} label="Thêm định mức mới" />
+
+      {/* Hidden Report Template (A4 Landscape) */}
+      <div className="fixed -left-[4000px] -top-[4000px] no-print">
+        <div 
+          ref={reportRef}
+          className="bg-white p-12 w-[1123px] min-h-[794px] font-sans text-gray-900 border"
+          style={{ width: '1123px' }}
+        >
+          {/* Company Header */}
+          <div className="flex justify-between items-start mb-10 pb-6 border-b-2 border-primary/20">
+            <div className="flex items-center gap-6">
+              <div className="bg-primary/5 p-4 rounded-3xl border border-primary/10">
+                <img src={logoBase64} alt="Company Logo" className="w-20 h-20 object-contain rounded-full" />
+              </div>
+              <div className="space-y-1">
+                <h1 className="text-3xl font-black text-primary tracking-tighter uppercase italic">CDX ERP SYSTEM</h1>
+                <p className="text-[10px] text-gray-400 font-bold uppercase tracking-[0.3em]">Smart Construction Management • 2026 Edition</p>
+                <div className="flex items-center gap-3 mt-2">
+                  <span className="px-3 py-1 bg-indigo-50 text-indigo-600 rounded-full text-[10px] font-black uppercase tracking-widest border border-indigo-100 italic">Bill of Materials Registry</span>
+                  <span className="w-1.5 h-1.5 bg-gray-200 rounded-full" />
+                  <span className="text-[10px] text-gray-500 font-bold italic tracking-wide">Ref ID: {new Date().getTime().toString(36).toUpperCase()}</span>
+                </div>
+              </div>
+            </div>
+            <div className="text-right">
+              <h2 className="text-3xl font-black text-gray-900 uppercase tracking-tighter mb-1">Thiết Lập Định Mức Vật Tư</h2>
+              <p className="text-xs text-gray-500 font-bold italic">Thời gian xuất: {new Date().toLocaleString('vi-VN')}</p>
+              <div className="mt-4 flex flex-col items-end gap-1">
+                <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest font-mono">STATUS: MASTER_BOM_AUDIT</p>
+                <div className="h-0.5 w-12 bg-primary/20 rounded-full" />
+              </div>
+            </div>
+          </div>
+
+          {/* Table */}
+          <table className="w-full text-left border-collapse rounded-3xl overflow-hidden shadow-sm border border-gray-100">
+            <thead>
+              <tr className="bg-gray-800 text-white">
+                <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest italic border-r border-white/10 w-16 text-center">STT</th>
+                <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest italic border-r border-white/10 w-1/3">Tên sản phẩm thiết lập</th>
+                <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest italic border-r border-white/10">Mô tả sản phẩm</th>
+                <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest italic text-right w-32">Số lượng VT</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-100 text-xs">
+              {filteredBoms.map((bom, idx) => (
+                <tr key={idx} className={idx % 2 === 0 ? 'bg-white' : 'bg-gray-50/30'}>
+                  <td className="px-6 py-4 text-center text-gray-400 font-bold">{idx + 1}</td>
+                  <td className="px-6 py-4 font-black text-indigo-600 uppercase tracking-tight break-words whitespace-normal leading-relaxed">{bom.ten_san_pham}</td>
+                  <td className="px-6 py-4 text-gray-500 font-bold italic break-words whitespace-normal leading-relaxed">{bom.mo_ta || '—'}</td>
+                  <td className="px-6 py-4 text-right font-black text-gray-900 bg-gray-100/30">{(bom.san_pham_bom_chi_tiet || []).length} mục</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+
+          {/* Footer Branding */}
+          <div className="mt-12 flex justify-between items-end border-t border-gray-100 pt-6">
+            <div className="space-y-1">
+              <p className="text-xs font-black text-gray-300 uppercase tracking-[0.2em] italic">CDX ERP SYSTEM</p>
+              <p className="text-[9px] text-gray-300 font-bold uppercase tracking-widest">End of Master BOM report • Production Design Services</p>
+            </div>
+            <div className="text-right">
+              <p className="text-[9px] font-black text-gray-300 uppercase tracking-[0.3em] mb-1">Formula Integrity Secured</p>
+              <div className="text-[10px] text-gray-400 font-bold bg-gray-50 px-3 py-1 rounded-full border border-gray-100">
+                Auth Token: <span className="text-primary font-black tracking-widest italic ml-1 underline">PRD-BOM-SYNC</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      
 
       {/* Create/Edit BOM Modal */}
       <AnimatePresence>

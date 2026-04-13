@@ -1,8 +1,9 @@
+import { exportTableImage } from '../../utils/reportExport';
 import { useState, useEffect, FormEvent } from 'react';
 import {
   Users,
   Plus,
-  Search,
+  Search, Filter,
   Edit,
   Trash2,
   X,
@@ -10,7 +11,13 @@ import {
   UserPlus,
   AlertCircle,
   CheckCircle,
+  Image as LucideImageIcon,
+  Share2,
 } from 'lucide-react';
+import { useRef } from 'react';
+
+
+import { SaveImageButton } from '../shared/SaveImageButton';
 import { motion, AnimatePresence } from 'motion/react';
 import { supabase } from '@/lib/supabase';
 import { Employee } from '@/types';
@@ -34,6 +41,11 @@ export const HRRecords = ({
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
+  const [statusFilter, setStatusFilter] = useState('Tất cả');
+  const [departmentFilter, setDepartmentFilter] = useState('Tất cả');
+  const [roleFilter, setRoleFilter] = useState('Tất cả');
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
   const [showModal, setShowModal] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [showFilter, setShowFilter] = useState(false);
@@ -43,6 +55,10 @@ export const HRRecords = ({
   const [sortBy, setSortBy] = useState<SortOption>(
     (localStorage.getItem(`sort_pref_hr_${user.id}`) as SortOption) || 'newest',
   );
+  const [isCapturingTable, setIsCapturingTable] = useState(false);
+  
+  const reportRef = useRef<HTMLDivElement>(null);
+  const logoBase64 = '/logo.png';
 
   useEffect(() => {
     localStorage.setItem(`sort_pref_hr_${user.id}`, sortBy);
@@ -99,6 +115,20 @@ export const HRRecords = ({
       return 'CDX001';
     }
   };
+
+  const handleSaveTableImage = () => {
+    if (reportRef.current) {
+      exportTableImage({
+        element: reportRef.current,
+        fileName: `Danh_Sach_Nhan_Su_${new Date().toLocaleDateString('vi-VN').replace(/\//g, '-')}.png`,
+        addToast,
+        onStart: () => setIsCapturingTable(true),
+        onEnd: () => setIsCapturingTable(false),
+      });
+    }
+  };
+
+  
 
   const handleEdit = async (emp: Employee) => {
     if (emp.role === 'Develop' && user.role !== 'Develop') {
@@ -287,10 +317,23 @@ export const HRRecords = ({
         emp.full_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
         (emp.code && emp.code.toLowerCase().includes(searchTerm.toLowerCase()));
 
+      const matchesStatus =
+        statusFilter === 'Tất cả' || emp.status === statusFilter;
+      
+      const matchesDepartment =
+        departmentFilter === 'Tất cả' || emp.department === departmentFilter;
+
+      const matchesRole =
+        roleFilter === 'Tất cả' || emp.role === roleFilter;
+
+      const matchesDate = 
+        (!startDate || (emp.join_date && emp.join_date >= startDate)) &&
+        (!endDate || (emp.join_date && emp.join_date <= endDate));
+
       if (user.role !== 'Develop' && emp.role === 'Develop') {
         return false;
       }
-      return matchesSearch;
+      return matchesSearch && matchesStatus && matchesDepartment && matchesRole && matchesDate;
     })
     .sort((a, b) => {
       if (sortBy === 'newest')
@@ -301,14 +344,13 @@ export const HRRecords = ({
       return 0;
     });
 
+  // Extract unique departments for filter
+  const departments = Array.from(new Set(employees.map(e => e.department).filter(Boolean))).sort();
+
   return (
     <div className="p-4 md:p-6 space-y-6 pb-24 overflow-x-hidden">
-      <PageBreadcrumb title="Hồ sơ Nhân sự" onBack={onBack} />
-      <div className="flex items-center justify-between">
-        <h2 className="text-lg font-bold text-gray-800 flex items-center gap-2 truncate">
-          <Users size={20} className="text-primary flex-shrink-0" />{' '}
-          <span className="truncate">Hồ sơ Nhân sự</span>
-        </h2>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <PageBreadcrumb title="Hồ sơ Nhân sự" onBack={onBack} />
         <div className="flex items-center gap-2 justify-end flex-1">
           <SortButton
             currentSort={sortBy}
@@ -327,6 +369,11 @@ export const HRRecords = ({
             variant={showFilter ? 'primary' : 'outline'}
             onClick={() => setShowFilter((f) => !f)}
             icon={Search}
+          />
+          <SaveImageButton 
+            onClick={handleSaveTableImage} 
+            isCapturing={isCapturingTable} 
+            title="Lưu ảnh danh mục nhân sự" 
           />
         </div>
       </div>
@@ -354,20 +401,51 @@ export const HRRecords = ({
                     className="w-full pl-10 pr-4 py-2 rounded-lg border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
                   />
                 </div>
-                <select className="px-4 py-2 rounded-lg border border-gray-200 text-sm outline-none">
-                  <option>-- Nhân sự --</option>
+                <select 
+                  value={statusFilter}
+                  onChange={(e) => setStatusFilter(e.target.value)}
+                  className="px-4 py-2 rounded-lg border border-gray-200 text-sm outline-none bg-white font-bold text-gray-700 shadow-sm"
+                >
+                  <option value="Tất cả">-- Trạng thái --</option>
+                  <option value="Đang làm việc">Đang làm việc</option>
+                  <option value="Hoạt động">Hoạt động</option>
+                  <option value="Nghỉ việc">Nghỉ việc</option>
                 </select>
-                <select className="px-4 py-2 rounded-lg border border-gray-200 text-sm outline-none">
-                  <option>-- Kho --</option>
+                <select 
+                  value={departmentFilter}
+                  onChange={(e) => setDepartmentFilter(e.target.value)}
+                  className="px-4 py-2 rounded-lg border border-gray-200 text-sm outline-none bg-white font-bold text-gray-700 shadow-sm"
+                >
+                  <option value="Tất cả">-- Bộ phận --</option>
+                  {departments.map(dept => (
+                    <option key={dept} value={dept}>{dept}</option>
+                  ))}
                 </select>
-                <input
-                  type="date"
-                  className="px-4 py-2 rounded-lg border border-gray-200 text-sm outline-none"
-                />
-                <input
-                  type="date"
-                  className="px-4 py-2 rounded-lg border border-gray-200 text-sm outline-none"
-                />
+                <select 
+                  value={roleFilter}
+                  onChange={(e) => setRoleFilter(e.target.value)}
+                  className="px-4 py-2 rounded-lg border border-gray-200 text-sm outline-none bg-white font-bold text-gray-700 shadow-sm"
+                >
+                  <option value="Tất cả">-- Phân quyền --</option>
+                  <option value="User">User</option>
+                  <option value="Admin">Admin</option>
+                  {user.role === 'Develop' && <option value="Develop">Develop</option>}
+                </select>
+                <div className="flex items-center gap-2 lg:col-span-1">
+                  <input
+                    type="date"
+                    value={startDate}
+                    onChange={(e) => setStartDate(e.target.value)}
+                    className="w-full px-4 py-2 rounded-lg border border-gray-200 text-sm outline-none shadow-sm"
+                  />
+                  <span className="text-gray-400">→</span>
+                  <input
+                    type="date"
+                    value={endDate}
+                    onChange={(e) => setEndDate(e.target.value)}
+                    className="w-full px-4 py-2 rounded-lg border border-gray-200 text-sm outline-none shadow-sm"
+                  />
+                </div>
               </div>
             </motion.div>
           )}
@@ -850,15 +928,100 @@ export const HRRecords = ({
       </AnimatePresence>
       {/* FAB — Thêm nhân sự */}
       <FAB
-        onClick={async () => {
-          const nextCode = await generateNextEmployeeCode();
-          setFormData({ ...initialFormState, code: nextCode });
+        onClick={() => {
           setIsEditing(false);
+          setFormData(initialFormState);
           setShowModal(true);
         }}
         label="Thêm nhân sự"
-        color="bg-primary"
       />
+
+      {/* Hidden Report Template (A4 Landscape) */}
+      <div className="fixed -left-[4000px] -top-[4000px] no-print">
+        <div 
+          ref={reportRef}
+          className="bg-white p-12 w-[1123px] min-h-[794px] font-sans text-gray-900 border"
+          style={{ width: '1123px' }}
+        >
+          {/* Company Header */}
+          <div className="flex justify-between items-start mb-10 pb-6 border-b-2 border-primary/20">
+            <div className="flex items-center gap-6">
+              <div className="bg-primary/5 p-4 rounded-3xl border border-primary/10">
+                <img src={logoBase64} alt="Company Logo" className="w-20 h-20 object-contain rounded-full" />
+              </div>
+              <div className="space-y-1">
+                <h1 className="text-3xl font-black text-primary tracking-tighter uppercase italic">CDX ERP SYSTEM</h1>
+                <p className="text-[10px] text-gray-400 font-bold uppercase tracking-[0.3em]">Smart Construction Management • 2026 Edition</p>
+                <div className="flex items-center gap-3 mt-2">
+                  <span className="px-3 py-1 bg-primary/5 text-primary rounded-full text-[10px] font-black uppercase tracking-widest border border-primary/10 italic">HR Records Database</span>
+                  <span className="w-1.5 h-1.5 bg-gray-200 rounded-full" />
+                  <span className="text-[10px] text-gray-500 font-bold italic tracking-wide">Ref ID: {new Date().getTime().toString(36).toUpperCase()}</span>
+                </div>
+              </div>
+            </div>
+            <div className="text-right">
+              <h2 className="text-3xl font-black text-gray-900 uppercase tracking-tighter mb-1">Danh Sách Nhân Sự Công Ty</h2>
+              <p className="text-xs text-gray-500 font-bold italic">Thời gian xuất: {new Date().toLocaleString('vi-VN')}</p>
+              <div className="mt-4 flex flex-col items-end gap-1">
+                <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest font-mono">STATUS: CORPORATE_AUDIT</p>
+                <div className="h-0.5 w-12 bg-primary/20 rounded-full" />
+              </div>
+            </div>
+          </div>
+
+          {/* Table */}
+          <table className="w-full text-left border-collapse rounded-3xl overflow-hidden shadow-sm border border-gray-100">
+            <thead>
+              <tr className="bg-gray-800 text-white">
+                <th className="px-4 py-4 text-[10px] font-black uppercase tracking-widest italic border-r border-white/10">Mã NV</th>
+                <th className="px-4 py-4 text-[10px] font-black uppercase tracking-widest italic border-r border-white/10">Họ và tên</th>
+                <th className="px-4 py-4 text-[10px] font-black uppercase tracking-widest italic border-r border-white/10">Email / Số điện thoại</th>
+                <th className="px-4 py-4 text-[10px] font-black uppercase tracking-widest italic border-r border-white/10">Ngày vào làm</th>
+                <th className="px-4 py-4 text-[10px] font-black uppercase tracking-widest italic border-r border-white/10">Bộ phận / Chức vụ</th>
+                <th className="px-4 py-4 text-[10px] font-black uppercase tracking-widest italic text-right">Trạng thái</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-100 text-xs">
+              {filteredEmployees.map((emp, idx) => (
+                <tr key={idx} className={idx % 2 === 0 ? 'bg-white' : 'bg-gray-50/30'}>
+                  <td className="px-4 py-3 font-black text-primary font-mono tracking-tighter">#{emp.code || emp.id.slice(0, 6)}</td>
+                  <td className="px-4 py-3 font-black text-gray-900 uppercase tracking-tight">{emp.full_name}</td>
+                  <td className="px-4 py-3">
+                    <p className="text-gray-600 font-bold italic">{emp.email || '—'}</p>
+                    <p className="text-[10px] text-gray-400 font-mono mt-0.5">{emp.phone || '—'}</p>
+                  </td>
+                  <td className="px-4 py-3 text-gray-500 font-bold">{emp.join_date || '—'}</td>
+                  <td className="px-4 py-3">
+                    <p className="font-black text-gray-800 uppercase tracking-tighter">{emp.department || '—'}</p>
+                    <p className="text-[10px] text-gray-400 italic mt-0.5">{emp.position || '—'}</p>
+                  </td>
+                  <td className="px-4 py-3 text-right">
+                    <span className={`px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-widest ${emp.status === 'Đang làm việc' || emp.status === 'Hoạt động' ? 'bg-green-100 text-green-600' : 'bg-red-100 text-red-600'}`}>
+                      {emp.status}
+                    </span>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+
+          {/* Footer Branding */}
+          <div className="mt-12 flex justify-between items-end border-t border-gray-100 pt-6">
+            <div className="space-y-1">
+              <p className="text-xs font-black text-gray-300 uppercase tracking-[0.2em] italic">CDX ERP SYSTEM</p>
+              <p className="text-[9px] text-gray-300 font-bold uppercase tracking-widest">End of personnel database report • Human Resource verified</p>
+            </div>
+            <div className="text-right">
+              <p className="text-[9px] font-black text-gray-300 uppercase tracking-[0.3em] mb-1">Corporate Protocol Verified</p>
+              <div className="text-[10px] text-gray-400 font-bold bg-gray-50 px-3 py-1 rounded-full border border-gray-100">
+                Data Integrity: <span className="text-primary font-black tracking-widest italic ml-1 underline">SECURED_VAULT</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      
     </div>
   );
 };

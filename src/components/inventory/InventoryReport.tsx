@@ -1,5 +1,11 @@
+import { exportTableImage } from '../../utils/reportExport';
 import { useState, useEffect } from 'react';
-import { BarChart3, RefreshCw, EyeOff, Download, Search } from 'lucide-react';
+import { BarChart3, RefreshCw, EyeOff, Download, Search, X, ImageIcon, Share2 } from 'lucide-react';
+import { useRef } from 'react';
+
+
+import { SaveImageButton } from '../shared/SaveImageButton';
+import { formatDate } from '@/utils/format';
 import { motion, AnimatePresence } from 'motion/react';
 import { supabase } from '@/lib/supabase';
 import * as xlsx from 'xlsx';
@@ -41,9 +47,13 @@ export const InventoryReport = ({
   const firstOfYear = `${new Date().getFullYear()}-01-01`;
   const [startDate, setStartDate] = useState<string>(firstOfYear);
   const [endDate, setEndDate] = useState<string>(today);
-  const [hideEmpty, setHideEmpty] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
+  const [hideEmpty, setHideEmpty] = useState(true);
   const [showFilter, setShowFilter] = useState(false);
+  const [isCapturingTable, setIsCapturingTable] = useState(false);
+  
+  const reportRef = useRef<HTMLDivElement>(null);
+  const logoBase64 = '/logo.png';
 
   useEffect(() => {
     Promise.all([
@@ -202,9 +212,29 @@ export const InventoryReport = ({
     }
   };
 
+  const handleSaveTableImage = () => {
+    if (reportRef.current) {
+      const whName = selectedWarehouse
+        ? warehouses.find((w) => w.id === selectedWarehouse)?.name
+        : 'TatCaKho';
+      const cleanWhName = whName?.replace(/[^a-zA-Z0-9_\u0080-\uFFFF]/g, '') || 'TatCaKho';
+      const dateStr = new Date().toISOString().split('T')[0].replace(/-/g, '');
+      
+      exportTableImage({
+        element: reportRef.current,
+        fileName: `TonKho_${cleanWhName}_${dateStr}.png`,
+        addToast,
+        onStart: () => setIsCapturingTable(true),
+        onEnd: () => setIsCapturingTable(false),
+      });
+    }
+  };
+
+
+
   return (
     <div className="p-4 md:p-6 space-y-6 pb-24">
-      <div className="flex items-center justify-between gap-2">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <PageBreadcrumb title="Kiểm tra tồn kho" onBack={onBack} />
         <div className="flex items-center gap-2 justify-end flex-1">
           <ExcelButton onClick={handleExportExcel} />
@@ -214,114 +244,113 @@ export const InventoryReport = ({
             onClick={() => setShowFilter((f) => !f)}
             icon={Search}
           />
+          <SaveImageButton 
+            onClick={handleSaveTableImage} 
+            isCapturing={isCapturingTable} 
+            title="Lưu ảnh báo cáo A4" 
+          />
         </div>
       </div>
 
-      <div className="flex justify-end">
-        <button
-          onClick={() => setHideEmpty(!hideEmpty)}
-          className={`group flex items-center gap-2 px-4 py-2 rounded-2xl border transition-all duration-300 ${
-            hideEmpty
-              ? 'bg-amber-50 text-amber-600 border-amber-200 shadow-sm shadow-amber-100/50'
-              : 'bg-white text-gray-400 border-gray-100 hover:bg-gray-50'
-          }`}
-        >
-          {hideEmpty ? (
-            <EyeOff size={16} className="animate-pulse" />
-          ) : (
-            <BarChart3 size={16} className="group-hover:scale-110 transition-transform" />
-          )}
-          <span className="text-[11px] font-black uppercase tracking-tight">
-            (Ẩn vật tư tồn bằng 0)
-          </span>
-          <div
-            className={`w-8 h-4 rounded-full relative transition-colors duration-200 ${hideEmpty ? 'bg-amber-400' : 'bg-gray-200'}`}
-          >
-            <div
-              className={`absolute top-0.5 w-3 h-3 bg-white rounded-full transition-all duration-200 ${hideEmpty ? 'left-4.5' : 'left-0.5'}`}
-            />
-          </div>
-        </button>
-      </div>
-
-      {/* Bộ lọc */}
       <AnimatePresence>
         {showFilter && (
           <motion.div
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: 'auto' }}
             exit={{ opacity: 0, height: 0 }}
-            className="overflow-hidden"
+            className="z-10"
           >
-            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 flex flex-col md:flex-row gap-4 mb-4">
-              <div className="flex-1">
-                <label className="text-[10px] font-bold text-gray-400 uppercase mb-1 block">
-                  Từ ngày (đầu kỳ)
-                </label>
-                <input
-                  type="date"
-                  value={startDate}
-                  onChange={(e) => setStartDate(e.target.value)}
-                  className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20"
-                />
-              </div>
-              <div className="flex-1">
-                <label className="text-[10px] font-bold text-gray-400 uppercase mb-1 block">
-                  Đến ngày (cuối kỳ)
-                </label>
-                <input
-                  type="date"
-                  value={endDate}
-                  onChange={(e) => setEndDate(e.target.value)}
-                  className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20"
-                />
-              </div>
-              <div className="flex-1">
-                <label className="text-[10px] font-bold text-gray-400 uppercase mb-1 block">
-                  Kho hàng
-                </label>
-                <select
-                  value={selectedWarehouse}
-                  onChange={(e) => setSelectedWarehouse(e.target.value)}
-                  className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20"
-                >
-                  <option value="">Tất cả các kho</option>
-                  {warehouses.map((wh) => (
-                    <option key={wh.id} value={wh.id}>
-                      {wh.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div className="flex-[2]">
-                <label className="text-[10px] font-bold text-gray-400 uppercase mb-1 block">
-                  Tìm kiếm vật tư
-                </label>
-                <div className="relative">
-                  <Search
-                    size={14}
-                    className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
-                  />
+            <div className="bg-white p-4 rounded-3xl shadow-sm border border-gray-100 mb-4 space-y-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div className="space-y-1">
+                  <label className="text-[10px] font-bold text-gray-400 uppercase">
+                    Từ ngày (đầu kỳ)
+                  </label>
                   <input
-                    type="text"
-                    placeholder="Nhập tên hoặc mã vật tư cần tìm..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="w-full pl-9 pr-3 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20"
+                    type="date"
+                    value={startDate}
+                    onChange={(e) => setStartDate(e.target.value)}
+                    className="w-full px-4 py-2 rounded-xl border border-gray-200 text-xs font-mono outline-none focus:ring-2 focus:ring-primary/20 transition-all font-bold"
                   />
                 </div>
+                <div className="space-y-1">
+                  <label className="text-[10px] font-bold text-gray-400 uppercase">
+                    Đến ngày (cuối kỳ)
+                  </label>
+                  <input
+                    type="date"
+                    value={endDate}
+                    onChange={(e) => setEndDate(e.target.value)}
+                    className="w-full px-4 py-2 rounded-xl border border-gray-200 text-xs font-mono outline-none focus:ring-2 focus:ring-primary/20 transition-all font-bold"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-[10px] font-bold text-gray-400 uppercase">Kho hàng</label>
+                  <select
+                    value={selectedWarehouse}
+                    onChange={(e) => setSelectedWarehouse(e.target.value)}
+                    className="w-full px-4 py-2 rounded-xl border border-gray-200 text-xs outline-none focus:ring-2 focus:ring-primary/20 transition-all"
+                  >
+                    <option value="">Tất cả các kho</option>
+                    {warehouses.map((wh) => (
+                      <option key={wh.id} value={wh.id}>
+                        {wh.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div className="space-y-1">
+                  <label className="text-[10px] font-bold text-gray-400 uppercase">Tìm kiếm</label>
+                  <div className="relative">
+                    <Search
+                      size={14}
+                      className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
+                    />
+                    <input
+                      type="text"
+                      placeholder="Mã hoặc tên vật tư..."
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      className="w-full pl-9 pr-3 py-2 rounded-xl border border-gray-200 text-xs outline-none focus:ring-2 focus:ring-primary/20 transition-all"
+                    />
+                  </div>
+                </div>
               </div>
-            </div>
-            <div className="flex items-center justify-end px-4 pb-2">
-              <div className="text-[10px] text-gray-400 font-medium">
-                Tìm thấy {report.length} kết quả phù hợp
+
+              <div className="flex items-center justify-between pt-2 border-t border-gray-50">
+                <div className="flex items-center gap-3">
+                  <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">
+                    Cấu hình hiển thị
+                  </label>
+                  <button
+                    onClick={() => setHideEmpty(!hideEmpty)}
+                    className={`flex items-center gap-2 px-3 py-1.5 rounded-xl border transition-all duration-300 ${
+                      hideEmpty
+                        ? 'bg-amber-50 text-amber-600 border-amber-200'
+                        : 'bg-white text-gray-400 border-gray-100 hover:bg-gray-50'
+                    }`}
+                  >
+                    <div
+                      className={`w-8 h-4 rounded-full relative transition-colors duration-200 ${hideEmpty ? 'bg-amber-400' : 'bg-gray-200'}`}
+                    >
+                      <div
+                        className={`absolute top-0.5 w-3 h-3 bg-white rounded-full transition-all duration-200 ${hideEmpty ? 'left-4.5' : 'left-0.5'}`}
+                      />
+                    </div>
+                    <span className="text-[10px] font-bold uppercase tracking-tighter">
+                      ({hideEmpty ? 'Đang ẩn' : 'Đang hiện'} vật tư tồn bằng 0)
+                    </span>
+                  </button>
+                </div>
+                <div className="text-[10px] text-gray-400 font-medium italic">
+                  Tìm thấy {report.length} kết quả phù hợp
+                </div>
               </div>
             </div>
           </motion.div>
         )}
       </AnimatePresence>
 
-      {/* Bảng tồn kho — giống bảng Tonkho app cũ */}
       <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse min-w-[900px] whitespace-nowrap">
@@ -452,6 +481,130 @@ export const InventoryReport = ({
               )}
             </tbody>
           </table>
+        </div>
+      </div>
+
+      {/* Hidden Report Template (A4 Landscape) */}
+      <div className="fixed -left-[4000px] -top-[4000px] no-print">
+        <div 
+          ref={reportRef}
+          className="bg-white p-12 w-[1123px] min-h-[794px] font-sans text-gray-900 border"
+          style={{ width: '1123px' }}
+        >
+          {/* Company Header */}
+          <div className="flex justify-between items-start mb-10 pb-6 border-b-2 border-primary/20">
+            <div className="flex items-center gap-6">
+              <div className="bg-primary/5 p-4 rounded-3xl border border-primary/10">
+                <img src={logoBase64} alt="Company Logo" className="w-20 h-20 object-contain rounded-full" />
+              </div>
+              <div className="space-y-1">
+                <h1 className="text-3xl font-black text-primary tracking-tighter uppercase italic">CDX ERP SYSTEM</h1>
+                <p className="text-[10px] text-gray-400 font-bold uppercase tracking-[0.3em]">Smart Construction Management • 2026 Edition</p>
+                <div className="flex items-center gap-3 mt-2">
+                  <span className="px-3 py-1 bg-green-50 text-green-600 rounded-full text-[10px] font-black uppercase tracking-widest border border-green-100 italic">Inventory Audit Report</span>
+                  <span className="w-1.5 h-1.5 bg-gray-200 rounded-full" />
+                  <span className="text-[10px] text-gray-500 font-bold italic tracking-wide">Data Ref: {new Date().getTime().toString(36).toUpperCase()}</span>
+                </div>
+              </div>
+            </div>
+            <div className="text-right">
+              <h2 className="text-3xl font-black text-gray-900 uppercase tracking-tighter mb-1">Báo Cáo Tổng Hợp Tồn Kho</h2>
+              <p className="text-xs text-gray-500 font-bold italic">Thời gian xuất: {new Date().toLocaleString('vi-VN')}</p>
+              <div className="mt-4 flex flex-col items-end gap-1">
+                <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest font-mono">Status: AUDITED_OK</p>
+                <div className="h-0.5 w-12 bg-primary/20 rounded-full" />
+              </div>
+            </div>
+          </div>
+
+          {/* Filters Info */}
+          <div className="grid grid-cols-2 gap-8 mb-8 bg-gray-50/50 p-6 rounded-3xl border border-gray-100">
+            <div className="space-y-3">
+              <div className="flex items-center gap-2">
+                <div className="w-1.5 h-4 bg-primary rounded-full" />
+                <p className="text-[10px] text-gray-400 font-black uppercase tracking-[0.2em]">Cấu hình báo cáo</p>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <p className="text-[11px] text-gray-500 font-bold">Từ ngày:</p>
+                  <p className="text-sm font-black text-gray-900">{startDate ? formatDate(startDate) : '—'}</p>
+                </div>
+                <div>
+                  <p className="text-[11px] text-gray-500 font-bold">Đến ngày:</p>
+                  <p className="text-sm font-black text-gray-900">{endDate ? formatDate(endDate) : '—'}</p>
+                </div>
+              </div>
+            </div>
+            <div className="space-y-3">
+              <div className="flex items-center gap-2">
+                <div className="w-1.5 h-4 bg-gray-800 rounded-full" />
+                <p className="text-[10px] text-gray-400 font-black uppercase tracking-[0.2em]">Bộ lọc ứng dụng</p>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <p className="text-[11px] text-gray-500 font-bold">Kho lọc:</p>
+                  <p className="text-sm font-black text-gray-900 uppercase tracking-widest">{selectedWarehouse ? warehouses.find(w => w.id === selectedWarehouse)?.name : 'Tất cả kho'}</p>
+                </div>
+                <div>
+                  <p className="text-[11px] text-gray-500 font-bold">Tìm kiếm:</p>
+                  <p className="text-sm font-black text-gray-900">{searchTerm || 'Tất cả vật tư'}</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Table */}
+          <table className="w-full text-left border-collapse rounded-3xl overflow-hidden shadow-sm border border-gray-100">
+            <thead>
+              <tr className="bg-primary text-white">
+                <th className="px-4 py-4 text-[10px] font-black uppercase tracking-widest italic border-r border-white/10">Vật tư</th>
+                <th className="px-4 py-4 text-[10px] font-black uppercase tracking-widest italic border-r border-white/10">Kho</th>
+                <th className="px-4 py-4 text-[10px] font-black uppercase tracking-widest italic border-r border-white/10 text-right">Tồn đầu</th>
+                <th className="px-4 py-4 text-[10px] font-black uppercase tracking-widest italic border-r border-white/10 text-right font-black">Nhập (+)</th>
+                <th className="px-4 py-4 text-[10px] font-black uppercase tracking-widest italic border-r border-white/10 text-right font-black">Xuất (-)</th>
+                <th className="px-4 py-4 text-[10px] font-black uppercase tracking-widest italic border-r border-white/10 text-right">Chuyển (+)</th>
+                <th className="px-4 py-4 text-[10px] font-black uppercase tracking-widest italic border-r border-white/10 text-right">Chuyển (-)</th>
+                <th className="px-4 py-4 text-[10px] font-black uppercase tracking-widest italic text-right bg-primary-hover">Tồn cuối</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-100 text-[11px]">
+              {report.map((item, idx) => (
+                <tr key={idx} className={idx % 2 === 0 ? 'bg-white' : 'bg-gray-50/50'}>
+                  <td className="px-4 py-3 font-black text-gray-900 uppercase tracking-tight">{item.materialName}</td>
+                  <td className="px-4 py-3 font-bold text-gray-500">{item.warehouseName}</td>
+                  <td className="px-4 py-3 text-right tabular-nums">{formatNumber(item.tonDau)}</td>
+                  <td className="px-4 py-3 text-right tabular-nums text-blue-600 font-black">+{formatNumber(item.tongNhap)}</td>
+                  <td className="px-4 py-3 text-right tabular-nums text-orange-600 font-black">-{formatNumber(item.tongXuat)}</td>
+                  <td className="px-4 py-3 text-right tabular-nums text-teal-600">+{formatNumber(item.chuyenDen)}</td>
+                  <td className="px-4 py-3 text-right tabular-nums text-purple-600">-{formatNumber(item.chuyenDi)}</td>
+                  <td className="px-4 py-3 text-right tabular-nums font-black text-primary bg-primary/5">{formatNumber(item.tonCuoi)} {item.unit}</td>
+                </tr>
+              ))}
+              <tr className="bg-primary/10 font-black">
+                <td colSpan={2} className="px-4 py-4 text-[11px] text-primary uppercase text-right italic tracking-[0.1em]">Tổng số toàn kho:</td>
+                <td className="px-4 py-4 text-right tabular-nums">{formatNumber(totals.tonDau)}</td>
+                <td className="px-4 py-4 text-right tabular-nums text-blue-600">+{formatNumber(totals.tongNhap)}</td>
+                <td className="px-4 py-4 text-right tabular-nums text-orange-600">-{formatNumber(totals.tongXuat)}</td>
+                <td className="px-4 py-4 text-right tabular-nums text-teal-600">+{formatNumber(totals.chuyenDen)}</td>
+                <td className="px-4 py-4 text-right tabular-nums text-purple-600">-{formatNumber(totals.chuyenDi)}</td>
+                <td className="px-4 py-4 text-lg text-right tabular-nums text-primary">{formatNumber(totals.tonCuoi)}</td>
+              </tr>
+            </tbody>
+          </table>
+
+          {/* Footer Branding */}
+          <div className="mt-12 flex justify-between items-end border-t border-gray-100 pt-6">
+            <div className="space-y-1">
+              <p className="text-xs font-black text-gray-300 uppercase tracking-[0.2em] italic">CDX ERP SYSTEM</p>
+              <p className="text-[9px] text-gray-300 font-bold uppercase tracking-widest">End of inventory audit report • Verified System Log</p>
+            </div>
+            <div className="text-right">
+              <p className="text-[9px] font-black text-gray-300 uppercase tracking-[0.3em] mb-1">Audit Protocol Verified</p>
+              <div className="text-[10px] text-gray-400 font-bold bg-gray-50 px-3 py-1 rounded-full border border-gray-100">
+                Security Hash: <span className="text-primary font-black tracking-widest italic ml-1 underline">A1-SAFE</span>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </div>

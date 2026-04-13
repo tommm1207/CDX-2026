@@ -1,4 +1,5 @@
-import { useState, useEffect, FormEvent } from 'react';
+import { exportTableImage } from '../../utils/reportExport';
+import { useState, useEffect, FormEvent, useRef } from 'react';
 import {
   Plus,
   Search,
@@ -15,6 +16,7 @@ import {
   Image as ImageIcon,
   RefreshCw,
   Camera,
+  Share2, Filter,
 } from 'lucide-react';
 import { ChangeEvent } from 'react';
 import { compressImage, uploadToImgBB } from '@/utils/imageUpload';
@@ -35,6 +37,8 @@ import { isUUID, generateCode, getAllowedWarehouses } from '@/utils/helpers';
 import { Button } from '../shared/Button';
 import { getAvailableStock, validateFutureImpact } from '@/utils/inventory';
 import { SortButton, SortOption } from '../shared/SortButton';
+
+import { SaveImageButton } from '../shared/SaveImageButton';
 
 export const StockOut = ({
   user,
@@ -75,6 +79,9 @@ export const StockOut = ({
   const [sortBy, setSortBy] = useState<SortOption>(
     (localStorage.getItem(`sort_pref_stockout_${user.id}`) as SortOption) || 'newest',
   );
+  const [isCapturingTable, setIsCapturingTable] = useState(false);
+  const reportRef = useRef<HTMLDivElement>(null);
+  const logoBase64 = '/logo.png';
 
   const { warehouses, materials, groups, refreshAll, fetchWarehouses } = useInventoryData(
     user.data_view_permission,
@@ -98,6 +105,19 @@ export const StockOut = ({
   useEffect(() => {
     fetchSlips();
   }, [statusFilter]);
+
+    const handleSaveTableImage = () => {
+    const reportElem = reportRef.current || tableBillRef.current;
+    if (reportElem) {
+      exportTableImage({
+        element: reportElem,
+        fileName: 'Bao_Cao.png',
+        addToast,
+        onStart: () => setIsCapturingTable(true),
+        onEnd: () => setIsCapturingTable(false),
+      });
+    }
+  };
 
   useEffect(() => {
     if (formData.warehouse_id && formData.material_id && formData.date) {
@@ -479,7 +499,7 @@ export const StockOut = ({
 
   return (
     <div className="p-4 md:p-6 space-y-6 pb-24 overflow-x-hidden">
-      <div className="flex items-center justify-between gap-2">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <PageBreadcrumb title="Xuất kho" onBack={onBack} />
         <div className="flex items-center gap-2 justify-end flex-1">
           <SortButton
@@ -501,6 +521,11 @@ export const StockOut = ({
             onClick={() => setShowFilter((f) => !f)}
             icon={Search}
           />
+          <SaveImageButton 
+            onClick={handleSaveTableImage} 
+            isCapturing={isCapturingTable} 
+            title="Lưu ảnh báo cáo A4" 
+          />
         </div>
       </div>
 
@@ -510,7 +535,7 @@ export const StockOut = ({
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: 'auto' }}
             exit={{ opacity: 0, height: 0 }}
-            className="overflow-hidden"
+            className="z-10"
           >
             <div className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 mb-4 space-y-4">
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
@@ -1111,6 +1136,153 @@ export const StockOut = ({
         label="Lập phiếu xuất"
         color="bg-red-600"
       />
+
+      {/* Hidden Report Template (A4 Landscape) */}
+      <div className="fixed -left-[4000px] -top-[4000px] no-print">
+        <div 
+          ref={reportRef}
+          className="bg-white p-12 w-[1123px] min-h-[794px] font-sans text-gray-900 border"
+          style={{ width: '1123px' }}
+        >
+          {/* Company Header */}
+          <div className="flex justify-between items-start mb-10 pb-6 border-b-2 border-red-200">
+            <div className="flex items-center gap-6">
+              <div className="bg-red-50 p-4 rounded-3xl border border-red-100">
+                <img src={logoBase64} alt="Company Logo" className="w-20 h-20 object-contain rounded-full" />
+              </div>
+              <div className="space-y-1">
+                <h1 className="text-3xl font-black text-red-600 tracking-tighter uppercase italic">CDX ERP SYSTEM</h1>
+                <p className="text-[10px] text-gray-400 font-bold uppercase tracking-[0.3em]">Smart Construction Management • 2026 Edition</p>
+                <div className="flex items-center gap-3 mt-2">
+                  <span className="px-3 py-1 bg-red-50 text-red-600 rounded-full text-[10px] font-black uppercase tracking-widest border border-red-100 italic">Inventory Outflow Report</span>
+                  <span className="w-1.5 h-1.5 bg-gray-200 rounded-full" />
+                  <span className="text-[10px] text-gray-500 font-bold italic tracking-wide">Data Ref: {new Date().getTime().toString(36).toUpperCase()}</span>
+                </div>
+              </div>
+            </div>
+            <div className="text-right">
+              <h2 className="text-3xl font-black text-gray-900 uppercase tracking-tighter mb-1">Báo Cáo Xuất Kho</h2>
+              <p className="text-xs text-gray-500 font-bold italic">Thời gian xuất: {new Date().toLocaleString('vi-VN')}</p>
+              <div className="mt-4 flex flex-col items-end gap-1">
+                <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest font-mono">Status: SECURED_TRANS</p>
+                <div className="h-0.5 w-12 bg-red-200 rounded-full" />
+              </div>
+            </div>
+          </div>
+
+          {/* Filters Info */}
+          <div className="grid grid-cols-2 gap-8 mb-8 bg-gray-50/50 p-6 rounded-3xl border border-gray-100">
+            <div className="space-y-3">
+              <div className="flex items-center gap-2">
+                <div className="w-1.5 h-4 bg-red-500 rounded-full" />
+                <p className="text-[10px] text-gray-400 font-black uppercase tracking-[0.2em]">Cấu hình báo cáo</p>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <p className="text-[11px] text-gray-500 font-bold">Từ ngày:</p>
+                  <p className="text-sm font-black text-gray-900">{filterStartDate ? formatDate(filterStartDate) : '—'}</p>
+                </div>
+                <div>
+                  <p className="text-[11px] text-gray-500 font-bold">Đến ngày:</p>
+                  <p className="text-sm font-black text-gray-900">{filterEndDate ? formatDate(filterEndDate) : '—'}</p>
+                </div>
+              </div>
+            </div>
+            <div className="space-y-3">
+              <div className="flex items-center gap-2">
+                <div className="w-1.5 h-4 bg-gray-800 rounded-full" />
+                <p className="text-[10px] text-gray-400 font-black uppercase tracking-[0.2em]">Bộ lọc ứng dụng</p>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <p className="text-[11px] text-gray-500 font-bold">Trạng thái:</p>
+                  <p className="text-sm font-black text-red-600 italic uppercase tracking-widest">{statusFilter}</p>
+                </div>
+                <div>
+                  <p className="text-[11px] text-gray-500 font-bold">Kho lọc:</p>
+                  <p className="text-sm font-black text-gray-900">{filterWarehouseId ? warehouses.find(w => w.id === filterWarehouseId)?.name : 'Tất cả kho'}</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Table */}
+          <table className="w-full text-left border-collapse rounded-3xl overflow-hidden shadow-sm border border-gray-100">
+            <thead>
+              <tr className="bg-red-600 text-white">
+                <th className="px-4 py-4 text-[10px] font-black uppercase tracking-widest italic border-r border-white/10">Ngày</th>
+                <th className="px-4 py-4 text-[10px] font-black uppercase tracking-widest italic border-r border-white/10">Mã phiếu</th>
+                <th className="px-4 py-4 text-[10px] font-black uppercase tracking-widest italic border-r border-white/10">Vật tư</th>
+                <th className="px-4 py-4 text-[10px] font-black uppercase tracking-widest italic border-r border-white/10">Kho</th>
+                <th className="px-4 py-4 text-[10px] font-black uppercase tracking-widest italic border-r border-white/10 text-center">SL</th>
+                <th className="px-4 py-4 text-[10px] font-black uppercase tracking-widest italic text-right">Thành tiền</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-100 text-sm">
+              {(() => {
+                const filteredList = slips.filter((item) => {
+                  let match = true;
+                  if (filterStartDate && item.date < filterStartDate) match = false;
+                  if (filterEndDate && item.date > filterEndDate) match = false;
+                  if (filterWarehouseId && item.warehouse_id !== filterWarehouseId) match = false;
+                  if (searchTerm) {
+                    const s = searchTerm.toLowerCase();
+                    const nameMatch = (item.materials?.name || '').toLowerCase().includes(s);
+                    const codeMatch = (item.export_code || '').toLowerCase().includes(s);
+                    if (!nameMatch && !codeMatch) match = false;
+                  }
+                  return match;
+                }).sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+                
+                return filteredList.map((item, idx) => (
+                  <tr key={idx} className={idx % 2 === 0 ? 'bg-white' : 'bg-red-50/10'}>
+                    <td className="px-4 py-3 text-xs text-gray-600 font-medium italic">{formatDate(item.date)}</td>
+                    <td className="px-4 py-3 text-xs font-black text-red-600 tracking-tight">{item.export_code}</td>
+                    <td className="px-4 py-3 text-xs font-black text-gray-900 uppercase tracking-tight">{item.materials?.name}</td>
+                    <td className="px-4 py-3 text-xs font-bold text-gray-500">{item.warehouses?.name}</td>
+                    <td className="px-4 py-3 text-xs font-black text-red-600 text-center">-{formatNumber(item.quantity)} {item.materials?.unit}</td>
+                    <td className="px-4 py-3 text-xs font-black text-gray-900 text-right tabular-nums">{formatCurrency(item.total_amount || 0)}</td>
+                  </tr>
+                ));
+              })()}
+              <tr className="bg-red-50">
+                <td colSpan={5} className="px-4 py-4 text-[11px] font-black text-red-600 uppercase text-right italic tracking-[0.1em]">Tổng giá trị xuất:</td>
+                <td className="px-4 py-4 text-lg font-black text-red-600 text-right tabular-nums">
+                  {formatCurrency(slips.filter(item => {
+                    let match = true;
+                    if (filterStartDate && item.date < filterStartDate) match = false;
+                    if (filterEndDate && item.date > filterEndDate) match = false;
+                    if (filterWarehouseId && item.warehouse_id !== filterWarehouseId) match = false;
+                    if (searchTerm) {
+                      const s = searchTerm.toLowerCase();
+                      const nameMatch = (item.materials?.name || '').toLowerCase().includes(s);
+                      const codeMatch = (item.export_code || '').toLowerCase().includes(s);
+                      if (!nameMatch && !codeMatch) match = false;
+                    }
+                    return match;
+                  }).reduce((sum, item) => sum + (item.total_amount || 0), 0))}
+                </td>
+              </tr>
+            </tbody>
+          </table>
+
+          {/* Footer Branding */}
+          <div className="mt-12 flex justify-between items-end border-t border-gray-100 pt-6">
+            <div className="space-y-1">
+              <p className="text-xs font-black text-gray-300 uppercase tracking-[0.2em] italic">CDX ERP SYSTEM</p>
+              <p className="text-[9px] text-gray-300 font-bold uppercase tracking-widest">End of transaction report • Smart Flow Management</p>
+            </div>
+            <div className="text-right">
+              <p className="text-[9px] font-black text-gray-300 uppercase tracking-[0.3em] mb-1">StockOut Protocol Verified</p>
+              <div className="text-[10px] text-gray-400 font-bold bg-gray-50 px-3 py-1 rounded-full border border-gray-100">
+                Integrity Hash: <span className="text-red-500 font-black tracking-widest italic ml-1 underline">VERIFIED_SECURE</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      
     </div>
   );
 };

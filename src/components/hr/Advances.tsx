@@ -1,5 +1,5 @@
-import { useState, useEffect, FormEvent } from 'react';
-import { Plus, X, Edit2, Trash2, AlertTriangle, Wallet } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
+import { Plus, X, Edit2, Trash2, AlertTriangle, Wallet, Search, Filter, Image as ImageIcon, Share2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { supabase } from '@/lib/supabase';
 import { Employee } from '@/types';
@@ -8,6 +8,14 @@ import { NumericInput } from '../shared/NumericInput';
 import { CreatableSelect } from '../shared/CreatableSelect';
 import { formatDate, formatCurrency } from '@/utils/format';
 import { FAB } from '../shared/FAB';
+import { exportTableImage } from '../../utils/reportExport';
+import { SaveImageButton } from '../shared/SaveImageButton';
+import { Button } from '../shared/Button';
+import { SortButton, SortOption } from '../shared/SortButton';
+import { ReportPreviewModal } from '../shared/ReportPreviewModal';
+import { MonthYearPicker } from '../shared/MonthYearPicker';
+import { ExcelButton } from '../shared/ExcelButton';
+import { utils, writeFile } from 'xlsx';
 
 export const Advances = ({
   user,
@@ -48,9 +56,23 @@ export const Advances = ({
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
+  // Filter & Sort States
+  const [searchTerm, setSearchTerm] = useState('');
+  const [showFilter, setShowFilter] = useState(false);
+  const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1);
+  const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
+  const [sortBy, setSortBy] = useState<'date' | 'amount'>('date');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
+
+  // Export States
+  const [isCapturingTable, setIsCapturingTable] = useState(false);
+  const [showReportPreview, setShowReportPreview] = useState(false);
+  const reportRef = useRef<HTMLDivElement>(null);
+  const logoBase64 = '/logo.png';
+
   useEffect(() => {
     fetchData();
-  }, []);
+  }, [selectedMonth, selectedYear]);
 
   const fetchData = async () => {
     setLoading(true);
@@ -198,13 +220,91 @@ export const Advances = ({
   };
 
   const confirmDelete = (id: string) => {
-    console.log('[CDX] confirmDelete called for ID:', id);
     setDeletingId(id);
     setShowDeleteModal(true);
   };
+
+  const filteredItems = (activeTab === 'advances' ? advances : allowances)
+    .filter((item) => {
+      const itemDate = new Date(item.date);
+      const start = new Date(selectedYear, selectedMonth - 1, 1);
+      const end = new Date(selectedYear, selectedMonth, 0, 23, 59, 59);
+      if (itemDate < start || itemDate > end) return false;
+
+      if (searchTerm) {
+        const name = item.users?.full_name?.toLowerCase() || '';
+        const term = searchTerm.toLowerCase();
+        if (!name.includes(term)) return false;
+      }
+      return true;
+    })
+    .sort((a, b) => {
+      let comparison = 0;
+      if (sortBy === 'date') {
+        comparison = new Date(a.date).getTime() - new Date(b.date).getTime();
+      } else if (sortBy === 'amount') {
+        comparison = a.amount - b.amount;
+      }
+      return sortOrder === 'asc' ? comparison : -comparison;
+    });
+
+  const exportExcel = () => {
+    try {
+      if (filteredItems.length === 0) {
+        if (addToast) addToast('Không có dữ liệu để xuất', 'warning');
+        return;
+      }
+
+      const exportData = filteredItems.map((item) => ({
+        'Ngày': formatDate(item.date),
+        'Nhân viên': item.users?.full_name,
+        'Số tiền': item.amount,
+        'Nội dung': activeTab === 'advances' ? 'Tạm ứng' : item.type,
+        'Ghi chú': item.notes || '',
+      }));
+
+      const ws = utils.json_to_sheet(exportData);
+      const wb = utils.book_new();
+      utils.book_append_sheet(wb, ws, activeTab === 'advances' ? 'Tạm ứng' : 'Phụ cấp');
+      writeFile(wb, `TamUng_PhuCap_T${selectedMonth}_${selectedYear}.xlsx`);
+      if (addToast) addToast('Xuất Excel thành công!', 'success');
+    } catch (err: any) {
+      if (addToast) addToast('Lỗi xuất Excel: ' + err.message, 'error');
+    }
+  };
+
   return (
     <div className="p-4 md:p-6 space-y-6 pb-24 overflow-x-hidden">
-      <PageBreadcrumb title="Tạm ứng & Phụ cấp" onBack={onBack} />
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <PageBreadcrumb title="Tạm ứng & Phụ cấp" onBack={onBack} />
+        <div className="flex items-center gap-1.5 justify-end flex-1">
+          <ExcelButton onClick={exportExcel} />
+
+          <div className="flex items-center gap-1.5 ml-1">
+            <SortButton
+              currentSort={sortBy}
+              onSortChange={(val: any) => setSortBy(val)}
+              options={[
+                { value: 'date', label: 'Sắp xếp: Ngày chi' },
+                { value: 'amount', label: 'Sắp xếp: Số tiền' },
+              ]}
+            />
+            <Button
+              size="icon"
+              variant={showFilter ? 'primary' : 'outline'}
+              onClick={() => setShowFilter((f) => !f)}
+              icon={Search}
+              className={showFilter ? '' : 'border-gray-200'}
+            />
+            <SaveImageButton
+              onClick={() => setShowReportPreview(true)}
+              isCapturing={isCapturingTable}
+              title="Lưu ảnh báo cáo"
+            />
+          </div>
+        </div>
+      </div>
+
       <div className="flex items-center justify-between">
         <div className="flex gap-2 bg-white p-1 rounded-2xl shadow-sm border border-gray-100">
           <button
@@ -222,6 +322,51 @@ export const Advances = ({
         </div>
       </div>
 
+      <AnimatePresence>
+        {showFilter && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
+            className="z-20"
+            style={{ overflow: showFilter ? 'visible' : 'hidden' }}
+          >
+            <div className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 mb-4 space-y-5">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {/* 1. Chọn thời kỳ */}
+                <div className="bg-gray-50/50 p-4 rounded-2xl border border-gray-100 space-y-3">
+                  <p className="text-[10px] font-black text-primary/40 uppercase tracking-widest text-center">Chọn thời kỳ</p>
+                  <MonthYearPicker
+                    selectedMonth={selectedMonth}
+                    selectedYear={selectedYear}
+                    onMonthChange={setSelectedMonth}
+                    onYearChange={setSelectedYear}
+                  />
+                </div>
+
+                {/* 2. Tìm kiếm */}
+                <div className="space-y-4">
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-bold text-gray-400 uppercase ml-1">Tìm nhân viên</label>
+                    <div className="relative group">
+                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-primary transition-colors" size={16} />
+                      <input
+                        type="text"
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        placeholder="Họ tên hoặc mã nhân viên..."
+                        className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-gray-200 text-sm outline-none focus:ring-4 focus:ring-primary/10 transition-all"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       <div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden overflow-x-auto custom-scrollbar pb-2">
         <table className="w-full text-left border-collapse min-w-[600px] whitespace-nowrap">
           <thead>
@@ -237,83 +382,63 @@ export const Advances = ({
               <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider">
                 {activeTab === 'advances' ? 'Lý do' : 'Loại / Ghi chú'}
               </th>
+              <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-right">
+                Thao tác
+              </th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-100">
-            {loading ? (
+            {filteredItems.length === 0 && !loading ? (
               <tr>
-                <td colSpan={4} className="px-4 py-12 text-center text-gray-400 italic">
-                  <div className="flex flex-col items-center justify-center">
-                    <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin mb-2"></div>
-                    <p className="text-sm">Đang tải dữ liệu...</p>
-                  </div>
-                </td>
-              </tr>
-            ) : (activeTab === 'advances' ? advances : allowances).length === 0 ? (
-              <tr>
-                <td colSpan={4} className="px-4 py-8 text-center text-gray-400 italic">
-                  Chưa có dữ liệu
+                <td colSpan={6} className="px-4 py-12 text-center text-gray-400 italic">
+                  Không tìm thấy dữ liệu phù hợp
                 </td>
               </tr>
             ) : (
-              (activeTab === 'advances' ? advances : allowances).map((item) => (
+              filteredItems.map((item) => (
                 <tr
                   key={item.id}
-                  className="hover:bg-gray-50 transition-colors group cursor-pointer"
-                  onClick={() => handleEdit(item)}
+                  className="hover:bg-gray-50/50 transition-colors group border-b border-gray-100 last:border-0"
                 >
-                  <td className="px-4 py-3 text-xs font-black text-primary">
-                    {activeTab === 'advances' ? 'TU-' : 'PC-'}
-                    {new Date(item.date).toISOString().slice(2, 10).replace(/-/g, '')}-
-                    {item.id.slice(0, 3).toUpperCase()}
+                  <td className="px-4 py-3.5 text-xs font-mono font-bold text-gray-400">
+                    {item.id.slice(0, 8).toUpperCase()}
                   </td>
-                  <td className="px-4 py-3 text-xs text-gray-600">{formatDate(item.date)}</td>
-                  <td className="px-4 py-3 text-xs font-bold text-gray-800">
-                    {item.users?.full_name}
+                  <td className="px-4 py-3.5 text-xs font-bold text-gray-600">
+                    {formatDate(item.date)}
                   </td>
-                  <td className="px-4 py-3 text-xs font-black text-red-600">
+                  <td className="px-4 py-3.5 text-xs font-bold text-gray-800">
+                    <div className="flex items-center gap-2">
+                      <div className="w-8 h-8 rounded-full bg-primary/10 text-primary flex items-center justify-center text-[10px] font-black uppercase">
+                        {item.users?.full_name?.charAt(0) || 'U'}
+                      </div>
+                      {item.users?.full_name || '...'}
+                    </div>
+                  </td>
+                  <td className="px-4 py-3.5 text-xs font-black text-primary">
                     {formatCurrency(item.amount)}
                   </td>
-                  <td className="px-4 py-3 text-xs text-gray-500 italic">
-                    <div className="flex items-center justify-between">
-                      <span>
-                        {item.notes || item.type
-                          ? item.type === 'meal'
-                            ? 'Tiền cơm'
-                            : item.type === 'travel'
-                              ? 'Xăng xe'
-                              : item.type === 'phone'
-                                ? 'Điện thoại'
-                                : item.type === 'other'
-                                  ? 'Khác'
-                                  : item.notes || item.type
-                          : '-'}
-                      </span>
-                      <div className="flex items-center gap-1">
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleEdit(item);
-                          }}
-                          className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors border border-blue-100"
-                          title="Sửa"
-                        >
-                          <Edit2 size={14} />
-                        </button>
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            console.log('[CDX] Delete button clicked for item:', item.id);
-                            confirmDelete(item.id);
-                          }}
-                          className="p-1.5 text-red-600 hover:bg-red-50 rounded-lg transition-colors border border-red-100"
-                          title="Xóa"
-                        >
-                          <Trash2 size={14} />
-                        </button>
-                      </div>
+                  <td className="px-4 py-3.5 text-xs font-bold text-gray-500 max-w-xs truncate">
+                    <span className="bg-gray-100 px-2 py-1 rounded-lg text-[10px] uppercase font-black tracking-widest mr-2">
+                      {activeTab === 'advances' ? 'ADV' : (item.type === 'meal' ? 'MEAL' : (item.type === 'travel' ? 'FUEL' : 'ALLOW'))}
+                    </span>
+                    {item.notes || item.reason || '-'}
+                  </td>
+                  <td className="px-4 py-3.5 text-right">
+                    <div className="flex items-center justify-end gap-1">
+                      <button
+                        onClick={() => handleEdit(item)}
+                        className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors border border-blue-100"
+                        title="Sửa"
+                      >
+                        <Edit2 size={14} />
+                      </button>
+                      <button
+                        onClick={() => confirmDelete(item.id)}
+                        className="p-1.5 text-red-600 hover:bg-red-50 rounded-lg transition-colors border border-red-100"
+                        title="Xóa"
+                      >
+                        <Trash2 size={14} />
+                      </button>
                     </div>
                   </td>
                 </tr>
@@ -506,11 +631,167 @@ export const Advances = ({
           </div>
         )}
       </AnimatePresence>
+
+      {/* Hidden Ref for Report Capture */}
+      <div style={{ position: 'absolute', left: '-9999px', top: 0 }}>
+        <div ref={reportRef} className="p-10 bg-white" style={{ width: '1400px' }}>
+          {/* Premium Branding Header */}
+          <div className="flex items-center gap-6 mb-10">
+            <img
+              src={logoBase64}
+              alt="Logo"
+              className="w-24 h-24 rounded-3xl object-contain shadow-sm"
+              onError={(e) => (e.currentTarget.style.display = 'none')}
+            />
+            <div className="space-y-1">
+              <h2 className="text-3xl font-black text-gray-800 tracking-tighter uppercase leading-none">CDX - CON ĐƯỜNG XANH</h2>
+              <p className="text-sm font-bold text-gray-400 uppercase tracking-[0.3em] mt-2">Hệ thống quản lý kho và nhân sự</p>
+            </div>
+          </div>
+
+          <div className="mb-6">
+            <h1 className="text-3xl font-black italic text-[#2D5A27] tracking-tighter mb-1 uppercase">
+              {activeTab === 'advances' ? 'BẢNG TẠM ỨNG' : 'BẢNG PHỤ CẤP'}
+            </h1>
+            <p className="text-sm font-bold text-gray-500 italic">
+              Kỳ báo cáo: Tháng {selectedMonth}/{selectedYear} • CDX-2026 Edition
+            </p>
+          </div>
+
+          <table className="w-full text-left border-collapse whitespace-nowrap">
+            <thead>
+              <tr className="bg-primary text-white">
+                <th className="px-4 py-4 text-[10px] font-black uppercase tracking-widest italic border-r border-white/10">Mã hiệu</th>
+                <th className="px-4 py-4 text-[10px] font-black uppercase tracking-widest italic border-r border-white/10">Ngày</th>
+                <th className="px-4 py-4 text-[10px] font-black uppercase tracking-widest italic border-r border-white/10">Nhân viên</th>
+                <th className="px-4 py-4 text-[10px] font-black uppercase tracking-widest italic border-r border-white/10">Số tiền</th>
+                <th className="px-4 py-4 text-[10px] font-black uppercase tracking-widest italic">{activeTab === 'advances' ? 'Lý do' : 'Ghi chú'}</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-100 text-xs">
+              {filteredItems.map((item, idx) => (
+                <tr key={idx} className={idx % 2 === 0 ? 'bg-white' : 'bg-gray-50/30'}>
+                  <td className="px-4 py-3 font-black text-primary font-mono tracking-tighter">#{item.id.slice(0, 8).toUpperCase()}</td>
+                  <td className="px-4 py-3 font-bold text-gray-500">{formatDate(item.date)}</td>
+                  <td className="px-4 py-3 font-black text-gray-900 uppercase tracking-tight">{item.users?.full_name}</td>
+                  <td className="px-4 py-3 font-black text-primary">{formatCurrency(item.amount)}</td>
+                  <td className="px-4 py-3 font-bold text-gray-500 italic max-w-xs truncate">{item.notes || item.reason || '-'}</td>
+                </tr>
+              ))}
+              <tr className="bg-primary/5 font-black border-t-2 border-primary/20">
+                <td colSpan={3} className="px-4 py-4 text-sm text-right uppercase tracking-[0.15em] italic">Tổng số tiền:</td>
+                <td className="px-4 py-4 text-lg text-primary">{formatCurrency(filteredItems.reduce((sum, item) => sum + item.amount, 0))}</td>
+                <td></td>
+              </tr>
+            </tbody>
+          </table>
+
+          <div className="mt-12 flex justify-between items-end border-t border-gray-100 pt-6">
+            <div className="space-y-1">
+              <p className="text-xs font-black text-gray-300 uppercase tracking-[0.2em] italic">CDX ERP SYSTEM</p>
+              <p className="text-[9px] text-gray-300 font-bold uppercase tracking-widest">End of financial record • Accounting Integrity Verified</p>
+            </div>
+            <div className="text-right">
+              <p className="text-[9px] font-black text-gray-300 uppercase tracking-[0.3em] mb-1">Financial Protocol Secured</p>
+              <div className="text-[10px] text-gray-400 font-bold bg-gray-50 px-3 py-1 rounded-full border border-gray-100">
+                Audit Hash: <span className="text-primary font-black tracking-widest italic ml-1 underline">{new Date().getTime().toString(16).toUpperCase()}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
       {/* FAB — Thêm tạm ứng/phụ cấp */}
       <FAB
         onClick={() => setShowModal(true)}
         label={activeTab === 'advances' ? 'Thêm tạm ứng' : 'Thêm phụ cấp'}
       />
+      <ReportPreviewModal
+        isOpen={showReportPreview}
+        onClose={() => setShowReportPreview(false)}
+        title="Bảng tạm ứng & phụ cấp"
+        isCapturing={isCapturingTable}
+        onExport={() => {
+          if (reportRef.current) {
+            exportTableImage({
+              element: reportRef.current,
+              fileName: `TamUng_PhuCap_T${selectedMonth}_${selectedYear}.png`,
+              addToast,
+              onStart: () => setIsCapturingTable(true),
+              onEnd: () => {
+                setIsCapturingTable(false);
+                setShowReportPreview(false);
+              },
+            });
+          }
+        }}
+      >
+        <div className="p-12 bg-white">
+          {/* Logo & Header */}
+          <div className="flex items-center gap-6 mb-10">
+            <img
+              src={logoBase64}
+              alt="Logo"
+              className="w-24 h-24 rounded-3xl object-contain shadow-sm"
+              onError={(e) => (e.currentTarget.style.display = 'none')}
+            />
+            <div className="space-y-1">
+              <h2 className="text-3xl font-black text-gray-800 tracking-tighter uppercase leading-none">CDX - CON ĐƯỜNG XANH</h2>
+              <p className="text-sm font-bold text-gray-400 uppercase tracking-[0.3em] mt-2">Hệ thống quản lý kho và nhân sự</p>
+            </div>
+          </div>
+
+          <div className="mb-6">
+            <h1 className="text-3xl font-black italic text-[#2D5A27] tracking-tighter mb-1 uppercase">
+              {activeTab === 'advances' ? 'BẢNG TẠM ỨNG' : 'BẢNG PHỤ CẤP'}
+            </h1>
+            <p className="text-sm font-bold text-gray-500 italic">
+              Kỳ báo cáo: Tháng {selectedMonth}/{selectedYear} • CDX ERP
+            </p>
+          </div>
+
+          {/* Table */}
+          <table className="w-full text-left border-collapse rounded-3xl overflow-hidden shadow-sm border border-gray-100">
+            <thead>
+              <tr className="bg-primary text-white">
+                <th className="px-4 py-4 text-[11px] font-black uppercase tracking-widest italic border-r border-white/10">Ngày</th>
+                <th className="px-4 py-4 text-[11px] font-black uppercase tracking-widest italic border-r border-white/10">Nhân viên</th>
+                <th className="px-4 py-4 text-[11px] font-black uppercase tracking-widest italic border-r border-white/10">Phân loại</th>
+                <th className="px-4 py-4 text-[11px] font-black uppercase tracking-widest italic border-r border-white/10">Cấp bởi</th>
+                <th className="px-4 py-4 text-[11px] font-black uppercase tracking-widest italic text-right">Số tiền</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-100">
+              {filteredItems.map((item, idx) => (
+                <tr key={idx} className={idx % 2 === 0 ? 'bg-white' : 'bg-gray-50/30'}>
+                  <td className="px-4 py-3 text-xs text-gray-600 font-bold italic">{formatDate(item.date)}</td>
+                  <td className="px-4 py-3 text-xs font-black text-gray-900 uppercase tracking-tight">{item.users?.full_name}</td>
+                  <td className="px-4 py-3 text-xs font-black text-primary uppercase">{activeTab === 'advances' ? 'Tạm ứng' : item.type}</td>
+                  <td className="px-4 py-3 text-xs font-bold text-gray-400 italic">Financial Audit Pooled</td>
+                  <td className="px-4 py-3 text-xs font-black text-right tabular-nums text-gray-900">{formatCurrency(item.amount)}</td>
+                </tr>
+              ))}
+              <tr className="bg-primary/5 font-black border-t-2 border-primary/20">
+                <td colSpan={4} className="px-4 py-4 text-xs uppercase tracking-widest italic text-right">Tổng cộng thực tế:</td>
+                <td className="px-4 py-4 text-sm text-right tabular-nums text-primary underline decoration-double">
+                  {formatCurrency(filteredItems.reduce((sum, item) => sum + Number(item.amount || 0), 0))}
+                </td>
+              </tr>
+            </tbody>
+          </table>
+
+          <div className="mt-8 pt-6 border-t border-gray-100 flex justify-between items-end">
+            <div className="text-[10px] text-gray-400 font-bold">
+              Ngày xuất: {new Date().toLocaleDateString('vi-VN')} • {new Date().toLocaleTimeString('vi-VN')}
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-[10px] font-black text-gray-300 uppercase italic">CDX ERP SYSTEM</span>
+              <div className="w-1 h-1 bg-gray-200 rounded-full"></div>
+              <span className="text-[10px] font-bold text-gray-300 uppercase">Operational Excellence</span>
+            </div>
+          </div>
+        </div>
+      </ReportPreviewModal>
     </div>
   );
 };

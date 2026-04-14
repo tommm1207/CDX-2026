@@ -1,4 +1,4 @@
-﻿import { CanvasLogo } from '@/components/shared/ReportExportHeader';
+import { CanvasLogo } from '@/components/shared/ReportExportHeader';
 import { exportTableImage } from '../../utils/reportExport';
 import { useState, useEffect, FormEvent, ChangeEvent } from 'react';
 import {
@@ -354,6 +354,13 @@ export const MaterialCatalog = ({
               { value: 'code', label: 'Mã hiệu' },
               { value: 'newest', label: 'Mới nhất' },
             ]}
+          />
+          <Button
+            size="icon"
+            variant={showFilter ? 'primary' : 'outline'}
+            onClick={() => setShowFilter((f) => !f)}
+            icon={Search}
+            className={showFilter ? '' : 'border-gray-200'}
           />
         </div>
       </div>

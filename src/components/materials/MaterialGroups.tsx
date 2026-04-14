@@ -1,4 +1,4 @@
-﻿import { CanvasLogo } from '@/components/shared/ReportExportHeader';
+import { CanvasLogo } from '@/components/shared/ReportExportHeader';
 import { exportTableImage } from '../../utils/reportExport';
 import { useState, useEffect, FormEvent, MouseEvent, ChangeEvent } from 'react';
 import {
@@ -419,6 +419,13 @@ export const MaterialGroups = ({
               { value: 'name', label: 'Tên nhóm' },
               { value: 'newest', label: 'Mới nhất' },
             ]}
+          />
+          <Button
+            size="icon"
+            variant={showFilter ? 'primary' : 'outline'}
+            onClick={() => setShowFilter((f) => !f)}
+            icon={Search}
+            className={showFilter ? '' : 'border-gray-200'}
           />
         </div>
       </div>

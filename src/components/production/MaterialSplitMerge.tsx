@@ -1,4 +1,4 @@
-﻿import { CanvasLogo } from '@/components/shared/ReportExportHeader';
+import { CanvasLogo } from '@/components/shared/ReportExportHeader';
 import { useState, useEffect } from 'react';
 import {
   Plus,
@@ -456,7 +456,7 @@ export const MaterialSplitMerge = ({
       <div className="flex items-center justify-between gap-2">
         <PageBreadcrumb title="Xả / Gộp vật tư" onBack={onBack} />
         <div className="flex items-center gap-2">
-          <ExcelButton onClick={exportToExcel} />
+          <ExcelButton onClick={handleExportExcel} />
           <SortButton
             currentSort={sortBy}
             onSortChange={(val) => {

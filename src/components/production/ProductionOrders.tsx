@@ -1,4 +1,4 @@
-﻿import { CanvasLogo } from '@/components/shared/ReportExportHeader';
+import { CanvasLogo } from '@/components/shared/ReportExportHeader';
 import { useState, useEffect } from 'react';
 import {
   Plus,
@@ -428,7 +428,7 @@ export const ProductionOrders = ({
             isCapturing={isCapturingTable}
             title="Lưu ảnh báo cáo"
           />
-          <ExcelButton onClick={exportToExcel} />
+          <ExcelButton onClick={handleExportExcel} />
           <SortButton
             currentSort={sortBy}
             onSortChange={(val) => {

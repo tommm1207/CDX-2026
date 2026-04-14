@@ -35,6 +35,7 @@ export const Attendance = ({
   const [loading, setLoading] = useState(true);
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1);
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
+  const [statusFilter, setStatusFilter] = useState<'all' | 'has_work' | 'no_work'>('all');
   const [previewImageUrl, setPreviewImageUrl] = useState<string | null>(null);
   const tableRef = useRef<HTMLDivElement>(null);
   const { captureElement, isCapturing: isCapturingTable } = useTableCapture();
@@ -343,11 +344,29 @@ export const Attendance = ({
 
   const filteredEmployees = employees
     .filter((e) => {
-      if (!searchTerm) return true;
-      const s = searchTerm.toLowerCase();
-      return (
-        (e.full_name || '').toLowerCase().includes(s) || (e.code || '').toLowerCase().includes(s)
-      );
+      // Search filter
+      let matchesSearch = true;
+      if (searchTerm) {
+        const s = searchTerm.toLowerCase();
+        matchesSearch =
+          (e.full_name || '').toLowerCase().includes(s) || (e.code || '').toLowerCase().includes(s);
+      }
+      if (!matchesSearch) return false;
+
+      // Status filter (0 công vs Có công)
+      if (statusFilter === 'all') return true;
+
+      const empAtt = attendance.filter((a) => a.employee_id === e.id);
+      const totalWork = empAtt.reduce((sum, a) => {
+        if (a.status === 'present') return sum + 1;
+        if (a.status === 'half-day') return sum + 0.5;
+        return sum;
+      }, 0);
+
+      if (statusFilter === 'has_work') return totalWork > 0;
+      if (statusFilter === 'no_work') return totalWork === 0;
+
+      return true;
     })
     .sort((a, b) => {
       if (sortBy === 'code') return (a.code || '').localeCompare(b.code || '');
@@ -461,10 +480,48 @@ export const Attendance = ({
                 <button
                   onClick={() => {
                     setSearchTerm('');
+                    setStatusFilter('all');
                   }}
                   className="text-[10px] font-bold text-primary hover:underline"
                 >
                   Đặt lại
+                </button>
+              </div>
+
+              {/* Loại công filter */}
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="text-[10px] font-bold text-gray-400 uppercase mr-1">
+                  Loại công:
+                </span>
+                <button
+                  onClick={() => setStatusFilter('all')}
+                  className={`px-3 py-1 rounded-full text-[10px] font-bold transition-all ${
+                    statusFilter === 'all'
+                      ? 'bg-primary text-white'
+                      : 'bg-gray-100 text-gray-400 hover:bg-gray-200'
+                  }`}
+                >
+                  Tất cả
+                </button>
+                <button
+                  onClick={() => setStatusFilter('has_work')}
+                  className={`px-3 py-1 rounded-full text-[10px] font-bold transition-all ${
+                    statusFilter === 'has_work'
+                      ? 'bg-green-600 text-white shadow-sm'
+                      : 'bg-gray-100 text-gray-400 hover:bg-green-50'
+                  }`}
+                >
+                  Có công
+                </button>
+                <button
+                  onClick={() => setStatusFilter('no_work')}
+                  className={`px-3 py-1 rounded-full text-[10px] font-bold transition-all ${
+                    statusFilter === 'no_work'
+                      ? 'bg-orange-600 text-white shadow-sm'
+                      : 'bg-gray-100 text-gray-400 hover:bg-orange-50'
+                  }`}
+                >
+                  Nghỉ (0 công)
                 </button>
               </div>
               {/* Tháng/Năm */}

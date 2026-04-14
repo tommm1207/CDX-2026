@@ -1,5 +1,6 @@
-﻿import { exportTableImage } from '../../utils/reportExport';
+import { exportTableImage } from '../../utils/reportExport';
 import { CanvasLogo } from '../shared/ReportExportHeader';
+import { supabase } from '@/lib/supabase';
 import { useState, useEffect, FormEvent, useRef, useMemo } from 'react';
 import {
   Search,
@@ -422,7 +423,7 @@ export const Costs = ({
     }
   };
 
-  const exportToExcel = () => {
+  const handleExportExcel = () => {
     import('@/utils/excelExport').then(({ exportToExcel: cdxExport }) => {
       cdxExport({
         title: 'B\u00e1o c\u00e1o Chi ph\u00ed',
@@ -490,7 +491,7 @@ export const Costs = ({
             isCapturing={isCapturingTable}
             title="Lưu ảnh báo cáo A4"
           />
-          <ExcelButton onClick={exportToExcel} size="icon" />
+          <ExcelButton onClick={handleExportExcel} size="icon" />
           <SortButton
             currentSort={sortBy}
             onSortChange={(val) => setSortBy(val)}

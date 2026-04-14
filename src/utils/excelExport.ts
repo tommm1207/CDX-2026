@@ -11,37 +11,39 @@ const CDX_GRAY = '6B7280';
 const CDX_LIGHT_GRAY = 'F3F4F6';
 const WHITE = 'FFFFFFFF';
 
-// ─── Helper: build a CDX-branded workbook with a cover sheet ──────────────────
-const buildWorkbook = (reportTitle: string): ExcelJS.Workbook => {
+// ─── Helper: build a CDX-branded workbook ──────────────────
+const buildWorkbook = (reportTitle: string, includeCover = true): ExcelJS.Workbook => {
   const wb = new ExcelJS.Workbook();
   wb.creator = 'CDX ERP System';
   wb.lastModifiedBy = 'CDX System';
   wb.created = new Date();
   wb.modified = new Date();
 
-  // Cover / Summary sheet
-  const cover = wb.addWorksheet('TỔNG QUAN', { views: [{ showGridLines: false }] });
+  if (includeCover) {
+    // Cover / Summary sheet
+    const cover = wb.addWorksheet('TỔNG QUAN', { views: [{ showGridLines: false }] });
 
-  cover.getColumn(1).width = 28;
-  cover.getColumn(2).width = 55;
+    cover.getColumn(1).width = 28;
+    cover.getColumn(2).width = 55;
 
-  const title = cover.getCell('A1');
-  title.value = 'CDX – CON ĐƯỜNG XANH';
-  title.font = { name: 'Calibri', size: 20, bold: true, color: { argb: CDX_GREEN } };
+    const title = cover.getCell('A1');
+    title.value = 'CDX – CON ĐƯỜNG XANH';
+    title.font = { name: 'Calibri', size: 20, bold: true, color: { argb: CDX_GREEN } };
 
-  const sub = cover.getCell('A2');
-  sub.value = 'HỆ THỐNG QUẢN LÝ KHO & NHÂN SỰ';
-  sub.font = { name: 'Calibri', size: 11, italic: true, color: { argb: CDX_GRAY } };
+    const sub = cover.getCell('A2');
+    sub.value = 'HỆ THỐNG QUẢN LÝ KHO & NHÂN SỰ';
+    sub.font = { name: 'Calibri', size: 11, italic: true, color: { argb: CDX_GRAY } };
 
-  cover.getCell('A4').value = reportTitle.toUpperCase();
-  cover.getCell('A4').font = { name: 'Calibri', size: 14, bold: true };
+    cover.getCell('A4').value = reportTitle.toUpperCase();
+    cover.getCell('A4').font = { name: 'Calibri', size: 14, bold: true };
 
-  cover.getCell('A6').value = 'Ngày xuất:';
-  cover.getCell('B6').value = new Date().toLocaleString('vi-VN');
-  cover.getCell('A6').font = { bold: true };
+    cover.getCell('A6').value = 'Ngày xuất:';
+    cover.getCell('B6').value = new Date().toLocaleString('vi-VN');
+    cover.getCell('A6').font = { bold: true };
 
-  cover.getCell('A8').value = 'Dữ liệu chi tiết được trình bày trong các Tab tương ứng bên dưới.';
-  cover.getCell('A8').font = { italic: true, color: { argb: CDX_GRAY } };
+    cover.getCell('A8').value = 'Dữ liệu chi tiết được trình bày trong các Tab tương ứng bên dưới.';
+    cover.getCell('A8').font = { italic: true, color: { argb: CDX_GRAY } };
+  }
 
   return wb;
 };
@@ -130,14 +132,28 @@ export const applyCDXSheetStyle = (
 
   // ── Footer row ──
   const footerRowIdx = rows.length + 7;
-  sheet.mergeCells(
-    `A${footerRowIdx}:${String.fromCharCode(64 + Math.max(columns.length, 1))}${footerRowIdx}`,
-  );
-  const footer = sheet.getCell(`A${footerRowIdx}`);
-  footer.value = `CDX ERP SYSTEM  •  ${new Date().toLocaleString('vi-VN')}`;
-  footer.font = { name: 'Calibri', size: 8, italic: true, color: { argb: 'FF9CA3AF' } };
-  footer.alignment = { horizontal: 'right', vertical: 'middle', indent: 1 };
-  footer.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: CDX_GREEN_LIGHT } };
+  const maxCol = Math.max(columns.length, 1);
+  const footerRow = sheet.getRow(footerRowIdx);
+  footerRow.height = 20;
+
+  for (let i = 1; i <= maxCol; i++) {
+    const cell = footerRow.getCell(i);
+    cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: CDX_GREEN_LIGHT } };
+    cell.font = { name: 'Calibri', size: 8, italic: true, color: { argb: 'FF9CA3AF' } };
+
+    if (i === 1) {
+      cell.value = `CDX ERP SYSTEM`;
+      cell.alignment = { horizontal: 'left', vertical: 'middle', indent: 1 };
+    } else if (i === maxCol) {
+      cell.value = `${new Date().toLocaleString('vi-VN')}`;
+      cell.alignment = { horizontal: 'right', vertical: 'middle', indent: 1 };
+    }
+  }
+
+  if (maxCol === 1) {
+    footerRow.getCell(1).value = `CDX ERP SYSTEM  •  ${new Date().toLocaleString('vi-VN')}`;
+    footerRow.getCell(1).alignment = { horizontal: 'center', vertical: 'middle' };
+  }
 
   // ── Auto-fit column widths ──
   const MIN_W = 10;
@@ -179,7 +195,7 @@ export const exportToExcel = async ({
 
     addToast?.('Đang tạo file Excel...', 'info');
 
-    const wb = buildWorkbook(title);
+    const wb = buildWorkbook(title, false);
     const sheet = wb.addWorksheet(sheetName.substring(0, 31).replace(/\//g, '-'), {
       views: [{ showGridLines: false }],
     });
@@ -227,7 +243,7 @@ export const exportBackupToExcel = async ({
 }) => {
   try {
     addToast?.('Đang tạo file sao lưu...', 'info');
-    const wb = buildWorkbook(reportTitle);
+    const wb = buildWorkbook(reportTitle, true);
 
     for (const s of sheets) {
       if (!s.rows || s.rows.length === 0) continue;

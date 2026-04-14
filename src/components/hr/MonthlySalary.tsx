@@ -224,6 +224,7 @@ export const MonthlySalary = ({
           totalAdv,
           totalAll,
           insuranceDeduction,
+          monthMultiplier,
           netSalary,
           dailyRate,
           monthlyCoeff,
@@ -330,6 +331,7 @@ export const MonthlySalary = ({
         totalAdv,
         totalAll,
         insuranceDeduction,
+        monthMultiplier,
         netSalary,
         dailyRate,
         monthlyCoeff,
@@ -1077,13 +1079,20 @@ export const MonthlySalary = ({
                               -{formatNumber(selectedSalary.totalAdv)}
                             </span>
                           </div>
-                          <div className="flex justify-between items-center py-2.5 border-b border-gray-100 gap-2">
-                            <span className="text-[11px] font-bold text-gray-500 whitespace-nowrap">
-                              Trừ % số tiền BHXH, BHYT phải nộp:
-                            </span>
-                            <span className="text-[11px] font-bold text-gray-800 whitespace-nowrap">
-                              -{formatNumber(selectedSalary.insuranceDeduction)}
-                            </span>
+                          <div className="flex flex-col border-b border-gray-100 py-2.5">
+                            <div className="flex justify-between items-center gap-2">
+                              <span className="text-[11px] font-bold text-gray-500 whitespace-nowrap">
+                                Trừ % số tiền BHXH, BHYT phải nộp:
+                              </span>
+                              <span className="text-[11px] font-bold text-gray-800 whitespace-nowrap">
+                                -{formatNumber(selectedSalary.insuranceDeduction)}
+                              </span>
+                            </div>
+                            {selectedSalary.monthMultiplier > 1 && (
+                              <p className="text-[9px] text-red-500 font-bold italic mt-0.5 text-right">
+                                (*) Bao gồm {selectedSalary.monthMultiplier} tháng đóng BHXH
+                              </p>
+                            )}
                           </div>
                           <div className="flex justify-between items-center py-2.5 border-b border-gray-100 gap-2">
                             <span className="text-[11px] font-bold text-gray-500 whitespace-nowrap">

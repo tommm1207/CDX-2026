@@ -104,8 +104,12 @@ const WEATHER_MAP: Record<string, string> = {
  * Hàm chuyển đổi mảng dữ liệu với các key kỹ thuật sang key tiếng Việt
  * Kết hợp tra cứu ID để hiển thị Tên (Nhân viên, Kho, Vật tư, BOM)
  */
-export const formatDataForExcel = (data: any[], lookupData: any = {}) => {
+export const formatDataForExcel = (data: any[], lookupData: any = {}, tableId?: string) => {
   if (!data || data.length === 0) return [];
+
+  // Các bảng không cần cột "Trạng thái" (Vì không có quy trình duyệt)
+  const hideStatusTables = ['advances', 'allowances'];
+  const shouldHideStatus = tableId && hideStatusTables.includes(tableId);
 
   // Tạo lookup map nếu có truyền vào
   const userMap = lookupData.users
@@ -129,6 +133,9 @@ export const formatDataForExcel = (data: any[], lookupData: any = {}) => {
     Object.keys(item).forEach((key) => {
       // 1. Tuyệt đối không để mã ID kỹ thuật (UUID) làm rác bảng tính
       if (key === 'id') return;
+
+      // 2. Loại bỏ cột trạng thái cho các bảng tài chính không cần duyệt (Theo ý người dùng)
+      if (key === 'status' && shouldHideStatus) return;
 
       let value = item[key];
 

@@ -273,7 +273,7 @@ export const Backup = ({
         if (data && rowCount > 0) {
           const sheetName = tableDef.label.substring(0, 31).replace(/[:\\/?*[\]]/g, '-');
           const sheet = workbook.addWorksheet(sheetName);
-          const formattedData = formatDataForExcel(data, lookupData);
+          const formattedData = formatDataForExcel(data, lookupData, tableId);
           if (formattedData.length === 0) continue;
 
           const columns = Object.keys(formattedData[0]);

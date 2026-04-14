@@ -289,8 +289,9 @@ async function runAutoBackup() {
         currentStatsRow++;
 
         if (data && rowCount > 0) {
-          const sheet = workbook.addWorksheet(table.label.substring(0, 31).replace(/\//g, '-'));
-          const formattedData = formatDataForExcel(data, lookupData);
+          const sheetName = table.label.substring(0, 31).replace(/[:\\\/?*\[\]]/g, '-');
+          const sheet = workbook.addWorksheet(sheetName);
+          const formattedData = formatDataForExcel(data, lookupData, table.id);
           if (formattedData.length > 0) {
             const columns = Object.keys(formattedData[0]);
             const headerRow = sheet.addRow(columns);

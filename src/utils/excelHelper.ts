@@ -3,8 +3,8 @@
  */
 export const COLUMN_MAP: Record<string, string> = {
   // Common columns
-  id: 'ID',
-  code: 'Mã hiệu',
+  id: '__EXCLUDE__',
+  code: 'ID / Mã hiệu',
   name: 'Tên / Nội dung',
   created_at: 'Ngày tạo',
   updated_at: 'Ngày cập nhật',
@@ -15,7 +15,7 @@ export const COLUMN_MAP: Record<string, string> = {
   unit: 'Đơn vị tính',
   unit_price: 'Đơn giá',
   total_amount: 'Thành tiền',
-  employee_id: 'Nhân viên',
+  employee_id: 'Nhân viên / Đối tượng',
   warehouse_id: 'Kho hàng',
   material_id: 'Vật tư',
   description: 'Mô tả chi tiết',
@@ -52,7 +52,7 @@ export const COLUMN_MAP: Record<string, string> = {
   created_by: 'Người tạo lệnh',
   approved_by: 'Người duyệt lệnh',
 
-  // Finance / Advances
+  // Finance / Costs
   amount: 'Số tiền (VNĐ)',
   cost_code: 'Mã chi phí',
   cost_type: 'Loại chi phí',
@@ -77,6 +77,27 @@ export const COLUMN_MAP: Record<string, string> = {
   work_progress: 'Diễn biến thi công',
   quality_issues: 'Chất lượng & An toàn',
   supervision_comments: 'Ý kiến Giám sát',
+
+  // Reminders / Notes
+  priority: 'Mức độ ưu tiên',
+  content: 'Nội dung chi tiết',
+  is_completed: 'Đã hoàn thành',
+  related_object: 'Đối tượng liên quan',
+  location: 'Địa điểm / Vị trí',
+};
+
+// Tra cứu bối cảnh thời tiết (Đồng bộ với Notes.tsx)
+const WEATHER_MAP: Record<string, string> = {
+  sunny: '☀️ Nắng nóng gay gắt',
+  'sudden-rain': '⛈️ Mưa rào đột ngột',
+  cloudy: '☁️ Trời âm u, oi bức',
+  'long-rain': '🌧️ Mưa dầm kéo dài',
+  'strong-wind': '💨 Gió giật mạnh trong cơn dông',
+  thunderstorm: '🌩️ Sấm chớp dữ dội',
+  flood: '🌊 Ngập lụt cục bộ',
+  cool: '🌬️ Trời se lạnh vào sáng sớm',
+  smog: '🌫️ Sương mù quang hóa',
+  pleasant: '🌤️ Trời trong xanh, nắng dịu',
 };
 
 /**
@@ -106,9 +127,12 @@ export const formatDataForExcel = (data: any[], lookupData: any = {}) => {
   return data.map((item) => {
     const newItem: any = {};
     Object.keys(item).forEach((key) => {
+      // 1. Tuyệt đối không để mã ID kỹ thuật (UUID) làm rác bảng tính
+      if (key === 'id') return;
+
       let value = item[key];
 
-      // Tự động chuyển đổi ID sang Tên nếu có trong lookup
+      // 2. Tự động chuyển đổi ID tham chiếu sang Tên người dùng hay dùng
       if (
         (key === 'employee_id' || key === 'created_by' || key === 'approved_by') &&
         userMap[value]
@@ -129,6 +153,16 @@ export const formatDataForExcel = (data: any[], lookupData: any = {}) => {
         value = matMap[value];
       if (key === 'group_id' && groupMap[value]) value = groupMap[value];
       if (key === 'bom_id' && bomMap[value]) value = bomMap[value];
+
+      // 3. Xử lý các "Mã" Slug kỹ thuật (Weather, Categories)
+      if (key === 'weather' && typeof value === 'string' && WEATHER_MAP[value.toLowerCase()]) {
+        value = WEATHER_MAP[value.toLowerCase()];
+      }
+
+      // Format Boolean sang Tiếng Việt chuyên nghiệp
+      if (typeof value === 'boolean') {
+        value = value ? 'Có / Hoàn tất' : 'Không / Chưa';
+      }
 
       const label = COLUMN_MAP[key] || key;
       newItem[label] = value;

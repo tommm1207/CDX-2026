@@ -198,33 +198,81 @@ async function runAutoBackup() {
       workbook.creator = 'CDX Auto System';
 
       const summarySheet = workbook.addWorksheet('TỔNG QUAN', { views: [{ showGridLines: false }] });
-      summarySheet.getCell('A1').value = 'HỆ THỐNG QUẢN LÝ KHO & NHÂN SỰ CDX 2026';
-      summarySheet.getCell('A1').font = { size: 18, bold: true, color: { argb: 'FF008060' } };
-      summarySheet.getCell('A3').value = 'BÁO CÁO SAO LƯU DỮ LIỆU TỰ ĐỘNG';
-      summarySheet.getCell('A3').font = { size: 14, bold: true };
-      summarySheet.getCell('A5').value = 'Ngày thực hiện:';
-      summarySheet.getCell('B5').value = vnTime.toLocaleString('vi-VN');
-      summarySheet.getColumn(1).width = 25;
-      summarySheet.getColumn(2).width = 50;
+      
+      // Tiêu đề thương hiệu
+      summarySheet.getCell('A1').value = 'CON ĐƯỜNG XANH - CỘNG TÁC ĐỂ VƯƠN XA';
+      summarySheet.getCell('A1').font = { size: 16, bold: true, color: { argb: 'FF2D5A27' } };
+      summarySheet.getCell('A2').value = 'HỆ THỐNG QUẢN LÝ KHO & NHÂN SỰ CDX 2026';
+      summarySheet.getCell('A2').font = { size: 10, italic: true, color: { argb: 'FF6B7280' } };
 
-      const [{ data: users }, { data: warehouses }, { data: materials }, { data: groups }] = await Promise.all([
+      // Thông tin chung
+      summarySheet.getCell('A4').value = 'BÁO CÁO SAO LƯU DỮ LIỆU TỰ ĐỘNG';
+      summarySheet.getCell('A4').font = { size: 14, bold: true };
+      
+      const infoBox = [
+        ['Ngày thực hiện (VN):', vnTime.toLocaleString('vi-VN')],
+        ['Email nhận:', config.email],
+        ['Bao gồm:', `${BACKUP_TABLES.length} bảng dữ liệu`],
+        ['Trạng thái:', 'Hệ thống tự động'],
+      ];
+
+      infoBox.forEach((row, i) => {
+        const rowNum = 6 + i;
+        summarySheet.getCell(`A${rowNum}`).value = row[0];
+        summarySheet.getCell(`B${rowNum}`).value = row[1];
+        summarySheet.getCell(`A${rowNum}`).font = { bold: true };
+      });
+
+      summarySheet.getCell('A11').value = 'BẢNG THỐNG KÊ DỮ LIỆU';
+      summarySheet.getCell('A11').font = { size: 12, bold: true, color: { argb: 'FF2D5A27' } };
+      
+      summarySheet.getColumn(1).width = 30;
+      summarySheet.getColumn(2).width = 45;
+
+      const [
+        { data: users }, 
+        { data: warehouses }, 
+        { data: materials }, 
+        { data: groups },
+        { data: boms }
+      ] = await Promise.all([
         supabase.from('users').select('id, full_name'),
         supabase.from('warehouses').select('id, name'),
         supabase.from('materials').select('id, name'),
-        supabase.from('material_groups').select('id, name')
+        supabase.from('material_groups').select('id, name'),
+        supabase.from('bom_configs').select('id, name')
       ]);
-      const lookupData = { users, warehouses, materials, groups };
+      const lookupData = { users, warehouses, materials, groups, boms };
 
       const labels: string[] = [];
       const stats: Record<string, number> = {};
+      let currentStatsRow = 13;
+
+      // Header bảng thống kê
+      summarySheet.getCell('A12').value = 'Hạng mục dữ liệu';
+      summarySheet.getCell('B12').value = 'Số lượng bản ghi hiện hữu';
+      ['A12', 'B12'].forEach((cell) => {
+        summarySheet.getCell(cell).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF2D5A27' } };
+        summarySheet.getCell(cell).font = { bold: true, color: { argb: 'FFFFFFFF' } };
+        summarySheet.getCell(cell).border = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } };
+      });
 
       for (const table of BACKUP_TABLES) {
-        const { data, error } = await supabase.from(table.id).select("*");
+        // Lọc dữ liệu: Không lấy các bản ghi đã xóa
+        const { data, error } = await supabase.from(table.id).select("*").neq('status', 'Đã xóa');
         if (error) continue;
 
         labels.push(table.label);
         const rowCount = data?.length || 0;
         stats[table.label] = rowCount;
+
+        // Điền thông tin vào bảng thống kê trang bìa
+        summarySheet.getCell(`A${currentStatsRow}`).value = table.label;
+        summarySheet.getCell(`B${currentStatsRow}`).value = rowCount;
+        ['A', 'B'].forEach((col) => {
+          summarySheet.getCell(`${col}${currentStatsRow}`).border = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } };
+        });
+        currentStatsRow++;
 
         if (data && rowCount > 0) {
           const sheet = workbook.addWorksheet(table.label.substring(0, 31).replace(/\//g, '-'));
@@ -246,6 +294,15 @@ async function runAutoBackup() {
                 cell.border = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } };
                 if (typeof cell.value === 'number') cell.alignment = { horizontal: 'right' };
               });
+            });
+
+            sheet.columns.forEach((column) => {
+              let maxColumnLength = 0;
+              column.eachCell!({ includeEmpty: true }, (cell) => {
+                const columnLength = cell.value ? cell.value.toString().length : 10;
+                maxColumnLength = Math.max(maxColumnLength, columnLength);
+              });
+              column.width = Math.min(maxColumnLength + 4, 60);
             });
           }
         }

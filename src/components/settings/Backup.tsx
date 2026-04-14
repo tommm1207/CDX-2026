@@ -18,30 +18,30 @@ import { PageBreadcrumb } from '../shared/PageBreadcrumb';
 
 export const BACKUP_TABLES = [
   // 1. Nhân sự & Lương
-  { id: 'users', label: '1. Danh sách Nhân sự' },
-  { id: 'salary_settings', label: '2. Cấu hình Lương (Hợp đồng)' },
-  { id: 'attendance', label: '3. Dữ liệu Chấm công (Lương)' },
-  { id: 'advances', label: '4. Dữ liệu Tạm ứng (Lương)' },
-  { id: 'allowances', label: '5. Dữ liệu Phụ cấp (Lương)' },
+  { id: 'users', label: 'Danh sách Nhân sự' },
+  { id: 'salary_settings', label: 'Cấu hình Lương (Hợp đồng)' },
+  { id: 'attendance', label: 'Dữ liệu Chấm công (Lương)' },
+  { id: 'advances', label: 'Dữ liệu Tạm ứng (Lương)' },
+  { id: 'allowances', label: 'Dữ liệu Phụ cấp (Lương)' },
 
   // 4. Báo cáo & Nhật ký (Move to 2nd position)
-  { id: 'construction_diaries', label: '6. Nhật ký thi công' },
-  { id: 'notes', label: '7. Ghi chú & Nhật ký' },
-  { id: 'costs', label: '8. Báo cáo Chi phí' },
-  { id: 'reminders', label: '9. Thông báo & Nhắc việc' },
+  { id: 'construction_diaries', label: 'Nhật ký thi công' },
+  { id: 'notes', label: 'Ghi chú & Nhật ký' },
+  { id: 'costs', label: 'Báo cáo Chi phí' },
+  { id: 'reminders', label: 'Thông báo & Nhắc việc' },
 
   // 3. Sản xuất (Move to 3rd position)
-  { id: 'production_orders', label: '10. Lệnh sản xuất' },
-  { id: 'bom_configs', label: '11. Định mức sản xuất (BOM)' },
+  { id: 'production_orders', label: 'Lệnh sản xuất' },
+  { id: 'bom_configs', label: 'Định mức sản xuất (BOM)' },
 
   // 2. Kho bãi & Vật tư (Move to last position)
-  { id: 'warehouses', label: '12. Danh sách Kho' },
-  { id: 'material_groups', label: '13. Nhóm vật tư' },
-  { id: 'materials', label: '14. Danh mục Vật tư' },
-  { id: 'partners', label: '15. Khách hàng & NCC' },
-  { id: 'stock_in', label: '16. Báo cáo Nhập kho' },
-  { id: 'stock_out', label: '17. Báo cáo Xuất kho' },
-  { id: 'transfers', label: '18. Báo cáo Chuyển kho' },
+  { id: 'warehouses', label: 'Danh sách Kho' },
+  { id: 'material_groups', label: 'Nhóm vật tư' },
+  { id: 'materials', label: 'Danh mục Vật tư' },
+  { id: 'partners', label: 'Khách hàng & NCC' },
+  { id: 'stock_in', label: 'Báo cáo Nhập kho' },
+  { id: 'stock_out', label: 'Báo cáo Xuất kho' },
+  { id: 'transfers', label: 'Báo cáo Chuyển kho' },
 ];
 
 export const Backup = ({

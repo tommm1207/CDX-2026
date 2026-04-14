@@ -23,7 +23,7 @@ if (process.env.NODE_ENV !== "production" && !process.env.VERCEL) {
 const COLUMN_MAP: Record<string, string> = {
   id: 'ID', code: 'Mã hiệu', name: 'Tên / Nội dung', created_at: 'Ngày tạo', updated_at: 'Ngày cập nhật',
   notes: 'Ghi chú', status: 'Trạng thái', date: 'Ngày', quantity: 'Số lượng', unit: 'Đơn vị tính',
-  unit_price: 'Đơn giá', total_amount: 'Thành tiền', employee_id: 'Mã Nhân viên',
+  unit_price: 'Đơn giá', total_amount: 'Thành tiền', employee_id: 'Nhân viên / Đối tượng',
   warehouse_id: 'Kho hàng', material_id: 'Vật tư', description: 'Mô tả chi tiết', type: 'Phân loại',
   full_name: 'Họ và tên', email: 'Email liên hệ', phone: 'Số điện thoại', id_card: 'Số CMND/CCCD',
   dob: 'Ngày sinh', join_date: 'Ngày nhận việc', tax_id: 'Mã số thuế', department: 'Phòng ban / Bộ phận',
@@ -32,11 +32,17 @@ const COLUMN_MAP: Record<string, string> = {
   specification: 'Quy cách hồ sơ / Kỹ thuật', group_id: 'Nhóm vật tư', order_code: 'Mã Lệnh sản xuất',
   bom_id: 'Mã Định mức (BOM)', output_warehouse_id: 'Kho thành phẩm', planned_date: 'Ngày dự kiến hoàn thành',
   amount: 'Số tiền (VNĐ)', cost_code: 'Mã chi phí', cost_type: 'Loại chi phí', category: 'Danh mục',
-  hours_worked: 'Số giờ làm việc', overtime_hours: 'Số giờ tăng ca', content: 'Nội dung chi tiết'
+  hours_worked: 'Số giờ làm việc', overtime_hours: 'Số giờ tăng ca', content: 'Nội dung chi tiết',
+  title: 'Tiêu đề', reminder_time: 'Thời gian nhắc', browser_notification: 'Thông báo trình duyệt',
+  base_salary: 'Lương cơ bản', daily_rate: 'Lương theo ngày', insurance_deduction: 'Khấu trừ BHXH',
+  monthly_ot_coeff: 'Hệ số tăng ca', valid_from: 'Ngày hiệu lực', valid_to: 'Hết hạn'
 };
 
-const formatDataForExcel = (data: any[], lookupData: any = {}) => {
+const formatDataForExcel = (data: any[], lookupData: any = {}, tableId?: string) => {
   if (!data || data.length === 0) return [];
+
+  const hideStatusTables = ['advances', 'allowances'];
+  const shouldHideStatus = tableId && hideStatusTables.includes(tableId);
 
   const userMap = lookupData.users ? Object.fromEntries(lookupData.users.map((u: any) => [u.id, u.full_name])) : {};
   const whMap = lookupData.warehouses ? Object.fromEntries(lookupData.warehouses.map((w: any) => [w.id, w.name])) : {};
@@ -46,12 +52,27 @@ const formatDataForExcel = (data: any[], lookupData: any = {}) => {
   return data.map(item => {
     const newItem: any = {};
     Object.keys(item).forEach(key => {
+      if (key.toLowerCase().includes('pass')) return;
+      if (key === 'id') return;
+      if (key === 'status' && shouldHideStatus) return;
+
       let value = item[key];
 
-      if (key === 'employee_id' && userMap[value]) value = userMap[value];
-      if ((key === 'warehouse_id' || key === 'from_warehouse_id' || key === 'to_warehouse_id') && whMap[value]) value = whMap[value];
+      if (typeof value === 'string' && value.startsWith('{')) {
+        try {
+          const parsed = JSON.parse(value);
+          if (parsed && typeof parsed === 'object') {
+            value = parsed.text || parsed.content || value;
+          }
+        } catch (e) {}
+      }
+
+      if ((key === 'employee_id' || key === 'created_by' || key === 'approved_by') && userMap[value]) value = userMap[value];
+      if ((key === 'warehouse_id' || key === 'from_warehouse_id' || key === 'to_warehouse_id' || key === 'output_warehouse_id') && whMap[value]) value = whMap[value];
       if (key === 'material_id' && matMap[value]) value = matMap[value];
       if (key === 'group_id' && groupMap[value]) value = groupMap[value];
+
+      if (typeof value === 'boolean') value = value ? 'Có / Hoàn tất' : 'Không / Chưa';
 
       const label = COLUMN_MAP[key] || key;
       newItem[label] = value;
@@ -84,30 +105,30 @@ const checkSupabaseConfig = (req: express.Request, res: express.Response, next: 
 
 const BACKUP_TABLES = [
   // 1. Nhân sự & Lương
-  { id: 'users', label: '1. Danh sách Nhân sự' },
-  { id: 'salary_settings', label: '2. Cấu hình Lương (Hợp đồng)' },
-  { id: 'attendance', label: '3. Dữ liệu Chấm công (Lương)' },
-  { id: 'advances', label: '4. Dữ liệu Tạm ứng (Lương)' },
-  { id: 'allowances', label: '5. Dữ liệu Phụ cấp (Lương)' },
+  { id: 'users', label: 'Danh sách Nhân sự' },
+  { id: 'salary_settings', label: 'Cấu hình Lương (Hợp đồng)' },
+  { id: 'attendance', label: 'Dữ liệu Chấm công (Lương)' },
+  { id: 'advances', label: 'Dữ liệu Tạm ứng (Lương)' },
+  { id: 'allowances', label: 'Dữ liệu Phụ cấp (Lương)' },
 
   // 4. Báo cáo & Nhật ký (Move to 2nd position)
-  { id: 'construction_diaries', label: '6. Nhật ký thi công' },
-  { id: 'notes', label: '7. Ghi chú & Nhật ký' },
-  { id: 'costs', label: '8. Báo cáo Chi phí' },
-  { id: 'reminders', label: '9. Thông báo & Nhắc việc' },
+  { id: 'construction_diaries', label: 'Nhật ký thi công' },
+  { id: 'notes', label: 'Ghi chú & Nhật ký' },
+  { id: 'costs', label: 'Báo cáo Chi phí' },
+  { id: 'reminders', label: 'Thông báo & Nhắc việc' },
 
   // 3. Sản xuất (Move to 3rd position)
-  { id: 'production_orders', label: '10. Lệnh sản xuất' },
-  { id: 'bom_configs', label: '11. Định mức sản xuất (BOM)' },
+  { id: 'production_orders', label: 'Lệnh sản xuất' },
+  { id: 'bom_configs', label: 'Định mức sản xuất (BOM)' },
 
   // 2. Kho bãi & Vật tư (Move to last position)
-  { id: 'warehouses', label: '12. Danh sách Kho' },
-  { id: 'material_groups', label: '13. Nhóm vật tư' },
-  { id: 'materials', label: '14. Danh mục Vật tư' },
-  { id: 'partners', label: '15. Khách hàng & NCC' },
-  { id: 'stock_in', label: '16. Báo cáo Nhập kho' },
-  { id: 'stock_out', label: '17. Báo cáo Xuất kho' },
-  { id: 'transfers', label: '18. Báo cáo Chuyển kho' },
+  { id: 'warehouses', label: 'Danh sách Kho' },
+  { id: 'material_groups', label: 'Nhóm vật tư' },
+  { id: 'materials', label: 'Danh mục Vật tư' },
+  { id: 'partners', label: 'Khách hàng & NCC' },
+  { id: 'stock_in', label: 'Báo cáo Nhập kho' },
+  { id: 'stock_out', label: 'Báo cáo Xuất kho' },
+  { id: 'transfers', label: 'Báo cáo Chuyển kho' },
 ];
 
 /**

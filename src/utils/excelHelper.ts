@@ -84,6 +84,17 @@ export const COLUMN_MAP: Record<string, string> = {
   is_completed: 'Đã hoàn thành',
   related_object: 'Đối tượng liên quan',
   location: 'Địa điểm / Vị trí',
+  title: 'Tiêu đề',
+  reminder_time: 'Thời gian nhắc',
+  browser_notification: 'Thông báo trình duyệt',
+
+  // Salary Settings (Hợp đồng)
+  base_salary: 'Lương cơ bản',
+  daily_rate: 'Lương theo ngày',
+  insurance_deduction: 'Khấu trừ BHXH',
+  monthly_ot_coeff: 'Hệ số tăng ca',
+  valid_from: 'Ngày hiệu lực',
+  valid_to: 'Hết hạn',
 };
 
 // Tra cứu bối cảnh thời tiết (Đồng bộ với Notes.tsx)
@@ -131,15 +142,31 @@ export const formatDataForExcel = (data: any[], lookupData: any = {}, tableId?: 
   return data.map((item) => {
     const newItem: any = {};
     Object.keys(item).forEach((key) => {
-      // 1. Tuyệt đối không để mã ID kỹ thuật (UUID) làm rác bảng tính
+      // 1. Bảo mật: Tuyệt đối không xuất mật khẩu hoặc trường nhạy cảm
+      if (key.toLowerCase().includes('pass')) return;
+
+      // 2. Tuyệt đối không để mã ID kỹ thuật (UUID) làm rác bảng tính
       if (key === 'id') return;
 
-      // 2. Loại bỏ cột trạng thái cho các bảng tài chính không cần duyệt (Theo ý người dùng)
+      // 3. Loại bỏ cột trạng thái cho các bảng tài chính không cần duyệt (Theo ý người dùng)
       if (key === 'status' && shouldHideStatus) return;
 
       let value = item[key];
 
-      // 2. Tự động chuyển đổi ID tham chiếu sang Tên người dùng hay dùng
+      // 4. Xử lý dữ liệu dạng JSON (Ghi chú, Nhật ký, Nhắc việc) để lấy text thô
+      if (typeof value === 'string' && value.startsWith('{')) {
+        try {
+          const parsed = JSON.parse(value);
+          if (parsed && typeof parsed === 'object') {
+            // Ưu tiên lấy trường 'text' nếu là cấu trúc Quill/Reminder
+            value = parsed.text || parsed.content || value;
+          }
+        } catch (e) {
+          // Nếu không phải JSON chuẩn thì giữ nguyên
+        }
+      }
+
+      // 5. Tự động chuyển đổi ID tham chiếu sang Tên người dùng hay dùng
       if (
         (key === 'employee_id' || key === 'created_by' || key === 'approved_by') &&
         userMap[value]

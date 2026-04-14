@@ -148,7 +148,7 @@ export const useTableCapture = () => {
         const fullHeight = wrapper.scrollHeight;
 
         // ---- 6. Capture ----
-        const dataUrl = await toPng(wrapper, {
+        const capturedDataUrl = await toPng(wrapper, {
           cacheBust: true,
           backgroundColor: '#ffffff',
           quality: 1,
@@ -166,7 +166,17 @@ export const useTableCapture = () => {
           },
         });
 
-        return dataUrl;
+        // ---- 6.5. MANUALLY INJECT THE LOGO (Bullet-proof fix for iOS/Safari)
+        // Table header logo is at padding 24 (x), 20 (y)
+        const { injectLogoToImage } = await import('@/utils/logoCompositor');
+        const finalDataUrl = await injectLogoToImage(capturedDataUrl, {
+          x: 24,
+          y: 20,
+          size: 44,
+          pixelRatio: 2,
+        });
+
+        return finalDataUrl;
       } catch (err) {
         console.error('[useTableCapture] capture failed:', err);
         return null;

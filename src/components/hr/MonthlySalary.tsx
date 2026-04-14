@@ -345,8 +345,8 @@ export const MonthlySalary = ({
       const fileName = `Phieu_Luong_${selectedSalary.full_name}_T${selectedMonth}_${selectedYear}.png`;
       const scale = 4; // High resolution for premium quality
 
-      // Capture the bill directly - CanvasLogo handles its own high-quality rendering
-      const finalDataUrl = await toPng(billRef.current, {
+      // Capture the bill - it might have a blank logo if Safari is being difficult
+      const capturedDataUrl = await toPng(billRef.current, {
         cacheBust: true,
         backgroundColor: '#FCFCFC',
         quality: 1,
@@ -358,6 +358,16 @@ export const MonthlySalary = ({
           margin: '0',
           padding: '0',
         },
+      });
+
+      // Step 2.5: MANUALLY INJECT THE LOGO (Bullet-proof fix for iOS/Safari)
+      // This ensures the logo is NEVER missing or grayed out, even on the very first try.
+      const { injectLogoToImage } = await import('@/utils/logoCompositor');
+      const finalDataUrl = await injectLogoToImage(capturedDataUrl, {
+        x: 20, // px-5 = 20px
+        y: 20, // pt-5 = 20px
+        size: 44, // size={44}
+        pixelRatio: scale,
       });
 
       // Step 3: Share (Mobile) or Download (Desktop)

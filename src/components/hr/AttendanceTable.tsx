@@ -48,6 +48,7 @@ export const AttendanceTable = ({
     null,
   );
   const [showOtConfirm, setShowOtConfirm] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   const getStatus = (empId: string, day: number) => {
     const dateStr = `${selectedYear}-${String(selectedMonth).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
@@ -378,7 +379,7 @@ export const AttendanceTable = ({
 
                   <div className="flex gap-2">
                     <button
-                      onClick={() => handleConfirm('remove')}
+                      onClick={() => setShowDeleteConfirm(true)}
                       className="flex-1 py-3 rounded-2xl bg-gray-100 text-gray-500 text-[10px] font-bold hover:bg-gray-200 active:scale-95 transition-all uppercase"
                     >
                       Xóa chấm công
@@ -409,6 +410,20 @@ export const AttendanceTable = ({
           if (selectedAction) handleConfirm(selectedAction);
         }}
         onCancel={() => setShowOtConfirm(false)}
+      />
+
+      <ConfirmModal
+        show={showDeleteConfirm}
+        title="Xác nhận xóa"
+        message={`Bạn có chắc chắn muốn xóa dữ liệu chấm công ngày ${confirmPopup?.day} của ${confirmPopup?.employeeName}? Hành động này không thể hoàn tác.`}
+        type="danger"
+        confirmText="Xác nhận xóa"
+        cancelText="Quay lại"
+        onConfirm={() => {
+          setShowDeleteConfirm(false);
+          handleConfirm('remove');
+        }}
+        onCancel={() => setShowDeleteConfirm(false)}
       />
     </>
   );

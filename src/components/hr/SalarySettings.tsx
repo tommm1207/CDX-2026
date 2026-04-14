@@ -211,7 +211,7 @@ export const SalarySettings = ({
       <div className="flex items-center justify-between gap-2 mb-4">
         <PageBreadcrumb title="Cài đặt lương" onBack={onBack} />
 
-        <div className="flex items-center gap-2 relative justify-end flex-1">
+        <div className="flex items-center gap-2 relative justify-end flex-1 flex-shrink-0">
           {/* Action Buttons - 4-Button Sync Layout */}
           <button
             disabled

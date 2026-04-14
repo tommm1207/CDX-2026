@@ -62,7 +62,7 @@ export const PageToolbar: React.FC<PageToolbarProps> = ({
   }, [tableRef, captureOptions, captureElement, onImageCaptured]);
 
   return (
-    <div className="flex items-center gap-1.5 flex-nowrap min-w-0 justify-end ml-auto">
+    <div className="flex items-center gap-1.5 flex-nowrap min-w-0 justify-end ml-auto flex-shrink-0">
       {/* Extra buttons (e.g., Chấm công) */}
       {extraButtons}
 

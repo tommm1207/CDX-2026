@@ -337,7 +337,7 @@ export const Warehouses = ({
     <div className="p-4 md:p-6 space-y-6 pb-24">
       <div className="flex items-center justify-between gap-2 mb-4">
         <PageBreadcrumb title="Danh sách kho" onBack={onBack} />
-        <div className="flex items-center gap-1.5 justify-end flex-1">
+        <div className="flex items-center gap-1.5 justify-end flex-1 flex-shrink-0">
           <SaveImageButton
             onClick={handleSaveTableImage}
             isCapturing={isCapturingTable}

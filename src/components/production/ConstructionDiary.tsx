@@ -299,7 +299,7 @@ export const ConstructionDiaryComponent = ({
       {/* Header Section */}
       <div className="flex items-center justify-between gap-2 mb-4">
         <PageBreadcrumb title="Nhật ký thi công" onBack={onBack} />
-        <div className="flex items-center gap-1.5 justify-end flex-1">
+        <div className="flex items-center gap-1.5 justify-end flex-1 flex-shrink-0">
           <SaveImageButton
             onClick={handleSaveTableImage}
             isCapturing={isCapturingTable}

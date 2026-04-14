@@ -310,14 +310,13 @@ export const MonthlySalary = ({
 
     try {
       setIsCapturing(true);
-      // Wait for Safari to stabilize
-      await new Promise((resolve) => setTimeout(resolve, 900));
+      // Wait for Safari to stabilize and ensure React finished updating the 'isCapturing' state
+      await new Promise((resolve) => setTimeout(resolve, 1000));
 
-      const fileName = `Phieu_Luong_${selectedSalary.full_name}_T${selectedMonth}_${selectedYear}.png`;
       const scale = 4; // High resolution for premium quality
 
-      // Step 1: Capture the bill base
-      const rawDataUrl = await toPng(billRef.current, {
+      // Capture the bill directly - CanvasLogo handles its own high-quality rendering
+      const finalDataUrl = await toPng(billRef.current, {
         cacheBust: true,
         backgroundColor: '#FCFCFC',
         quality: 1,
@@ -326,79 +325,29 @@ export const MonthlySalary = ({
         style: {
           transform: 'scale(1)',
           WebkitTransform: 'scale(1)',
+          margin: '0',
+          padding: '0',
         },
       });
 
-      // Step 2: Manually draw logo on top of the canvas
-      const finalDataUrl = await new Promise<string>((resolve) => {
-        const billImg = new Image();
-        billImg.onload = () => {
-          const canvas = document.createElement('canvas');
-          canvas.width = billImg.width;
-          canvas.height = billImg.height;
-          const ctx = canvas.getContext('2d')!;
-
-          // Draw the captured bill
-          ctx.drawImage(billImg, 0, 0);
-
-          // Draw logo manually with high quality
-          const logoImg = new Image();
-          logoImg.onload = () => {
-            const logoX = Math.round(20 * scale);
-            const logoY = Math.round(20 * scale);
-            const logoSize = Math.round(36 * scale);
-            const radius = Math.round(8 * scale);
-
-            ctx.save();
-            // Enable high quality smoothing
-            ctx.imageSmoothingEnabled = true;
-            ctx.imageSmoothingQuality = 'high';
-
-            ctx.beginPath();
-            if (ctx.roundRect) {
-              ctx.roundRect(logoX, logoY, logoSize, logoSize, radius);
-            } else {
-              ctx.moveTo(logoX + radius, logoY);
-              ctx.arcTo(logoX + logoSize, logoY, logoX + logoSize, logoY + logoSize, radius);
-              ctx.arcTo(logoX + logoSize, logoY + logoSize, logoX, logoY + logoSize, radius);
-              ctx.arcTo(logoX, logoY + logoSize, logoX, logoY, radius);
-              ctx.arcTo(logoX, logoY, logoX + logoSize, logoY, radius);
-            }
-            ctx.closePath();
-            ctx.clip();
-
-            ctx.drawImage(logoImg, logoX, logoY, logoSize, logoSize);
-            ctx.restore();
-            resolve(canvas.toDataURL('image/png', 1.0));
-          };
-          logoImg.onerror = () => resolve(rawDataUrl);
-          logoImg.src = logoBase64;
-        };
-        billImg.src = rawDataUrl;
-      });
-
-      setIsCapturing(false);
-
       // Step 3: Share (Mobile) or Download (Desktop)
-      if (navigator.share && navigator.canShare) {
+      if (navigator.share) {
         try {
-          // Convert dataUrl to File for sharing
           const res = await fetch(finalDataUrl);
           const blob = await res.blob();
           const file = new File([blob], fileName, { type: 'image/png' });
 
-          if (navigator.canShare({ files: [file] })) {
+          if (navigator.canShare && navigator.canShare({ files: [file] })) {
             await navigator.share({
               files: [file],
               title: 'Phiếu Lương',
               text: `Phiếu lương tháng ${selectedMonth}/${selectedYear} của ${selectedSalary.full_name}`,
             });
-            if (addToast) addToast('Đã mở bảng chia sẻ!', 'success');
+            addToast?.('Đã mở bảng chia sẻ!', 'success');
             return;
           }
         } catch (shareErr) {
           console.error('Share failed:', shareErr);
-          // Fallback to traditional download if share is cancelled or fails
         }
       }
 
@@ -407,11 +356,12 @@ export const MonthlySalary = ({
       link.download = fileName;
       link.href = finalDataUrl;
       link.click();
-      if (addToast) addToast('Đã lưu ảnh phiếu lương thành công!', 'success');
+      addToast?.('Đã lưu ảnh phiếu lương thành công!', 'success');
     } catch (err) {
-      setIsCapturing(false);
       console.error('Lỗi khi lưu ảnh:', err);
-      if (addToast) addToast('Lỗi khi tạo ảnh phiếu lương', 'error');
+      addToast?.('Lỗi khi tạo ảnh phiếu lương', 'error');
+    } finally {
+      setIsCapturing(false);
     }
   };
 
@@ -901,7 +851,7 @@ export const MonthlySalary = ({
                     .bill-capture .italic { font-style: italic !important; }
                     .bill-capture .uppercase { text-transform: uppercase !important; }
                     .bill-capture .text-primary { color: #2D5A27 !important; }
-                    .bill-capture .logo-img { width: 36px !important; height: 36px !important; opacity: 1 !important; visibility: hidden !important; display: block !important; background-color: transparent !important; transform: translateZ(0) !important; -webkit-transform: translateZ(0) !important; }
+                    .bill-capture .logo-img { width: 36px !important; height: 36px !important; opacity: 1 !important; display: block !important; background-color: transparent !important; transform: translateZ(0) !important; -webkit-transform: translateZ(0) !important; }
                     .bill-capture .main-title { color: #2D5A27 !important; font-weight: 900 !important; letter-spacing: -0.02em !important; text-shadow: none !important; }
                     .bill-capture .text-gray-400 { color: #9CA3AF !important; }
                     .bill-capture .text-gray-500 { color: #6B7280 !important; }
@@ -921,8 +871,8 @@ export const MonthlySalary = ({
                         {/* Logo row */}
                         <div className="flex items-center gap-2 mb-3">
                           <CanvasLogo
-                            size={64}
-                            className="w-16 h-16 rounded-2xl object-contain shadow-sm"
+                            size={44}
+                            className="w-11 h-11 rounded-xl object-contain shadow-sm"
                           />
                           <div>
                             <p className="text-[9px] font-black text-gray-700 uppercase tracking-wider">

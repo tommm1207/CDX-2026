@@ -1,6 +1,4 @@
-import { CanvasLogo } from '@/components/shared/ReportExportHeader';
-import { exportTableImage } from '../../utils/reportExport';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import {
   ClipboardList,
   Plus,
@@ -13,14 +11,21 @@ import {
   Users,
   Settings2,
   AlertCircle,
+  Thermometer,
   MessageSquare,
+  AlertTriangle,
+  Clipboard,
+  ChevronDown,
   MapPin,
   ChevronRight,
   Image as ImageIcon,
   CheckCircle,
   Share2,
 } from 'lucide-react';
-import { useRef } from 'react';
+import { exportTableImage } from '@/utils/reportExport';
+import { CreatableSelect } from '../shared/CreatableSelect';
+import { WEATHER_OPTIONS } from '../notes/Notes';
+import { CanvasLogo } from '@/components/shared/ReportExportHeader';
 
 import { SaveImageButton } from '../shared/SaveImageButton';
 import { motion, AnimatePresence } from 'motion/react';
@@ -78,7 +83,7 @@ export const ConstructionDiaryComponent = ({
 
   const initialFormState: Partial<ConstructionDiary> = {
     date: new Date().toISOString().split('T')[0],
-    weather: 'pleasant',
+    weather: '',
     temperature: '',
     labor_info: '',
     equipment_info: '',
@@ -97,7 +102,12 @@ export const ConstructionDiaryComponent = ({
   }, []);
 
   const handleAddNew = () => {
-    setFormData(initialFormState);
+    const code = `NKTC-${new Date().getFullYear()}${(new Date().getMonth() + 1).toString().padStart(2, '0')}${new Date().getDate().toString().padStart(2, '0')}-${Math.floor(
+      Math.random() * 1000,
+    )
+      .toString()
+      .padStart(3, '0')}`;
+    setFormData({ ...initialFormState, diary_code: code });
     setEditingId(null);
     setShowAddNew(true);
   };
@@ -805,8 +815,11 @@ export const ConstructionDiaryComponent = ({
                     <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">
                       Mã tham chiếu
                     </label>
-                    <div className="bg-primary/5 px-5 py-3.5 rounded-2xl border border-primary/10 text-sm font-black text-primary uppercase shadow-inner italic">
-                      {formData.diary_code || '(Hệ thống tự tạo)'}
+                    <div className="bg-primary/5 px-5 py-3.5 rounded-2xl border border-primary/10 text-sm font-black text-primary uppercase shadow-inner italic flex items-center justify-between">
+                      {formData.diary_code || '---'}
+                      <span className="text-[8px] bg-primary/10 px-1.5 py-0.5 rounded italic opacity-50 uppercase tracking-tighter">
+                        Mã được cấp
+                      </span>
                     </div>
                   </div>
                   <div className="space-y-2">
@@ -845,27 +858,26 @@ export const ConstructionDiaryComponent = ({
                     <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">
                       Thời tiết hiện tại
                     </label>
-                    <div className="relative">
-                      <input
-                        list="weather-options"
-                        placeholder="Chọn hoặc nhập thời tiết..."
-                        className="w-full px-5 py-3.5 rounded-2xl border border-gray-100 bg-white focus:ring-4 focus:ring-primary/10 focus:border-primary outline-none text-sm font-bold shadow-sm"
-                        value={
-                          WEATHER_OPTIONS.find((o) => o.value === formData.weather)?.label ||
-                          formData.weather
-                        }
-                        onChange={(e) => {
-                          const val = e.target.value;
-                          const option = WEATHER_OPTIONS.find((o) => o.label === val);
-                          setFormData({ ...formData, weather: option ? option.value : val });
-                        }}
-                      />
-                      <datalist id="weather-options">
-                        {WEATHER_OPTIONS.map((o) => (
-                          <option key={o.value} value={o.label} />
-                        ))}
-                      </datalist>
-                    </div>
+                    <CreatableSelect
+                      value={formData.weather || ''}
+                      options={[
+                        ...WEATHER_OPTIONS.map((o) => ({ id: o.value, name: o.label })),
+                        ...Array.from(
+                          new Set(
+                            diaries
+                              .map((d) => d.weather)
+                              .filter(
+                                (w) =>
+                                  w && !WEATHER_OPTIONS.find((o) => o.value === w || o.label === w),
+                              ),
+                          ),
+                        ).map((w) => ({ id: w, name: w })),
+                      ]}
+                      onChange={(id) => setFormData({ ...formData, weather: id })}
+                      onCreate={(name) => setFormData({ ...formData, weather: name })}
+                      placeholder="Chọn hoặc nhập thời tiết..."
+                      selectClassName="w-full px-5 py-3.5 rounded-2xl border border-gray-100 bg-white focus:ring-4 focus:ring-primary/10 focus:border-primary outline-none text-sm font-bold shadow-sm"
+                    />
                   </div>
                   <div className="space-y-2">
                     <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">

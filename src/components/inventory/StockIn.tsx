@@ -497,6 +497,7 @@ export const StockIn = ({
 
       <FilterPanel
         show={showFilter}
+        hideTitle={true}
         onReset={() => {
           setFilterStartDate('');
           setFilterEndDate('');
@@ -505,33 +506,50 @@ export const StockIn = ({
           setStatusFilter('Tất cả');
         }}
       >
-        <DateRangeFilter
-          startDate={filterStartDate}
-          endDate={filterEndDate}
-          onStartChange={setFilterStartDate}
-          onEndChange={setFilterEndDate}
-        />
-        <div className="space-y-1">
-          <label className="text-[10px] font-bold text-gray-400 uppercase">Kho</label>
-          <select
-            value={filterWarehouseId}
-            onChange={(e) => setFilterWarehouseId(e.target.value)}
-            className="w-full px-3 py-2 rounded-xl border border-gray-200 text-xs outline-none focus:ring-2 focus:ring-primary/20"
-          >
-            <option value="">Tất cả kho</option>
-            {warehouses.map((w) => (
-              <option key={w.id} value={w.id}>
-                {w.name}
-              </option>
-            ))}
-          </select>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+          <div className="space-y-1">
+            <label className="text-[10px] font-bold text-gray-400 uppercase">Từ ngày</label>
+            <input
+              type="date"
+              value={filterStartDate}
+              onChange={(e) => setFilterStartDate(e.target.value)}
+              className="w-full px-3 py-2 rounded-xl border border-gray-200 text-xs outline-none focus:ring-2 focus:ring-primary/20 bg-white"
+            />
+          </div>
+          <div className="space-y-1">
+            <label className="text-[10px] font-bold text-gray-400 uppercase">Đến ngày</label>
+            <input
+              type="date"
+              value={filterEndDate}
+              onChange={(e) => setFilterEndDate(e.target.value)}
+              className="w-full px-3 py-2 rounded-xl border border-gray-200 text-xs outline-none focus:ring-2 focus:ring-primary/20 bg-white"
+            />
+          </div>
+          <div className="space-y-1">
+            <label className="text-[10px] font-bold text-gray-400 uppercase">Kho</label>
+            <select
+              value={filterWarehouseId}
+              onChange={(e) => setFilterWarehouseId(e.target.value)}
+              className="w-full px-3 py-2 rounded-xl border border-gray-200 text-xs outline-none focus:ring-2 focus:ring-primary/20 bg-white"
+            >
+              <option value="">Tất cả kho</option>
+              {warehouses.map((w) => (
+                <option key={w.id} value={w.id}>
+                  {w.name}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="space-y-1">
+            <label className="text-[10px] font-bold text-gray-400 uppercase">Tìm kiếm</label>
+            <FilterSearchInput
+              value={searchTerm}
+              onChange={setSearchTerm}
+              placeholder="Vật tư, mã phiếu..."
+            />
+          </div>
         </div>
-        <FilterSearchInput
-          value={searchTerm}
-          onChange={setSearchTerm}
-          placeholder="Vật tư, mã phiếu..."
-        />
-        <div className="flex items-center gap-2 overflow-x-auto no-scrollbar">
+        <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pt-2">
           {['Tất cả', 'Chờ duyệt', 'Đã duyệt', 'Từ chối'].map((status) => (
             <Button
               key={status}

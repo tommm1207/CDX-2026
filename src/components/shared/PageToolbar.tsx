@@ -112,10 +112,16 @@ interface FilterPanelProps {
   show: boolean;
   onReset?: () => void;
   children: React.ReactNode;
+  hideTitle?: boolean;
 }
 
 /** Animated filter panel container — renders children between header & reset button */
-export const FilterPanel: React.FC<FilterPanelProps> = ({ show, onReset, children }) => (
+export const FilterPanel: React.FC<FilterPanelProps> = ({
+  show,
+  onReset,
+  children,
+  hideTitle = false,
+}) => (
   <AnimatePresence>
     {show && (
       <motion.div
@@ -126,11 +132,15 @@ export const FilterPanel: React.FC<FilterPanelProps> = ({ show, onReset, childre
       >
         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 space-y-4">
           <div className="flex items-center justify-between">
-            <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Bộ lọc</p>
+            {!hideTitle && (
+              <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">
+                Bộ lọc
+              </p>
+            )}
             {onReset && (
               <button
                 onClick={onReset}
-                className="text-[10px] font-bold text-primary hover:underline"
+                className={`text-[10px] font-bold text-primary hover:underline ${hideTitle ? 'ml-auto' : ''}`}
               >
                 Đặt lại
               </button>

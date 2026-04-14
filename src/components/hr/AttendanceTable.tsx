@@ -323,7 +323,8 @@ export const AttendanceTable = ({
                     </span>
                   </div>
                   {(() => {
-                    if (parseFloat(otInput) > 6) {
+                    const numOt = parseFloat(String(otInput).replace(',', '.'));
+                    if (numOt > 6) {
                       return (
                         <div className="mt-2 p-3 bg-red-50 border border-red-100 rounded-xl">
                           <p className="text-[10px] text-red-600 font-bold uppercase leading-tight">
@@ -356,7 +357,7 @@ export const AttendanceTable = ({
                 <div className="flex flex-col gap-2 pt-2">
                   <button
                     onClick={() => {
-                      const numOt = parseFloat(otInput);
+                      const numOt = parseFloat(String(otInput).replace(',', '.'));
                       if (numOt > 6) {
                         if (
                           confirm(`Giờ tăng ca hiện là ${numOt}h. Bạn có chắc chắn muốn lưu không?`)

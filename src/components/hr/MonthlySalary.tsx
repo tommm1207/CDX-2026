@@ -1089,7 +1089,7 @@ export const MonthlySalary = ({
                               </span>
                             </div>
                             {selectedSalary.monthMultiplier > 1 && (
-                              <p className="text-[9px] text-red-500 font-bold italic mt-0.5 text-right">
+                              <p className="text-[9px] text-red-500 font-bold italic mt-0.5 text-left">
                                 (*) Bao gồm {selectedSalary.monthMultiplier} tháng đóng BHXH
                               </p>
                             )}

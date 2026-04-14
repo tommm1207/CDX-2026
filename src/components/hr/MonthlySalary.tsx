@@ -55,7 +55,7 @@ export const MonthlySalary = ({
     const updateScale = () => {
       if (containerRef.current) {
         const containerWidth = containerRef.current.offsetWidth;
-        const availableWidth = containerWidth - 24; // Small padding
+        const availableWidth = containerWidth - 32; // Increased padding for safer mobile display
         if (availableWidth < 380) {
           setBillScale(availableWidth / 380);
         } else {
@@ -879,17 +879,15 @@ export const MonthlySalary = ({
               {/* Bill table */}
               <div
                 ref={containerRef}
-                className="max-h-[55dvh] overflow-y-auto overflow-x-hidden custom-scrollbar bg-gray-50/50"
+                className="max-h-[55dvh] overflow-y-auto overflow-x-hidden custom-scrollbar bg-gray-100/30 flex flex-col items-center p-4 sm:p-6"
               >
                 <div
-                  className="mx-auto"
                   style={{
                     width: '380px',
                     transform: `scale(${isCapturing ? 1 : billScale})`,
                     transformOrigin: 'top center',
-                    transition: 'transform 0.1s ease-out',
-                    // Adjust margin to pull up footer when scaled down
-                    marginBottom: isCapturing ? 0 : `-${380 * (1 - billScale)}px`,
+                    transition: 'transform 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+                    flexShrink: 0,
                   }}
                 >
                   <div ref={billRef} className="bg-white shadow-sm">
@@ -923,8 +921,8 @@ export const MonthlySalary = ({
                         {/* Logo row */}
                         <div className="flex items-center gap-2 mb-3">
                           <CanvasLogo
-                            size={96}
-                            className="w-24 h-24 rounded-3xl object-contain shadow-sm"
+                            size={64}
+                            className="w-16 h-16 rounded-2xl object-contain shadow-sm"
                           />
                           <div>
                             <p className="text-[9px] font-black text-gray-700 uppercase tracking-wider">

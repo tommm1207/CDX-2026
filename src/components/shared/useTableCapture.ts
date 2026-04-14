@@ -151,6 +151,8 @@ export const useTableCapture = () => {
             transformOrigin: 'top left',
             width: `${fullWidth}px`,
             height: `${fullHeight}px`,
+            maxWidth: 'none',
+            maxHeight: 'none',
           },
         });
 

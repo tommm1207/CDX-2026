@@ -455,8 +455,23 @@ export const MaterialSplitMerge = ({
     <div className="p-4 md:p-6 space-y-6 pb-24">
       <div className="flex items-center justify-between gap-2">
         <PageBreadcrumb title="Xả / Gộp vật tư" onBack={onBack} />
-        <div className="flex items-center gap-2">
-          <ExcelButton onClick={handleExportExcel} />
+        <div className="flex items-center gap-1.5 justify-end flex-1">
+          <SaveImageButton
+            onClick={() => {
+              if (reportRef.current) {
+                exportTableImage({
+                  element: reportRef.current,
+                  fileName: `Xa_Gop_Vat_Tu_${new Date().toLocaleDateString('vi-VN').replace(/\//g, '-')}.png`,
+                  addToast,
+                  onStart: () => setIsCapturingTable(true),
+                  onEnd: () => setIsCapturingTable(false),
+                });
+              }
+            }}
+            isCapturing={isCapturingTable}
+            title="Lưu ảnh báo cáo"
+          />
+          <ExcelButton onClick={handleExportExcel} size="icon" />
           <SortButton
             currentSort={sortBy}
             onSortChange={(val) => {
@@ -473,21 +488,7 @@ export const MaterialSplitMerge = ({
             variant={showFilter ? 'primary' : 'outline'}
             onClick={() => setShowFilter((f) => !f)}
             icon={Search}
-          />
-          <SaveImageButton
-            onClick={() => {
-              if (reportRef.current) {
-                exportTableImage({
-                  element: reportRef.current,
-                  fileName: `Xa_Gop_Vat_Tu_${new Date().toLocaleDateString('vi-VN').replace(/\//g, '-')}.png`,
-                  addToast,
-                  onStart: () => setIsCapturingTable(true),
-                  onEnd: () => setIsCapturingTable(false),
-                });
-              }
-            }}
-            isCapturing={isCapturingTable}
-            title="Lưu ảnh báo cáo"
+            className={showFilter ? '' : 'border-gray-200'}
           />
         </div>
       </div>

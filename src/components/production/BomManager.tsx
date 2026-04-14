@@ -1,4 +1,4 @@
-﻿import { CanvasLogo } from '@/components/shared/ReportExportHeader';
+import { CanvasLogo } from '@/components/shared/ReportExportHeader';
 import { exportTableImage } from '../../utils/reportExport';
 import { useState, useEffect } from 'react';
 import {
@@ -284,11 +284,35 @@ export const BomManager = ({
     name: `${m.name}${m.code ? ` (${m.code})` : ''}`,
   }));
 
+  const handleExportExcel = () => {
+    import('@/utils/excelExport').then(({ exportToExcel }) => {
+      exportToExcel({
+        title: 'Danh mục Định mức Sản phẩm (BOM)',
+        sheetName: 'Định mức',
+        columns: ['Tên sản phẩm', 'Mô tả', 'Số loại vật tư', 'Ngày tạo'],
+        rows: filteredBoms.map((bom) => [
+          bom.ten_san_pham,
+          bom.mo_ta || '',
+          bom.san_pham_bom_chi_tiet?.length || 0,
+          new Date(bom.created_at).toLocaleDateString('vi-VN'),
+        ]),
+        fileName: `CDX_DinhMuc_BOM_${new Date().toISOString().split('T')[0]}.xlsx`,
+        addToast,
+      });
+    });
+  };
+
   return (
-    <div className="p-4 md:p-6 space-y-6 pb-24">
+    <div className="p-4 md:p-6 space-y-6 pb-24 overflow-x-hidden">
       <div className="flex items-center justify-between gap-2">
         <PageBreadcrumb title="Thiết lập Định mức vật tư" onBack={onBack} />
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5 justify-end flex-1">
+          <SaveImageButton
+            onClick={handleSaveTableImage}
+            isCapturing={isCapturingTable}
+            title="Lưu ảnh danh mục định mức"
+          />
+          <ExcelButton onClick={handleExportExcel} size="icon" />
           <SortButton
             currentSort={sortBy}
             onSortChange={(val) => {
@@ -305,11 +329,7 @@ export const BomManager = ({
             variant={showFilter ? 'primary' : 'outline'}
             onClick={() => setShowFilter((f) => !f)}
             icon={Search}
-          />
-          <SaveImageButton
-            onClick={handleSaveTableImage}
-            isCapturing={isCapturingTable}
-            title="Lưu ảnh danh mục định mức"
+            className={showFilter ? '' : 'border-gray-200'}
           />
         </div>
       </div>

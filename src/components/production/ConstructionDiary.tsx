@@ -1,4 +1,4 @@
-﻿import { CanvasLogo } from '@/components/shared/ReportExportHeader';
+import { CanvasLogo } from '@/components/shared/ReportExportHeader';
 import { exportTableImage } from '../../utils/reportExport';
 import { useState, useEffect } from 'react';
 import {
@@ -299,8 +299,13 @@ export const ConstructionDiaryComponent = ({
       {/* Header Section */}
       <div className="flex items-center justify-between gap-2">
         <PageBreadcrumb title="Nhật ký thi công" onBack={onBack} />
-        <div className="flex items-center gap-2">
-          <ExcelButton onClick={handleExportExcel} loading={exporting} />
+        <div className="flex items-center gap-1.5 justify-end flex-1">
+          <SaveImageButton
+            onClick={handleSaveTableImage}
+            isCapturing={isCapturingTable}
+            title="Lưu ảnh báo cáo A4"
+          />
+          <ExcelButton onClick={handleExportExcel} loading={exporting} size="icon" />
           <SortButton
             currentSort={sortBy}
             onSortChange={(val) => {
@@ -318,11 +323,7 @@ export const ConstructionDiaryComponent = ({
             variant={showFilter ? 'primary' : 'outline'}
             onClick={() => setShowFilter((f) => !f)}
             icon={Search}
-          />
-          <SaveImageButton
-            onClick={handleSaveTableImage}
-            isCapturing={isCapturingTable}
-            title="Lưu ảnh báo cáo A4"
+            className={showFilter ? '' : 'border-gray-200'}
           />
         </div>
       </div>

@@ -31,12 +31,26 @@ export const exportTableImage = async ({
     // Stabilization wait (Safari / WebKit)
     await new Promise((resolve) => setTimeout(resolve, 600));
 
+    // Lấy kích thước thực tế kể cả phần cuộn
+    const width = element.scrollWidth;
+    const height = element.scrollHeight;
+
     const dataUrl = await toPng(element, {
       cacheBust: true,
       backgroundColor: '#FFFFFF',
       quality: 1,
-      pixelRatio: 4,
+      pixelRatio: 2, // Giảm xuống 2 để tránh lỗi tràn RAM trên mobile Safari
       skipFonts: false,
+      width,
+      height,
+      style: {
+        width: `${width}px`,
+        height: `${height}px`,
+        maxWidth: 'none',
+        maxHeight: 'none',
+        transform: 'none',
+        transformOrigin: 'top left',
+      },
     });
 
     // Convert to blob/file

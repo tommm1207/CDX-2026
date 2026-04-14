@@ -1,4 +1,4 @@
-﻿import { CanvasLogo } from '@/components/shared/ReportExportHeader';
+import { CanvasLogo } from '@/components/shared/ReportExportHeader';
 import { exportTableImage } from '../../utils/reportExport';
 import { useState, useEffect } from 'react';
 import { X, PackageCheck, Factory, Search, ChevronRight, Package } from 'lucide-react';
@@ -331,11 +331,40 @@ export const FinishedGoodsIntake = ({
       return 0;
     });
 
+  const handleExportExcel = () => {
+    import('@/utils/excelExport').then(({ exportToExcel }) => {
+      exportToExcel({
+        title: 'Báo cáo Tiến độ Nhập kho Thành phẩm',
+        sheetName: 'Tiến độ',
+        columns: ['Mã lệnh', 'Sản phẩm', 'Kế hoạch', 'Đã nhập', 'Còn lại', 'Trạng thái'],
+        rows: filteredOrders.map((o) => {
+          const remaining = o.so_luong_ke_hoach - o.so_luong_hoan_thanh;
+          return [
+            o.ma_lenh,
+            o.san_pham_bom?.ten_san_pham || '—',
+            o.so_luong_ke_hoach,
+            o.so_luong_hoan_thanh,
+            remaining,
+            o.trang_thai === 'hoan_thanh' ? 'Hoàn thành' : 'Đang sản xuất',
+          ];
+        }),
+        fileName: `CDX_TienDoNhapKho_${new Date().toISOString().split('T')[0]}.xlsx`,
+        addToast,
+      });
+    });
+  };
+
   return (
-    <div className="p-4 md:p-6 space-y-6 pb-24">
+    <div className="p-4 md:p-6 space-y-6 pb-24 overflow-x-hidden">
       <div className="flex items-center justify-between gap-2">
         <PageBreadcrumb title="Nhập kho thành phẩm" onBack={onBack} />
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5 justify-end flex-1">
+          <SaveImageButton
+            onClick={handleSaveTableImage}
+            isCapturing={isCapturingTable}
+            title="Lưu ảnh tiến độ nhập kho"
+          />
+          <ExcelButton onClick={handleExportExcel} size="icon" />
           <SortButton
             currentSort={sortBy}
             onSortChange={(val) => {
@@ -352,11 +381,7 @@ export const FinishedGoodsIntake = ({
             variant={showFilter ? 'primary' : 'outline'}
             onClick={() => setShowFilter((f) => !f)}
             icon={Search}
-          />
-          <SaveImageButton
-            onClick={handleSaveTableImage}
-            isCapturing={isCapturingTable}
-            title="Lưu ảnh tiến độ nhập kho"
+            className={showFilter ? '' : 'border-gray-200'}
           />
         </div>
       </div>

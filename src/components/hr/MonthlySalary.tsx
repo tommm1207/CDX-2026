@@ -929,10 +929,10 @@ export const MonthlySalary = ({
                           />
                           <div>
                             <p className="text-[9px] font-black text-gray-700 uppercase tracking-wider">
-                              CDX - CON ĐƯỜNG XANH
+                              CON ĐƯỜNG XANH
                             </p>
                             <p className="text-[7px] text-gray-400 uppercase tracking-widest">
-                              Hệ thống quản lý kho và nhân sự
+                              CỘNG TÁC ĐỂ VƯƠN XA
                             </p>
                           </div>
                         </div>

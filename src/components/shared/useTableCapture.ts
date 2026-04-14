@@ -89,7 +89,7 @@ export const useTableCapture = () => {
         headerEl.innerHTML = `
           <div style="background:#fff;padding:20px 24px 16px;border-bottom:1px solid #F3F4F6;font-family:'Inter',system-ui,sans-serif;width:max-content;min-width:100%;box-sizing:border-box;">
             <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;">
-              <img src="${logoBase64}" alt="CDX" style="width:44px;height:44px;border-radius:10px;object-fit:contain;flex-shrink:0;" />
+              <img src="${logoBase64}" alt="CDX" style="width:44px;height:44px;border-radius:11px;object-fit:contain;flex-shrink:0;visibility:hidden;" />
               <div>
                 <p style="margin:0;font-size:11px;font-weight:900;color:#1F2937;text-transform:uppercase;letter-spacing:0.06em;line-height:1.3;">CDX - CON ĐƯỜNG XANH</p>
                 <p style="margin:0;font-size:8.5px;color:#9CA3AF;text-transform:uppercase;letter-spacing:0.1em;margin-top:1px;">HỆ THỐNG QUẢN LÝ KHO VÀ NHÂN SỰ</p>

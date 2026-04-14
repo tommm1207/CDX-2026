@@ -925,7 +925,7 @@ export const MonthlySalary = ({
                         <div className="flex items-center gap-2 mb-3">
                           <CanvasLogo
                             size={44}
-                            className="logo-img w-11 h-11 rounded-xl object-contain shadow-sm"
+                            className={`logo-img w-11 h-11 rounded-xl object-contain shadow-sm ${isCapturing ? 'invisible' : ''}`}
                           />
                           <div>
                             <p className="text-[9px] font-black text-gray-700 uppercase tracking-wider">

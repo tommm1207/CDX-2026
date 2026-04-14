@@ -56,11 +56,12 @@ export const injectLogoToImage = async (
         ctx.save();
 
         // 3. Clear the area where the logo will be (in case a "bad" logo was captured)
-        ctx.fillStyle = '#ffffff';
-        ctx.fillRect(finalX - 2, finalY - 2, finalSize + 4, finalSize + 4);
+        // We clear a significant area to the right and bottom to wipe out any residual shadows
+        ctx.fillStyle = '#FCFCFC'; // Match the bill background
+        ctx.fillRect(finalX - 10, finalY - 10, finalSize + 40, finalSize + 40);
 
-        // 4. Create rounded path for the logo
-        const radius = finalSize * 0.22; // Slightly more rounding for premium look
+        // 4. Create rounded path for the logo background
+        const radius = finalSize * 0.25; // rounded-xl match (~11px for 44px)
         ctx.beginPath();
         ctx.moveTo(finalX + radius, finalY);
         ctx.lineTo(finalX + finalSize - radius, finalY);
@@ -79,11 +80,24 @@ export const injectLogoToImage = async (
         ctx.arcTo(finalX, finalY, finalX + radius, finalY, radius);
         ctx.closePath();
 
-        // 5. Clip and draw logo
-        ctx.clip();
+        // 5. Build Shadow and White Background
+        // Match the high-end UI "shadow-sm" look
+        ctx.shadowColor = 'rgba(0, 0, 0, 0.1)';
+        ctx.shadowBlur = actualPixelRatio * 3;
+        ctx.shadowOffsetY = actualPixelRatio * 1.5;
+
         ctx.fillStyle = '#ffffff';
-        ctx.fillRect(finalX, finalY, finalSize, finalSize);
+        ctx.fill(); // Draw the rounded white box with shadow
+
+        // 6. Draw the actual logo inside the path
+        ctx.save();
+        ctx.clip();
+        // Reset shadow so it doesn't apply to the image content
+        ctx.shadowColor = 'transparent';
+        ctx.shadowBlur = 0;
+        ctx.shadowOffsetY = 0;
         ctx.drawImage(logoImg, finalX, finalY, finalSize, finalSize);
+        ctx.restore();
 
         ctx.restore();
 

@@ -238,6 +238,7 @@ export const MaterialSplitMerge = ({
         await supabase.from('stock_out').insert([
           {
             slip_code: `XA-${ma_phieu}`,
+            export_code: `XA-${ma_phieu}`,
             date: today,
             material_id: nguonXa.material_id,
             warehouse_id: kho_id,
@@ -251,8 +252,9 @@ export const MaterialSplitMerge = ({
           },
         ]);
 
-        const stockInItems = outputXa.map((o: any) => ({
+        const stockInItems = outputXa.map((o: any, idx: number) => ({
           slip_code: `XA-${ma_phieu}`,
+          import_code: `XA-${ma_phieu}-${idx + 1}`,
           date: today,
           material_id: o.material_id,
           warehouse_id: kho_id,
@@ -288,8 +290,9 @@ export const MaterialSplitMerge = ({
         await supabase.from('xasa_gop_chi_tiet').insert(details);
 
         // stock_out for all sources
-        const stockOuts = nguonGop.map((n: any) => ({
+        const stockOuts = nguonGop.map((n: any, idx: number) => ({
           slip_code: `GOP-${ma_phieu}`,
+          export_code: `GOP-${ma_phieu}-${idx + 1}`,
           date: today,
           material_id: n.material_id,
           warehouse_id: kho_id,
@@ -305,6 +308,7 @@ export const MaterialSplitMerge = ({
         await supabase.from('stock_in').insert([
           {
             slip_code: `GOP-${ma_phieu}`,
+            import_code: `GOP-${ma_phieu}`,
             date: today,
             material_id: outputGop.material_id,
             warehouse_id: kho_id,
@@ -591,9 +595,19 @@ export const MaterialSplitMerge = ({
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-1.5 no-wrap overflow-hidden">
                       <h4 className="font-bold text-gray-800 text-[11px] truncate shrink min-w-0">
-                        {nguonItems.map((n: any) => n.materials?.name || '...').join(', ')}
+                        {nguonItems
+                          .map(
+                            (n: any) =>
+                              `${n.materials?.name || '...'}${n.so_luong ? ` (${formatNumber(n.so_luong)}${n.don_vi ? ' ' + n.don_vi : ''})` : ''}`,
+                          )
+                          .join(', ')}
                         <ArrowRight size={10} className="inline mx-1 text-gray-400" />
-                        {raItems.map((r: any) => r.materials?.name || '...').join(', ')}
+                        {raItems
+                          .map(
+                            (r: any) =>
+                              `${r.materials?.name || '...'}${r.so_luong ? ` (${formatNumber(r.so_luong)}${r.don_vi ? ' ' + r.don_vi : ''})` : ''}`,
+                          )
+                          .join(', ')}
                       </h4>
                       <span className="text-[7px] font-normal text-gray-200 shrink-0">
                         {item.ma_phieu.split('-')[1] || item.ma_phieu}

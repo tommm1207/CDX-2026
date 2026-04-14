@@ -867,6 +867,20 @@ export const HRRecords = ({
         )}
       </AnimatePresence>
 
+      {/* Mobile FAB */}
+      {user.role !== 'User' && (
+        <button
+          onClick={() => {
+            setIsEditing(false);
+            setFormData(initialFormState);
+            setShowModal(true);
+          }}
+          className="fixed bottom-20 right-4 md:hidden w-14 h-14 bg-primary text-white rounded-full shadow-lg flex items-center justify-center hover:bg-primary/90 active:scale-95 transition-all z-[90]"
+        >
+          <Plus size={24} />
+        </button>
+      )}
+
       {previewImageUrl && (
         <ReportImagePreviewModal
           imageDataUrl={previewImageUrl}

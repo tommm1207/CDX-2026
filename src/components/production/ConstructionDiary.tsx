@@ -37,7 +37,6 @@ import { FAB } from '../shared/FAB';
 import { Button } from '../shared/Button';
 import { ConfirmModal } from '../shared/ConfirmModal';
 import { ImageCapture } from '../shared/ImageCapture';
-import { WEATHER_OPTIONS } from '../notes/Notes';
 import { SortButton, SortOption } from '../shared/SortButton';
 import { ExcelButton } from '../shared/ExcelButton';
 import { formatDate, formatNumber } from '@/utils/format';
@@ -980,9 +979,11 @@ export const ConstructionDiaryComponent = ({
                 </div>
 
                 <div className="space-y-2">
-                  <label className="text-[10px] font-black text-primary uppercase tracking-widest ml-1 flex items-center gap-2">
-                    Tiến độ & Diễn biến thi công chính *{' '}
-                    <span className="text-[8px] bg-primary/10 px-1.5 py-0.5 rounded italic">
+                  <label className="text-[10px] font-black text-primary uppercase tracking-widest ml-1 flex items-center justify-between gap-2 w-full min-w-0">
+                    <span className="truncate flex-1 min-w-0">
+                      Tiến độ & Diễn biến thi công chính *
+                    </span>
+                    <span className="text-[8px] bg-primary/10 px-1.5 py-0.5 rounded italic flex-shrink-0">
                       Rất quan trọng
                     </span>
                   </label>

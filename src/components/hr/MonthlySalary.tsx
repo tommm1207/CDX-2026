@@ -42,6 +42,7 @@ export const MonthlySalary = ({
 
   const [selectedSalary, setSelectedSalary] = useState<any>(null);
   const [showDetailModal, setShowDetailModal] = useState(false);
+  const [billNote, setBillNote] = useState('');
   const [isCustomRange, setIsCustomRange] = useState(false);
   const [customRange, setCustomRange] = useState({
     start: '',
@@ -224,6 +225,21 @@ export const MonthlySalary = ({
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    if (showDetailModal && selectedSalary) {
+      if (!billNote) {
+        const firstDay = `01/${String(selectedMonth).padStart(2, '0')}`;
+        const lastDay = `${new Date(selectedYear, selectedMonth, 0).getDate()}/${String(selectedMonth).padStart(2, '0')}`;
+        const defaultNote = isCustomRange
+          ? `Kỳ lương: ${formatDate(customRange.start)} — ${formatDate(customRange.end)}`
+          : `Tháng ${selectedMonth}/${selectedYear} (${firstDay} - ${lastDay})`;
+        setBillNote(defaultNote);
+      }
+    } else {
+      setBillNote('');
+    }
+  }, [showDetailModal, selectedSalary, isCustomRange, customRange]);
 
   const billRef = useRef<HTMLDivElement>(null);
 
@@ -760,7 +776,7 @@ export const MonthlySalary = ({
                     <Wallet size={24} className="text-white drop-shadow-sm" />
                   </div>
                   <div>
-                    <h3 className="font-extrabold text-base sm:text-lg leading-tight tracking-tight whitespace-nowrap overflow-hidden text-ellipsis max-w-[180px] xs:max-w-[220px] sm:max-w-none">
+                    <h3 className="font-extrabold text-[13px] xs:text-sm sm:text-lg leading-tight tracking-tight whitespace-nowrap">
                       Phiếu lương — {selectedSalary.full_name}
                     </h3>
                     <p className="text-[10px] text-white/80 font-black uppercase tracking-widest bg-black/10 px-2 py-0.5 rounded-full w-fit mt-1">
@@ -828,6 +844,19 @@ export const MonthlySalary = ({
               </div>
 
               {/* Bill table */}
+              <div className="px-5 pb-3">
+                <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1.5 block">
+                  CÀI ĐẶT GHI CHÚ TRÊN PHIẾU
+                </label>
+                <input
+                  type="text"
+                  value={billNote}
+                  onChange={(e) => setBillNote(e.target.value)}
+                  placeholder="Nhập ghi chú cho phiếu lương..."
+                  className="w-full px-4 py-2.5 rounded-2xl border border-gray-200 text-xs font-bold outline-none focus:ring-2 focus:ring-primary/20 bg-white shadow-sm transition-all"
+                />
+              </div>
+
               <div
                 ref={containerRef}
                 className="max-h-[55dvh] overflow-y-auto overflow-x-hidden custom-scrollbar bg-gray-100/30 flex flex-col items-center p-4 sm:p-6"
@@ -1061,14 +1090,8 @@ export const MonthlySalary = ({
                             <span className="text-[11px] font-bold text-gray-500 whitespace-nowrap">
                               Ghi chú:
                             </span>
-                            <span className="text-[11px] font-bold text-gray-800 whitespace-nowrap">
-                              {isCustomRange
-                                ? `${customRange.start} — ${customRange.end}`
-                                : (() => {
-                                    const firstDay = `01/${String(selectedMonth).padStart(2, '0')}`;
-                                    const lastDay = `${new Date(selectedYear, selectedMonth, 0).getDate()}/${String(selectedMonth).padStart(2, '0')}`;
-                                    return `Tháng ${selectedMonth}/${selectedYear} (${firstDay} - ${lastDay})`;
-                                  })()}
+                            <span className="text-[11px] font-bold text-gray-800 text-right">
+                              {billNote}
                             </span>
                           </div>
                         </div>

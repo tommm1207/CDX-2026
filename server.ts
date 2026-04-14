@@ -431,22 +431,27 @@ app.post("/api/save-backup-config", checkApiKey, checkSupabaseConfig, async (req
 app.post("/api/send-backup", backupLimiter, checkApiKey, checkSupabaseConfig, async (req, res) => {
   const { email, fileName, fileData, tableList, tableStats } = req.body;
 
+  const smtpUser = process.env.SMTP_USER || req.body.smtpConfig?.user;
+  const smtpPass = process.env.SMTP_PASS || req.body.smtpConfig?.pass;
+
   const smtpConfig = {
     host: process.env.SMTP_HOST || req.body.smtpConfig?.host,
     port: process.env.SMTP_PORT || req.body.smtpConfig?.port,
-    user: process.env.SMTP_USER || req.body.smtpConfig?.user,
-    pass: process.env.SMTP_PASS || req.body.smtpConfig?.pass,
+    user: smtpUser,
+    pass: smtpPass,
     secure: process.env.SMTP_SECURE ? process.env.SMTP_SECURE === 'true' : req.body.smtpConfig?.secure
   };
 
-  if (!email || !fileData || !smtpConfig.user || !smtpConfig.pass) {
-    return res.status(400).json({ error: "Thiêu thông tin cấu hình mail ngầm (SMTP) hoặc dữ liệu backup." });
+  const recipient = email?.toString().trim();
+
+  if (!recipient || !fileData || !smtpUser || !smtpPass) {
+    return res.status(400).json({ error: 'Thiếu thông tin người nhận file (Email) hoặc cấu hình máy chủ gửi mail.' });
   }
 
   try {
     await sendEmail({
       smtpConfig,
-      to: email,
+      to: recipient,
       subject: `[HỆ THỐNG] Sao lưu dữ liệu CDX - ${new Date().toLocaleDateString('vi-VN')}`,
       fileName,
       fileData,

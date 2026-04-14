@@ -123,6 +123,19 @@ export const Backup = ({
   };
 
   const handleBackupNow = async () => {
+    // 1. Validation
+    const trimmedEmail = email.trim();
+    if (!trimmedEmail) {
+      addToast('Vui lòng nhập email nhận file báo cáo!', 'error');
+      return;
+    }
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(trimmedEmail)) {
+      addToast('Địa chỉ email không hợp lệ!', 'error');
+      return;
+    }
+
     if (selectedTables.length === 0) {
       addToast('Vui lòng chọn ít nhất một bảng dữ liệu!', 'error');
       return;

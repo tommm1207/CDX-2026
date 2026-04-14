@@ -17,8 +17,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const smtpPass = process.env.SMTP_PASS;
   const smtpSecure = process.env.SMTP_SECURE === 'true';
 
-  if (!email || !fileData || !smtpUser || !smtpPass) {
-    return res.status(400).json({ error: 'Thiếu thông tin cấu hình SMTP hoặc dữ liệu backup.' });
+  const recipient = email?.toString().trim();
+
+  if (!recipient || !fileData || !smtpUser || !smtpPass) {
+    return res.status(400).json({ error: 'Thiếu thông tin người nhận file (Email) hoặc cấu hình máy chủ gửi mail.' });
   }
 
   try {
@@ -40,7 +42,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     await transporter.sendMail({
       from: `"Hệ thống Sao lưu CDX" <${smtpUser}>`,
-      to: email,
+      to: recipient,
       subject: `[HỆ THỐNG] Sao lưu dữ liệu CDX - ${new Date().toLocaleDateString('vi-VN')}`,
       html: `
         <div style="font-family: sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; border: 1px solid #eee; border-radius: 10px; overflow: hidden;">

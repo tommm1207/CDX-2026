@@ -40,6 +40,14 @@ export const MonthlySalary = ({
   const [billScale, setBillScale] = useState(1);
   const containerRef = useRef<HTMLDivElement>(null);
 
+  const [selectedSalary, setSelectedSalary] = useState<any>(null);
+  const [showDetailModal, setShowDetailModal] = useState(false);
+  const [isCustomRange, setIsCustomRange] = useState(false);
+  const [customRange, setCustomRange] = useState({
+    start: '',
+    end: '',
+  });
+
   // Auto-scale bill to fit container width (mainly for mobile)
   useEffect(() => {
     if (!showDetailModal) return;
@@ -217,13 +225,6 @@ export const MonthlySalary = ({
     }
   };
 
-  const [selectedSalary, setSelectedSalary] = useState<any>(null);
-  const [showDetailModal, setShowDetailModal] = useState(false);
-  const [isCustomRange, setIsCustomRange] = useState(false);
-  const [customRange, setCustomRange] = useState({
-    start: '',
-    end: '',
-  });
   const billRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {

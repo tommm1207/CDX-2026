@@ -288,38 +288,60 @@ async function runAutoBackup() {
         });
         currentStatsRow++;
 
-        if (data && rowCount > 0) {
-          const sheetName = table.label.substring(0, 31).replace(/[:\\\/?*\[\]]/g, '-');
-          const sheet = workbook.addWorksheet(sheetName);
-          const formattedData = formatDataForExcel(data, lookupData, table.id);
-          if (formattedData.length > 0) {
-            const columns = Object.keys(formattedData[0]);
-            const headerRow = sheet.addRow(columns);
-            headerRow.height = 25;
-            headerRow.eachCell((cell) => {
-              cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF2D5A27' } };
-              cell.font = { bold: true, color: { argb: 'FFFFFFFF' } };
-              cell.alignment = { vertical: 'middle', horizontal: 'center' };
-              cell.border = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } };
-            });
+        // Tạo Sheet cho bảng (Kể cả khi bảng trống - theo ý người dùng)
+        const sheetName = table.label.substring(0, 31).replace(/[:\\\/?*\[\]]/g, '-');
+        const sheet = workbook.addWorksheet(sheetName);
 
-            formattedData.forEach((item) => {
-              const row = sheet.addRow(Object.values(item));
-              row.eachCell((cell) => {
-                cell.border = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } };
-                if (typeof cell.value === 'number') cell.alignment = { horizontal: 'right' };
-              });
-            });
+        const formattedData = formatDataForExcel(data || [], lookupData, table.id);
 
-            sheet.columns.forEach((column) => {
-              let maxColumnLength = 0;
-              column.eachCell!({ includeEmpty: true }, (cell) => {
-                const columnLength = cell.value ? cell.value.toString().length : 10;
-                maxColumnLength = Math.max(maxColumnLength, columnLength);
-              });
-              column.width = Math.min(maxColumnLength + 4, 60);
-            });
+        let columns: string[] = [];
+        if (formattedData.length > 0) {
+          columns = Object.keys(formattedData[0]);
+        } else {
+          // Schema discovery cho bảng trống
+          const { data: schemaData } = await supabase.from(table.id).select('*').limit(1);
+          if (schemaData && schemaData.length > 0) {
+            const formattedSchema = formatDataForExcel(schemaData, lookupData, table.id);
+            columns = Object.keys(formattedSchema[0]);
           }
+        }
+
+        if (columns.length > 0) {
+          const headerRow = sheet.addRow(columns);
+          headerRow.height = 25;
+          headerRow.eachCell((cell) => {
+            cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF2D5A27' } };
+            cell.font = { bold: true, color: { argb: 'FFFFFFFF' } };
+            cell.alignment = { vertical: 'middle', horizontal: 'center' };
+            cell.border = {
+              top: { style: 'thin' },
+              left: { style: 'thin' },
+              bottom: { style: 'thin' },
+              right: { style: 'thin' },
+            };
+          });
+
+          formattedData.forEach((item) => {
+            const row = sheet.addRow(Object.values(item));
+            row.eachCell((cell) => {
+              cell.border = {
+                top: { style: 'thin' },
+                left: { style: 'thin' },
+                bottom: { style: 'thin' },
+                right: { style: 'thin' },
+              };
+              if (typeof cell.value === 'number') cell.alignment = { horizontal: 'right' };
+            });
+          });
+
+          sheet.columns.forEach((column) => {
+            let maxColumnLength = 0;
+            column.eachCell!({ includeEmpty: true }, (cell) => {
+              const columnLength = cell.value ? cell.value.toString().length : 10;
+              maxColumnLength = Math.max(maxColumnLength, columnLength);
+            });
+            column.width = Math.min(maxColumnLength + 4, 60);
+          });
         }
       }
 

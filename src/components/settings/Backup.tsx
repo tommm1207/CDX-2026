@@ -270,14 +270,27 @@ export const Backup = ({
         });
         currentStatsRow++;
 
-        if (data && rowCount > 0) {
-          const sheetName = tableDef.label.substring(0, 31).replace(/[:\\/?*[\]]/g, '-');
-          const sheet = workbook.addWorksheet(sheetName);
-          const formattedData = formatDataForExcel(data, lookupData, tableId);
-          if (formattedData.length === 0) continue;
+        // Tạo Sheet cho bảng (Kể cả khi bảng trống - theo ý người dùng: "đừng gom sheet")
+        const sheetName = tableDef.label.substring(0, 31).replace(/[:\\/?*[\]]/g, '-');
+        const sheet = workbook.addWorksheet(sheetName);
 
-          const columns = Object.keys(formattedData[0]);
+        // Lấy dữ liệu đã format
+        const formattedData = formatDataForExcel(data || [], lookupData, tableId);
 
+        // Xác định danh sách cột (Headers)
+        let columns: string[] = [];
+        if (formattedData.length > 0) {
+          columns = Object.keys(formattedData[0]);
+        } else {
+          // Nếu bảng trống, cố gắng lấy schema từ record bất kỳ (kể cả đã xóa) để hiển thị Header
+          const { data: schemaData } = await supabase.from(tableId).select('*').limit(1);
+          if (schemaData && schemaData.length > 0) {
+            const formattedSchema = formatDataForExcel(schemaData, lookupData, tableId);
+            columns = Object.keys(formattedSchema[0]);
+          }
+        }
+
+        if (columns.length > 0) {
           // Thiết lập tiêu đề (Header)
           const headerRow = sheet.addRow(columns);
           headerRow.height = 25;

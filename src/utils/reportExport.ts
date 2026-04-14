@@ -35,6 +35,11 @@ export const exportTableImage = async ({
     const width = element.scrollWidth;
     const height = element.scrollHeight;
 
+    // EXTREMELY IMPORTANT: Warmup capture to resolve blank image/logo issue on first attempt
+    // This allows the browser to compute styles and load all required image resources into memory.
+    await toPng(element, { quality: 0.1, pixelRatio: 1 });
+    await new Promise((resolve) => setTimeout(resolve, 200));
+
     const dataUrl = await toPng(element, {
       cacheBust: true,
       backgroundColor: '#FFFFFF',

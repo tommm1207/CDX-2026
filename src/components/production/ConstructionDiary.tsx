@@ -130,6 +130,7 @@ export const ConstructionDiaryComponent = ({
         .select('*')
         .neq('status', 'Đã xóa')
         .order('name');
+      if (whData) setWarehouses(whData);
       const { data: userData } = await supabase
         .from('users')
         .select('*')
@@ -844,40 +845,26 @@ export const ConstructionDiaryComponent = ({
                     <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">
                       Thời tiết hiện tại
                     </label>
-                    <div className="flex flex-col gap-2">
-                      <select
+                    <div className="relative">
+                      <input
+                        list="weather-options"
+                        placeholder="Chọn hoặc nhập thời tiết..."
                         className="w-full px-5 py-3.5 rounded-2xl border border-gray-100 bg-white focus:ring-4 focus:ring-primary/10 focus:border-primary outline-none text-sm font-bold shadow-sm"
                         value={
-                          WEATHER_OPTIONS.find((o) => o.value === formData.weather)
-                            ? formData.weather
-                            : 'other'
+                          WEATHER_OPTIONS.find((o) => o.value === formData.weather)?.label ||
+                          formData.weather
                         }
                         onChange={(e) => {
                           const val = e.target.value;
-                          if (val === 'other') {
-                            setFormData({ ...formData, weather: '' });
-                          } else {
-                            setFormData({ ...formData, weather: val });
-                          }
+                          const option = WEATHER_OPTIONS.find((o) => o.label === val);
+                          setFormData({ ...formData, weather: option ? option.value : val });
                         }}
-                      >
+                      />
+                      <datalist id="weather-options">
                         {WEATHER_OPTIONS.map((o) => (
-                          <option key={o.value} value={o.value}>
-                            {o.label}
-                          </option>
+                          <option key={o.value} value={o.label} />
                         ))}
-                        <option value="other">-- Khác (Tự nhập) --</option>
-                      </select>
-                      {(!WEATHER_OPTIONS.find((o) => o.value === formData.weather) ||
-                        formData.weather === '') && (
-                        <input
-                          type="text"
-                          placeholder="Nhập thời tiết khác..."
-                          className="w-full px-5 py-3 rounded-xl border border-primary/20 bg-primary/5 focus:ring-4 focus:ring-primary/10 focus:border-primary outline-none text-sm font-bold shadow-sm mt-1"
-                          value={formData.weather}
-                          onChange={(e) => setFormData({ ...formData, weather: e.target.value })}
-                        />
-                      )}
+                      </datalist>
                     </div>
                   </div>
                   <div className="space-y-2">

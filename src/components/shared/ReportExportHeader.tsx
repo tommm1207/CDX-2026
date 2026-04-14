@@ -79,7 +79,7 @@ interface ReportExportHeaderProps {
  *  Layout: logo + tên công ty | tên báo cáo | dòng phụ */
 export const ReportExportHeader = ({ reportTitle, subtitle }: ReportExportHeaderProps) => {
   const today = new Date();
-  const defaultSubtitle = `Ngày: ${String(today.getDate()).padStart(2, '0')}/${String(today.getMonth() + 1).padStart(2, '0')}/${today.getFullYear()}`;
+  const defaultSubtitle = `Ngày lập: ${String(today.getDate()).padStart(2, '0')}/${String(today.getMonth() + 1).padStart(2, '0')}/${today.getFullYear()}`;
 
   return (
     <div
@@ -140,10 +140,10 @@ export const ReportExportHeader = ({ reportTitle, subtitle }: ReportExportHeader
       {/* Row 3: Subtitle */}
       <p
         style={{
-          margin: '4px 0 0',
-          fontSize: 11,
-          fontWeight: 600,
-          color: '#6B7280',
+          margin: '6px 0 0',
+          fontSize: 22,
+          fontWeight: 900,
+          color: '#4B5563',
         }}
       >
         {subtitle ?? defaultSubtitle}
@@ -155,7 +155,7 @@ export const ReportExportHeader = ({ reportTitle, subtitle }: ReportExportHeader
 /** Footer nhỏ xuất hiện ở cuối ảnh. */
 export const ReportExportFooter = ({ showNetSalary = false }: { showNetSalary?: boolean }) => {
   const now = new Date();
-  const timeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')} ${String(now.getDate()).padStart(2, '0')}/${String(now.getMonth() + 1).padStart(2, '0')}/${now.getFullYear()}`;
+  const timeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}:${String(now.getSeconds()).padStart(2, '0')} ${String(now.getDate()).padStart(2, '0')}/${String(now.getMonth() + 1).padStart(2, '0')}/${now.getFullYear()}`;
 
   return (
     <div

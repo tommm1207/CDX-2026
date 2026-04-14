@@ -157,6 +157,25 @@ export const DeletedProduction = ({
         .update(updateData)
         .eq('id', selectedItem.id);
       if (error) throw error;
+
+      // Khôi phục stock_in/stock_out liên quan nếu là phiếu xả/gộp
+      if (selectedItem.table === 'split_merge_history') {
+        const { data: phieu } = await supabase
+          .from('xasa_gop_phieu')
+          .select('ma_phieu, loai')
+          .eq('id', selectedItem.id)
+          .single();
+        if (phieu) {
+          const pref = phieu.loai === 'xa' ? 'XA-' : 'GOP-';
+          const slipCode = `${pref}${phieu.ma_phieu}`;
+          await supabase.from('stock_in').update({ status: 'Chờ duyệt' }).eq('slip_code', slipCode);
+          await supabase
+            .from('stock_out')
+            .update({ status: 'Chờ duyệt' })
+            .eq('slip_code', slipCode);
+        }
+      }
+
       if (addToast) addToast(`Đã khôi phục ${selectedItem.code} thành công!`, 'success');
       fetchDeletedItems();
       setShowRestoreModal(false);
@@ -188,6 +207,21 @@ export const DeletedProduction = ({
           .delete()
           .eq('san_pham_bom_id', selectedItem.id);
         if (err1) throw err1;
+      }
+
+      // Xóa vĩnh viễn stock_in/stock_out liên quan nếu là phiếu xả/gộp
+      if (selectedItem.table === 'split_merge_history') {
+        const { data: phieu } = await supabase
+          .from('xasa_gop_phieu')
+          .select('ma_phieu, loai')
+          .eq('id', selectedItem.id)
+          .single();
+        if (phieu) {
+          const pref = phieu.loai === 'xa' ? 'XA-' : 'GOP-';
+          const slipCode = `${pref}${phieu.ma_phieu}`;
+          await supabase.from('stock_in').delete().eq('slip_code', slipCode);
+          await supabase.from('stock_out').delete().eq('slip_code', slipCode);
+        }
       }
 
       const { error } = await supabase.from(actualTable).delete().eq('id', selectedItem.id);

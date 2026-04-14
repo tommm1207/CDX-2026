@@ -381,9 +381,9 @@ export const MaterialSplitMerge = ({
       const pref = phieu.loai === 'xa' ? 'XA-' : 'GOP-';
       const slipCode = `${pref}${phieu.ma_phieu}`;
 
-      // Delete stock records
-      await supabase.from('stock_in').delete().eq('slip_code', slipCode);
-      await supabase.from('stock_out').delete().eq('slip_code', slipCode);
+      // Soft delete stock records
+      await supabase.from('stock_in').update({ status: 'Đã xóa' }).eq('slip_code', slipCode);
+      await supabase.from('stock_out').update({ status: 'Đã xóa' }).eq('slip_code', slipCode);
 
       // Delete phieu chi tiet
       await supabase.from('xasa_gop_chi_tiet').delete().eq('phieu_id', phieu.id);

@@ -144,16 +144,28 @@ export const DeletedSlips = ({
     }
   };
 
+  const isFromSplitMerge = (item: any) => {
+    const code = item?.slip_code || '';
+    return code.startsWith('XA-') || code.startsWith('GOP-');
+  };
+
   const confirmRestore = async () => {
     if (!selectedItem) return;
     setSubmitting(true);
     try {
       const table = selectedItem.table;
       const id = selectedItem.id;
+      const slip = slips.find((s) => s.id === id && s.table === table);
+
+      // Chặn khôi phục phiếu thuộc xả/gộp — phải khôi phục từ phiếu gốc
+      if (slip && isFromSplitMerge(slip)) {
+        throw new Error(
+          `Phiếu này được tạo từ phiếu Xả/Gộp. Vui lòng khôi phục từ mục Xả / Gộp vật tư trong Thùng rác.`,
+        );
+      }
 
       // Logic check stock status before restoring export/transfer
       if (table === 'stock_out' || table === 'transfers') {
-        const slip = slips.find((s) => s.id === id && s.table === table);
         const wh_id = table === 'stock_out' ? slip.warehouse_id : slip.from_warehouse_id;
         const stockAtDate = await getAvailableStock(slip.material_id, wh_id, slip.date);
 
@@ -181,6 +193,15 @@ export const DeletedSlips = ({
     if (!selectedItem) return;
     setSubmitting(true);
     try {
+      const slip = slips.find((s) => s.id === selectedItem.id && s.table === selectedItem.table);
+
+      // Chặn xóa vĩnh viễn phiếu thuộc xả/gộp — phải xóa từ phiếu gốc
+      if (slip && isFromSplitMerge(slip)) {
+        throw new Error(
+          `Phiếu này được tạo từ phiếu Xả/Gộp. Vui lòng xóa vĩnh viễn từ mục Xả / Gộp vật tư trong Thùng rác.`,
+        );
+      }
+
       const { error } = await supabase.from(selectedItem.table).delete().eq('id', selectedItem.id);
       if (error) throw error;
       addToast(`Đã xóa vĩnh viễn phiếu ${selectedItem.code} thành công!`, 'success');
@@ -188,7 +209,7 @@ export const DeletedSlips = ({
       setShowDeleteModal(false);
       setSelectedItem(null);
     } catch (err: any) {
-      addToast('Lỗi xóa vĩnh viễn: ' + err.message, 'error');
+      addToast('Lỗi: ' + err.message, 'error');
     } finally {
       setSubmitting(false);
     }

@@ -3,6 +3,46 @@ import { logoBase64 } from '@/utils/logoBase64';
 
 let cachedLogoDataUrl: string | null = null;
 
+// Aggressively preload the processed logo so it's ready on first render
+// This avoids the "missing logo on first click" issue
+if (typeof window !== 'undefined') {
+  const img = new Image();
+  img.src = logoBase64;
+  img.onload = () => {
+    const size = 120; // Generate high-enough resolution for all use cases
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    const scale = 4;
+    canvas.width = size * scale;
+    canvas.height = size * scale;
+
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = 'high';
+
+    const radius = size * 0.2 * scale;
+    ctx.beginPath();
+    ctx.moveTo(radius, 0);
+    ctx.lineTo(canvas.width - radius, 0);
+    ctx.arcTo(canvas.width, 0, canvas.width, radius, radius);
+    ctx.lineTo(canvas.width, canvas.height - radius);
+    ctx.arcTo(canvas.width, canvas.height, canvas.width - radius, canvas.height, radius);
+    ctx.lineTo(radius, canvas.height);
+    ctx.arcTo(0, canvas.height, 0, canvas.height - radius, radius);
+    ctx.lineTo(0, radius);
+    ctx.arcTo(0, 0, radius, 0, radius);
+    ctx.closePath();
+    ctx.clip();
+
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+
+    cachedLogoDataUrl = canvas.toDataURL('image/png');
+  };
+}
+
 export const CanvasLogo = ({
   size = 44,
   className,
@@ -17,7 +57,9 @@ export const CanvasLogo = ({
 
   useEffect(() => {
     if (cachedLogoDataUrl) {
-      if (imgRef.current) imgRef.current.src = cachedLogoDataUrl;
+      if (imgRef.current && imgRef.current.src !== cachedLogoDataUrl) {
+        imgRef.current.src = cachedLogoDataUrl;
+      }
       return;
     }
 
@@ -25,7 +67,7 @@ export const CanvasLogo = ({
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
-    const scale = 4; // High density enough for 44px
+    const scale = 4;
     canvas.width = size * scale;
     canvas.height = size * scale;
 
@@ -64,6 +106,7 @@ export const CanvasLogo = ({
       <canvas ref={canvasRef} style={{ display: 'none' }} />
       <img
         ref={imgRef}
+        src={cachedLogoDataUrl || logoBase64}
         className={className}
         style={{
           width: size,

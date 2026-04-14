@@ -938,7 +938,7 @@ export const MonthlySalary = ({
                         </div>
                         {/* Title block */}
                         <h1
-                          className="text-xl uppercase leading-none main-title italic"
+                          className="text-xl uppercase leading-none main-title italic whitespace-nowrap"
                           style={{
                             color: '#2D5A27',
                             fontWeight: 900,

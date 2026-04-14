@@ -95,7 +95,7 @@ export const useTableCapture = () => {
                 <p style="margin:0;font-size:8.5px;color:#9CA3AF;text-transform:uppercase;letter-spacing:0.1em;margin-top:1px;">CỘNG TÁC ĐỂ VƯƠN XA</p>
               </div>
             </div>
-            <h1 style="margin:0;font-size:26px;font-weight:900;font-style:italic;color:#2D5A27;letter-spacing:-0.01em;line-height:1.1;text-transform:uppercase;">${reportTitle}</h1>
+            <h1 style="margin:0;font-size:26px;font-weight:900;font-style:italic;color:#2D5A27;letter-spacing:-0.01em;line-height:1.1;text-transform:uppercase;white-space:nowrap;">${reportTitle}</h1>
             <p style="margin:4px 0 0;font-size:11px;font-weight:600;color:#6B7280;">${finalSubtitle}</p>
           </div>
         `;

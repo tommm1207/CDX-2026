@@ -92,6 +92,7 @@ export const ReportExportHeader = ({ reportTitle, subtitle }: ReportExportHeader
           letterSpacing: '-0.01em',
           lineHeight: 1.1,
           textTransform: 'uppercase',
+          whiteSpace: 'nowrap',
         }}
       >
         {reportTitle}

@@ -1,4 +1,4 @@
-﻿import { CanvasLogo } from '@/components/shared/ReportExportHeader';
+import { CanvasLogo } from '@/components/shared/ReportExportHeader';
 import { exportTableImage } from '../../utils/reportExport';
 import { useState, useEffect } from 'react';
 import {
@@ -60,8 +60,9 @@ export const ConstructionDiaryComponent = ({
   const [editingId, setEditingId] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [warehouses, setWarehouses] = useState<Warehouse[]>([]);
-  const [selectedDiary, setSelectedDiary] = useState<ConstructionDiary | null>(null);
   const [showDetail, setShowDetail] = useState(false);
+  const [users, setUsers] = useState<Employee[]>([]);
+  const [userSearchTerm, setUserSearchTerm] = useState('');
 
   // Filters
   const [filterStartDate, setFilterStartDate] = useState('');
@@ -129,7 +130,12 @@ export const ConstructionDiaryComponent = ({
         .select('*')
         .neq('status', 'Đã xóa')
         .order('name');
-      if (whData) setWarehouses(whData);
+      const { data: userData } = await supabase
+        .from('users')
+        .select('*')
+        .neq('status', 'Đã xóa')
+        .order('full_name');
+      if (userData) setUsers(userData);
     } catch (err: any) {
       if (addToast) addToast('Lỗi tải dữ liệu: ' + err.message, 'error');
     } finally {
@@ -838,17 +844,41 @@ export const ConstructionDiaryComponent = ({
                     <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">
                       Thời tiết hiện tại
                     </label>
-                    <select
-                      className="w-full px-5 py-3.5 rounded-2xl border border-gray-100 bg-white focus:ring-4 focus:ring-primary/10 focus:border-primary outline-none text-sm font-bold shadow-sm"
-                      value={formData.weather}
-                      onChange={(e) => setFormData({ ...formData, weather: e.target.value })}
-                    >
-                      {WEATHER_OPTIONS.map((o) => (
-                        <option key={o.value} value={o.value}>
-                          {o.label}
-                        </option>
-                      ))}
-                    </select>
+                    <div className="flex flex-col gap-2">
+                      <select
+                        className="w-full px-5 py-3.5 rounded-2xl border border-gray-100 bg-white focus:ring-4 focus:ring-primary/10 focus:border-primary outline-none text-sm font-bold shadow-sm"
+                        value={
+                          WEATHER_OPTIONS.find((o) => o.value === formData.weather)
+                            ? formData.weather
+                            : 'other'
+                        }
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          if (val === 'other') {
+                            setFormData({ ...formData, weather: '' });
+                          } else {
+                            setFormData({ ...formData, weather: val });
+                          }
+                        }}
+                      >
+                        {WEATHER_OPTIONS.map((o) => (
+                          <option key={o.value} value={o.value}>
+                            {o.label}
+                          </option>
+                        ))}
+                        <option value="other">-- Khác (Tự nhập) --</option>
+                      </select>
+                      {(!WEATHER_OPTIONS.find((o) => o.value === formData.weather) ||
+                        formData.weather === '') && (
+                        <input
+                          type="text"
+                          placeholder="Nhập thời tiết khác..."
+                          className="w-full px-5 py-3 rounded-xl border border-primary/20 bg-primary/5 focus:ring-4 focus:ring-primary/10 focus:border-primary outline-none text-sm font-bold shadow-sm mt-1"
+                          value={formData.weather}
+                          onChange={(e) => setFormData({ ...formData, weather: e.target.value })}
+                        />
+                      )}
+                    </div>
                   </div>
                   <div className="space-y-2">
                     <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">
@@ -869,13 +899,72 @@ export const ConstructionDiaryComponent = ({
                     <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">
                       Nhân sự & Tổ đội công trường
                     </label>
-                    <textarea
-                      rows={3}
-                      placeholder="Số lượng công nhân, kỹ thuật, các đội thầu phụ..."
-                      className="w-full px-5 py-4 rounded-3xl border border-gray-100 bg-white focus:ring-4 focus:ring-primary/10 focus:border-primary outline-none text-sm font-medium shadow-sm resize-none"
-                      value={formData.labor_info}
-                      onChange={(e) => setFormData({ ...formData, labor_info: e.target.value })}
-                    />
+                    <div className="space-y-3">
+                      <div className="bg-white rounded-2xl border border-gray-100 p-3 max-h-[160px] overflow-y-auto no-scrollbar space-y-1">
+                        <div className="relative mb-2">
+                          <Search
+                            size={14}
+                            className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
+                          />
+                          <input
+                            type="text"
+                            placeholder="Tìm nhân sự..."
+                            className="w-full pl-9 pr-4 py-2 rounded-xl border border-gray-50 bg-gray-50/50 text-[11px] outline-none focus:ring-2 focus:ring-primary/10"
+                            value={userSearchTerm}
+                            onChange={(e) => setUserSearchTerm(e.target.value)}
+                          />
+                        </div>
+                        <div className="grid grid-cols-2 gap-2">
+                          {users
+                            .filter((u) =>
+                              u.full_name.toLowerCase().includes(userSearchTerm.toLowerCase()),
+                            )
+                            .map((u) => {
+                              const isSelected = formData.labor_info
+                                ?.split(', ')
+                                .includes(u.full_name);
+                              return (
+                                <label
+                                  key={u.id}
+                                  className={`flex items-center gap-2 p-2 rounded-xl border transition-all cursor-pointer ${
+                                    isSelected
+                                      ? 'bg-primary/5 border-primary/20 text-primary'
+                                      : 'bg-gray-50/50 border-transparent text-gray-500 hover:bg-gray-50'
+                                  }`}
+                                >
+                                  <input
+                                    type="checkbox"
+                                    className="hidden"
+                                    checked={isSelected}
+                                    onChange={(e) => {
+                                      const current = formData.labor_info
+                                        ? formData.labor_info.split(', ').filter(Boolean)
+                                        : [];
+                                      let next;
+                                      if (e.target.checked) {
+                                        next = [...current, u.full_name];
+                                      } else {
+                                        next = current.filter((n) => n !== u.full_name);
+                                      }
+                                      setFormData({ ...formData, labor_info: next.join(', ') });
+                                    }}
+                                  />
+                                  <span className="text-[11px] font-bold truncate">
+                                    {u.full_name}
+                                  </span>
+                                </label>
+                              );
+                            })}
+                        </div>
+                      </div>
+                      <textarea
+                        rows={2}
+                        placeholder="Ghi chú thêm về tổ đội công trường..."
+                        className="w-full px-5 py-3 rounded-2xl border border-gray-100 bg-white focus:ring-4 focus:ring-primary/10 focus:border-primary outline-none text-xs font-medium shadow-sm resize-none"
+                        value={formData.labor_info}
+                        onChange={(e) => setFormData({ ...formData, labor_info: e.target.value })}
+                      />
+                    </div>
                   </div>
                   <div className="space-y-2">
                     <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">

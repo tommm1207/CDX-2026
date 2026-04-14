@@ -613,7 +613,7 @@ export const MaterialSplitMerge = ({
                         {item.ma_phieu.split('-')[1] || item.ma_phieu}
                       </span>
                       {(() => {
-                        const badge = getStatusBadge(item.trang_thai);
+                        const badge = getStatusBadge(item.status);
                         return (
                           <span
                             className={`px-1 rounded text-[7px] font-bold shrink-0 ${badge.bg} ${badge.text}`}
@@ -1055,9 +1055,9 @@ export const MaterialSplitMerge = ({
                   <div>
                     <p className="text-[10px] text-gray-400 font-bold uppercase">Trạng thái</p>
                     <span
-                      className={`px-2 py-0.5 rounded-lg text-xs font-bold ${getStatusBadge(selectedPhieu.trang_thai).bg} ${getStatusBadge(selectedPhieu.trang_thai).text}`}
+                      className={`px-2 py-0.5 rounded-lg text-xs font-bold ${getStatusBadge(selectedPhieu.status).bg} ${getStatusBadge(selectedPhieu.status).text}`}
                     >
-                      {getStatusBadge(selectedPhieu.trang_thai).label}
+                      {getStatusBadge(selectedPhieu.status).label}
                     </span>
                   </div>
                 </div>
@@ -1139,7 +1139,7 @@ export const MaterialSplitMerge = ({
                 )}
               </div>
 
-              {selectedPhieu.trang_thai === 'cho_duyet' &&
+              {selectedPhieu.status === 'cho_duyet' &&
                 (user.role === 'Admin' || user.role === 'Develop') && (
                   <div className="p-6 border-t border-gray-100 bg-gray-50 flex gap-3">
                     <Button

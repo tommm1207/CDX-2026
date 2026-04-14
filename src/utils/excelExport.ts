@@ -123,6 +123,7 @@ export const applyCDXSheetStyle = (
       };
       if (typeof val === 'number') {
         cell.alignment = { horizontal: 'right', vertical: 'middle' };
+        cell.numFmt = '#,##0';
       } else {
         cell.alignment = { horizontal: 'left', vertical: 'middle' };
       }

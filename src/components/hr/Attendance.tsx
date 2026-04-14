@@ -15,6 +15,7 @@ import { SortButton, SortOption } from '../shared/SortButton';
 import { AttendanceTable } from './AttendanceTable';
 import { ReportImagePreviewModal } from '../shared/ReportImagePreviewModal';
 import { useTableCapture } from '../shared/useTableCapture';
+import { ConfirmModal } from '../shared/ConfirmModal';
 
 export const Attendance = ({
   user,
@@ -285,6 +286,7 @@ export const Attendance = ({
   };
 
   const [showEditModal, setShowEditModal] = useState(false);
+  const [showOtConfirm, setShowOtConfirm] = useState(false);
   const [editingAtt, setEditingAtt] = useState<any>(null);
   const [editFormData, setEditFormData] = useState({ status: 'present', overtime: 0, notes: '' });
 
@@ -711,13 +713,7 @@ export const Attendance = ({
                     fullWidth
                     onClick={() => {
                       if (editFormData.overtime > 6) {
-                        if (
-                          confirm(
-                            `Giờ tăng ca hiện là ${editFormData.overtime}h. Bạn có chắc chắn muốn lưu không?`,
-                          )
-                        ) {
-                          saveEdit();
-                        }
+                        setShowOtConfirm(true);
                       } else {
                         saveEdit();
                       }
@@ -1055,6 +1051,20 @@ export const Attendance = ({
           onClose={() => setPreviewImageUrl(null)}
         />
       )}
+
+      <ConfirmModal
+        show={showOtConfirm}
+        title="Xác nhận giờ tăng ca"
+        message={`Giờ tăng ca hiện đang là ${editFormData.overtime}h cho nhân viên ${employees.find((e) => e.id === editingAtt?.employee_id)?.full_name}. Bạn có chắc chắn muốn lưu không?`}
+        type="warning"
+        confirmText="Đúng, lưu ngay"
+        cancelText="Để mình xem lại"
+        onConfirm={() => {
+          setShowOtConfirm(false);
+          saveEdit();
+        }}
+        onCancel={() => setShowOtConfirm(false)}
+      />
     </div>
   );
 };

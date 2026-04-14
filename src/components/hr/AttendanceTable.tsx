@@ -3,6 +3,7 @@ import { Plus, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Employee } from '@/types';
 import { getDayOfWeekStr, convertSolarToLunar } from '@/utils/lunar';
+import { ConfirmModal } from '../shared/ConfirmModal';
 
 interface AttendanceTableProps {
   employees: Employee[];
@@ -46,6 +47,7 @@ export const AttendanceTable = ({
   const [selectedAction, setSelectedAction] = useState<'present' | 'half-day' | 'absent' | null>(
     null,
   );
+  const [showOtConfirm, setShowOtConfirm] = useState(false);
 
   const getStatus = (empId: string, day: number) => {
     const dateStr = `${selectedYear}-${String(selectedMonth).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
@@ -359,11 +361,7 @@ export const AttendanceTable = ({
                     onClick={() => {
                       const numOt = parseFloat(String(otInput).replace(',', '.'));
                       if (numOt > 6) {
-                        if (
-                          confirm(`Giờ tăng ca hiện là ${numOt}h. Bạn có chắc chắn muốn lưu không?`)
-                        ) {
-                          if (selectedAction) handleConfirm(selectedAction);
-                        }
+                        setShowOtConfirm(true);
                       } else {
                         if (selectedAction) handleConfirm(selectedAction);
                       }
@@ -398,6 +396,20 @@ export const AttendanceTable = ({
           </div>
         )}
       </AnimatePresence>
+
+      <ConfirmModal
+        show={showOtConfirm}
+        title="Xác nhận giờ tăng ca"
+        message={`Giờ tăng ca hiện đang là ${otInput}h. Bạn có chắc chắn con số này là chính xác không?`}
+        type="warning"
+        confirmText="Đúng, lưu ngay"
+        cancelText="Để mình xem lại"
+        onConfirm={() => {
+          setShowOtConfirm(false);
+          if (selectedAction) handleConfirm(selectedAction);
+        }}
+        onCancel={() => setShowOtConfirm(false)}
+      />
     </>
   );
 };

@@ -32,6 +32,7 @@ export const purgeDependencies = async (
         supabase.from('construction_diaries').delete().eq('created_by', id),
         supabase.from('reminders').delete().eq('created_by', id),
         supabase.from('notifications').delete().eq('created_by', id),
+        supabase.from('system_configs').delete().eq('key', `backup_settings_${id}`),
       ]);
     } else if (type === 'material') {
       // 1. Transactional - We cannot really unlink material from slips easily without breaking inventory

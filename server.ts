@@ -141,7 +141,7 @@ async function runAutoBackup() {
 
   const { data: configs } = await supabase
     .from('system_configs')
-    .select('value')
+    .select('key, value')
     .like('key', 'backup_settings_%');
 
   if (!configs || configs.length === 0) {
@@ -149,11 +149,22 @@ async function runAutoBackup() {
     return;
   }
 
+  const { data: allUsers } = await supabase.from('users').select('id, status');
+
   const vnTime = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Ho_Chi_Minh" }));
   const currentHour = vnTime.getHours();
   const currentMin = vnTime.getMinutes();
 
   for (const configData of configs) {
+    const userId = configData.key.replace('backup_settings_', '');
+    const user = allUsers?.find((u) => u.id === userId);
+
+    if (!user || user.status === 'Đã xóa' || user.status === 'Nghỉ việc') {
+      console.log(`[BACKUP] User ${userId} active status is false (deleted/resigned). Cleaning up backup config.`);
+      await supabase.from('system_configs').delete().eq('key', configData.key);
+      continue;
+    }
+
     const config = configData.value;
     if (!config || !config.enabled || !config.email || !config.schedule) continue;
 

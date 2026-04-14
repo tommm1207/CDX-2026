@@ -64,7 +64,7 @@ export const ReportExportHeader = ({ reportTitle, subtitle }: ReportExportHeader
               lineHeight: 1.3,
             }}
           >
-            CDX - CON ĐƯỜNG XANH
+            CON ĐƯỜNG XANH
           </p>
           <p
             style={{
@@ -76,7 +76,7 @@ export const ReportExportHeader = ({ reportTitle, subtitle }: ReportExportHeader
               marginTop: 1,
             }}
           >
-            HỆ THỐNG QUẢN LÝ KHO VÀ NHÂN SỰ
+            CỘNG TÁC ĐỂ VƯƠN XA
           </p>
         </div>
       </div>

@@ -56,9 +56,9 @@ export const injectLogoToImage = async (
         ctx.save();
 
         // 3. Clear the area where the logo will be (in case a "bad" logo was captured)
-        // We clear only enough to remove the logo and its shadow, avoiding the title text
+        // We use a minimal clearing box because the logo is already 'invisible' in the snapshot
         ctx.fillStyle = '#FCFCFC'; // Match the bill background
-        ctx.fillRect(finalX - 10, finalY - 10, finalSize + 15, finalSize + 20);
+        ctx.fillRect(finalX - 2, finalY - 2, finalSize + 4, finalSize + 4);
 
         // 4. Create rounded path for the logo background
         const radius = finalSize * 0.25; // rounded-xl match (~11px for 44px)

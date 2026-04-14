@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+﻿import { useState, useEffect, useCallback } from 'react';
 import { Bell, CheckCircle, Trash2, Clock, RefreshCw } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { supabase } from '@/lib/supabase';
@@ -227,7 +227,7 @@ export const Notifications = ({
 
       {/* SECTION 2: Reminders (System Notifications) */}
       <div className="space-y-4">
-        <div className="flex items-center justify-between gap-2">
+        <div className="flex items-center justify-between gap-2 mb-4">
           <div className="space-y-1">
             <h2 className="text-xl font-bold text-gray-800 flex items-center gap-2 uppercase tracking-tight">
               <Bell className="text-primary" size={20} /> Nhắc nhở đã kích hoạt

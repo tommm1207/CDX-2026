@@ -1,4 +1,4 @@
-import { CanvasLogo } from '@/components/shared/ReportExportHeader';
+﻿import { CanvasLogo } from '@/components/shared/ReportExportHeader';
 import { useState, useEffect } from 'react';
 import {
   Plus,
@@ -453,7 +453,7 @@ export const MaterialSplitMerge = ({
 
   return (
     <div className="p-4 md:p-6 space-y-6 pb-24">
-      <div className="flex items-center justify-between gap-2">
+      <div className="flex items-center justify-between gap-2 mb-4">
         <PageBreadcrumb title="Xả / Gộp vật tư" onBack={onBack} />
         <div className="flex items-center gap-1.5 justify-end flex-1">
           <SaveImageButton

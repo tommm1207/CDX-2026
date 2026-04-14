@@ -209,7 +209,7 @@ export const PendingApprovals = ({
 
   return (
     <div className="p-4 md:p-6 space-y-4 pb-24">
-      <div className="flex items-center justify-between gap-2">
+      <div className="flex items-center justify-between gap-2 mb-4">
         <PageBreadcrumb title="Phê duyệt phiếu" onBack={onBack} />
         <div className="flex items-center gap-2">
           <SortButton

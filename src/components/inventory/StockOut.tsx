@@ -1,4 +1,4 @@
-import { CanvasLogo } from '@/components/shared/ReportExportHeader';
+﻿import { CanvasLogo } from '@/components/shared/ReportExportHeader';
 import { exportTableImage } from '../../utils/reportExport';
 import { useState, useEffect, FormEvent, useRef } from 'react';
 import {
@@ -532,7 +532,7 @@ export const StockOut = ({
 
   return (
     <div className="p-4 md:p-6 space-y-6 pb-24 overflow-x-hidden">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="flex items-center justify-between gap-2 mb-4">
         <PageBreadcrumb title="Xuất kho" onBack={onBack} />
         <div className="flex items-center gap-1.5 justify-end flex-1">
           <SaveImageButton

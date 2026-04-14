@@ -1,4 +1,4 @@
-import { CanvasLogo } from '@/components/shared/ReportExportHeader';
+﻿import { CanvasLogo } from '@/components/shared/ReportExportHeader';
 import { useState, useEffect, useRef, useCallback } from 'react';
 
 import { Wallet, X, Image as ImageIcon, Camera, Search } from 'lucide-react';
@@ -497,7 +497,7 @@ export const MonthlySalary = ({
   return (
     <div className="p-4 md:p-6 space-y-6 pb-24 overflow-x-hidden">
       {/* Header + Toolbar */}
-      <div className="flex items-center justify-between gap-2 flex-wrap">
+      <div className="flex items-center justify-between gap-2 mb-4">
         <PageBreadcrumb title="Bảng lương" onBack={onBack} />
         <PageToolbar
           tableRef={mainTableRef}

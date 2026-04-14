@@ -472,7 +472,7 @@ export const StockIn = ({
 
   return (
     <div className="p-4 md:p-6 space-y-6 pb-24 overflow-x-hidden">
-      <div className="flex items-center justify-between gap-2 flex-wrap">
+      <div className="flex items-center justify-between gap-2 mb-4">
         <PageBreadcrumb title="Nhập kho" onBack={onBack} />
         <PageToolbar
           tableRef={tableRef}

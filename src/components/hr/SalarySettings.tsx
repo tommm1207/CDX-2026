@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+﻿import { useState, useEffect } from 'react';
 import {
   Settings2,
   X,
@@ -208,7 +208,7 @@ export const SalarySettings = ({
 
   return (
     <div className="p-4 md:p-6 space-y-6 pb-24">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="flex items-center justify-between gap-2 mb-4">
         <PageBreadcrumb title="Cài đặt lương" onBack={onBack} />
 
         <div className="flex items-center gap-2 relative justify-end flex-1">

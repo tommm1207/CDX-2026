@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+﻿import React, { useState, useEffect, useRef } from 'react';
 import { BarChart3, RefreshCw, EyeOff, Download, Search } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { supabase } from '@/lib/supabase';
@@ -206,7 +206,7 @@ export const InventoryReport = ({
         />
       )}
 
-      <div className="flex items-center justify-between gap-2 flex-wrap">
+      <div className="flex items-center justify-between gap-2 mb-4">
         <PageBreadcrumb title="Kiểm tra tồn kho" onBack={onBack} />
         <PageToolbar
           tableRef={mainTableRef}

@@ -186,7 +186,9 @@ export const Backup = ({
       infoBox.forEach((row, i) => {
         const rowNum = 6 + i;
         summarySheet.getCell(`A${rowNum}`).value = row[0];
-        summarySheet.getCell(`B${rowNum}`).value = row[1];
+        const valueCell = summarySheet.getCell(`B${rowNum}`);
+        valueCell.value = row[1];
+        valueCell.alignment = { horizontal: 'left' }; // Sửa lỗi số nhảy ra xa
         summarySheet.getCell(`A${rowNum}`).font = { bold: true };
       });
 

@@ -15,15 +15,17 @@ export const CreatableSelect = ({
   className = '',
   labelClassName = 'text-[10px] font-bold text-gray-400 uppercase',
   selectClassName = 'w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20 bg-white',
+  allowCreate = true,
 }: {
   label?: string;
   value: string;
   options: { id: string; name: string }[];
   onChange: (id: string) => void;
-  onCreate: (name: string) => void;
+  onCreate?: (name: string) => void;
   placeholder?: string;
   required?: boolean;
   disabled?: boolean;
+  allowCreate?: boolean;
   className?: string;
   labelClassName?: string;
   selectClassName?: string;
@@ -39,13 +41,13 @@ export const CreatableSelect = ({
       if (selectedOption) {
         // eslint-disable-next-line react-hooks/set-state-in-effect
         setSearchTerm(selectedOption.name);
-      } else if (value && !isUUID(value)) {
+      } else if (allowCreate && value && !isUUID(value)) {
         setSearchTerm(value);
       } else {
         setSearchTerm('');
       }
     }
-  }, [value, selectedOption, isOpen]);
+  }, [value, selectedOption, isOpen, allowCreate]);
 
   const filteredOptions = options.filter((opt) =>
     opt.name.toLowerCase().includes(searchTerm.toLowerCase()),
@@ -57,7 +59,7 @@ export const CreatableSelect = ({
         setIsOpen(false);
         if (selectedOption) {
           setSearchTerm(selectedOption.name);
-        } else if (value && !isUUID(value)) {
+        } else if (allowCreate && value && !isUUID(value)) {
           setSearchTerm(value);
         } else {
           setSearchTerm('');
@@ -114,7 +116,8 @@ export const CreatableSelect = ({
         <AnimatePresence>
           {isOpen &&
             (filteredOptions.length > 0 ||
-              (searchTerm &&
+              (allowCreate &&
+                searchTerm &&
                 !options.find((opt) => opt.name.toLowerCase() === searchTerm.toLowerCase()))) && (
               <motion.div
                 initial={{ opacity: 0, y: -10 }}
@@ -137,7 +140,9 @@ export const CreatableSelect = ({
                     </div>
                   ))}
 
-                  {searchTerm &&
+                  {allowCreate &&
+                    onCreate &&
+                    searchTerm &&
                     !options.find((opt) => opt.name.toLowerCase() === searchTerm.toLowerCase()) && (
                       <div
                         onClick={() => {

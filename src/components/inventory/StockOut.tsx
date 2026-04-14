@@ -1,4 +1,4 @@
-﻿import { CanvasLogo } from '@/components/shared/ReportExportHeader';
+import { CanvasLogo } from '@/components/shared/ReportExportHeader';
 import { exportTableImage } from '../../utils/reportExport';
 import { useState, useEffect, FormEvent, useRef } from 'react';
 import {
@@ -37,7 +37,7 @@ import { useInventoryData } from '@/hooks/useInventoryData';
 import { formatDate, formatCurrency, formatNumber } from '@/utils/format';
 import { isUUID, generateCode, getAllowedWarehouses } from '@/utils/helpers';
 import { Button } from '../shared/Button';
-import { getAvailableStock, validateFutureImpact } from '@/utils/inventory';
+import { getAvailableStock, getDetailedStock, validateFutureImpact } from '@/utils/inventory';
 import { ExcelButton } from '../shared/ExcelButton';
 import { SortButton, SortOption } from '../shared/SortButton';
 
@@ -395,23 +395,24 @@ export const StockOut = ({
           .maybeSingle();
 
         if (slipToCheck) {
-          // Loại trừ chính phiếu này khỏi tongXuat (nó đang Chờ duyệt, đã được tính)
+          // Loại trừ chính phiếu này khỏi tính toán (nó đang Chờ duyệt, đã được tính)
           // để kiểm tra tồn thực tế tích lũy đến ngày phiếu.
-          const stockAtDate = await getAvailableStock(
+          const stockInfo = await getDetailedStock(
             slipToCheck.material_id,
             slipToCheck.warehouse_id,
             slipToCheck.date,
             id, // excludeId — bỏ phiếu hiện tại ra khỏi tính toán
           );
-          if (Number(slipToCheck.quantity) > stockAtDate) {
-            const thieu = Number(slipToCheck.quantity) - stockAtDate;
+          if (stockInfo.available < 0) {
+            const thieu = Math.abs(stockInfo.available);
             if (addToast)
               addToast(
                 `❌ Từ chối duyệt phiếu xuất kho
-- Tồn kho hiện tại: ${stockAtDate}
-- Số lượng yêu cầu: ${slipToCheck.quantity}
-- Thiếu hụt: ${thieu}
-→ Vui lòng kiểm tra lại số lượng hoặc bổ sung phiếu nhập trước khi duyệt.`,
+- Tồn thực tế: ${formatNumber(stockInfo.actual)}
+- Đang giữ chỗ (Phân bổ khác): ${formatNumber(stockInfo.pendingOut)}
+- Khả dụng ngay: ${formatNumber(stockInfo.available)}
+- Thiếu hụt: ${formatNumber(thieu)}
+→ Vui lòng kiểm tra lại số lượng hoặc duyệt các phiếu nhập trước.`,
                 'error',
               );
             return;
@@ -848,7 +849,13 @@ export const StockOut = ({
 
                 {selectedSlip.status !== 'Đã xóa' &&
                   (user.role === 'Admin' || user.role === 'Develop') &&
-                  selectedSlip.status === 'Chờ duyệt' && (
+                  selectedSlip.status === 'Chờ duyệt' &&
+                  ((selectedSlip.export_code || '').startsWith('XA-') ||
+                  (selectedSlip.export_code || '').startsWith('GOP-') ? (
+                    <div className="px-3 py-2 bg-orange-50 border border-orange-100 rounded-xl text-xs text-orange-600 font-medium text-center">
+                      Phiếu từ Xả/Gộp — duyệt từ màn hình Xả/Gộp vật tư
+                    </div>
+                  ) : (
                     <div className="grid grid-cols-2 gap-2">
                       <Button
                         fullWidth
@@ -867,7 +874,7 @@ export const StockOut = ({
                         Duyệt
                       </Button>
                     </div>
-                  )}
+                  ))}
                 {selectedSlip.status !== 'Đã xóa' && (
                   <div className="grid grid-cols-2 gap-2">
                     <Button
@@ -987,12 +994,7 @@ export const StockOut = ({
                         value={formData.material_id}
                         options={materials}
                         onChange={(val) => setFormData({ ...formData, material_id: val })}
-                        onCreate={() =>
-                          addToast?.(
-                            'Vui lòng chọn vật tư có trong Danh mục. Hoặc click nút Thêm mới ở trên để tạo.',
-                            'error',
-                          )
-                        }
+                        allowCreate={false}
                         placeholder="Chọn vật tư..."
                         required
                       />

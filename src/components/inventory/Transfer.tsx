@@ -1,4 +1,4 @@
-﻿import { CanvasLogo } from '@/components/shared/ReportExportHeader';
+import { CanvasLogo } from '@/components/shared/ReportExportHeader';
 import { exportTableImage } from '../../utils/reportExport';
 import { useState, useEffect, FormEvent, useRef } from 'react';
 import {
@@ -35,7 +35,7 @@ import { FAB } from '../shared/FAB';
 import { useInventoryData } from '@/hooks/useInventoryData';
 import { formatDate, formatNumber } from '@/utils/format';
 import { isUUID, generateCode, getAllowedWarehouses } from '@/utils/helpers';
-import { getAvailableStock, validateFutureImpact } from '@/utils/inventory';
+import { getAvailableStock, getDetailedStock, validateFutureImpact } from '@/utils/inventory';
 import { Button } from '../shared/Button';
 import { ExcelButton } from '../shared/ExcelButton';
 import { SortButton, SortOption } from '../shared/SortButton';
@@ -498,21 +498,30 @@ export const Transfer = ({
           .maybeSingle();
 
         if (slipToCheck) {
-          const stockAtDate = await getAvailableStock(
+          const impact = await validateFutureImpact(
             slipToCheck.material_id,
             slipToCheck.from_warehouse_id,
             slipToCheck.date,
+            -Number(slipToCheck.quantity),
+            id,
           );
-          if (Number(slipToCheck.quantity) > stockAtDate) {
-            const thieu = Number(slipToCheck.quantity) - stockAtDate;
+          if (!impact.valid) {
+            const stockInfo = await getDetailedStock(
+              slipToCheck.material_id,
+              slipToCheck.from_warehouse_id,
+              slipToCheck.date,
+              id,
+            );
+            const thieu = Math.abs((impact.currentStock || 0) - Number(slipToCheck.quantity));
             if (addToast)
               addToast(
                 `❌ Từ chối duyệt phiếu luân chuyển
-- Mặt hàng: mã ${slipToCheck.material_id}
-- Tồn kho nguồn hiện tại: ${stockAtDate}
-- Số lượng yêu cầu chuyển: ${slipToCheck.quantity}
-- Thiếu hụt: ${thieu}
-→ Vui lòng kiểm tra lại số lượng hoặc bổ sung phiếu nhập kho nguồn trước khi duyệt.`,
+- Tồn thực tế tại kho nguồn: ${formatNumber(stockInfo.actual)}
+- Đang giữ chỗ (Phân bổ khác): ${formatNumber(stockInfo.pendingOut)}
+- Khả dụng ngay: ${formatNumber(stockInfo.available)}
+- Thiếu hụt: ${formatNumber(thieu)}
+- Sẽ bị âm vào ngày: ${formatDate(impact.failedDate || slipToCheck.date)}
+→ Vui lòng kiểm tra lại số lượng hoặc duyệt các phiếu nhập kho nguồn trước khi duyệt.`,
                 'error',
               );
             return;
@@ -1023,13 +1032,7 @@ export const Transfer = ({
                         value={formData.material_id}
                         options={materials}
                         onChange={(val) => setFormData({ ...formData, material_id: val })}
-                        onCreate={() => {
-                          if (addToast)
-                            addToast(
-                              'Vui lòng chọn vật tư có trong Danh mục. Hoặc click nút Thêm mới ở trên để tạo.',
-                              'info',
-                            );
-                        }}
+                        allowCreate={false}
                         placeholder="Chọn vật tư..."
                         required
                       />
@@ -1147,6 +1150,7 @@ export const Transfer = ({
         show={showAddMaterial}
         onClose={() => setShowAddMaterial(false)}
         groups={groups}
+        warehouses={warehouses}
         addToast={addToast}
         onSuccess={(newMat) => {
           setFormData({ ...formData, material_id: newMat.id });

@@ -47,6 +47,8 @@ export const DeletedCosts = ({
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [showActionModal, setShowActionModal] = useState(false);
   const [showUsageDetails, setShowUsageDetails] = useState(false);
+  const [showBulkDeleteModal, setShowBulkDeleteModal] = useState(false);
+  const [showEmptyTrashModal, setShowEmptyTrashModal] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [usageInfo, setUsageInfo] = useState<UsageResult>({
     inUse: false,
@@ -148,6 +150,56 @@ export const DeletedCosts = ({
     }
   };
 
+  const bulkDelete = async () => {
+    setSubmitting(true);
+    try {
+      let successCount = 0;
+      let failCount = 0;
+      for (const id of selectedIds) {
+        const { error } = await supabase.from('costs').delete().eq('id', id);
+        if (!error) successCount++;
+        else failCount++;
+      }
+      if (addToast)
+        addToast(
+          `Đã xóa vĩnh viễn ${successCount} chi phí.${failCount > 0 ? ` Thất bại: ${failCount}.` : ''}`,
+          successCount > 0 ? 'success' : 'error',
+        );
+      setSelectedIds(new Set());
+      fetchDeletedCosts();
+      setShowBulkDeleteModal(false);
+    } catch (err: any) {
+      if (addToast) addToast('Lỗi xóa hàng loạt: ' + err.message, 'error');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const emptyTrash = async () => {
+    setSubmitting(true);
+    try {
+      let successCount = 0;
+      let failCount = 0;
+      for (const item of costs) {
+        const { error } = await supabase.from('costs').delete().eq('id', item.id);
+        if (!error) successCount++;
+        else failCount++;
+      }
+      if (addToast)
+        addToast(
+          `Đã xóa vĩnh viễn ${successCount} chi phí.${failCount > 0 ? ` Thất bại: ${failCount}.` : ''}`,
+          successCount > 0 ? 'success' : 'error',
+        );
+      setSelectedIds(new Set());
+      fetchDeletedCosts();
+      setShowEmptyTrashModal(false);
+    } catch (err: any) {
+      if (addToast) addToast('Lỗi dọn thùng rác: ' + err.message, 'error');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   const filteredCosts = costs
     .filter((c) => {
       if (!searchTerm) return true;
@@ -191,6 +243,26 @@ export const DeletedCosts = ({
           />
         </div>
       </div>
+
+      {filteredCosts.length > 0 && (
+        <div className="flex items-center gap-2 flex-wrap">
+          {selectedIds.size > 0 ? (
+            <button
+              onClick={() => setShowBulkDeleteModal(true)}
+              className="whitespace-nowrap px-4 py-2 bg-red-600 text-white rounded-xl font-bold text-xs flex items-center gap-2 shadow-lg shadow-red-200"
+            >
+              <Trash2 size={14} /> Xóa vĩnh viễn ({selectedIds.size})
+            </button>
+          ) : (
+            <button
+              onClick={() => setShowEmptyTrashModal(true)}
+              className="whitespace-nowrap px-4 py-2 bg-red-50 text-red-600 border border-red-200 rounded-xl font-bold text-xs flex items-center gap-2"
+            >
+              <Trash2 size={14} /> Xóa tất cả
+            </button>
+          )}
+        </div>
+      )}
 
       <AnimatePresence>
         {showFilter && (
@@ -454,6 +526,28 @@ export const DeletedCosts = ({
         onConfirm={confirmRestore}
         onCancel={() => setShowRestoreModal(false)}
         type="success"
+        isLoading={submitting}
+      />
+
+      <ConfirmModal
+        show={showBulkDeleteModal}
+        title="Xóa vĩnh viễn các chi phí đã chọn"
+        message={`Xóa vĩnh viễn ${selectedIds.size} chi phí đã chọn? Hành động này không thể hoàn tác.`}
+        onConfirm={bulkDelete}
+        onCancel={() => setShowBulkDeleteModal(false)}
+        confirmText="Xóa vĩnh viễn"
+        cancelText="Hủy"
+        isLoading={submitting}
+      />
+
+      <ConfirmModal
+        show={showEmptyTrashModal}
+        title="Dọn sạch thùng rác"
+        message={`Xóa vĩnh viễn tất cả ${costs.length} chi phí trong thùng rác? Hành động này không thể hoàn tác.`}
+        onConfirm={emptyTrash}
+        onCancel={() => setShowEmptyTrashModal(false)}
+        confirmText="Xóa tất cả"
+        cancelText="Hủy"
         isLoading={submitting}
       />
     </div>

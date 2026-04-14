@@ -30,7 +30,12 @@ import { Button } from '../shared/Button';
 import { SortButton, SortOption } from '../shared/SortButton';
 import { ExcelButton } from '../shared/ExcelButton';
 import { formatDate, formatNumber, formatCurrency } from '@/utils/format';
-import { isActiveWarehouse, getAvailableStock } from '@/utils/inventory';
+import {
+  isActiveWarehouse,
+  getAvailableStock,
+  validateFutureImpact,
+  getDetailedStock,
+} from '@/utils/inventory';
 import { getAllowedWarehouses } from '@/utils/helpers';
 
 // ============================
@@ -51,9 +56,10 @@ export const ProductionOrders = ({
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState<any>(null);
+  const [materials, setMaterials] = useState<any[]>([]);
+  const [submitting, setSubmitting] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('Tất cả');
-  const [submitting, setSubmitting] = useState(false);
   const [sortBy, setSortBy] = useState<SortOption>(
     (localStorage.getItem(`sort_pref_prodOrders_${user.id}`) as SortOption) || 'newest',
   );
@@ -77,6 +83,7 @@ export const ProductionOrders = ({
     fetchOrders();
     fetchBoms();
     fetchWarehouses();
+    fetchMaterials();
   }, []);
 
   const fetchOrders = async () => {
@@ -125,6 +132,11 @@ export const ProductionOrders = ({
     const dd = String(today.getDate()).padStart(2, '0');
     const random = Math.floor(1000 + Math.random() * 9000);
     return `LSX${yyyy}${mm}${dd}-${random}`;
+  };
+
+  const fetchMaterials = async () => {
+    const { data } = await supabase.from('materials').select('id, name, unit');
+    if (data) setMaterials(data);
   };
 
   // Calculate preview when Norms + quantity + warehouse change
@@ -231,7 +243,6 @@ export const ProductionOrders = ({
       const bom = boms.find((b) => b.id === formData.bom_id);
       if (bom) {
         const stockOutItems = (bom.san_pham_bom_chi_tiet || []).map((bomItem: any) => ({
-          slip_code: `XSX-${ma_lenh}`,
           date: today,
           material_id: bomItem.material_id,
           warehouse_id: formData.kho_vat_tu_id,
@@ -240,8 +251,7 @@ export const ProductionOrders = ({
           employee_id: user.id,
           notes: `Xuất kho tự động - Lệnh SX: ${ma_lenh}`,
           status: 'Chờ duyệt',
-          approved_by: null,
-          approved_date: null,
+          export_code: `XSX-${ma_lenh}`,
         }));
 
         const { error: stockOutError } = await supabase.from('stock_out').insert(stockOutItems);
@@ -273,7 +283,7 @@ export const ProductionOrders = ({
 
     try {
       // 1. Delete associated stock_out
-      await supabase.from('stock_out').delete().eq('slip_code', `XSX-${order.ma_lenh}`);
+      await supabase.from('stock_out').delete().eq('export_code', `XSX-${order.ma_lenh}`);
 
       // 2. Delete the order itself if it's just pending, or soft delete if it's production
       if (order.trang_thai === 'cho_duyet') {
@@ -305,16 +315,59 @@ export const ProductionOrders = ({
     setSubmitting(true);
     try {
       const today = new Date().toISOString().split('T')[0];
+      const slipCode = `XSX-${order.ma_lenh}`;
 
-      // 1. Approve associated stock_out
+      // 1. Validate tồn kho cho các phiếu xuất trước khi duyệt
+      const { data: stockOutRecords } = await supabase
+        .from('stock_out')
+        .select('id, material_id, warehouse_id, quantity')
+        .eq('export_code', slipCode)
+        .eq('status', 'Chờ duyệt');
+
+      if (stockOutRecords && stockOutRecords.length > 0) {
+        for (const rec of stockOutRecords) {
+          const impact = await validateFutureImpact(
+            rec.material_id,
+            rec.warehouse_id,
+            today,
+            -Number(rec.quantity),
+            rec.id,
+          );
+
+          if (!impact.valid) {
+            const mat = materials.find((m) => m.id === rec.material_id);
+            const detailStock = await getDetailedStock(
+              rec.material_id,
+              rec.warehouse_id,
+              today,
+              rec.id,
+            );
+
+            if (addToast)
+              addToast(
+                `❌ Từ chối duyệt: Không đủ tồn kho cho "${mat?.name || 'Vật tư'}"
+- Tồn thực tế: ${formatNumber(detailStock.actual)}
+- Đang giữ chỗ (phiếu khác): ${formatNumber(detailStock.pendingOut)}
+- Khả dụng: ${formatNumber(detailStock.available)}
+- Cần xuất thêm: ${formatNumber(Number(rec.quantity))}
+- Sẽ bị âm vào ngày: ${formatDate(impact.failedDate || today)}
+→ Vui lòng kiểm tra lại trước khi duyệt lệnh.`,
+                'error',
+              );
+            setSubmitting(false);
+            return;
+          }
+        }
+      }
+
+      // 2. Approve associated stock_out
       const { error: stockError } = await supabase
         .from('stock_out')
         .update({
           status: 'Đã duyệt',
-          approved_by: user.id,
-          approved_date: today,
         })
-        .eq('slip_code', `XSX-${order.ma_lenh}`);
+        .eq('export_code', slipCode)
+        .eq('status', 'Chờ duyệt');
       if (stockError) throw stockError;
 
       // 2. Update order status
@@ -343,7 +396,7 @@ export const ProductionOrders = ({
     setSubmitting(true);
     try {
       // Delete associated stock_out
-      await supabase.from('stock_out').delete().eq('slip_code', `XSX-${order.ma_lenh}`);
+      await supabase.from('stock_out').delete().eq('export_code', `XSX-${order.ma_lenh}`);
 
       // Delete the order
       const { error } = await supabase.from('lenh_san_xuat').delete().eq('id', order.id);

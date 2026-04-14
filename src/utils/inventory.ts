@@ -159,6 +159,91 @@ export const getAvailableStock = async (
 };
 
 /**
+ * Lấy chi tiết tồn kho để hiển thị thông báo rõ ràng:
+ * - actual: Tồn thực tế đã duyệt
+ * - pendingOut: Số lượng đang "giữ chỗ" trong các phiếu Chờ duyệt
+ * - available: Số lượng thực sự có thể xuất (actual - pendingOut)
+ */
+export const getDetailedStock = async (
+  materialId: string,
+  warehouseId: string,
+  date: string,
+  excludeId?: string,
+): Promise<{ actual: number; pendingOut: number; available: number }> => {
+  try {
+    let xuatDaDuyetQ = supabase
+      .from('stock_out')
+      .select('quantity')
+      .eq('material_id', materialId)
+      .eq('warehouse_id', warehouseId)
+      .eq('status', 'Đã duyệt')
+      .lte('date', date);
+    if (excludeId) xuatDaDuyetQ = xuatDaDuyetQ.neq('id', excludeId);
+
+    let xuatChoDuyetQ = supabase
+      .from('stock_out')
+      .select('quantity')
+      .eq('material_id', materialId)
+      .eq('warehouse_id', warehouseId)
+      .eq('status', 'Chờ duyệt')
+      .lte('date', date);
+    if (excludeId) xuatChoDuyetQ = xuatChoDuyetQ.neq('id', excludeId);
+
+    const [nhap, xuatDaDuyet, xuatChoDuyet, chuyenDiDuyet, chuyenDiCho, chuyenDenDuyet] =
+      await Promise.all([
+        supabase
+          .from('stock_in')
+          .select('quantity')
+          .eq('material_id', materialId)
+          .eq('warehouse_id', warehouseId)
+          .eq('status', 'Đã duyệt')
+          .lte('date', date),
+        xuatDaDuyetQ,
+        xuatChoDuyetQ,
+        supabase
+          .from('transfers')
+          .select('quantity')
+          .eq('material_id', materialId)
+          .eq('from_warehouse_id', warehouseId)
+          .eq('status', 'Đã duyệt')
+          .lte('date', date),
+        supabase
+          .from('transfers')
+          .select('quantity')
+          .eq('material_id', materialId)
+          .eq('from_warehouse_id', warehouseId)
+          .eq('status', 'Chờ duyệt')
+          .lte('date', date),
+        supabase
+          .from('transfers')
+          .select('quantity')
+          .eq('material_id', materialId)
+          .eq('to_warehouse_id', warehouseId)
+          .eq('status', 'Đã duyệt')
+          .lte('date', date),
+      ]);
+
+    const sum = (data: any[] | null) => (data || []).reduce((s, i) => s + Number(i.quantity), 0);
+
+    const actualIn = sum(nhap.data) + sum(chuyenDenDuyet.data);
+    const actualOut = sum(xuatDaDuyet.data) + sum(chuyenDiDuyet.data);
+    const pendingOutCount = sum(xuatChoDuyet.data) + sum(chuyenDiCho.data);
+
+    const actual = actualIn - actualOut;
+    const available = actual - pendingOutCount;
+
+    return {
+      actual,
+      pendingOut: pendingOutCount,
+      available,
+    };
+  } catch (err) {
+    console.error('Error in getDetailedStock:', err);
+    return { actual: 0, pendingOut: 0, available: 0 };
+  }
+};
+
+/**
  * Lấy dữ liệu tồn kho tổng hợp cho tất cả mặt hàng,
  * Lấy bảng nhập/xuất/tồn kho trong một khoảng thời gian
  * (Dùng cho kiểm tra tồn kho — chỉ tính phiếu Đã duyệt)
@@ -290,6 +375,9 @@ export const getTonKhoTable = async (
       start?: string,
       end?: string,
     ) => {
+      // stock_out: tính cả Chờ duyệt để giữ chỗ tồn kho (tránh xuất vượt tồn)
+      // stock_in & transfers: chỉ tính Đã duyệt (hàng chưa về / chưa chuyển thì chưa tính)
+      const statusFilter = table === 'stock_out' ? ['Đã duyệt', 'Chờ duyệt'] : ['Đã duyệt'];
       let q = supabase
         .from(table)
         .select(
@@ -297,7 +385,7 @@ export const getTonKhoTable = async (
             ? 'material_id, from_warehouse_id, to_warehouse_id, quantity'
             : 'material_id, warehouse_id, quantity',
         )
-        .eq('status', 'Đã duyệt');
+        .in('status', statusFilter);
       if (dateOp === 'lte') {
         q = q.lte(dateCol, end!);
       } else {
@@ -482,6 +570,7 @@ export const validateFutureImpact = async (
   warehouseId: string,
   fromDate: string,
   diff: number,
+  excludeId?: string,
 ): Promise<{ valid: boolean; failedDate?: string; currentStock?: number }> => {
   if (diff >= 0) return { valid: true }; // Tăng thêm thì không lo âm (giả sử trước đó ko âm)
 
@@ -495,13 +584,17 @@ export const validateFutureImpact = async (
         .eq('warehouse_id', warehouseId)
         .eq('status', 'Đã duyệt')
         .gte('date', fromDate),
-      supabase
-        .from('stock_out')
-        .select('date')
-        .eq('material_id', materialId)
-        .eq('warehouse_id', warehouseId)
-        .in('status', ['Đã duyệt', 'Chờ duyệt'])
-        .gte('date', fromDate),
+      (() => {
+        let q = supabase
+          .from('stock_out')
+          .select('date')
+          .eq('material_id', materialId)
+          .eq('warehouse_id', warehouseId)
+          .in('status', ['Đã duyệt', 'Chờ duyệt'])
+          .gte('date', fromDate);
+        if (excludeId) q = q.neq('id', excludeId);
+        return q;
+      })(),
       supabase
         .from('transfers')
         .select('date')
@@ -522,7 +615,7 @@ export const validateFutureImpact = async (
 
     // 2. Chạy kiểm tra tồn kho tại mỗi mốc ngày
     for (const date of sortedDates) {
-      const stock = await getAvailableStock(materialId, warehouseId, date);
+      const stock = await getAvailableStock(materialId, warehouseId, date, excludeId);
       if (stock + diff < 0) {
         return {
           valid: false,

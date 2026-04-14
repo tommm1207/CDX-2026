@@ -816,7 +816,13 @@ export const StockIn = ({
               <div className="p-4 border-t border-gray-100 bg-gray-50 rounded-b-3xl md:rounded-b-none space-y-2">
                 {selectedSlip.status !== 'Đã xóa' &&
                   (user.role === 'Admin' || user.role === 'Develop') &&
-                  selectedSlip.status === 'Chờ duyệt' && (
+                  selectedSlip.status === 'Chờ duyệt' &&
+                  ((selectedSlip.import_code || '').startsWith('XA-') ||
+                  (selectedSlip.import_code || '').startsWith('GOP-') ? (
+                    <div className="px-3 py-2 bg-orange-50 border border-orange-100 rounded-xl text-xs text-orange-600 font-medium text-center">
+                      Phiếu từ Xả/Gộp — duyệt từ màn hình Xả/Gộp vật tư
+                    </div>
+                  ) : (
                     <div className="grid grid-cols-2 gap-2">
                       <Button
                         fullWidth
@@ -835,7 +841,7 @@ export const StockIn = ({
                         Duyệt
                       </Button>
                     </div>
-                  )}
+                  ))}
                 {selectedSlip.status !== 'Đã xóa' && (
                   <div className="grid grid-cols-2 gap-2">
                     <Button
@@ -961,13 +967,7 @@ export const StockIn = ({
                             unit: mat?.unit || formData.unit,
                           });
                         }}
-                        onCreate={() => {
-                          if (addToast)
-                            addToast(
-                              'Vui lòng chọn vật tư có trong Danh mục. Hoặc click nút Thêm mới ở trên để tạo.',
-                              'info',
-                            );
-                        }}
+                        allowCreate={false}
                         placeholder="Chọn vật tư..."
                         required
                       />
@@ -1079,12 +1079,14 @@ export const StockIn = ({
       <QuickAddMaterialModal
         show={showAddMaterial}
         onClose={() => setShowAddMaterial(false)}
-        groups={groups}
-        addToast={addToast}
         onSuccess={(newMat) => {
-          setFormData({ ...formData, material_id: newMat.id, unit: newMat.unit });
-          refreshAll();
+          setFormData({ ...formData, material_id: newMat.id });
+          setShowAddMaterial(false);
         }}
+        groups={groups}
+        warehouses={warehouses}
+        color="green"
+        addToast={addToast}
       />
 
       <ConfirmModal

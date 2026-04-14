@@ -43,6 +43,8 @@ export const DeletedSlips = ({
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [showActionModal, setShowActionModal] = useState(false);
   const [showUsageDetails, setShowUsageDetails] = useState(false);
+  const [showBulkDeleteModal, setShowBulkDeleteModal] = useState(false);
+  const [showEmptyTrashModal, setShowEmptyTrashModal] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [usageInfo, setUsageInfo] = useState<UsageResult>({
     inUse: false,
@@ -215,6 +217,65 @@ export const DeletedSlips = ({
     }
   };
 
+  const bulkDelete = async () => {
+    setSubmitting(true);
+    try {
+      let successCount = 0;
+      let failCount = 0;
+      for (const sid of selectedIds) {
+        const [table, ...rest] = sid.split('-');
+        const id = rest.join('-');
+        const slip = slips.find((s) => s.id === id && s.table === table);
+        if (slip && isFromSplitMerge(slip)) {
+          failCount++;
+          continue;
+        }
+        const { error } = await supabase.from(table).delete().eq('id', id);
+        if (!error) successCount++;
+        else failCount++;
+      }
+      addToast(
+        `Đã xóa vĩnh viễn ${successCount} phiếu.${failCount > 0 ? ` Bỏ qua ${failCount} phiếu từ Xả/Gộp.` : ''}`,
+        successCount > 0 ? 'success' : 'error',
+      );
+      setSelectedIds(new Set());
+      fetchDeletedSlips();
+      setShowBulkDeleteModal(false);
+    } catch (err: any) {
+      addToast('Lỗi xóa hàng loạt: ' + err.message, 'error');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const emptyTrash = async () => {
+    setSubmitting(true);
+    try {
+      let successCount = 0;
+      let failCount = 0;
+      for (const slip of slips) {
+        if (isFromSplitMerge(slip)) {
+          failCount++;
+          continue;
+        }
+        const { error } = await supabase.from(slip.table).delete().eq('id', slip.id);
+        if (!error) successCount++;
+        else failCount++;
+      }
+      addToast(
+        `Đã xóa vĩnh viễn ${successCount} phiếu.${failCount > 0 ? ` Bỏ qua ${failCount} phiếu từ Xả/Gộp.` : ''}`,
+        successCount > 0 ? 'success' : 'error',
+      );
+      setSelectedIds(new Set());
+      fetchDeletedSlips();
+      setShowEmptyTrashModal(false);
+    } catch (err: any) {
+      addToast('Lỗi dọn thùng rác: ' + err.message, 'error');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   const filteredSlips = slips
     .filter((s) => {
       if (!searchTerm) return true;
@@ -257,6 +318,28 @@ export const DeletedSlips = ({
           />
         </div>
       </div>
+
+      {filteredSlips.length > 0 && (
+        <div className="flex items-center gap-2 flex-wrap">
+          {selectedIds.size > 0 ? (
+            <>
+              <button
+                onClick={() => setShowBulkDeleteModal(true)}
+                className="whitespace-nowrap px-4 py-2 bg-red-600 text-white rounded-xl font-bold text-xs flex items-center gap-2 shadow-lg shadow-red-200"
+              >
+                <Trash2 size={14} /> Xóa vĩnh viễn ({selectedIds.size})
+              </button>
+            </>
+          ) : (
+            <button
+              onClick={() => setShowEmptyTrashModal(true)}
+              className="whitespace-nowrap px-4 py-2 bg-red-50 text-red-600 border border-red-200 rounded-xl font-bold text-xs flex items-center gap-2"
+            >
+              <Trash2 size={14} /> Xóa tất cả
+            </button>
+          )}
+        </div>
+      )}
 
       <AnimatePresence>
         {showFilter && (
@@ -533,6 +616,28 @@ export const DeletedSlips = ({
         onConfirm={confirmRestore}
         onCancel={() => setShowRestoreModal(false)}
         type="success"
+        isLoading={submitting}
+      />
+
+      <ConfirmModal
+        show={showBulkDeleteModal}
+        title="Xóa vĩnh viễn các phiếu đã chọn"
+        message={`Xóa vĩnh viễn ${selectedIds.size} phiếu đã chọn? Phiếu từ Xả/Gộp sẽ bị bỏ qua. Hành động này không thể hoàn tác.`}
+        onConfirm={bulkDelete}
+        onCancel={() => setShowBulkDeleteModal(false)}
+        confirmText="Xóa vĩnh viễn"
+        cancelText="Hủy"
+        isLoading={submitting}
+      />
+
+      <ConfirmModal
+        show={showEmptyTrashModal}
+        title="Dọn sạch thùng rác"
+        message={`Xóa vĩnh viễn tất cả ${slips.length} phiếu trong thùng rác? Phiếu từ Xả/Gộp sẽ bị bỏ qua. Hành động này không thể hoàn tác.`}
+        onConfirm={emptyTrash}
+        onCancel={() => setShowEmptyTrashModal(false)}
+        confirmText="Xóa tất cả"
+        cancelText="Hủy"
         isLoading={submitting}
       />
     </div>

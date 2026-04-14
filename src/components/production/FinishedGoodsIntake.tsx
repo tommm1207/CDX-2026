@@ -1,4 +1,4 @@
-﻿import { CanvasLogo } from '@/components/shared/ReportExportHeader';
+import { CanvasLogo } from '@/components/shared/ReportExportHeader';
 import { exportTableImage } from '../../utils/reportExport';
 import { useState, useEffect } from 'react';
 import { X, PackageCheck, Factory, Search, ChevronRight, Package } from 'lucide-react';
@@ -189,17 +189,15 @@ export const FinishedGoodsIntake = ({
       if (materialId) {
         const { error: stockInError } = await supabase.from('stock_in').insert([
           {
-            slip_code: `NTP-${selectedOrder.ma_lenh}`,
-            date: today,
             material_id: materialId,
             warehouse_id: formData.kho_id,
             quantity: formData.so_luong,
             unit: 'cái',
+            date: today,
             employee_id: user.id,
             notes: `Nhập thành phẩm (Chờ duyệt) - Lệnh SX: ${selectedOrder.ma_lenh}`,
             status: 'Chờ duyệt',
-            approved_by: null,
-            approved_date: null,
+            import_code: `NTP-${selectedOrder.ma_lenh}`,
           },
         ]);
         if (stockInError) throw stockInError;
@@ -236,10 +234,8 @@ export const FinishedGoodsIntake = ({
         .from('stock_in')
         .update({
           status: 'Đã duyệt',
-          approved_by: user.id,
-          approved_date: today,
         })
-        .eq('slip_code', `NTP-${selectedOrder.ma_lenh}`)
+        .eq('import_code', `NTP-${selectedOrder.ma_lenh}`)
         .is('approved_by', null)
         .limit(1); // Careful with slip_code collisions
 
@@ -286,7 +282,7 @@ export const FinishedGoodsIntake = ({
       await supabase
         .from('stock_in')
         .delete()
-        .eq('slip_code', `NTP-${selectedOrder.ma_lenh}`)
+        .eq('import_code', `NTP-${selectedOrder.ma_lenh}`)
         .eq('status', 'Chờ duyệt')
         .limit(1);
 

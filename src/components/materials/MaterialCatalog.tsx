@@ -622,7 +622,30 @@ export const MaterialCatalog = ({
                           setFormData({ ...formData, group_id: val, code: nextCode });
                         }}
                         onCreate={async (val) => {
-                          setFormData({ ...formData, group_id: val });
+                          const existing = groups.find(
+                            (g) => g.name.toLowerCase() === val.toLowerCase(),
+                          );
+                          if (existing) {
+                            const nextCode = await generateNextMaterialCode(existing.id);
+                            setFormData({
+                              ...formData,
+                              group_id: existing.id,
+                              code: isEditing ? formData.code : nextCode,
+                            });
+                            return;
+                          }
+                          const generatedCode = await generateNextGroupCode();
+                          const { data: newGroup, error } = await supabase
+                            .from('material_groups')
+                            .insert([{ name: val, code: generatedCode }])
+                            .select()
+                            .single();
+                          if (error || !newGroup) return;
+                          fetchGroups();
+                          const nextCode = isEditing
+                            ? formData.code
+                            : await generateNextMaterialCode(newGroup.id);
+                          setFormData({ ...formData, group_id: newGroup.id, code: nextCode });
                         }}
                         placeholder="Chọn nhóm trước để sinh mã tự động..."
                         required

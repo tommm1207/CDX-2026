@@ -12,6 +12,7 @@ interface QuickAddMaterialModalProps {
   onSuccess: (newMaterial: any) => void;
   addToast?: (message: string, type?: any) => void;
   groups: any[];
+  warehouses?: any[];
   color?: 'blue' | 'orange' | 'green';
   initialName?: string;
 }
@@ -22,6 +23,7 @@ export const QuickAddMaterialModal = ({
   onSuccess,
   addToast,
   groups,
+  warehouses = [],
   color = 'blue',
   initialName = '',
 }: QuickAddMaterialModalProps) => {
@@ -31,7 +33,13 @@ export const QuickAddMaterialModal = ({
   const [spec, setSpec] = useState('');
   const [desc, setDesc] = useState('');
   const [code, setCode] = useState('');
+  const [initialStock, setInitialStock] = useState<number>(0);
+  const [initialUnitPrice, setInitialUnitPrice] = useState<number>(0);
+  const [initialWarehouseId, setInitialWarehouseId] = useState('');
   const [loading, setLoading] = useState(false);
+  const [extraGroups, setExtraGroups] = useState<{ id: string; name: string; code: string }[]>([]);
+
+  const allGroups = [...groups, ...extraGroups];
 
   React.useEffect(() => {
     if (show) {
@@ -49,6 +57,27 @@ export const QuickAddMaterialModal = ({
     }
   };
 
+  const handleCreateGroup = async (newName: string) => {
+    const existing = allGroups.find((g) => g.name.toLowerCase() === newName.toLowerCase());
+    if (existing) {
+      handleGroupChange(existing.id);
+      return;
+    }
+    try {
+      const generatedGroupCode = await generateNextGroupCode();
+      const { data: newGroup, error } = await supabase
+        .from('material_groups')
+        .insert([{ name: newName, code: generatedGroupCode }])
+        .select()
+        .single();
+      if (error) throw error;
+      setExtraGroups((prev: { id: string; name: string; code: string }[]) => [...prev, newGroup]);
+      handleGroupChange(newGroup.id);
+    } catch (err: any) {
+      addToast?.('Lỗi tạo nhóm: ' + err.message, 'error');
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!name.trim()) {
@@ -59,26 +88,19 @@ export const QuickAddMaterialModal = ({
       addToast?.('Vui lòng chọn nhóm vật tư', 'error');
       return;
     }
+    if (initialStock > 0 && !initialWarehouseId) {
+      addToast?.('Vui lòng chọn kho để nhập tồn đầu kỳ', 'error');
+      return;
+    }
+    if (initialStock > 0 && !initialUnitPrice) {
+      addToast?.('Vui lòng nhập đơn giá cho tồn đầu kỳ', 'error');
+      return;
+    }
 
     setLoading(true);
     try {
-      let finalGroupId = groupId;
-      if (groupId && !isUUID(groupId)) {
-        const groupByName = groups.find((g) => g.name.toLowerCase() === groupId.toLowerCase());
-        if (groupByName) {
-          finalGroupId = groupByName.id;
-        } else {
-          const generatedGroupCode = await generateNextGroupCode();
-          const { data: newGroup, error: groupErr } = await supabase
-            .from('material_groups')
-            .insert([{ name: groupId, code: generatedGroupCode }])
-            .select();
-          if (groupErr) throw groupErr;
-          if (newGroup) {
-            finalGroupId = newGroup[0].id;
-          }
-        }
-      }
+      // groupId is always a UUID at this point (set by handleGroupChange or handleCreateGroup)
+      const finalGroupId = groupId;
 
       const finalCode = code || (await generateNextMaterialCode(finalGroupId));
       const payload = {
@@ -104,6 +126,36 @@ export const QuickAddMaterialModal = ({
         setSpec('');
         setDesc('');
         setCode('');
+        setInitialStock(0);
+        setInitialUnitPrice(0);
+        setInitialWarehouseId('');
+
+        // Handle Initial Stock if provided
+        if (initialStock > 0 && initialWarehouseId) {
+          const today = new Date().toISOString().split('T')[0];
+          const { error: stockErr } = await supabase.from('stock_in').insert([
+            {
+              material_id: data[0].id,
+              warehouse_id: initialWarehouseId,
+              quantity: initialStock,
+              unit: unit || 'Cái',
+              unit_price: initialUnitPrice,
+              total_amount: initialStock * initialUnitPrice,
+              date: today,
+              import_code: 'START-' + finalCode,
+              status: 'Đã duyệt',
+              notes: 'Nhập tồn đầu kỳ (Khai báo khi thêm mới vật tư)',
+            },
+          ]);
+          if (stockErr) {
+            addToast?.(
+              '⚠️ Vật tư đã tạo thành công, nhưng không thể nhập tồn đầu kỳ: ' + stockErr.message,
+              'error',
+            );
+          } else {
+            addToast?.(`Đã nhập ${initialStock} ${unit || 'Cái'} vào tồn đầu kỳ`, 'success');
+          }
+        }
       }
     } catch (err: any) {
       addToast?.('Lỗi: ' + err.message, 'error');
@@ -152,9 +204,9 @@ export const QuickAddMaterialModal = ({
                   </label>
                   <CreatableSelect
                     value={groupId}
-                    options={groups}
+                    options={allGroups}
                     onChange={(val) => handleGroupChange(val)}
-                    onCreate={(val) => handleGroupChange(val)}
+                    onCreate={(val) => handleCreateGroup(val)}
                     placeholder="Chọn hoặc nhập tên nhóm mới..."
                     required
                   />
@@ -213,6 +265,64 @@ export const QuickAddMaterialModal = ({
                     placeholder="Mô tả thêm về vật tư nếu cần..."
                     className={`w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 resize-none ${color === 'orange' ? 'focus:ring-orange-600/20' : color === 'green' ? 'focus:ring-green-600/20' : 'focus:ring-blue-600/20'}`}
                   />
+                </div>
+
+                <div className="md:col-span-2 pt-4 border-t border-gray-100 mt-2">
+                  <h4 className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] mb-4 flex items-center gap-2">
+                    <span className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse" />
+                    Thiết lập tồn kho đầu kỳ (Tùy chọn)
+                  </h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-bold text-gray-400 uppercase">
+                        Số lượng tồn đầu
+                      </label>
+                      <input
+                        type="number"
+                        step="any"
+                        min="0"
+                        value={initialStock || ''}
+                        onChange={(e) => setInitialStock(Number(e.target.value))}
+                        placeholder="0.00"
+                        className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-green-600/10"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-bold text-gray-400 uppercase">
+                        Đơn giá {initialStock > 0 && <span className="text-red-400">*</span>}
+                      </label>
+                      <input
+                        type="number"
+                        step="any"
+                        min="0"
+                        value={initialUnitPrice || ''}
+                        onChange={(e) => setInitialUnitPrice(Number(e.target.value))}
+                        placeholder="Nhập đơn giá..."
+                        className={`w-full px-4 py-2 rounded-xl border text-sm outline-none focus:ring-2 focus:ring-green-600/10 ${initialStock > 0 && !initialUnitPrice ? 'border-red-300 bg-red-50' : 'border-gray-200'}`}
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-bold text-gray-400 uppercase">
+                        Kho lưu trữ {initialStock > 0 && <span className="text-red-400">*</span>}
+                      </label>
+                      <select
+                        value={initialWarehouseId}
+                        onChange={(e) => setInitialWarehouseId(e.target.value)}
+                        className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-green-600/10 bg-white"
+                      >
+                        <option value="">-- Chọn kho --</option>
+                        {warehouses.map((w: any) => (
+                          <option key={w.id} value={w.id}>
+                            {w.name}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+                  <p className="text-[10px] text-gray-400 italic mt-2 ml-1">
+                    * Nếu nhập tồn đầu, hệ thống sẽ tự động tạo một phiếu nhập "Đã duyệt" cho vật tư
+                    này.
+                  </p>
                 </div>
               </form>
             </div>

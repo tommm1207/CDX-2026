@@ -11,6 +11,8 @@ import {
   Package,
   Trash2,
   ChevronRight,
+  Edit,
+  Check,
   Image as LucideImageIcon,
   Share2,
 } from 'lucide-react';
@@ -29,10 +31,16 @@ import { Button } from '../shared/Button';
 import { SortButton, SortOption } from '../shared/SortButton';
 import { ExcelButton } from '../shared/ExcelButton';
 import { formatDate, formatNumber } from '@/utils/format';
-import { isActiveWarehouse, getAvailableStock } from '@/utils/inventory';
-import { getAllowedWarehouses } from '@/utils/helpers';
+import {
+  isActiveWarehouse,
+  getAvailableStock,
+  getDetailedStock,
+  validateFutureImpact,
+} from '@/utils/inventory';
+import { getAllowedWarehouses, isUUID } from '@/utils/helpers';
 
 import { QuickAddMaterialModal } from '../shared/QuickAddMaterialModal';
+import { ConfirmModal } from '../shared/ConfirmModal';
 import { useInventoryData } from '@/hooks/useInventoryData';
 
 // ============================
@@ -68,12 +76,20 @@ export const MaterialSplitMerge = ({
   const [isCapturingTable, setIsCapturingTable] = useState(false);
   const reportRef = useRef<HTMLDivElement>(null);
   const [showDetailPhieu, setShowDetailPhieu] = useState(false);
+  const [showRejectConfirm, setShowRejectConfirm] = useState(false);
+  const [phieuToReject, setPhieuToReject] = useState<any>(null);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [phieuToDelete, setPhieuToDelete] = useState<any>(null);
   const [selectedPhieu, setSelectedPhieu] = useState<any>(null);
   const [quickAddTarget, setQuickAddTarget] = useState<{
     type: 'nguonXa' | 'outputXa' | 'nguonGop' | 'outputGop';
     index?: number;
   } | null>(null);
   const [initialMaterialName, setInitialMaterialName] = useState('');
+  const [showEditApprovedConfirm, setShowEditApprovedConfirm] = useState(false);
+  const [showMismatchConfirm, setShowMismatchConfirm] = useState(false);
+  const [mismatchData, setMismatchData] = useState<any>(null);
+  const [pendingPhieuToEdit, setPendingPhieuToEdit] = useState<any>(null);
 
   // Form
   const [kho_id, setKhoId] = useState('');
@@ -97,10 +113,22 @@ export const MaterialSplitMerge = ({
     so_luong: 0,
     don_vi: '',
   });
+  const [isEditing, setIsEditing] = useState(false);
+  const [editingPhieu, setEditingPhieu] = useState<any>(null);
 
   useEffect(() => {
     fetchHistory();
   }, []);
+
+  // Cập nhật tồn kho khi đổi kho
+  useEffect(() => {
+    if (kho_id && nguonXa.material_id && isUUID(nguonXa.material_id)) {
+      getAvailableStock(nguonXa.material_id, kho_id, new Date().toISOString().split('T')[0]).then(
+        (tk) => setNguonXa((p) => ({ ...p, ton_kho: tk })),
+      );
+    }
+     
+  }, [kho_id]);
 
   const fetchHistory = async () => {
     setLoadingHistory(true);
@@ -113,9 +141,25 @@ export const MaterialSplitMerge = ({
         .or('status.is.null,status.neq.Đã xóa')
         .order('created_at', { ascending: false });
       if (error) throw error;
-      setHistory(data || []);
+
+      // Normalize statuses
+      const normalized = (data || []).map((h: any) => ({
+        ...h,
+        status:
+          h.status === 'cho_duyet'
+            ? 'Chờ duyệt'
+            : h.status === 'da_duyet'
+              ? 'Đã duyệt'
+              : h.status === 'da_huy'
+                ? 'Từ chối'
+                : h.status || 'Chờ duyệt',
+      }));
+
+      setHistory(normalized);
     } catch (err: any) {
-      console.error('Error:', err);
+      console.error('Error fetching history:', err);
+      if (addToast)
+        addToast(`Không thể tải lịch sử: ${err.message || 'Lỗi kết nối database'}`, 'error');
     } finally {
       setLoadingHistory(false);
     }
@@ -146,6 +190,71 @@ export const MaterialSplitMerge = ({
     setOutputXa([]);
     setNguonGop([]);
     setOutputGop({ material_id: '', material_name: '', so_luong: 0, don_vi: '' });
+    setIsEditing(false);
+    setEditingPhieu(null);
+    setShowModal(true);
+  };
+
+  const handleEditPhieu = (phieu: any) => {
+    if (phieu.status === 'Đã duyệt') {
+      setPendingPhieuToEdit(phieu);
+      setShowEditApprovedConfirm(true);
+      return;
+    }
+    startEditFlow(phieu);
+  };
+
+  const startEditFlow = (phieu: any) => {
+    setMode(phieu.loai);
+    setKhoId(phieu.kho_id);
+    setGhiChu(phieu.ghi_chu || '');
+    setIsEditing(true);
+    setEditingPhieu(phieu);
+
+    const details = phieu.xasa_gop_chi_tiet || [];
+    if (phieu.loai === 'xa') {
+      const nguon = details.find((d: any) => d.vai_tro === 'nguon');
+      const outputs = details.filter((d: any) => d.vai_tro === 'ra');
+      if (nguon) {
+        setNguonXa({
+          material_id: nguon.material_id,
+          material_name: nguon.materials?.name || '',
+          so_luong: nguon.so_luong,
+          don_vi: nguon.don_vi,
+          ton_kho: 0, // Will be fetched if needed
+        });
+      }
+      setOutputXa(
+        outputs.map((o: any) => ({
+          material_id: o.material_id,
+          material_name: o.materials?.name || '',
+          so_luong: o.so_luong,
+          don_vi: o.don_vi,
+        })),
+      );
+    } else {
+      const nguons = details.filter((d: any) => d.vai_tro === 'nguon');
+      const output = details.find((d: any) => d.vai_tro === 'ra');
+      setNguonGop(
+        nguons.map((n: any) => ({
+          material_id: n.material_id,
+          material_name: n.materials?.name || '',
+          so_luong: n.so_luong,
+          don_vi: n.don_vi,
+          ton_kho: 0,
+        })),
+      );
+      if (output) {
+        setOutputGop({
+          material_id: output.material_id,
+          material_name: output.materials?.name || '',
+          so_luong: output.so_luong,
+          don_vi: output.don_vi,
+        });
+      }
+    }
+
+    setShowDetailPhieu(false);
     setShowModal(true);
   };
 
@@ -154,7 +263,7 @@ export const MaterialSplitMerge = ({
     let tonKho = 0;
     if (kho_id) {
       try {
-        tonKho = await getAvailableStock(matId, kho_id);
+        tonKho = await getAvailableStock(matId, kho_id, new Date().toISOString().split('T')[0]);
       } catch (e) {}
     }
     setNguonXa({
@@ -183,49 +292,163 @@ export const MaterialSplitMerge = ({
       return;
     }
 
+    // Validate material_id là UUID hợp lệ
+    if (mode === 'xa') {
+      if (!isUUID(nguonXa.material_id)) {
+        if (addToast)
+          addToast(
+            'Vật tư nguồn không hợp lệ. Vui lòng chọn từ danh sách hoặc thêm vật tư nhanh.',
+            'error',
+          );
+        return;
+      }
+      for (const o of outputXa) {
+        if (!isUUID(o.material_id)) {
+          if (addToast)
+            addToast(
+              'Vật tư đầu ra không hợp lệ. Vui lòng chọn từ danh sách hoặc thêm vật tư nhanh.',
+              'error',
+            );
+          return;
+        }
+      }
+    } else {
+      for (const n of nguonGop) {
+        if (!isUUID(n.material_id)) {
+          if (addToast)
+            addToast(
+              'Vật tư nguồn không hợp lệ. Vui lòng chọn từ danh sách hoặc thêm vật tư nhanh.',
+              'error',
+            );
+          return;
+        }
+      }
+      if (!isUUID(outputGop.material_id)) {
+        if (addToast)
+          addToast(
+            'Vật tư gộp ra không hợp lệ. Vui lòng chọn từ danh sách hoặc thêm vật tư nhanh.',
+            'error',
+          );
+        return;
+      }
+    }
+
     setSubmitting(true);
     try {
-      const ma_phieu = generateCode(mode);
+      const ma_phieu = isEditing ? editingPhieu.ma_phieu : generateCode(mode);
       const today = new Date().toISOString().split('T')[0];
-
-      // 1. Create phieu header
-      const { data: phieu, error: phieuErr } = await supabase
-        .from('xasa_gop_phieu')
-        .insert([
-          {
-            ma_phieu,
-            loai: mode,
-            ngay: today,
+      if (mode === 'xa') {
+        const stockInfo = await getDetailedStock(
+          nguonXa.material_id,
+          kho_id,
+          today,
+          isEditing ? editingPhieu.id : undefined,
+        );
+        if (stockInfo.available < Number(nguonXa.so_luong)) {
+          throw new Error(`
+❌ Không đủ tồn kho thực hiện Xả:
+- Vật tư: ${nguonXa.material_name}
+- Tồn thực tế: ${formatNumber(stockInfo.actual)}
+- Đang giữ chỗ (Chờ duyệt): ${formatNumber(stockInfo.pendingOut)}
+- Khả dụng ngay: ${formatNumber(stockInfo.available)}
+→ Vui lòng giảm số lượng hoặc duyệt phiếu nhập trước.`);
+        }
+      } else {
+        for (const n of nguonGop) {
+          const stockInfo = await getDetailedStock(
+            n.material_id,
             kho_id,
-            nguoi_tao: user.id,
+            today,
+            isEditing ? editingPhieu.id : undefined,
+          );
+          if (stockInfo.available < Number(n.so_luong)) {
+            throw new Error(`
+❌ Không đủ tồn kho thực hiện Gộp:
+- Vật tư: ${n.material_name}
+- Tồn thực tế: ${formatNumber(stockInfo.actual)}
+- Đang giữ chỗ (Chờ duyệt): ${formatNumber(stockInfo.pendingOut)}
+- Khả dụng ngay: ${formatNumber(stockInfo.available)}
+→ Vui lòng giảm số lượng hoặc duyệt phiếu nhập trước.`);
+          }
+        }
+      }
+
+      const totalIn =
+        mode === 'xa' ? nguonXa.so_luong : nguonGop.reduce((sum, n) => sum + n.so_luong, 0);
+      const totalOut =
+        mode === 'xa' ? outputXa.reduce((sum, o) => sum + o.so_luong, 0) : outputGop.so_luong;
+
+      if (Math.abs(totalIn - totalOut) > 0.001 && !mismatchData) {
+        setMismatchData({ totalIn, totalOut });
+        setShowMismatchConfirm(true);
+        setSubmitting(false);
+        return;
+      }
+
+      let phieuId = isEditing ? editingPhieu.id : null;
+
+      if (isEditing) {
+        // 1. Update phieu header
+        await supabase
+          .from('xasa_gop_phieu')
+          .update({
+            kho_id,
             ghi_chu: ghi_chu || null,
-            status: 'cho_duyet',
-          },
-        ])
-        .select()
-        .single();
-      if (phieuErr) throw phieuErr;
+            status: 'Chờ duyệt',
+            updated_at: new Date().toISOString(),
+          })
+          .eq('id', phieuId);
+
+        // 2. Clean up old details and stock records (soft delete stock, hard delete details to recreate)
+        await supabase.from('xasa_gop_chi_tiet').delete().eq('phieu_id', phieuId);
+
+        // Use the ma_phieu directly as it already contains the prefix (XA... or GOP...)
+        await supabase
+          .from('stock_in')
+          .update({ status: 'Đã xóa' })
+          .ilike('import_code', `${ma_phieu}%`);
+        await supabase
+          .from('stock_out')
+          .update({ status: 'Đã xóa' })
+          .ilike('export_code', `${ma_phieu}%`);
+      } else {
+        // Create new
+        const { data: phieu, error: phieuErr } = await supabase
+          .from('xasa_gop_phieu')
+          .insert([
+            {
+              ma_phieu,
+              loai: mode,
+              ngay: today,
+              kho_id,
+              nguoi_tao: user.id,
+              ghi_chu: ghi_chu || null,
+              status: 'Chờ duyệt',
+            },
+          ])
+          .select()
+          .single();
+        if (phieuErr) throw phieuErr;
+        // set phieuId for details
+        phieuId = phieu.id;
+      }
 
       if (mode === 'xa') {
-        // Validate
-        if (!nguonXa.material_id || nguonXa.so_luong <= 0) {
+        // Validate and insert (Same as before but use phieuId)
+        if (!nguonXa.material_id || nguonXa.so_luong <= 0)
           throw new Error('Vui lòng chọn vật tư nguồn và nhập số lượng');
-        }
-        if (outputXa.length === 0) {
-          throw new Error('Vui lòng thêm ít nhất 1 mảnh ra');
-        }
+        if (outputXa.length === 0) throw new Error('Vui lòng thêm ít nhất 1 mảnh ra');
 
-        // Insert detail records
         const details = [
           {
-            phieu_id: phieu.id,
+            phieu_id: phieuId,
             material_id: nguonXa.material_id,
             vai_tro: 'nguon',
             so_luong: nguonXa.so_luong,
             don_vi: nguonXa.don_vi,
           },
           ...outputXa.map((o: any) => ({
-            phieu_id: phieu.id,
+            phieu_id: phieuId,
             material_id: o.material_id,
             vai_tro: 'ra',
             so_luong: o.so_luong,
@@ -234,37 +457,38 @@ export const MaterialSplitMerge = ({
         ];
         await supabase.from('xasa_gop_chi_tiet').insert(details);
 
-        // Create stock_out for source + stock_in for outputs
-        await supabase.from('stock_out').insert([
+        const { error: stockOutErr } = await supabase.from('stock_out').insert([
           {
-            slip_code: `XA-${ma_phieu}`,
-            export_code: `XA-${ma_phieu}`,
+            export_code: ma_phieu,
             date: today,
             material_id: nguonXa.material_id,
             warehouse_id: kho_id,
             quantity: nguonXa.so_luong,
             unit: nguonXa.don_vi,
+            unit_price: 0,
+            total_amount: 0,
             employee_id: user.id,
-            notes: `Xả vật tư - Phiếu: ${ma_phieu}`,
+            notes: `Xả vật tư${isEditing ? ' (Cập nhật)' : ''} - Phiếu: ${ma_phieu}`,
             status: 'Chờ duyệt',
-            approved_by: null,
-            approved_date: null,
           },
         ]);
+        if (stockOutErr) throw stockOutErr;
 
         const stockInItems = outputXa.map((o: any, idx: number) => ({
-          slip_code: `XA-${ma_phieu}`,
-          import_code: `XA-${ma_phieu}-${idx + 1}`,
+          import_code: `${ma_phieu}-${idx + 1}`,
           date: today,
           material_id: o.material_id,
           warehouse_id: kho_id,
           quantity: o.so_luong,
           unit: o.don_vi,
+          unit_price: 0,
+          total_amount: 0,
           employee_id: user.id,
-          notes: `Mảnh ra từ xả vật tư - Phiếu: ${ma_phieu}`,
+          notes: `Mảnh ra từ xả vật tư${isEditing ? ' (Cập nhật)' : ''} - Phiếu: ${ma_phieu}`,
           status: 'Chờ duyệt',
         }));
-        await supabase.from('stock_in').insert(stockInItems);
+        const { error: stockInErr } = await supabase.from('stock_in').insert(stockInItems);
+        if (stockInErr) throw stockInErr;
       } else {
         // GỘP
         if (nguonGop.length === 0) throw new Error('Vui lòng thêm vật tư nguồn');
@@ -273,14 +497,14 @@ export const MaterialSplitMerge = ({
 
         const details = [
           ...nguonGop.map((n: any) => ({
-            phieu_id: phieu.id,
+            phieu_id: phieuId,
             material_id: n.material_id,
             vai_tro: 'nguon',
             so_luong: n.so_luong,
             don_vi: n.don_vi,
           })),
           {
-            phieu_id: phieu.id,
+            phieu_id: phieuId,
             material_id: outputGop.material_id,
             vai_tro: 'ra',
             so_luong: outputGop.so_luong,
@@ -289,45 +513,52 @@ export const MaterialSplitMerge = ({
         ];
         await supabase.from('xasa_gop_chi_tiet').insert(details);
 
-        // stock_out for all sources
         const stockOuts = nguonGop.map((n: any, idx: number) => ({
-          slip_code: `GOP-${ma_phieu}`,
-          export_code: `GOP-${ma_phieu}-${idx + 1}`,
+          export_code: `${ma_phieu}-${idx + 1}`,
           date: today,
           material_id: n.material_id,
           warehouse_id: kho_id,
           quantity: n.so_luong,
           unit: n.don_vi,
+          unit_price: 0,
+          total_amount: 0,
           employee_id: user.id,
-          notes: `Gộp vật tư - Phiếu: ${ma_phieu}`,
+          notes: `Gộp vật tư${isEditing ? ' (Cập nhật)' : ''} - Phiếu: ${ma_phieu}`,
           status: 'Chờ duyệt',
         }));
-        await supabase.from('stock_out').insert(stockOuts);
+        const { error: gopStockOutErr } = await supabase.from('stock_out').insert(stockOuts);
+        if (gopStockOutErr) throw gopStockOutErr;
 
-        // stock_in for output
-        await supabase.from('stock_in').insert([
+        const { error: gopStockInErr } = await supabase.from('stock_in').insert([
           {
-            slip_code: `GOP-${ma_phieu}`,
-            import_code: `GOP-${ma_phieu}`,
+            import_code: ma_phieu,
             date: today,
             material_id: outputGop.material_id,
             warehouse_id: kho_id,
             quantity: outputGop.so_luong,
             unit: outputGop.don_vi,
+            unit_price: 0,
+            total_amount: 0,
             employee_id: user.id,
-            notes: `Vật tư gộp ra - Phiếu: ${ma_phieu}`,
+            notes: `Vật tư gộp ra${isEditing ? ' (Cập nhật)' : ''} - Phiếu: ${ma_phieu}`,
             status: 'Chờ duyệt',
-            approved_by: null,
-            approved_date: null,
           },
         ]);
+        if (gopStockInErr) throw gopStockInErr;
       }
 
-      if (addToast) addToast(`Phiếu ${ma_phieu} đã được tạo và đang chờ duyệt!`, 'success');
+      if (isEditing) {
+        if (addToast) addToast(`Phiếu ${ma_phieu} đã được cập nhật!`, 'success');
+      } else {
+        if (addToast) addToast(`Phiếu ${ma_phieu} đã được tạo và đang chờ duyệt!`, 'success');
+      }
       setShowModal(false);
       fetchHistory();
     } catch (err: any) {
-      if (addToast) addToast('Lỗi: ' + err.message, 'error');
+      console.error('Submit error:', err);
+      const userMsg =
+        err.message || 'Đã xảy ra lỗi khi lưu phiếu. Vui lòng kiểm tra lại kết nối mạng.';
+      if (addToast) addToast('❌ Lỗi hệ thống: ' + userMsg, 'error');
     } finally {
       setSubmitting(false);
     }
@@ -342,78 +573,207 @@ export const MaterialSplitMerge = ({
     setSubmitting(true);
     try {
       const today = new Date().toISOString().split('T')[0];
+      const slipCode = phieu.ma_phieu; // Use directly
 
-      // 1. Approve associated stock_in/out
-      const pref = phieu.loai === 'xa' ? 'XA-' : 'GOP-';
-      const slipCode = `${pref}${phieu.ma_phieu}`;
-
-      await supabase
-        .from('stock_in')
-        .update({ status: 'Đã duyệt', approved_by: user.id, approved_date: today })
-        .eq('slip_code', slipCode);
-
-      await supabase
+      // 1. Validate tồn kho cho các phiếu xuất trước khi duyệt
+      const { data: stockOutRecords } = await supabase
         .from('stock_out')
-        .update({ status: 'Đã duyệt', approved_by: user.id, approved_date: today })
-        .eq('slip_code', slipCode);
+        .select('id, material_id, warehouse_id, quantity')
+        .ilike('export_code', `${slipCode}%`)
+        .eq('status', 'Chờ duyệt');
 
-      // 2. Update phieu status
+      if (stockOutRecords && stockOutRecords.length > 0) {
+        for (const rec of stockOutRecords) {
+          // Sử dụng validateFutureImpact để kiểm tra xem việc xuất kho này có làm tồn kho bị âm
+          // vào bất kỳ thời điểm nào từ hôm nay trở đi hay không.
+          // Quan trọng: Truyền rec.id vào excludeId để không tự trừ đi chính nó.
+          const impact = await validateFutureImpact(
+            rec.material_id,
+            rec.warehouse_id,
+            today,
+            -Number(rec.quantity),
+            rec.id,
+          );
+
+          if (!impact.valid) {
+            const mat = materials.find((m) => m.id === rec.material_id);
+            const detailStock = await getDetailedStock(
+              rec.material_id,
+              rec.warehouse_id,
+              today,
+              rec.id,
+            );
+
+            if (addToast)
+              addToast(
+                `❌ Từ chối duyệt: Không đủ tồn kho cho "${mat?.name || 'Vật tư'}"
+- Tồn thực tế: ${formatNumber(detailStock.actual)}
+- Đang giữ chỗ (phiếu khác): ${formatNumber(detailStock.pendingOut)}
+- Khả dụng: ${formatNumber(detailStock.available)}
+- Cần xuất thêm: ${formatNumber(Number(rec.quantity))}
+- Sẽ bị âm vào ngày: ${formatDate(impact.failedDate || today)}
+→ Vui lòng kiểm tra lại hoặc nhập thêm hàng trước khi duyệt.`,
+                'error',
+              );
+            setSubmitting(false);
+            return;
+          }
+        }
+      }
+
+      // 2. Approve associated stock_in/out (Only pending ones to avoid resurrecting deleted/rejected records)
+      const { error: siErr } = await supabase
+        .from('stock_in')
+        .update({ status: 'Đã duyệt' })
+        .ilike('import_code', `${slipCode}%`)
+        .eq('status', 'Chờ duyệt');
+      if (siErr) {
+        console.error('Error approving stock_in:', siErr);
+        throw new Error(`Lỗi cập nhật phiếu nhập kho liên quan: ${siErr.message}`);
+      }
+
+      const { error: soErr } = await supabase
+        .from('stock_out')
+        .update({ status: 'Đã duyệt' })
+        .ilike('export_code', `${slipCode}%`)
+        .eq('status', 'Chờ duyệt');
+      if (soErr) {
+        console.error('Error approving stock_out:', soErr);
+        throw new Error(`Lỗi cập nhật phiếu xuất kho liên quan: ${soErr.message}`);
+      }
+
+      // 3. Update phieu status
       const { error } = await supabase
         .from('xasa_gop_phieu')
-        .update({ status: 'da_duyet' })
+        .update({
+          status: 'Đã duyệt',
+        })
         .eq('id', phieu.id);
       if (error) throw error;
 
       if (addToast) addToast(`Đã duyệt phiếu ${phieu.ma_phieu} thành công!`, 'success');
       fetchHistory();
     } catch (err: any) {
-      if (addToast) addToast('Lỗi duyệt: ' + err.message, 'error');
+      console.error('Approval flow error:', err);
+      const userMessage = err.message || 'Máy chủ không phản hồi hoặc lệnh bị từ chối.';
+      if (addToast) addToast('🚫 Lỗi duyệt: ' + userMessage, 'error');
     } finally {
       setSubmitting(false);
     }
   };
 
   const handleRejectPhieu = async (phieu: any) => {
-    if (!window.confirm(`Từ chối và xóa phiếu ${phieu.ma_phieu}?`)) return;
+    setPhieuToReject(phieu);
+    setShowRejectConfirm(true);
+  };
 
+  const confirmRejectPhieu = async () => {
+    const phieu = phieuToReject;
+    if (!phieu) return;
+    setShowRejectConfirm(false);
     setSubmitting(true);
     try {
-      const pref = phieu.loai === 'xa' ? 'XA-' : 'GOP-';
-      const slipCode = `${pref}${phieu.ma_phieu}`;
+      const slipCode = phieu.ma_phieu;
 
-      // Soft delete stock records
-      await supabase.from('stock_in').update({ status: 'Đã xóa' }).eq('slip_code', slipCode);
-      await supabase.from('stock_out').update({ status: 'Đã xóa' }).eq('slip_code', slipCode);
+      // Set associated stock records to "Từ chối"
+      await supabase
+        .from('stock_in')
+        .update({ status: 'Từ chối' })
+        .ilike('import_code', `${slipCode}%`);
+      await supabase
+        .from('stock_out')
+        .update({ status: 'Từ chối' })
+        .ilike('export_code', `${slipCode}%`);
 
-      // Delete phieu chi tiet
-      await supabase.from('xasa_gop_chi_tiet').delete().eq('phieu_id', phieu.id);
+      // Đưa phieu header vào trạng thái "Từ chối"
+      const { error } = await supabase
+        .from('xasa_gop_phieu')
+        .update({ status: 'Từ chối' })
+        .eq('id', phieu.id);
+      if (error) throw error;
 
-      // Đưa phieu header vào thùng rác (Soft Delete)
+      if (addToast) addToast(`Đã từ chối phiếu ${phieu.ma_phieu}`, 'info');
+      fetchHistory();
+    } catch (err: any) {
+      console.error('Reject error:', err);
+      if (addToast)
+        addToast('❌ Lỗi từ chối: ' + (err.message || 'Không thể cập nhật trạng thái'), 'error');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleDeletePhieu = (phieu: any) => {
+    if (!phieu) {
+      if (addToast) addToast('❌ Lỗi: Không tìm thấy thông tin phiếu để xóa', 'error');
+      return;
+    }
+    setPhieuToDelete(phieu);
+    setShowDeleteConfirm(true);
+  };
+
+  const confirmDeletePhieu = async () => {
+    const phieu = phieuToDelete;
+    if (!phieu) return;
+    setShowDeleteConfirm(false);
+    setSubmitting(true);
+    try {
+      const slipCode = phieu.ma_phieu;
+
+      // Soft delete associated stock records
+      const { error: siErr } = await supabase
+        .from('stock_in')
+        .update({ status: 'Đã xóa' })
+        .ilike('import_code', `${slipCode}%`);
+      if (siErr) throw new Error(`Lỗi xóa dữ liệu nhập kho: ${siErr.message}`);
+
+      const { error: soErr } = await supabase
+        .from('stock_out')
+        .update({ status: 'Đã xóa' })
+        .ilike('export_code', `${slipCode}%`);
+      if (soErr) throw new Error(`Lỗi xóa dữ liệu xuất kho: ${soErr.message}`);
+
+      // Soft delete phieu header
       const { error } = await supabase
         .from('xasa_gop_phieu')
         .update({ status: 'Đã xóa' })
         .eq('id', phieu.id);
       if (error) throw error;
 
-      if (addToast) addToast('Đã từ chối và xóa phiếu', 'info');
+      if (addToast)
+        addToast('✅ Đã chuyển phiếu ' + phieu.ma_phieu + ' vào thùng rác thành công', 'success');
+      setShowDetailPhieu(false);
       fetchHistory();
     } catch (err: any) {
-      if (addToast) addToast('Lỗi: ' + err.message, 'error');
+      if (addToast)
+        addToast('🗑️ Lỗi xóa: ' + (err.message || 'Không thể chuyển vào thùng rác'), 'error');
     } finally {
       setSubmitting(false);
     }
   };
 
   const getStatusBadge = (status: string) => {
-    switch (status) {
-      case 'cho_duyet':
-        return { label: 'Chờ duyệt', bg: 'bg-primary/10', text: 'text-primary' };
-      case 'da_duyet':
-        return { label: 'Đã duyệt', bg: 'bg-green-100', text: 'text-green-700' };
-      case 'da_huy':
-        return { label: 'Đã hủy', bg: 'bg-red-100', text: 'text-red-700' };
+    // Map legacy keys if they exist
+    const s =
+      status === 'cho_duyet'
+        ? 'Chờ duyệt'
+        : status === 'da_duyet'
+          ? 'Đã duyệt'
+          : status === 'da_huy'
+            ? 'Từ chối'
+            : status;
+
+    switch (s) {
+      case 'Chờ duyệt':
+        return { label: 'Chờ duyệt', bg: 'bg-yellow-50', text: 'text-yellow-600' };
+      case 'Đã duyệt':
+        return { label: 'Đã duyệt', bg: 'bg-green-50', text: 'text-green-600' };
+      case 'Từ chối':
+        return { label: 'Từ chối', bg: 'bg-red-50', text: 'text-red-600' };
+      case 'Đã xóa':
+        return { label: 'Đã xóa', bg: 'bg-gray-50', text: 'text-gray-400' };
       default:
-        return { label: 'Đã duyệt', bg: 'bg-green-100', text: 'text-green-700' };
+        return { label: s || 'Chờ duyệt', bg: 'bg-gray-50', text: 'text-gray-600' };
     }
   };
 
@@ -423,11 +783,19 @@ export const MaterialSplitMerge = ({
   }));
   const warehouseOptions = warehouses.map((w) => ({ id: w.id, name: w.name }));
 
-  const filteredHistory = history.filter((h) => {
-    if (!searchTerm) return true;
-    const s = searchTerm.toLowerCase();
-    return (h.ma_phieu || '').toLowerCase().includes(s);
-  });
+  const filteredHistory = history
+    .filter((h) => {
+      if (h.status === 'Đã xóa') return false;
+      if (!searchTerm) return true;
+      const s = searchTerm.toLowerCase();
+      return (h.ma_phieu || '').toLowerCase().includes(s);
+    })
+    .sort((a, b) => {
+      if (sortBy === 'newest')
+        return new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime();
+      if (sortBy === 'code') return (a.ma_phieu || '').localeCompare(b.ma_phieu || '');
+      return 0;
+    });
 
   const handleExportExcel = () => {
     import('@/utils/excelExport').then(({ exportToExcel }) => {
@@ -444,16 +812,28 @@ export const MaterialSplitMerge = ({
           'Số lượng',
           'Ghi chú',
         ],
-        rows: slips.map((s) => [
-          s.slip_code ?? '',
-          s.type ?? '',
-          s.date ?? '',
-          s.warehouses?.name ?? '',
-          s.from_material?.name ?? '',
-          s.to_material?.name ?? '',
-          s.quantity,
-          s.notes ?? '',
-        ]),
+        rows: history.map((s) => {
+          const chiTiet = s.xasa_gop_chi_tiet || [];
+          const nguon = chiTiet
+            .filter((d: any) => d.vai_tro === 'nguon')
+            .map((d: any) => d.materials?.name || '')
+            .join(', ');
+          const ra = chiTiet
+            .filter((d: any) => d.vai_tro === 'ra')
+            .map((d: any) => d.materials?.name || '')
+            .join(', ');
+          const tongSL = chiTiet.reduce((sum: number, d: any) => sum + Number(d.so_luong || 0), 0);
+          return [
+            s.ma_phieu ?? '',
+            s.loai === 'xa' ? 'Xả' : 'Gộp',
+            formatDate(s.ngay) ?? '',
+            s.warehouses?.name ?? '',
+            nguon,
+            ra,
+            tongSL,
+            s.ghi_chu ?? '',
+          ];
+        }),
         fileName: `CDX_TachGhep_${new Date().toISOString().slice(0, 10)}.xlsx`,
         addToast,
       });
@@ -616,7 +996,7 @@ export const MaterialSplitMerge = ({
                         const badge = getStatusBadge(item.status);
                         return (
                           <span
-                            className={`px-1 rounded text-[7px] font-bold shrink-0 ${badge.bg} ${badge.text}`}
+                            className={`px-2 py-0.5 rounded-full text-[10px] font-bold shrink-0 ${badge.bg} ${badge.text}`}
                           >
                             {badge.label}
                           </span>
@@ -655,7 +1035,7 @@ export const MaterialSplitMerge = ({
             >
               {/* Header */}
               <div
-                className={`p-6 text-white flex items-center justify-between rounded-t-[2rem] md:rounded-t-[2.5rem] flex-shrink-0 ${mode === 'xa' ? 'bg-orange-500' : 'bg-blue-500'}`}
+                className={`p-6 text-white flex items-center justify-between flex-shrink-0 ${mode === 'xa' ? 'bg-orange-500' : 'bg-blue-500'}`}
               >
                 <div className="flex items-center gap-3">
                   <button
@@ -665,16 +1045,19 @@ export const MaterialSplitMerge = ({
                     <X size={20} />
                   </button>
                   <div>
-                    <h2 className="font-bold text-lg">
-                      {mode === 'xa' ? 'Xả vật tư' : 'Gộp vật tư'}
-                    </h2>
+                    <h3 className="font-bold text-lg">
+                      {isEditing
+                        ? `Sửa phiếu ${editingPhieu?.ma_phieu}`
+                        : mode === 'xa'
+                          ? 'Xả vật tư'
+                          : 'Gộp vật tư'}
+                    </h3>
                     <p className="text-xs text-white/70">
                       {mode === 'xa' ? '1 vật tư nguồn → Nhiều mảnh' : 'Nhiều mảnh → 1 vật tư mới'}
                     </p>
                   </div>
                 </div>
               </div>
-
               {/* Body */}
               <div className="p-6 space-y-5 overflow-y-auto flex-1">
                 {/* Kho */}
@@ -686,154 +1069,168 @@ export const MaterialSplitMerge = ({
                     value={kho_id}
                     options={warehouseOptions}
                     onChange={(val) => setKhoId(val)}
-                    placeholder="Chọn kho..."
                     allowCreate={false}
+                    placeholder="Chọn kho..."
                   />
                 </div>
 
                 {mode === 'xa' ? (
                   <>
                     {/* Nguồn xả */}
-                    <div className="bg-orange-50 rounded-2xl p-4 border border-orange-100">
-                      <div className="flex items-center justify-between mb-1">
-                        <h4 className="text-xs font-bold text-orange-700 uppercase">
-                          📦 Vật tư nguồn
-                        </h4>
-                        <button
-                          type="button"
-                          onClick={() => setShowAddMaterial(true)}
-                          className="text-[10px] font-bold text-orange-600 flex items-center gap-1 hover:underline"
-                        >
-                          <Plus size={12} /> Thêm vật tư mới
-                        </button>
+                    <div className="bg-orange-50/50 rounded-3xl p-5 border border-orange-100 shadow-sm relative">
+                      <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3 mb-4">
+                        <div className="flex flex-col gap-1">
+                          <h4 className="text-xs font-black text-orange-700 uppercase tracking-widest flex items-center gap-2">
+                            <Package size={14} /> Vật tư nguồn
+                          </h4>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setQuickAddTarget({ type: 'nguonXa' });
+                              setShowAddMaterial(true);
+                            }}
+                            className="text-[10px] font-bold text-orange-600 hover:underline text-left"
+                          >
+                            + Thêm vật tư nhanh
+                          </button>
+                        </div>
                       </div>
                       <CreatableSelect
                         value={nguonXa.material_id}
                         options={materialOptions}
-                        onChange={(val) => handleSelectNguonXa(val)}
-                        onCreate={(name) => {
-                          setQuickAddTarget({ type: 'nguonXa' });
-                          setInitialMaterialName(name);
-                          setShowAddMaterial(true);
+                        onChange={(val) => {
+                          handleSelectNguonXa(val);
                         }}
+                        allowCreate={false}
                         placeholder="Chọn vật tư cần xả..."
                       />
                       {nguonXa.material_id && (
-                        <div className="mt-3 grid grid-cols-12 gap-3">
-                          <div className="col-span-8">
+                        <div className="mt-4 flex flex-col gap-4">
+                          <div className="w-full">
                             <NumericInput
-                              label="Số lượng xả"
+                              label=""
                               value={nguonXa.so_luong}
                               onChange={(val) => setNguonXa({ ...nguonXa, so_luong: val })}
                             />
                           </div>
-                          <div className="col-span-4">
-                            <label className="text-[10px] font-bold text-gray-400 uppercase block mb-1">
-                              ĐVT
-                            </label>
+                          <div className="w-full">
                             <input
                               type="text"
                               value={nguonXa.don_vi}
                               onChange={(e) => setNguonXa({ ...nguonXa, don_vi: e.target.value })}
-                              className="w-full px-3 py-2.5 rounded-xl border border-gray-200 text-sm bg-gray-50/50"
+                              placeholder="Đơn vị tính..."
+                              className="w-full px-4 py-2.5 rounded-2xl border border-gray-200 text-sm bg-white font-bold text-gray-700 shadow-sm outline-none focus:ring-2 focus:ring-orange-500/20"
                             />
                           </div>
                           {kho_id && (
-                            <p className="text-[10px] text-gray-500 col-span-2">
-                              Tồn kho hiện tại:{' '}
-                              <span className="font-bold text-primary">
-                                {formatNumber(nguonXa.ton_kho)}
+                            <div className="col-span-12 flex items-center gap-2">
+                              <span className="text-[10px] text-gray-400 font-bold uppercase tracking-tight">
+                                Tồn kho hiện tại:
                               </span>
-                            </p>
+                              <div className="px-3 py-1 bg-white border border-gray-100 rounded-full shadow-sm">
+                                <span className="text-xs font-black text-orange-600">
+                                  {formatNumber(nguonXa.ton_kho)}{' '}
+                                  <span className="text-[10px] text-gray-400 font-bold tracking-tight">
+                                    {nguonXa.don_vi || 'đang tải...'}
+                                  </span>
+                                </span>
+                              </div>
+                            </div>
                           )}
                         </div>
                       )}
                     </div>
 
                     {/* Output xả */}
-                    <div>
-                      <div className="flex items-center justify-between mb-3">
-                        <h4 className="text-xs font-bold text-gray-600 uppercase">
-                          ✂️ Mảnh ra ({outputXa.length})
-                        </h4>
-                        <div className="flex items-center gap-2">
+                    <div className="bg-gray-50/50 rounded-3xl p-5 border border-gray-100 shadow-sm">
+                      <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3 mb-4">
+                        <div className="flex flex-col gap-1">
+                          <h4 className="text-xs font-black text-gray-600 uppercase tracking-widest flex items-center gap-2 whitespace-nowrap">
+                            ✂️ Mảnh ra ({outputXa.length})
+                          </h4>
                           <button
                             type="button"
                             onClick={() => {
                               setQuickAddTarget({
                                 type: 'outputXa',
-                                index: outputXa.length, // Sẽ điền vào dòng mới tạo
+                                index: outputXa.length,
                               });
                               addOutputXa();
                               setShowAddMaterial(true);
                             }}
-                            className="text-[10px] font-bold text-orange-600 flex items-center gap-1 hover:underline mr-2"
+                            className="text-[10px] font-bold text-orange-600 hover:underline text-left"
                           >
-                            <Plus size={12} /> Thêm vật tư mới
+                            + Thêm vật tư nhanh
                           </button>
-                          <Button size="sm" variant="outline" icon={Plus} onClick={addOutputXa}>
-                            Thêm dòng
-                          </Button>
                         </div>
-                      </div>
-                      {outputXa.map((o, idx) => (
-                        <div
-                          key={idx}
-                          className="flex items-center gap-2 mb-2 bg-gray-50 rounded-xl p-3"
+                        <Button
+                          size="sm"
+                          variant="secondary"
+                          icon={Plus}
+                          onClick={addOutputXa}
+                          className="rounded-lg text-[10px] h-8 px-3 whitespace-nowrap font-bold shrink-0 self-start sm:self-auto"
                         >
-                          <div className="flex-1">
-                            <CreatableSelect
-                              value={o.material_id}
-                              options={materialOptions}
-                              onChange={(val) => {
-                                const mat = materials.find((m) => m.id === val);
-                                const updated = [...outputXa];
-                                updated[idx] = {
-                                  ...updated[idx],
-                                  material_id: val,
-                                  material_name: mat?.name || '',
-                                  don_vi: mat?.unit || '',
-                                };
-                                setOutputXa(updated);
-                              }}
-                              onCreate={(name) => {
-                                setQuickAddTarget({ type: 'outputXa', index: idx });
-                                setInitialMaterialName(name);
-                                setShowAddMaterial(true);
-                              }}
-                              placeholder="Chọn vật tư..."
-                            />
-                          </div>
-                          <div className="w-20 md:w-24">
-                            <NumericInput
-                              label=""
-                              value={o.so_luong}
-                              onChange={(val) => {
-                                const updated = [...outputXa];
-                                updated[idx] = { ...updated[idx], so_luong: val };
-                                setOutputXa(updated);
-                              }}
-                            />
-                          </div>
-                          <button
-                            onClick={() => setOutputXa(outputXa.filter((_, i) => i !== idx))}
-                            className="p-1.5 text-red-400 hover:bg-red-50 rounded-lg shrink-0"
+                          THÊM DÒNG
+                        </Button>
+                      </div>
+                      <div className="space-y-3">
+                        {outputXa.map((o, idx) => (
+                          <div
+                            key={idx}
+                            className="flex flex-col gap-3 bg-white rounded-2xl p-3 border border-gray-100 shadow-sm hover:shadow-md transition-all group"
                           >
-                            <Trash2 size={14} />
-                          </button>
-                        </div>
-                      ))}
+                            <div className="w-full">
+                              <CreatableSelect
+                                value={o.material_id}
+                                options={materialOptions}
+                                onChange={(val) => {
+                                  const mat = materials.find((m) => m.id === val);
+                                  const updated = [...outputXa];
+                                  updated[idx] = {
+                                    ...updated[idx],
+                                    material_id: val,
+                                    material_name: mat?.name || '',
+                                    don_vi: mat?.unit || '',
+                                  };
+                                  setOutputXa(updated);
+                                }}
+                                allowCreate={false}
+                                placeholder="Chọn vật tư..."
+                              />
+                            </div>
+                            <div className="flex items-center gap-3">
+                              <div className="flex-1">
+                                <NumericInput
+                                  label=""
+                                  value={o.so_luong}
+                                  onChange={(val) => {
+                                    const updated = [...outputXa];
+                                    updated[idx] = { ...updated[idx], so_luong: val };
+                                    setOutputXa(updated);
+                                  }}
+                                />
+                              </div>
+                              <button
+                                onClick={() => setOutputXa(outputXa.filter((_, i) => i !== idx))}
+                                className="w-9 h-9 flex items-center justify-center text-red-400 hover:bg-red-50 hover:text-red-500 rounded-xl transition-colors shrink-0 border border-red-50 shadow-sm"
+                              >
+                                <Trash2 size={16} />
+                              </button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
                     </div>
                   </>
                 ) : (
                   <>
                     {/* Nguồn gộp */}
-                    <div>
-                      <div className="flex items-center justify-between mb-3">
-                        <h4 className="text-xs font-bold text-blue-700 uppercase">
-                          📦 Vật tư nguồn ({nguonGop.length})
-                        </h4>
-                        <div className="flex items-center gap-2">
+                    <div className="bg-blue-50/50 rounded-3xl p-5 border border-blue-100 shadow-sm">
+                      <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3 mb-4">
+                        <div className="flex flex-col gap-1">
+                          <h4 className="text-xs font-black text-blue-700 uppercase tracking-widest flex items-center gap-2 whitespace-nowrap">
+                            📦 Vật tư nguồn ({nguonGop.length})
+                          </h4>
                           <button
                             type="button"
                             onClick={() => {
@@ -844,151 +1241,170 @@ export const MaterialSplitMerge = ({
                               addNguonGop();
                               setShowAddMaterial(true);
                             }}
-                            className="text-[10px] font-bold text-blue-600 flex items-center gap-1 hover:underline mr-2"
+                            className="text-[10px] font-bold text-blue-600 hover:underline text-left"
                           >
-                            <Plus size={12} /> Thêm vật tư mới
+                            + Thêm vật tư nhanh
                           </button>
-                          <Button size="sm" variant="outline" icon={Plus} onClick={addNguonGop}>
-                            Thêm dòng
-                          </Button>
                         </div>
+                        <Button
+                          size="sm"
+                          variant="secondary"
+                          icon={Plus}
+                          onClick={addNguonGop}
+                          className="rounded-lg text-[10px] h-8 px-3 whitespace-nowrap font-bold shrink-0 self-start sm:self-auto"
+                        >
+                          THÊM DÒNG
+                        </Button>
                       </div>
-                      {nguonGop.map((n, idx) => (
-                        <div className="flex items-center gap-2 mb-2 bg-blue-50 rounded-xl p-3">
-                          <div className="flex-1">
-                            <CreatableSelect
-                              value={n.material_id}
-                              options={materialOptions}
-                              onChange={(val) => {
-                                const mat = materials.find((m) => m.id === val);
-                                const updated = [...nguonGop];
-                                updated[idx] = {
-                                  ...updated[idx],
-                                  material_id: val,
-                                  material_name: mat?.name || '',
-                                  don_vi: mat?.unit || '',
-                                };
-                                setNguonGop(updated);
-                              }}
-                              onCreate={(name) => {
-                                setQuickAddTarget({ type: 'nguonGop', index: idx });
-                                setInitialMaterialName(name);
-                                setShowAddMaterial(true);
-                              }}
-                              placeholder="Chọn vật tư..."
-                            />
-                          </div>
-                          <div className="w-20 md:w-24">
-                            <NumericInput
-                              label=""
-                              value={n.so_luong}
-                              onChange={(val) => {
-                                const updated = [...nguonGop];
-                                updated[idx] = { ...updated[idx], so_luong: val };
-                                setNguonGop(updated);
-                              }}
-                            />
-                          </div>
-                          <button
-                            onClick={() => setNguonGop(nguonGop.filter((_, i) => i !== idx))}
-                            className="p-1.5 text-red-400 hover:bg-red-50 rounded-lg shrink-0"
+                      <div className="space-y-3">
+                        {nguonGop.map((n, idx) => (
+                          <div
+                            key={idx}
+                            className="flex flex-col gap-3 bg-white rounded-2xl p-3 border border-gray-100 shadow-sm hover:shadow-md transition-all group"
                           >
-                            <Trash2 size={14} />
-                          </button>
-                        </div>
-                      ))}
+                            <div className="w-full">
+                              <CreatableSelect
+                                value={n.material_id}
+                                options={materialOptions}
+                                onChange={(val) => {
+                                  const mat = materials.find((m) => m.id === val);
+                                  const updated = [...nguonGop];
+                                  updated[idx] = {
+                                    ...updated[idx],
+                                    material_id: val,
+                                    material_name: mat?.name || '',
+                                    don_vi: mat?.unit || '',
+                                  };
+                                  setNguonGop(updated);
+                                }}
+                                allowCreate={false}
+                                placeholder="Chọn vật tư..."
+                              />
+                            </div>
+                            <div className="flex items-center gap-3">
+                              <div className="flex-1">
+                                <NumericInput
+                                  label=""
+                                  value={n.so_luong}
+                                  onChange={(val) => {
+                                    const updated = [...nguonGop];
+                                    updated[idx] = { ...updated[idx], so_luong: val };
+                                    setNguonGop(updated);
+                                  }}
+                                />
+                              </div>
+                              <button
+                                onClick={() => setNguonGop(nguonGop.filter((_, i) => i !== idx))}
+                                className="w-9 h-9 flex items-center justify-center text-red-400 hover:bg-red-50 hover:text-red-500 rounded-xl transition-colors shrink-0 border border-red-50"
+                              >
+                                <Trash2 size={16} />
+                              </button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
                     </div>
 
                     {/* Output gộp */}
-                    <div className="bg-blue-50 rounded-2xl p-4 border border-blue-100">
-                      <div className="flex items-center justify-between mb-1">
-                        <h4 className="text-xs font-bold text-blue-700 uppercase">
-                          🔗 Vật tư gộp ra
-                        </h4>
-                        <button
-                          type="button"
-                          onClick={() => setShowAddMaterial(true)}
-                          className="text-[10px] font-bold text-blue-600 flex items-center gap-1 hover:underline"
-                        >
-                          <Plus size={12} /> Thêm vật tư mới
-                        </button>
-                      </div>
-                      <CreatableSelect
-                        value={outputGop.material_id}
-                        options={materialOptions}
-                        onChange={(val) => {
-                          const mat = materials.find((m) => m.id === val);
-                          setOutputGop({
-                            ...outputGop,
-                            material_id: val,
-                            material_name: mat?.name || '',
-                            don_vi: mat?.unit || '',
-                          });
-                        }}
-                        onCreate={(name) => {
-                          setQuickAddTarget({ type: 'outputGop' });
-                          setInitialMaterialName(name);
-                          setShowAddMaterial(true);
-                        }}
-                        placeholder="Chọn vật tư đầu ra..."
-                      />
-                      {outputGop.material_id && (
-                        <div className="mt-3 grid grid-cols-12 gap-3">
-                          <div className="col-span-8">
-                            <NumericInput
-                              label="Số lượng"
-                              value={outputGop.so_luong}
-                              onChange={(val) => setOutputGop({ ...outputGop, so_luong: val })}
-                            />
-                          </div>
-                          <div className="col-span-4">
-                            <label className="text-[10px] font-bold text-gray-400 uppercase block mb-1">
-                              ĐVT
-                            </label>
-                            <input
-                              type="text"
-                              value={outputGop.don_vi}
-                              onChange={(e) =>
-                                setOutputGop({ ...outputGop, don_vi: e.target.value })
-                              }
-                              className="w-full px-3 py-2.5 rounded-xl border border-gray-200 text-sm"
-                            />
+                    <div className="bg-blue-50/50 rounded-3xl p-5 border border-blue-100 shadow-sm relative">
+                      <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/5 rounded-full -mr-16 -mt-16" />
+                      <div className="relative z-10">
+                        <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3 mb-4">
+                          <div className="flex flex-col gap-1">
+                            <h4 className="text-xs font-black text-blue-700 uppercase tracking-widest flex items-center gap-2">
+                              🔗 Vật tư gộp ra
+                            </h4>
+                            <button
+                              type="button"
+                              onClick={() => setShowAddMaterial(true)}
+                              className="text-[10px] font-bold text-blue-600 hover:underline text-left"
+                            >
+                              + Thêm vật tư nhanh
+                            </button>
                           </div>
                         </div>
-                      )}
+                        <CreatableSelect
+                          value={outputGop.material_id}
+                          options={materialOptions}
+                          onChange={(val) => {
+                            const mat = materials.find((m) => m.id === val);
+                            setOutputGop({
+                              ...outputGop,
+                              material_id: val,
+                              material_name: mat?.name || '',
+                              don_vi: mat?.unit || '',
+                            });
+                          }}
+                          allowCreate={false}
+                          placeholder="Chọn vật tư đầu ra..."
+                        />
+                        {outputGop.material_id && (
+                          <div className="mt-4 flex flex-col gap-4">
+                            <div className="w-full">
+                              <NumericInput
+                                label=""
+                                value={outputGop.so_luong}
+                                onChange={(val) => setOutputGop({ ...outputGop, so_luong: val })}
+                              />
+                            </div>
+                            <div className="w-full">
+                              <input
+                                type="text"
+                                value={outputGop.don_vi}
+                                onChange={(e) =>
+                                  setOutputGop({ ...outputGop, don_vi: e.target.value })
+                                }
+                                placeholder="Đơn vị tính..."
+                                className="w-full px-4 py-2.5 rounded-2xl border border-gray-200 text-sm bg-white font-bold text-gray-700 shadow-sm outline-none focus:ring-2 focus:ring-blue-500/20"
+                              />
+                            </div>
+                          </div>
+                        )}
+                      </div>
                     </div>
                   </>
                 )}
 
                 {/* Ghi chú */}
-                <div>
-                  <label className="text-[10px] font-bold text-gray-400 uppercase block mb-1">
-                    Ghi chú
+                <div className="bg-gray-50/50 p-5 rounded-3xl border border-gray-100 shadow-inner">
+                  <label className="text-[10px] font-black text-gray-400 uppercase block mb-2 tracking-widest ml-1">
+                    📖 Ghi chú & Diễn giải
                   </label>
-                  <input
-                    type="text"
+                  <textarea
+                    rows={2}
                     value={ghi_chu}
                     onChange={(e) => setGhiChu(e.target.value)}
-                    placeholder="Ghi chú..."
-                    className="w-full px-4 py-3 rounded-xl border border-gray-200 text-sm"
+                    placeholder="Nhập ghi chú chi tiết nếu có..."
+                    className="w-full px-4 py-3 rounded-2xl border border-gray-200 text-sm outline-none focus:ring-4 focus:ring-primary/5 transition-all resize-none bg-white font-medium"
                   />
                 </div>
               </div>
 
               {/* Footer */}
-              <div className="p-6 border-t border-gray-100 flex justify-end gap-3 shrink-0">
+              <div className="p-8 border-t border-gray-100 flex justify-end gap-4 bg-gray-50/30 rounded-b-[2.5rem] flex-shrink-0">
                 <button
                   onClick={() => setShowModal(false)}
-                  className="px-6 py-2.5 rounded-xl text-sm font-bold text-gray-500 hover:bg-gray-100"
+                  className="px-4 py-1.5 rounded-lg text-[10px] font-bold text-gray-500 hover:bg-white hover:shadow-md transition-all active:scale-95 border border-transparent hover:border-gray-100 uppercase"
                 >
-                  Hủy
+                  HUỶ BỎ
                 </button>
                 <button
                   onClick={handleSubmit}
                   disabled={submitting}
-                  className={`px-8 py-2.5 rounded-xl text-sm font-bold text-white shadow-lg disabled:opacity-50 ${mode === 'xa' ? 'bg-orange-500 hover:bg-orange-600 shadow-orange-500/20' : 'bg-blue-500 hover:bg-blue-600 shadow-blue-500/20'}`}
+                  className={`px-6 py-1.5 rounded-lg text-[10px] font-bold text-white shadow-md transform transition-all active:scale-95 disabled:opacity-50 disabled:scale-100 uppercase ${
+                    mode === 'xa'
+                      ? 'bg-gradient-to-r from-orange-500 to-orange-600 shadow-orange-500/10'
+                      : 'bg-gradient-to-r from-blue-500 to-blue-600 shadow-blue-500/10'
+                  }`}
                 >
-                  {submitting ? 'Đang xử lý...' : 'Xác nhận'}
+                  {submitting ? (
+                    <div className="flex items-center gap-2">
+                      <div className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                      XỬ LÝ...
+                    </div>
+                  ) : (
+                    'XÁC NHẬN PHIẾU'
+                  )}
                 </button>
               </div>
             </motion.div>
@@ -1010,55 +1426,71 @@ export const MaterialSplitMerge = ({
               onClick={(e) => e.stopPropagation()}
             >
               <div
-                className={`p-6 text-white flex items-center justify-between rounded-t-[2rem] md:rounded-t-[2.5rem] flex-shrink-0 ${selectedPhieu.loai === 'xa' ? 'bg-orange-500' : 'bg-blue-500'}`}
+                className={`p-6 text-white flex items-center justify-between flex-shrink-0 bg-gradient-to-r ${selectedPhieu.loai === 'xa' ? 'from-orange-500 to-orange-600' : 'from-blue-500 to-blue-600'}`}
               >
-                <div className="flex items-center gap-3">
-                  <div className="p-2 bg-white/20 rounded-xl">
+                <div className="flex items-center gap-4">
+                  <div className="p-3 bg-white/20 rounded-2xl backdrop-blur-md shadow-inner">
                     {selectedPhieu.loai === 'xa' ? <Scissors size={24} /> : <Merge size={24} />}
                   </div>
                   <div>
-                    <h2 className="font-bold text-lg">Chi tiết phiếu {selectedPhieu.ma_phieu}</h2>
-                    <p className="text-xs text-white/70">
-                      Loại: {selectedPhieu.loai === 'xa' ? 'Xả vật tư' : 'Gộp vật tư'}
+                    <h2 className="font-extrabold text-xl uppercase tracking-wider">
+                      Chi tiết phiếu
+                    </h2>
+                    <p className="text-[10px] text-white/80 font-bold uppercase tracking-widest mt-0.5">
+                      Mã: {selectedPhieu.ma_phieu} •{' '}
+                      {selectedPhieu.loai === 'xa' ? 'Xả vật tư' : 'Gộp vật tư'}
                     </p>
                   </div>
                 </div>
                 <button
                   onClick={() => setShowDetailPhieu(false)}
-                  className="p-2 hover:bg-white/20 rounded-xl transition-all"
+                  className="p-3 hover:bg-white/20 rounded-2xl transition-all active:scale-90"
                 >
                   <X size={24} />
                 </button>
               </div>
 
-              <div className="flex-1 overflow-y-auto p-6 space-y-6">
+              <div className="flex-1 overflow-y-auto p-4 space-y-4">
                 {/* Meta info */}
-                <div className="grid grid-cols-2 gap-4 bg-gray-50 p-4 rounded-2xl">
-                  <div>
-                    <p className="text-[10px] text-gray-400 font-bold uppercase">Ngày thực hiện</p>
-                    <p className="text-sm font-bold text-gray-800">
+                <div className="grid grid-cols-2 gap-4 bg-gray-50/50 p-6 rounded-3xl border border-gray-100 shadow-inner">
+                  <div className="space-y-1">
+                    <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">
+                      Ngày thực hiện
+                    </p>
+                    <p className="text-sm font-extrabold text-gray-800">
                       {formatDate(selectedPhieu.ngay)}
                     </p>
                   </div>
-                  <div>
-                    <p className="text-[10px] text-gray-400 font-bold uppercase">Kho xử lý</p>
-                    <p className="text-sm font-bold text-gray-800">
+                  <div className="space-y-1">
+                    <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">
+                      Kho xử lý
+                    </p>
+                    <p className="text-sm font-extrabold text-gray-800">
                       {selectedPhieu.warehouses?.name}
                     </p>
                   </div>
-                  <div>
-                    <p className="text-[10px] text-gray-400 font-bold uppercase">Người tạo</p>
-                    <p className="text-sm font-bold text-gray-800">
-                      {selectedPhieu.users?.full_name}
+                  <div className="space-y-1 mt-2">
+                    <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">
+                      Người tạo
                     </p>
+                    <div className="flex items-center gap-2">
+                      <div className="w-5 h-5 bg-primary/10 rounded-full flex items-center justify-center text-[10px] font-bold text-primary">
+                        {selectedPhieu.users?.full_name?.charAt(0)}
+                      </div>
+                      <p className="text-sm font-extrabold text-gray-800">
+                        {selectedPhieu.users?.full_name}
+                      </p>
+                    </div>
                   </div>
-                  <div>
-                    <p className="text-[10px] text-gray-400 font-bold uppercase">Trạng thái</p>
-                    <span
-                      className={`px-2 py-0.5 rounded-lg text-xs font-bold ${getStatusBadge(selectedPhieu.status).bg} ${getStatusBadge(selectedPhieu.status).text}`}
+                  <div className="space-y-2 mt-2">
+                    <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">
+                      Trạng thái
+                    </p>
+                    <div
+                      className={`inline-flex px-3 py-1 rounded-full text-[10px] font-black tracking-widest uppercase ${getStatusBadge(selectedPhieu.status).bg} ${getStatusBadge(selectedPhieu.status).text} border border-current opacity-80`}
                     >
                       {getStatusBadge(selectedPhieu.status).label}
-                    </span>
+                    </div>
                   </div>
                 </div>
 
@@ -1132,44 +1564,85 @@ export const MaterialSplitMerge = ({
                 </div>
 
                 {selectedPhieu.ghi_chu && (
-                  <div className="bg-gray-50 p-4 rounded-2xl">
-                    <p className="text-[10px] text-gray-400 font-bold uppercase mb-1">Ghi chú</p>
-                    <p className="text-sm text-gray-600 italic">“{selectedPhieu.ghi_chu}”</p>
+                  <div className="bg-gray-50/50 p-5 rounded-3xl border border-gray-100 shadow-inner">
+                    <p className="text-[10px] text-gray-400 font-black uppercase tracking-widest mb-2 ml-1">
+                      📖 Ghi chú & Diễn giải
+                    </p>
+                    <p className="text-sm text-gray-600 font-medium italic leading-relaxed">
+                      “{selectedPhieu.ghi_chu}”
+                    </p>
                   </div>
                 )}
               </div>
 
-              {selectedPhieu.status === 'cho_duyet' &&
-                (user.role === 'Admin' || user.role === 'Develop') && (
-                  <div className="p-6 border-t border-gray-100 bg-gray-50 flex gap-3">
+              <div className="p-3 border-t border-gray-100 bg-gray-50 flex flex-col gap-2">
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="flex-1 rounded-lg text-red-500 border-red-50 hover:bg-red-50 text-[10px] font-bold uppercase h-8"
+                    icon={Trash2}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleDeletePhieu(selectedPhieu);
+                    }}
+                    isLoading={submitting}
+                  >
+                    Xóa phiếu
+                  </Button>
+                  {(selectedPhieu.status === 'Chờ duyệt' ||
+                    selectedPhieu.status === 'Từ chối' ||
+                    selectedPhieu.status === 'Đã duyệt') && (
                     <Button
-                      variant="danger"
-                      className="flex-1 rounded-2xl"
-                      icon={Trash2}
+                      variant="outline"
+                      size="sm"
+                      className="flex-1 rounded-lg text-[10px] font-bold uppercase h-8"
+                      icon={Edit}
                       onClick={(e) => {
                         e.stopPropagation();
-                        handleRejectPhieu(selectedPhieu);
-                        setShowDetailPhieu(false);
+                        handleEditPhieu(selectedPhieu);
                       }}
                       isLoading={submitting}
                     >
-                      Từ chối
+                      Sửa
                     </Button>
-                    <Button
-                      variant="success"
-                      className="flex-1 rounded-2xl"
-                      icon={Package}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleApprovePhieu(selectedPhieu);
-                        setShowDetailPhieu(false);
-                      }}
-                      isLoading={submitting}
-                    >
-                      Duyệt phiếu
-                    </Button>
-                  </div>
-                )}
+                  )}
+                </div>
+
+                {selectedPhieu.status === 'Chờ duyệt' &&
+                  (user.role === 'Admin' || user.role === 'Develop') && (
+                    <div className="flex gap-2 pt-2 border-t border-gray-100">
+                      <Button
+                        variant="danger"
+                        size="sm"
+                        className="flex-1 rounded-lg text-[10px] font-bold uppercase shadow-sm h-8"
+                        icon={X}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleRejectPhieu(selectedPhieu);
+                          setShowDetailPhieu(false);
+                        }}
+                        isLoading={submitting}
+                      >
+                        Từ chối
+                      </Button>
+                      <Button
+                        variant="success"
+                        size="sm"
+                        className="flex-1 rounded-lg text-[10px] font-bold uppercase shadow-sm h-8"
+                        icon={Package}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleApprovePhieu(selectedPhieu);
+                          setShowDetailPhieu(false);
+                        }}
+                        isLoading={submitting}
+                      >
+                        Duyệt phiếu
+                      </Button>
+                    </div>
+                  )}
+              </div>
             </motion.div>
           </div>
         )}
@@ -1195,9 +1668,11 @@ export const MaterialSplitMerge = ({
               }));
               // Fetch ton kho after setting material
               if (kho_id) {
-                getAvailableStock(newMat.id, kho_id).then((tk) => {
-                  setNguonXa((p) => ({ ...p, ton_kho: tk }));
-                });
+                getAvailableStock(newMat.id, kho_id, new Date().toISOString().split('T')[0]).then(
+                  (tk) => {
+                    setNguonXa((p) => ({ ...p, ton_kho: tk }));
+                  },
+                );
               }
             } else if (type === 'outputXa' && typeof index === 'number') {
               const updated = [...outputXa];
@@ -1234,12 +1709,13 @@ export const MaterialSplitMerge = ({
           if (addToast) addToast(`Đã thêm và chọn vật tư mới: ${newMat.name}`, 'success');
         }}
         groups={groups}
+        warehouses={warehouses}
         color={mode === 'xa' ? 'orange' : 'blue'}
         addToast={addToast}
       />
 
       {/* FAB — Thêm phiếu mới */}
-      <FAB onClick={() => setShowModal(true)} label="Tạo phiếu mới" />
+      <FAB onClick={() => openModal('xa')} label="Tạo phiếu mới" />
 
       {/* Hidden Ref for Report Capture */}
       <div style={{ position: 'absolute', left: '-9999px', top: 0 }}>
@@ -1284,8 +1760,10 @@ export const MaterialSplitMerge = ({
             </thead>
             <tbody>
               {filteredHistory.map((item) => {
-                const nguonItems = item.xasa_gop_chi_tiet?.filter((c: any) => c.is_input) || [];
-                const raItems = item.xasa_gop_chi_tiet?.filter((c: any) => !c.is_input) || [];
+                const nguonItems =
+                  item.xasa_gop_chi_tiet?.filter((c: any) => c.vai_tro === 'nguon') || [];
+                const raItems =
+                  item.xasa_gop_chi_tiet?.filter((c: any) => c.vai_tro === 'ra') || [];
                 return (
                   <tr key={item.id} className="border-b border-gray-100">
                     <td className="px-4 py-3.5 text-xs font-black text-primary uppercase">
@@ -1329,6 +1807,97 @@ export const MaterialSplitMerge = ({
           </div>
         </div>
       </div>
+
+      <ConfirmModal
+        show={showRejectConfirm}
+        onCancel={() => setShowRejectConfirm(false)}
+        onConfirm={confirmRejectPhieu}
+        title="Từ chối & xóa phiếu"
+        message={`Xác nhận từ chối và xóa phiếu ${phieuToReject?.ma_phieu}? Hành động này sẽ hủy các phiếu nhập/xuất liên quan.`}
+        confirmText="Từ chối"
+        cancelText="Hủy"
+      />
+
+      <ConfirmModal
+        show={showDeleteConfirm}
+        onCancel={() => setShowDeleteConfirm(false)}
+        onConfirm={confirmDeletePhieu}
+        title="Xóa phiếu"
+        message={`Chuyển phiếu ${phieuToDelete?.ma_phieu} vào thùng rác? Các bản ghi nhập/xuất kho liên quan cũng sẽ bị xóa.`}
+        confirmText="Xóa"
+        cancelText="Hủy"
+      />
+
+      <ConfirmModal
+        show={showEditApprovedConfirm}
+        onCancel={() => {
+          setShowEditApprovedConfirm(false);
+          setPendingPhieuToEdit(null);
+        }}
+        onConfirm={() => {
+          setShowEditApprovedConfirm(false);
+          if (pendingPhieuToEdit) {
+            startEditFlow(pendingPhieuToEdit);
+            setPendingPhieuToEdit(null);
+          }
+        }}
+        title="Sửa phiếu đã duyệt"
+        message={`Phiếu ${pendingPhieuToEdit?.ma_phieu} đã được duyệt. Việc sửa đổi sẽ thu hồi trạng thái Duyệt và cần được duyệt lại. Bạn có chắc chắn muốn sửa không?`}
+        confirmText="Đồng ý sửa"
+        cancelText="Bỏ qua"
+        type="warning"
+      />
+
+      <ConfirmModal
+        show={showMismatchConfirm}
+        onCancel={() => {
+          setShowMismatchConfirm(false);
+          setMismatchData(null);
+        }}
+        onConfirm={() => {
+          setShowMismatchConfirm(false);
+          handleSubmit();
+        }}
+        title="Xác nhận chênh lệch số lượng"
+        message={
+          <div className="space-y-4 text-left">
+            <p className="text-sm font-medium text-gray-700">
+              Có sự chênh lệch số lượng giữa vật tư nguồn và đầu ra:
+            </p>
+            <div className="bg-amber-50 p-4 rounded-2xl border border-amber-100 space-y-2">
+              <div className="flex justify-between text-xs">
+                <span className="text-gray-500">Tổng đầu vào (Nguồn):</span>
+                <span className="font-bold text-gray-900">
+                  {formatNumber(mismatchData?.totalIn)}
+                </span>
+              </div>
+              <div className="flex justify-between text-xs">
+                <span className="text-gray-500">Tổng đầu ra (Sản phẩm):</span>
+                <span className="font-bold text-gray-900">
+                  {formatNumber(mismatchData?.totalOut)}
+                </span>
+              </div>
+              <div className="pt-2 mt-2 border-t border-amber-200 flex justify-between text-sm">
+                <span className="font-bold text-amber-800 uppercase italic">
+                  Chênh lệch (Hao hụt):
+                </span>
+                <span className="font-black text-red-600">
+                  {formatNumber(
+                    Math.abs((mismatchData?.totalIn || 0) - (mismatchData?.totalOut || 0)),
+                  )}
+                </span>
+              </div>
+            </div>
+            <p className="text-[11px] text-gray-500 leading-relaxed italic">
+              Việc lưu phiếu đồng nghĩa với việc bạn xác nhận số lượng hao hụt này là hợp lệ trong
+              quá trình sản xuất.
+            </p>
+          </div>
+        }
+        confirmText="Xác nhận hao hụt & Lưu"
+        cancelText="Kiểm tra lại"
+        type="warning"
+      />
     </div>
   );
 };

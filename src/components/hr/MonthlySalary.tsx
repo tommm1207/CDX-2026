@@ -313,6 +313,7 @@ export const MonthlySalary = ({
       // Wait for Safari to stabilize and ensure React finished updating the 'isCapturing' state
       await new Promise((resolve) => setTimeout(resolve, 1000));
 
+      const fileName = `Phieu_Luong_${selectedSalary.full_name}_T${selectedMonth}_${selectedYear}.png`;
       const scale = 4; // High resolution for premium quality
 
       // Capture the bill directly - CanvasLogo handles its own high-quality rendering
@@ -759,7 +760,7 @@ export const MonthlySalary = ({
                     <Wallet size={24} className="text-white drop-shadow-sm" />
                   </div>
                   <div>
-                    <h3 className="font-extrabold text-lg leading-tight tracking-tight">
+                    <h3 className="font-extrabold text-base sm:text-lg leading-tight tracking-tight whitespace-nowrap overflow-hidden text-ellipsis max-w-[180px] xs:max-w-[220px] sm:max-w-none">
                       Phiếu lương — {selectedSalary.full_name}
                     </h3>
                     <p className="text-[10px] text-white/80 font-black uppercase tracking-widest bg-black/10 px-2 py-0.5 rounded-full w-fit mt-1">

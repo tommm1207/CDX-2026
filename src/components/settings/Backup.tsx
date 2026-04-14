@@ -17,24 +17,31 @@ import { supabase } from '@/lib/supabase';
 import { PageBreadcrumb } from '../shared/PageBreadcrumb';
 
 export const BACKUP_TABLES = [
-  { id: 'users', label: 'Danh sách Nhân sự' },
-  { id: 'attendance', label: 'Dữ liệu Chấm công (Lương)' },
-  { id: 'advances', label: 'Dữ liệu Tạm ứng (Lương)' },
-  { id: 'allowances', label: 'Dữ liệu Phụ cấp (Lương)' },
-  { id: 'salary_settings', label: 'Cấu hình Lương (Hợp đồng)' },
-  { id: 'stock_in', label: 'Báo cáo Nhập kho' },
-  { id: 'stock_out', label: 'Báo cáo Xuất kho' },
-  { id: 'transfers', label: 'Báo cáo Chuyển kho' },
-  { id: 'production_orders', label: 'Lệnh sản xuất' },
-  { id: 'bom_configs', label: 'Định mức sản xuất (BOM)' },
-  { id: 'warehouses', label: 'Danh sách Kho' },
-  { id: 'materials', label: 'Danh mục Vật tư' },
-  { id: 'material_groups', label: 'Nhóm vật tư' },
-  { id: 'costs', label: 'Báo cáo Chi phí' },
-  { id: 'notes', label: 'Ghi chú & Nhật ký' },
-  { id: 'construction_diaries', label: 'Nhật ký thi công' },
-  { id: 'reminders', label: 'Thông báo & Nhắc việc' },
-  { id: 'partners', label: 'Khách hàng & NCC' },
+  // 1. Nhân sự & Lương
+  { id: 'users', label: '1. Danh sách Nhân sự' },
+  { id: 'salary_settings', label: '2. Cấu hình Lương (Hợp đồng)' },
+  { id: 'attendance', label: '3. Dữ liệu Chấm công (Lương)' },
+  { id: 'advances', label: '4. Dữ liệu Tạm ứng (Lương)' },
+  { id: 'allowances', label: '5. Dữ liệu Phụ cấp (Lương)' },
+
+  // 2. Kho bãi & Vật tư
+  { id: 'warehouses', label: '6. Danh sách Kho' },
+  { id: 'material_groups', label: '7. Nhóm vật tư' },
+  { id: 'materials', label: '8. Danh mục Vật tư' },
+  { id: 'partners', label: '9. Khách hàng & NCC' },
+  { id: 'stock_in', label: '10. Báo cáo Nhập kho' },
+  { id: 'stock_out', label: '11. Báo cáo Xuất kho' },
+  { id: 'transfers', label: '12. Báo cáo Chuyển kho' },
+
+  // 3. Sản xuất
+  { id: 'production_orders', label: '13. Lệnh sản xuất' },
+  { id: 'bom_configs', label: '14. Định mức sản xuất (BOM)' },
+
+  // 4. Báo cáo & Nhật ký
+  { id: 'construction_diaries', label: '15. Nhật ký thi công' },
+  { id: 'notes', label: '16. Ghi chú & Nhật ký' },
+  { id: 'costs', label: '17. Báo cáo Chi phí' },
+  { id: 'reminders', label: '18. Thông báo & Nhắc việc' },
 ];
 
 export const Backup = ({
@@ -85,7 +92,7 @@ export const Backup = ({
       }
     };
     fetchConfig();
-  }, []);
+  }, [user?.id]);
 
   const toggleTable = (id: string) => {
     setSelectedTables((prev) => (prev.includes(id) ? prev.filter((t) => t !== id) : [...prev, id]));
@@ -155,22 +162,25 @@ export const Backup = ({
         views: [{ showGridLines: false }],
       });
 
-      // Tiêu đề thương hiệu
+      // Tiêu đề thương hiệu (Tăng kích thước và khoảng cách)
+      summarySheet.getRow(1).height = 30;
       summarySheet.getCell('A1').value = 'CON ĐƯỜNG XANH - CỘNG TÁC ĐỂ VƯƠN XA';
-      summarySheet.getCell('A1').font = { size: 16, bold: true, color: { argb: 'FF2D5A27' } };
+      summarySheet.getCell('A1').font = { size: 18, bold: true, color: { argb: 'FF2D5A27' } };
+
+      summarySheet.getRow(2).height = 20;
       summarySheet.getCell('A2').value = 'HỆ THỐNG QUẢN LÝ KHO & NHÂN SỰ CDX 2026';
-      summarySheet.getCell('A2').font = { size: 10, italic: true, color: { argb: 'FF6B7280' } };
+      summarySheet.getCell('A2').font = { size: 11, italic: true, color: { argb: 'FF6B7280' } };
 
       // Thông tin chung
+      summarySheet.getRow(4).height = 25;
       summarySheet.getCell('A4').value = 'BÁO CÁO SAO LƯU DỮ LIỆU TOÀN BỘ';
       summarySheet.getCell('A4').font = { size: 14, bold: true };
       summarySheet.getCell('A4').alignment = { vertical: 'middle' };
 
       const infoBox = [
         ['Ngày thực hiện:', new Date().toLocaleString('vi-VN')],
-        ['Email nhận:', email],
         ['Số lượng bảng:', selectedTables.length],
-        ['Trạng thái:', 'Hoàn tất (Thành công)'],
+        ['Trạng thái:', 'Hoàn tất (Xuất trực tiếp)'],
       ];
 
       infoBox.forEach((row, i) => {
@@ -180,10 +190,10 @@ export const Backup = ({
         summarySheet.getCell(`A${rowNum}`).font = { bold: true };
       });
 
-      summarySheet.getCell('A11').value = 'BẢNG THỐNG KÊ CHI TIẾT DỮ LIỆU';
-      summarySheet.getCell('A11').font = { size: 12, bold: true, color: { argb: 'FF2D5A27' } };
+      summarySheet.getCell('A10').value = 'DANH SÁCH CÁC HẠNG MỤC DỮ LIỆU ĐÃ SAO LƯU';
+      summarySheet.getCell('A10').font = { size: 12, bold: true, color: { argb: 'FF2D5A27' } };
 
-      summarySheet.getColumn(1).width = 30;
+      summarySheet.getColumn(1).width = 35;
       summarySheet.getColumn(2).width = 45;
 
       // 2. Chuẩn bị dữ liệu tra cứu (Lookup Data)
@@ -205,13 +215,13 @@ export const Backup = ({
 
       // 3. Thêm dữ liệu các bảng và thu thập thống kê cho trang bìa
       const labels: string[] = [];
-      const stats: Record<string, number> = {};
-      let currentStatsRow = 13;
+      let currentStatsRow = 12;
 
       // Header bảng thông kê
-      summarySheet.getCell('A12').value = 'Hạng mục dữ liệu';
-      summarySheet.getCell('B12').value = 'Số lượng bản ghi hiện hữu';
-      ['A12', 'B12'].forEach((cell) => {
+      summarySheet.getRow(11).height = 22;
+      summarySheet.getCell('A11').value = 'Tên bảng dữ liệu';
+      summarySheet.getCell('B11').value = 'Số lượng bản ghi hiện hữu';
+      ['A11', 'B11'].forEach((cell) => {
         summarySheet.getCell(cell).fill = {
           type: 'pattern',
           pattern: 'solid',
@@ -224,9 +234,15 @@ export const Backup = ({
           bottom: { style: 'thin' },
           right: { style: 'thin' },
         };
+        summarySheet.getCell(cell).alignment = { vertical: 'middle', horizontal: 'center' };
       });
 
-      for (const tableId of selectedTables) {
+      // Sắp xếp các bảng được chọn theo thứ tự của BACKUP_TABLES
+      const sortedSelectedTables = BACKUP_TABLES.filter((t) => selectedTables.includes(t.id)).map(
+        (t) => t.id,
+      );
+
+      for (const tableId of sortedSelectedTables) {
         const tableDef = BACKUP_TABLES.find((t) => t.id === tableId);
         if (!tableDef) continue;
 
@@ -237,7 +253,6 @@ export const Backup = ({
         const { data } = await supabase.from(tableId).select('*').neq('status', 'Đã xóa');
 
         const rowCount = data?.length || 0;
-        stats[tableDef.label] = rowCount;
 
         // Điền thông tin vào bảng thống kê trang bìa
         summarySheet.getCell(`A${currentStatsRow}`).value = tableDef.label;
@@ -254,7 +269,8 @@ export const Backup = ({
         currentStatsRow++;
 
         if (data && rowCount > 0) {
-          const sheet = workbook.addWorksheet(tableDef.label.substring(0, 31).replace(/\//g, '-'));
+          const sheetName = tableDef.label.substring(0, 31).replace(/[:\\/?*[\]]/g, '-');
+          const sheet = workbook.addWorksheet(sheetName);
           const formattedData = formatDataForExcel(data, lookupData);
           if (formattedData.length === 0) continue;
 
@@ -281,7 +297,8 @@ export const Backup = ({
 
           // Thêm dữ liệu
           formattedData.forEach((item) => {
-            const row = sheet.addRow(Object.values(item));
+            const rowArr = Object.values(item);
+            const row = sheet.addRow(rowArr);
             row.eachCell((cell) => {
               cell.border = {
                 top: { style: 'thin' },
@@ -309,34 +326,23 @@ export const Backup = ({
         }
       }
 
-      const fileName = `CDX_Professional_Backup_${new Date().toISOString().split('T')[0]}.xlsx`;
+      setBackupStatus('Đang hoàn tất file và tải xuống...');
+      const fileName = `CDX_Backup_Pro_${new Date().toISOString().split('T')[0]}.xlsx`;
       const buffer = await workbook.xlsx.writeBuffer();
 
-      // Chuyển Buffer sang Base64 cho API
-      const uint8Array = new Uint8Array(buffer);
-      let binary = '';
-      for (let i = 0; i < uint8Array.byteLength; i++) {
-        binary += String.fromCharCode(uint8Array[i]);
-      }
-      const fileData = btoa(binary);
-
-      setBackupStatus('Đang gửi báo cáo qua Email...');
-      const response = await fetch('/api/send-backup', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-api-key': 'cdx-secret-2026',
-        },
-        body: JSON.stringify({ email, fileName, fileData, tableList: labels, tableStats: stats }),
+      // Tạo link tải xuống trực tiếp trên trình duyệt
+      const blob = new Blob([buffer], {
+        type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
       });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Gửi mail thất bại');
-      }
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = fileName;
+      a.click();
+      window.URL.revokeObjectURL(url);
 
       setBackupStatus('Hoàn tất!');
-      addToast('Sao lưuthành công! File đã gửi tới ' + email, 'success');
+      addToast('Đã xuất file và tải xuống máy thành công!', 'success');
     } catch (err: any) {
       addToast('Lỗi: ' + err.message, 'error');
     } finally {

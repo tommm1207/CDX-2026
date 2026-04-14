@@ -83,19 +83,31 @@ const checkSupabaseConfig = (req: express.Request, res: express.Response, next: 
 };
 
 const BACKUP_TABLES = [
-  { id: 'users', label: 'Bảng Nhân sự' },
-  { id: 'attendance', label: 'Bảng Chấm công' },
-  { id: 'advances', label: 'Tạm ứng - Phụ cấp' },
-  { id: 'stock_in', label: 'Báo cáo Nhập kho' },
-  { id: 'stock_out', label: 'Báo cáo Xuất kho' },
-  { id: 'transfers', label: 'Báo cáo Chuyển kho' },
-  { id: 'warehouses', label: 'Danh sách Kho' },
-  { id: 'materials', label: 'Danh mục Vật tư' },
-  { id: 'material_groups', label: 'Nhóm vật tư' },
-  { id: 'costs', label: 'Báo cáo Chi phí' },
-  { id: 'notes', label: 'Nhật ký - Ghi chú' },
-  { id: 'reminders', label: 'Lịch nhắc' },
-  { id: 'partners', label: 'Khách hàng & NCC' },
+  // 1. Nhân sự & Lương
+  { id: 'users', label: '1. Danh sách Nhân sự' },
+  { id: 'salary_settings', label: '2. Cấu hình Lương (Hợp đồng)' },
+  { id: 'attendance', label: '3. Dữ liệu Chấm công (Lương)' },
+  { id: 'advances', label: '4. Dữ liệu Tạm ứng (Lương)' },
+  { id: 'allowances', label: '5. Dữ liệu Phụ cấp (Lương)' },
+
+  // 2. Kho bãi & Vật tư
+  { id: 'warehouses', label: '6. Danh sách Kho' },
+  { id: 'material_groups', label: '7. Nhóm vật tư' },
+  { id: 'materials', label: '8. Danh mục Vật tư' },
+  { id: 'partners', label: '9. Khách hàng & NCC' },
+  { id: 'stock_in', label: '10. Báo cáo Nhập kho' },
+  { id: 'stock_out', label: '11. Báo cáo Xuất kho' },
+  { id: 'transfers', label: '12. Báo cáo Chuyển kho' },
+
+  // 3. Sản xuất
+  { id: 'production_orders', label: '13. Lệnh sản xuất' },
+  { id: 'bom_configs', label: '14. Định mức sản xuất (BOM)' },
+
+  // 4. Báo cáo & Nhật ký
+  { id: 'construction_diaries', label: '15. Nhật ký thi công' },
+  { id: 'notes', label: '16. Ghi chú & Nhật ký' },
+  { id: 'costs', label: '17. Báo cáo Chi phí' },
+  { id: 'reminders', label: '18. Thông báo & Nhắc việc' },
 ];
 
 /**

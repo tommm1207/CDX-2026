@@ -326,8 +326,21 @@ export const MonthlySalary = ({
 
     try {
       setIsCapturing(true);
-      // Wait for Safari to stabilize and ensure React finished updating the 'isCapturing' state
-      await new Promise((resolve) => setTimeout(resolve, 1000));
+      // Wait for React to finish updating the 'isCapturing' state
+      await new Promise((resolve) => setTimeout(resolve, 500));
+
+      // Force logo decoding (especially on iOS) to prevent blank logo on capture
+      const logoImg = billRef.current?.querySelector('img.logo-img');
+      if (logoImg) {
+        try {
+          await (logoImg as HTMLImageElement).decode();
+        } catch (e) {
+          console.warn('[handleSaveImage] Logo decode failed, proceeding anyway:', e);
+        }
+      }
+
+      // Final short wait to ensure everything is painted
+      await new Promise((resolve) => setTimeout(resolve, 500));
 
       const fileName = `Phieu_Luong_${selectedSalary.full_name}_T${selectedMonth}_${selectedYear}.png`;
       const scale = 4; // High resolution for premium quality

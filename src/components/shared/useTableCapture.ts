@@ -127,11 +127,21 @@ export const useTableCapture = () => {
         wrapper.appendChild(tableEl); // Move tableEl inside wrapper
         wrapper.appendChild(footerEl);
 
-        // ---- 5. Wait for layout/paint to settle ----
+        // ---- 5. Wait for layout/paint to settle and images to decode ----
+        // Force logo decoding to prevent blank logo on first capture (especially on iOS)
+        const logoImg = headerEl?.querySelector('img');
+        if (logoImg) {
+          try {
+            await (logoImg as HTMLImageElement).decode();
+          } catch (e) {
+            console.warn('[useTableCapture] Logo decode failed, proceeding anyway:', e);
+          }
+        }
+
         await new Promise<void>((r) =>
           requestAnimationFrame(() => requestAnimationFrame(() => r())),
         );
-        await new Promise<void>((r) => setTimeout(r, 150));
+        await new Promise<void>((r) => setTimeout(r, 200));
 
         // Get actual full dimensions after layout update
         const fullWidth = wrapper.scrollWidth;

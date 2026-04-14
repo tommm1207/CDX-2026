@@ -848,12 +848,12 @@ export const MonthlySalary = ({
                 <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1.5 block">
                   CÀI ĐẶT GHI CHÚ TRÊN PHIẾU
                 </label>
-                <input
-                  type="text"
+                <textarea
                   value={billNote}
                   onChange={(e) => setBillNote(e.target.value)}
                   placeholder="Nhập ghi chú cho phiếu lương..."
-                  className="w-full px-4 py-2.5 rounded-2xl border border-gray-200 text-xs font-bold outline-none focus:ring-2 focus:ring-primary/20 bg-white shadow-sm transition-all"
+                  rows={2}
+                  className="w-full px-4 py-2.5 rounded-2xl border border-gray-200 text-xs font-bold outline-none focus:ring-2 focus:ring-primary/20 bg-white shadow-sm transition-all resize-none"
                 />
               </div>
 
@@ -1086,11 +1086,11 @@ export const MonthlySalary = ({
                             </span>
                           </div>
 
-                          <div className="flex justify-between items-center py-2.5 gap-2">
-                            <span className="text-[11px] font-bold text-gray-500 whitespace-nowrap">
+                          <div className="flex justify-between items-start py-2.5 gap-2">
+                            <span className="text-[11px] font-bold text-gray-500 whitespace-nowrap mt-0.5">
                               Ghi chú:
                             </span>
-                            <span className="text-[11px] font-bold text-gray-800 text-right">
+                            <span className="text-[11px] font-bold text-gray-800 text-right break-words max-w-[280px]">
                               {billNote}
                             </span>
                           </div>

@@ -24,24 +24,24 @@ export const BACKUP_TABLES = [
   { id: 'advances', label: '4. Dữ liệu Tạm ứng (Lương)' },
   { id: 'allowances', label: '5. Dữ liệu Phụ cấp (Lương)' },
 
-  // 2. Kho bãi & Vật tư
-  { id: 'warehouses', label: '6. Danh sách Kho' },
-  { id: 'material_groups', label: '7. Nhóm vật tư' },
-  { id: 'materials', label: '8. Danh mục Vật tư' },
-  { id: 'partners', label: '9. Khách hàng & NCC' },
-  { id: 'stock_in', label: '10. Báo cáo Nhập kho' },
-  { id: 'stock_out', label: '11. Báo cáo Xuất kho' },
-  { id: 'transfers', label: '12. Báo cáo Chuyển kho' },
+  // 4. Báo cáo & Nhật ký (Move to 2nd position)
+  { id: 'construction_diaries', label: '6. Nhật ký thi công' },
+  { id: 'notes', label: '7. Ghi chú & Nhật ký' },
+  { id: 'costs', label: '8. Báo cáo Chi phí' },
+  { id: 'reminders', label: '9. Thông báo & Nhắc việc' },
 
-  // 3. Sản xuất
-  { id: 'production_orders', label: '13. Lệnh sản xuất' },
-  { id: 'bom_configs', label: '14. Định mức sản xuất (BOM)' },
+  // 3. Sản xuất (Move to 3rd position)
+  { id: 'production_orders', label: '10. Lệnh sản xuất' },
+  { id: 'bom_configs', label: '11. Định mức sản xuất (BOM)' },
 
-  // 4. Báo cáo & Nhật ký
-  { id: 'construction_diaries', label: '15. Nhật ký thi công' },
-  { id: 'notes', label: '16. Ghi chú & Nhật ký' },
-  { id: 'costs', label: '17. Báo cáo Chi phí' },
-  { id: 'reminders', label: '18. Thông báo & Nhắc việc' },
+  // 2. Kho bãi & Vật tư (Move to last position)
+  { id: 'warehouses', label: '12. Danh sách Kho' },
+  { id: 'material_groups', label: '13. Nhóm vật tư' },
+  { id: 'materials', label: '14. Danh mục Vật tư' },
+  { id: 'partners', label: '15. Khách hàng & NCC' },
+  { id: 'stock_in', label: '16. Báo cáo Nhập kho' },
+  { id: 'stock_out', label: '17. Báo cáo Xuất kho' },
+  { id: 'transfers', label: '18. Báo cáo Chuyển kho' },
 ];
 
 export const Backup = ({

@@ -69,10 +69,10 @@ export const ReportExportHeader = ({ reportTitle, subtitle }: ReportExportHeader
           <p
             style={{
               margin: 0,
-              fontSize: 8.5,
+              fontSize: 8,
               color: '#9CA3AF',
               textTransform: 'uppercase',
-              letterSpacing: '0.1em',
+              letterSpacing: '0.12em',
               marginTop: 1,
             }}
           >
@@ -81,10 +81,11 @@ export const ReportExportHeader = ({ reportTitle, subtitle }: ReportExportHeader
           <p
             style={{
               margin: 0,
-              fontSize: 7.5,
-              color: '#9CA3AF',
+              fontSize: 9,
+              fontWeight: 700,
+              color: '#6B7280',
               textTransform: 'uppercase',
-              letterSpacing: '0.05em',
+              letterSpacing: '0.06em',
               marginTop: 1,
             }}
           >

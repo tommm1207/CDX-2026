@@ -867,7 +867,7 @@ export const HRRecords = ({
         )}
       </AnimatePresence>
 
-      {/* Mobile FAB */}
+      {/* Global FAB */}
       {user.role !== 'User' && (
         <button
           onClick={() => {
@@ -875,9 +875,10 @@ export const HRRecords = ({
             setFormData(initialFormState);
             setShowModal(true);
           }}
-          className="fixed bottom-20 right-4 md:hidden w-14 h-14 bg-primary text-white rounded-full shadow-lg flex items-center justify-center hover:bg-primary/90 active:scale-95 transition-all z-[90]"
+          className="fixed bottom-20 md:bottom-10 right-4 md:right-10 w-14 h-14 bg-primary text-white rounded-full shadow-xl shadow-primary/30 flex items-center justify-center hover:bg-primary/90 hover:scale-105 active:scale-95 transition-all z-[90]"
+          title="Thêm nhân sự mới"
         >
-          <Plus size={24} />
+          <Plus size={24} strokeWidth={3} />
         </button>
       )}
 

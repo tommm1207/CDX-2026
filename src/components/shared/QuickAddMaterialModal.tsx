@@ -13,6 +13,7 @@ interface QuickAddMaterialModalProps {
   addToast?: (message: string, type?: any) => void;
   groups: any[];
   color?: 'blue' | 'orange' | 'green';
+  initialName?: string;
 }
 
 export const QuickAddMaterialModal = ({
@@ -22,14 +23,21 @@ export const QuickAddMaterialModal = ({
   addToast,
   groups,
   color = 'blue',
+  initialName = '',
 }: QuickAddMaterialModalProps) => {
-  const [name, setName] = useState('');
+  const [name, setName] = useState(initialName);
   const [unit, setUnit] = useState('');
   const [groupId, setGroupId] = useState('');
   const [spec, setSpec] = useState('');
   const [desc, setDesc] = useState('');
   const [code, setCode] = useState('');
   const [loading, setLoading] = useState(false);
+
+  React.useEffect(() => {
+    if (show) {
+      setName(initialName);
+    }
+  }, [show, initialName]);
 
   const handleGroupChange = async (val: string) => {
     setGroupId(val);

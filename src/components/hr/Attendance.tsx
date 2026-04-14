@@ -1,4 +1,4 @@
-﻿import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 
 import { CalendarCheck, Plus, X, Users, Check, RefreshCw, Search, Camera } from 'lucide-react';
 import { SaveImageButton } from '../shared/SaveImageButton';
@@ -100,6 +100,7 @@ export const Attendance = ({
     day: number,
     action?: 'present' | 'half-day' | 'absent' | 'remove',
     otHours: number | '' = 0,
+    notes: string = '',
   ) => {
     const isAdmin = ['admin', 'develop'].includes(user.role?.toLowerCase() || '');
     if (!isAdmin) return;
@@ -122,7 +123,7 @@ export const Attendance = ({
     if (current) {
       await supabase
         .from('attendance')
-        .update({ status, hours_worked: hours, overtime_hours: saveOt })
+        .update({ status, hours_worked: hours, overtime_hours: saveOt, notes })
         .eq('id', current.id);
     } else {
       await supabase.from('attendance').insert([
@@ -132,6 +133,7 @@ export const Attendance = ({
           status,
           hours_worked: hours,
           overtime_hours: saveOt,
+          notes,
         },
       ]);
     }
@@ -284,7 +286,7 @@ export const Attendance = ({
 
   const [showEditModal, setShowEditModal] = useState(false);
   const [editingAtt, setEditingAtt] = useState<any>(null);
-  const [editFormData, setEditFormData] = useState({ status: 'present', overtime: 0 });
+  const [editFormData, setEditFormData] = useState({ status: 'present', overtime: 0, notes: '' });
 
   const openEditModal = (empId: string, day: number) => {
     const isAdmin = ['admin', 'develop'].includes(user.role?.toLowerCase() || '');
@@ -296,6 +298,7 @@ export const Attendance = ({
     setEditFormData({
       status: att?.status || 'present',
       overtime: att?.overtime_hours || 0,
+      notes: att?.notes || '',
     });
     setShowEditModal(true);
   };
@@ -310,6 +313,7 @@ export const Attendance = ({
           status: editFormData.status,
           hours_worked: hours,
           overtime_hours: editFormData.overtime,
+          notes: editFormData.notes,
         })
         .eq('id', editingAtt.id);
     } else {
@@ -320,6 +324,7 @@ export const Attendance = ({
           status: editFormData.status,
           hours_worked: hours,
           overtime_hours: editFormData.overtime,
+          notes: editFormData.notes,
         },
       ]);
     }
@@ -588,7 +593,7 @@ export const Attendance = ({
               initial={{ opacity: 0, scale: 0.95, y: 30 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 30 }}
-              className="bg-white rounded-[2rem] md:rounded-[2.5rem] shadow-2xl w-full max-w-sm overflow-hidden max-h-[90dvh] flex flex-col"
+              className="bg-white rounded-[2rem] md:rounded-[2.5rem] shadow-2xl w-full max-w-md overflow-hidden max-h-[90dvh] flex flex-col"
               onClick={(e) => e.stopPropagation()}
             >
               <div className="bg-primary p-6 text-white flex items-center justify-between transition-colors">
@@ -648,18 +653,76 @@ export const Attendance = ({
                     </button>
                   </div>
                 </div>
-                <NumericInput
-                  label="Giờ tăng ca (h)"
-                  value={editFormData.overtime}
-                  onChange={(val) => setEditFormData({ ...editFormData, overtime: val })}
-                  placeholder="Ví dụ: 1.5"
-                  isDecimal={true}
-                />
+                <div>
+                  <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1 mb-2 block">
+                    Giờ tăng ca (TC)
+                  </label>
+                  <div className="flex flex-wrap gap-2 mb-3">
+                    {[0.5, 1, 1.5, 2, 2.5, 3, 3.5, 4, 4.5, 5, 5.5, 6].map((num) => (
+                      <button
+                        key={num}
+                        onClick={() => setEditFormData({ ...editFormData, overtime: num })}
+                        className={`px-3 py-2 rounded-xl text-xs font-bold border transition-all active:scale-95 ${
+                          editFormData.overtime === num
+                            ? 'bg-amber-500 text-white border-amber-500 shadow-sm'
+                            : 'bg-gray-50 text-gray-400 border-gray-100 hover:bg-gray-100'
+                        }`}
+                      >
+                        {`+${num}h`}
+                      </button>
+                    ))}
+                  </div>
+                  <NumericInput
+                    label="Hoặc nhập số khác (h)"
+                    value={editFormData.overtime}
+                    onChange={(val) => setEditFormData({ ...editFormData, overtime: val })}
+                    placeholder="Ví dụ: 8"
+                    isDecimal={true}
+                  />
+                  {editFormData.overtime > 6 && (
+                    <div className="mt-2 p-3 bg-red-50 border border-red-100 rounded-xl">
+                      <p className="text-[10px] text-red-600 font-bold uppercase leading-tight">
+                        ⚠ CẢNH BÁO: GIỜ TĂNG CA CAO ({editFormData.overtime}h)
+                      </p>
+                      <p className="text-[9px] text-red-400 mt-1 italic">
+                        Vui lòng xác nhận chính xác trước khi lưu để tránh nhầm lẫn.
+                      </p>
+                    </div>
+                  )}
+                </div>
+
+                <div>
+                  <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1 mb-2 block">
+                    Ghi chú công việc
+                  </label>
+                  <textarea
+                    value={editFormData.notes}
+                    onChange={(e) => setEditFormData({ ...editFormData, notes: e.target.value })}
+                    placeholder="Nhập nội dung công việc, ví dụ: Đổ bê tông dầm, quét dọn..."
+                    className="w-full p-4 rounded-2xl border border-gray-100 text-sm outline-none focus:ring-2 focus:ring-primary/20 bg-gray-50 min-h-[100px] resize-none"
+                  />
+                </div>
                 <div className="flex gap-3 pt-2">
                   <Button variant="outline" fullWidth onClick={() => setShowEditModal(false)}>
                     Hủy bỏ
                   </Button>
-                  <Button variant="primary" fullWidth onClick={saveEdit}>
+                  <Button
+                    variant="primary"
+                    fullWidth
+                    onClick={() => {
+                      if (editFormData.overtime > 6) {
+                        if (
+                          confirm(
+                            `Giờ tăng ca hiện là ${editFormData.overtime}h. Bạn có chắc chắn muốn lưu không?`,
+                          )
+                        ) {
+                          saveEdit();
+                        }
+                      } else {
+                        saveEdit();
+                      }
+                    }}
+                  >
                     Cập nhật
                   </Button>
                 </div>

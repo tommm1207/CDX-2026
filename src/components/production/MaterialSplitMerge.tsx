@@ -1,4 +1,4 @@
-﻿import { CanvasLogo } from '@/components/shared/ReportExportHeader';
+import { CanvasLogo } from '@/components/shared/ReportExportHeader';
 import { useState, useEffect } from 'react';
 import {
   Plus,
@@ -69,6 +69,11 @@ export const MaterialSplitMerge = ({
   const reportRef = useRef<HTMLDivElement>(null);
   const [showDetailPhieu, setShowDetailPhieu] = useState(false);
   const [selectedPhieu, setSelectedPhieu] = useState<any>(null);
+  const [quickAddTarget, setQuickAddTarget] = useState<{
+    type: 'nguonXa' | 'outputXa' | 'nguonGop' | 'outputGop';
+    index?: number;
+  } | null>(null);
+  const [initialMaterialName, setInitialMaterialName] = useState('');
 
   // Form
   const [kho_id, setKhoId] = useState('');
@@ -692,8 +697,12 @@ export const MaterialSplitMerge = ({
                         value={nguonXa.material_id}
                         options={materialOptions}
                         onChange={(val) => handleSelectNguonXa(val)}
+                        onCreate={(name) => {
+                          setQuickAddTarget({ type: 'nguonXa' });
+                          setInitialMaterialName(name);
+                          setShowAddMaterial(true);
+                        }}
                         placeholder="Chọn vật tư cần xả..."
-                        allowCreate={false}
                       />
                       {nguonXa.material_id && (
                         <div className="mt-3 grid grid-cols-12 gap-3">
@@ -733,9 +742,25 @@ export const MaterialSplitMerge = ({
                         <h4 className="text-xs font-bold text-gray-600 uppercase">
                           ✂️ Mảnh ra ({outputXa.length})
                         </h4>
-                        <Button size="sm" variant="outline" icon={Plus} onClick={addOutputXa}>
-                          Thêm
-                        </Button>
+                        <div className="flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setQuickAddTarget({
+                                type: 'outputXa',
+                                index: outputXa.length, // Sẽ điền vào dòng mới tạo
+                              });
+                              addOutputXa();
+                              setShowAddMaterial(true);
+                            }}
+                            className="text-[10px] font-bold text-orange-600 flex items-center gap-1 hover:underline mr-2"
+                          >
+                            <Plus size={12} /> Thêm vật tư mới
+                          </button>
+                          <Button size="sm" variant="outline" icon={Plus} onClick={addOutputXa}>
+                            Thêm dòng
+                          </Button>
+                        </div>
                       </div>
                       {outputXa.map((o, idx) => (
                         <div
@@ -757,8 +782,12 @@ export const MaterialSplitMerge = ({
                                 };
                                 setOutputXa(updated);
                               }}
+                              onCreate={(name) => {
+                                setQuickAddTarget({ type: 'outputXa', index: idx });
+                                setInitialMaterialName(name);
+                                setShowAddMaterial(true);
+                              }}
                               placeholder="Chọn vật tư..."
-                              allowCreate={false}
                             />
                           </div>
                           <div className="w-20 md:w-24">
@@ -790,9 +819,25 @@ export const MaterialSplitMerge = ({
                         <h4 className="text-xs font-bold text-blue-700 uppercase">
                           📦 Vật tư nguồn ({nguonGop.length})
                         </h4>
-                        <Button size="sm" variant="outline" icon={Plus} onClick={addNguonGop}>
-                          Thêm
-                        </Button>
+                        <div className="flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setQuickAddTarget({
+                                type: 'nguonGop',
+                                index: nguonGop.length,
+                              });
+                              addNguonGop();
+                              setShowAddMaterial(true);
+                            }}
+                            className="text-[10px] font-bold text-blue-600 flex items-center gap-1 hover:underline mr-2"
+                          >
+                            <Plus size={12} /> Thêm vật tư mới
+                          </button>
+                          <Button size="sm" variant="outline" icon={Plus} onClick={addNguonGop}>
+                            Thêm dòng
+                          </Button>
+                        </div>
                       </div>
                       {nguonGop.map((n, idx) => (
                         <div className="flex items-center gap-2 mb-2 bg-blue-50 rounded-xl p-3">
@@ -811,8 +856,12 @@ export const MaterialSplitMerge = ({
                                 };
                                 setNguonGop(updated);
                               }}
+                              onCreate={(name) => {
+                                setQuickAddTarget({ type: 'nguonGop', index: idx });
+                                setInitialMaterialName(name);
+                                setShowAddMaterial(true);
+                              }}
                               placeholder="Chọn vật tư..."
-                              allowCreate={false}
                             />
                           </div>
                           <div className="w-20 md:w-24">
@@ -862,8 +911,12 @@ export const MaterialSplitMerge = ({
                             don_vi: mat?.unit || '',
                           });
                         }}
+                        onCreate={(name) => {
+                          setQuickAddTarget({ type: 'outputGop' });
+                          setInitialMaterialName(name);
+                          setShowAddMaterial(true);
+                        }}
                         placeholder="Chọn vật tư đầu ra..."
-                        allowCreate={false}
                       />
                       {outputGop.material_id && (
                         <div className="mt-3 grid grid-cols-12 gap-3">
@@ -1110,11 +1163,61 @@ export const MaterialSplitMerge = ({
 
       <QuickAddMaterialModal
         show={showAddMaterial}
-        onClose={() => setShowAddMaterial(false)}
+        onClose={() => {
+          setShowAddMaterial(false);
+          setQuickAddTarget(null);
+          setInitialMaterialName('');
+        }}
+        initialName={initialMaterialName}
         onSuccess={(newMat) => {
+          if (quickAddTarget) {
+            const { type, index } = quickAddTarget;
+            if (type === 'nguonXa') {
+              setNguonXa((prev) => ({
+                ...prev,
+                material_id: newMat.id,
+                material_name: newMat.name,
+                don_vi: newMat.unit,
+              }));
+              // Fetch ton kho after setting material
+              if (kho_id) {
+                getAvailableStock(newMat.id, kho_id).then((tk) => {
+                  setNguonXa((p) => ({ ...p, ton_kho: tk }));
+                });
+              }
+            } else if (type === 'outputXa' && typeof index === 'number') {
+              const updated = [...outputXa];
+              updated[index] = {
+                ...updated[index],
+                material_id: newMat.id,
+                material_name: newMat.name,
+                don_vi: newMat.unit,
+              };
+              setOutputXa(updated);
+            } else if (type === 'nguonGop' && typeof index === 'number') {
+              const updated = [...nguonGop];
+              updated[index] = {
+                ...updated[index],
+                material_id: newMat.id,
+                material_name: newMat.name,
+                don_vi: newMat.unit,
+              };
+              setNguonGop(updated);
+            } else if (type === 'outputGop') {
+              setOutputGop((prev) => ({
+                ...prev,
+                material_id: newMat.id,
+                material_name: newMat.name,
+                don_vi: newMat.unit,
+              }));
+            }
+          }
+
           refreshAll();
           setShowAddMaterial(false);
-          if (addToast) addToast(`Đã thêm vật tư mới: ${newMat.name}`, 'success');
+          setQuickAddTarget(null);
+          setInitialMaterialName('');
+          if (addToast) addToast(`Đã thêm và chọn vật tư mới: ${newMat.name}`, 'success');
         }}
         groups={groups}
         color={mode === 'xa' ? 'orange' : 'blue'}

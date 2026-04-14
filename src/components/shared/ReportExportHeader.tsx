@@ -78,6 +78,18 @@ export const ReportExportHeader = ({ reportTitle, subtitle }: ReportExportHeader
           >
             CỘNG TÁC ĐỂ VƯƠN XA
           </p>
+          <p
+            style={{
+              margin: 0,
+              fontSize: 7.5,
+              color: '#9CA3AF',
+              textTransform: 'uppercase',
+              letterSpacing: '0.05em',
+              marginTop: 1,
+            }}
+          >
+            HỆ THỐNG QUẢN LÝ KHO & NHÂN SỰ CDX
+          </p>
         </div>
       </div>
 

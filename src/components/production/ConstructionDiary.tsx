@@ -161,8 +161,10 @@ export const ConstructionDiaryComponent = ({
   };
 
   const handleSave = async () => {
-    if (!formData.work_progress || !formData.warehouse_id) {
-      if (addToast) addToast('Vui lòng nhập nội dung thi công và chọn địa điểm', 'warning');
+    // Chỉ bắt buộc Địa điểm và Nhân sự (ít nhất 1 người)
+    if (!formData.labor_info?.trim() || !formData.warehouse_id) {
+      if (addToast)
+        addToast('Vui lòng chọn địa điểm và nhập ít nhất một nhân sự hôm nay', 'warning');
       return;
     }
 

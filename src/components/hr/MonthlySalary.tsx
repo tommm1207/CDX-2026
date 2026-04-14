@@ -93,6 +93,21 @@ export const MonthlySalary = ({
     return `${parseInt(d)}/${parseInt(m)}/${y}`;
   };
 
+  /**
+   * Đếm số lượng tháng (kỳ BHXH) nằm trong khoảng ngày a - ngày b
+   * Ví dụ: 25/03 - 05/04 => 2 tháng (Tháng 3 và Tháng 4)
+   */
+  const countMonthsInRange = (startStr: string, endStr: string) => {
+    if (!startStr || !endStr) return 1;
+    const start = new Date(startStr);
+    const end = new Date(endStr);
+    const startYear = start.getFullYear();
+    const startMonth = start.getMonth();
+    const endYear = end.getFullYear();
+    const endMonth = end.getMonth();
+    return (endYear - startYear) * 12 + (endMonth - startMonth) + 1;
+  };
+
   useEffect(() => {
     fetchSalaries();
   }, [selectedMonth, selectedYear, isMainCustomRange, filterStartDate, filterEndDate]);
@@ -183,7 +198,9 @@ export const MonthlySalary = ({
         const totalAdv = empAdv.reduce((sum, a) => sum + Number(a.amount || 0), 0);
         const totalAll = empAll.reduce((sum, a) => sum + Number(a.amount || 0), 0);
 
-        const insuranceDeduction = Number(set.insurance_deduction || 0);
+        // BHXH: Nếu quét qua nhiều tháng, nhân hệ số tháng tương ứng (ví dụ quét 2 tháng thì đóng 2 lần)
+        const monthMultiplier = countMonthsInRange(queryStart, queryEnd);
+        const insuranceDeduction = Number(set.insurance_deduction || 0) * monthMultiplier;
         const monthlyCoeff = Number(set.monthly_ot_coeff || 1.0);
 
         const dailyRate = Number(set.daily_rate || 0);
@@ -290,7 +307,9 @@ export const MonthlySalary = ({
       const totalAdv = (adv || []).reduce((sum, a) => sum + Number(a.amount || 0), 0);
       const totalAll = (all || []).reduce((sum, a) => sum + Number(a.amount || 0), 0);
 
-      const insuranceDeduction = Number(set.insurance_deduction || 0);
+      // BHXH: Tương tự cho tính lẻ 1 người
+      const monthMultiplier = countMonthsInRange(customRange.start, customRange.end);
+      const insuranceDeduction = Number(set.insurance_deduction || 0) * monthMultiplier;
       const monthlyCoeff = Number(set.monthly_ot_coeff || 1.0);
       const dailyRate = Number(set.daily_rate || 0);
       const hourlyRate = dailyRate / 8;

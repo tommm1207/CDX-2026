@@ -1,3 +1,4 @@
+﻿import { CanvasLogo } from '@/components/shared/ReportExportHeader';
 import { exportTableImage } from '../../utils/reportExport';
 import { useState, useEffect } from 'react';
 import {
@@ -1075,7 +1076,7 @@ export const ConstructionDiaryComponent = ({
           {/* Footer Branding */}
           <div className="mt-12 flex justify-between items-end border-t border-gray-100 pt-6">
             <div className="space-y-1">
-              <p className="text-xs font-black text-gray-300 uppercase tracking-[0.2em] italic">
+              <p className="text-xs font-black text-gray-300 uppercase tracking-[0.2em] italic whitespace-nowrap">
                 CDX ERP SYSTEM
               </p>
               <p className="text-[9px] text-gray-300 font-bold uppercase tracking-widest">

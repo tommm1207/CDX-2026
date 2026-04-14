@@ -1,3 +1,4 @@
+﻿import { CanvasLogo } from '@/components/shared/ReportExportHeader';
 import { exportTableImage } from '../../utils/reportExport';
 import { useState, useEffect, FormEvent } from 'react';
 import {
@@ -24,6 +25,7 @@ import { PageBreadcrumb } from '../shared/PageBreadcrumb';
 import { ToastType } from '../shared/Toast';
 import { Button } from '../shared/Button';
 import { FAB } from '../shared/FAB';
+import { ExcelButton } from '../shared/ExcelButton';
 import { SortButton, SortOption } from '../shared/SortButton';
 import { checkUsage } from '@/utils/dataIntegrity';
 import { generateSmartCode } from '@/utils/codeGenerator';
@@ -85,6 +87,19 @@ export const Warehouses = ({
         onEnd: () => setIsCapturingTable(false),
       });
     }
+  };
+
+  const handleExportExcel = () => {
+    import('@/utils/excelExport').then(({ exportToExcel }) => {
+      exportToExcel({
+        title: 'Danh sách Kho hàng',
+        sheetName: 'Kho hàng',
+        columns: ['Mã kho', 'Tên kho', 'Địa chỉ', 'Ghi chú'],
+        rows: warehouses.map((it) => [it.code, it.name, it.address ?? '', it.notes ?? '']),
+        fileName: `CDX_KhoHang_${new Date().toISOString().slice(0, 10)}.xlsx`,
+        addToast,
+      });
+    });
   };
 
   const fetchWarehouses = async () => {
@@ -321,8 +336,14 @@ export const Warehouses = ({
   return (
     <div className="p-4 md:p-6 space-y-6 pb-24">
       <div className="flex items-center justify-between gap-2">
-        <PageBreadcrumb title="Danh sách Kho" onBack={onBack} />
-        <div className="flex items-center gap-2 justify-end flex-1">
+        <PageBreadcrumb title="Báo cáo" onBack={onBack} />
+        <div className="flex items-center gap-1.5 justify-end flex-1">
+          <SaveImageButton
+            onClick={handleSaveTableImage}
+            isCapturing={isCapturingTable}
+            title="Lưu ảnh danh mục kho"
+          />
+          <ExcelButton onClick={handleExportExcel} size="icon" />
           <SortButton
             currentSort={sortBy}
             onSortChange={(val) => {
@@ -334,21 +355,6 @@ export const Warehouses = ({
               { value: 'newest', label: 'Mới nhất' },
             ]}
           />
-          <button
-            onClick={() => setShowFilter((f) => !f)}
-            className={`p-2.5 rounded-xl border transition-colors ${
-              showFilter
-                ? 'bg-primary text-white border-primary'
-                : 'bg-white text-gray-500 border-gray-200 hover:border-primary/40'
-            }`}
-          >
-            <Search size={16} />
-          </button>
-          <SaveImageButton
-            onClick={handleSaveTableImage}
-            isCapturing={isCapturingTable}
-            title="Lưu ảnh danh mục kho"
-          />
         </div>
       </div>
 
@@ -358,7 +364,7 @@ export const Warehouses = ({
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: 'auto' }}
             exit={{ opacity: 0, height: 0 }}
-            className="overflow-hidden"
+            style={{ overflow: showFilter ? 'visible' : 'hidden' }}
           >
             <div className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-4">
               <div className="space-y-1">
@@ -886,7 +892,7 @@ export const Warehouses = ({
           {/* Footer Branding */}
           <div className="mt-12 flex justify-between items-end border-t border-gray-100 pt-6">
             <div className="space-y-1">
-              <p className="text-xs font-black text-gray-300 uppercase tracking-[0.2em] italic">
+              <p className="text-xs font-black text-gray-300 uppercase tracking-[0.2em] italic whitespace-nowrap">
                 CDX ERP SYSTEM
               </p>
               <p className="text-[9px] text-gray-300 font-bold uppercase tracking-widest">

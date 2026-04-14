@@ -1,5 +1,5 @@
-import { useState, useEffect, FormEvent, useRef, useCallback } from 'react';
-import * as XLSX from 'xlsx';
+﻿import { useState, useEffect, FormEvent, useRef, useCallback } from 'react';
+
 import {
   Plus,
   Search,
@@ -440,26 +440,35 @@ export const StockIn = ({
   };
 
   const handleExportExcel = useCallback(() => {
-    const data: any[][] = [
-      ['Ngày', 'Mã phiếu', 'Vật tư', 'Kho', 'Số lượng', 'Đơn giá', 'Thành tiền', 'Trạng thái'],
-    ];
-    slips.forEach((item) => {
-      data.push([
-        item.date,
-        item.import_code,
-        item.materials?.name || '',
-        item.warehouses?.name || '',
-        item.quantity,
-        item.unit_price,
-        item.total_amount || 0,
-        item.status,
-      ]);
+    import('@/utils/excelExport').then(({ exportToExcel }) => {
+      exportToExcel({
+        title: 'Báo cáo Nhập kho',
+        sheetName: 'Nhập kho',
+        columns: [
+          'Ngày',
+          'Mã phiếu',
+          'Vật tư',
+          'Kho',
+          'Số lượng',
+          'Đơn giá',
+          'Thành tiền',
+          'Trạng thái',
+        ],
+        rows: slips.map((it) => [
+          it.date,
+          it.import_code,
+          it.materials?.name ?? '',
+          it.warehouses?.name ?? '',
+          it.quantity,
+          it.unit_price,
+          it.total_amount ?? 0,
+          it.status,
+        ]),
+        fileName: `CDX_NhapKho_${new Date().toISOString().slice(0, 10)}.xlsx`,
+        addToast,
+      });
     });
-    const ws = XLSX.utils.aoa_to_sheet(data);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, 'NhapKho');
-    XLSX.writeFile(wb, `CDX_NhapKho_${new Date().toISOString().slice(0, 10)}.xlsx`);
-  }, [slips]);
+  }, [slips, addToast]);
 
   return (
     <div className="p-4 md:p-6 space-y-6 pb-24 overflow-x-hidden">
@@ -542,7 +551,7 @@ export const StockIn = ({
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: 'auto' }}
             exit={{ opacity: 0, height: 0 }}
-            className="overflow-hidden"
+            style={{ overflow: showFilter ? 'visible' : 'hidden' }}
           >
             <div className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 mb-4 space-y-4">
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">

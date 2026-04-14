@@ -1,3 +1,4 @@
+﻿import { CanvasLogo } from '@/components/shared/ReportExportHeader';
 import { exportTableImage } from '../../utils/reportExport';
 import { useState, useEffect } from 'react';
 import { X, PackageCheck, Factory, Search, ChevronRight, Package } from 'lucide-react';
@@ -9,6 +10,7 @@ import { NumericInput } from '../shared/NumericInput';
 import { CreatableSelect } from '../shared/CreatableSelect';
 import { ToastType } from '../shared/Toast';
 import { Button } from '../shared/Button';
+import { ExcelButton } from '../shared/ExcelButton';
 import { SortButton, SortOption } from '../shared/SortButton';
 import { formatDate, formatNumber } from '@/utils/format';
 import { isActiveWarehouse } from '@/utils/inventory';
@@ -365,7 +367,7 @@ export const FinishedGoodsIntake = ({
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: 'auto' }}
             exit={{ opacity: 0, height: 0 }}
-            className="overflow-hidden"
+            style={{ overflow: showFilter ? 'visible' : 'hidden' }}
           >
             <div className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 space-y-2">
               <label className="text-[10px] font-bold text-gray-400 uppercase">Tìm kiếm</label>
@@ -770,7 +772,7 @@ export const FinishedGoodsIntake = ({
           {/* Footer Branding */}
           <div className="mt-12 flex justify-between items-end border-t border-gray-100 pt-6">
             <div className="space-y-1">
-              <p className="text-xs font-black text-gray-300 uppercase tracking-[0.2em] italic">
+              <p className="text-xs font-black text-gray-300 uppercase tracking-[0.2em] italic whitespace-nowrap">
                 CDX ERP SYSTEM
               </p>
               <p className="text-[9px] text-gray-300 font-bold uppercase tracking-widest">

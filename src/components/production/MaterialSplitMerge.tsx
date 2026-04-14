@@ -1,3 +1,4 @@
+﻿import { CanvasLogo } from '@/components/shared/ReportExportHeader';
 import { useState, useEffect } from 'react';
 import {
   Plus,
@@ -30,7 +31,7 @@ import { ExcelButton } from '../shared/ExcelButton';
 import { formatDate, formatNumber } from '@/utils/format';
 import { isActiveWarehouse, getAvailableStock } from '@/utils/inventory';
 import { getAllowedWarehouses } from '@/utils/helpers';
-import { utils, writeFile } from 'xlsx';
+
 import { QuickAddMaterialModal } from '../shared/QuickAddMaterialModal';
 import { useInventoryData } from '@/hooks/useInventoryData';
 
@@ -66,7 +67,6 @@ export const MaterialSplitMerge = ({
   const [showAddMaterial, setShowAddMaterial] = useState(false);
   const [isCapturingTable, setIsCapturingTable] = useState(false);
   const reportRef = useRef<HTMLDivElement>(null);
-  const logoBase64 = '/logo.png';
   const [showDetailPhieu, setShowDetailPhieu] = useState(false);
   const [selectedPhieu, setSelectedPhieu] = useState<any>(null);
 
@@ -420,19 +420,35 @@ export const MaterialSplitMerge = ({
     return (h.ma_phieu || '').toLowerCase().includes(s);
   });
 
-  const exportToExcel = () => {
-    const data = filteredHistory.map((h) => ({
-      'Mã phiếu': h.ma_phieu,
-      Loại: h.loai === 'xa' ? 'Xả' : 'Gộp',
-      Ngày: formatDate(h.ngay),
-      Kho: h.warehouses?.name || '',
-      'Người tạo': h.users?.full_name || '',
-      'Ghi chú': h.ghi_chu || '',
-    }));
-    const ws = utils.json_to_sheet(data);
-    const wb = utils.book_new();
-    utils.book_append_sheet(wb, ws, 'XaGop');
-    writeFile(wb, `XaGopVatTu_${new Date().toISOString().slice(0, 10)}.xlsx`);
+  const handleExportExcel = () => {
+    import('@/utils/excelExport').then(({ exportToExcel }) => {
+      exportToExcel({
+        title: 'Tách ghép Vật tư',
+        sheetName: 'Tách ghép',
+        columns: [
+          'Mã phiếu',
+          'Loại',
+          'Ngày',
+          'Kho',
+          'Vật tư gốc',
+          'Vật tư mới',
+          'Số lượng',
+          'Ghi chú',
+        ],
+        rows: slips.map((s) => [
+          s.slip_code ?? '',
+          s.type ?? '',
+          s.date ?? '',
+          s.warehouses?.name ?? '',
+          s.from_material?.name ?? '',
+          s.to_material?.name ?? '',
+          s.quantity,
+          s.notes ?? '',
+        ]),
+        fileName: `CDX_TachGhep_${new Date().toISOString().slice(0, 10)}.xlsx`,
+        addToast,
+      });
+    });
   };
 
   return (
@@ -511,7 +527,7 @@ export const MaterialSplitMerge = ({
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: 'auto' }}
             exit={{ opacity: 0, height: 0 }}
-            className="overflow-hidden"
+            style={{ overflow: showFilter ? 'visible' : 'hidden' }}
           >
             <div className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 space-y-2">
               <label className="text-[10px] font-bold text-gray-400 uppercase">Tìm kiếm</label>
@@ -1179,11 +1195,11 @@ export const MaterialSplitMerge = ({
           </table>
 
           <div className="mt-8 pt-6 border-t border-gray-100 flex justify-between items-end">
-            <div className="text-[10px] text-gray-400 font-bold">
+            <div className="text-[10px] text-gray-400 font-bold whitespace-nowrap">
               Ngày xuất: {new Date().toLocaleDateString('vi-VN')} •{' '}
               {new Date().toLocaleTimeString('vi-VN')}
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 whitespace-nowrap">
               <span className="text-[10px] font-black text-gray-300 uppercase italic">
                 CDX ERP SYSTEM
               </span>

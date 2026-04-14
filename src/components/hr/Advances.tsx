@@ -1,3 +1,4 @@
+﻿import { CanvasLogo } from '@/components/shared/ReportExportHeader';
 import { useState, useEffect, useRef } from 'react';
 import {
   Plus,
@@ -26,7 +27,6 @@ import { SortButton, SortOption } from '../shared/SortButton';
 import { ReportPreviewModal } from '../shared/ReportPreviewModal';
 import { MonthYearPicker } from '../shared/MonthYearPicker';
 import { ExcelButton } from '../shared/ExcelButton';
-import { utils, writeFile } from 'xlsx';
 
 export const Advances = ({
   user,
@@ -259,28 +259,22 @@ export const Advances = ({
     });
 
   const exportExcel = () => {
-    try {
-      if (filteredItems.length === 0) {
-        if (addToast) addToast('Không có dữ liệu để xuất', 'warning');
-        return;
-      }
-
-      const exportData = filteredItems.map((item) => ({
-        Ngày: formatDate(item.date),
-        'Nhân viên': item.users?.full_name,
-        'Số tiền': item.amount,
-        'Nội dung': activeTab === 'advances' ? 'Tạm ứng' : item.type,
-        'Ghi chú': item.notes || '',
-      }));
-
-      const ws = utils.json_to_sheet(exportData);
-      const wb = utils.book_new();
-      utils.book_append_sheet(wb, ws, activeTab === 'advances' ? 'Tạm ứng' : 'Phụ cấp');
-      writeFile(wb, `TamUng_PhuCap_T${selectedMonth}_${selectedYear}.xlsx`);
-      if (addToast) addToast('Xuất Excel thành công!', 'success');
-    } catch (err: any) {
-      if (addToast) addToast('Lỗi xuất Excel: ' + err.message, 'error');
-    }
+    import('@/utils/excelExport').then(({ exportToExcel }) => {
+      exportToExcel({
+        title: activeTab === 'advances' ? 'Bảng Tạm ứng lương' : 'Bảng Phụ cấp',
+        sheetName: activeTab === 'advances' ? 'Tạm ứng' : 'Phụ cấp',
+        columns: ['Ngày', 'Nhân viên', 'Số tiền', 'Nội dung', 'Ghi chú'],
+        rows: filteredItems.map((item) => [
+          item.date,
+          item.users?.full_name ?? '',
+          item.amount,
+          activeTab === 'advances' ? 'Tạm ứng' : (item.type ?? ''),
+          item.notes ?? '',
+        ]),
+        fileName: `CDX_TamUng_PhuCap_T${selectedMonth}_${selectedYear}.xlsx`,
+        addToast,
+      });
+    });
   };
 
   return (
@@ -288,30 +282,27 @@ export const Advances = ({
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <PageBreadcrumb title="Tạm ứng & Phụ cấp" onBack={onBack} />
         <div className="flex items-center gap-1.5 justify-end flex-1">
-          <ExcelButton onClick={exportExcel} />
-
-          <div className="flex items-center gap-1.5 ml-1">
-            <SortButton
-              currentSort={sortBy}
-              onSortChange={(val: any) => setSortBy(val)}
-              options={[
-                { value: 'date', label: 'Sắp xếp: Ngày chi' },
-                { value: 'amount', label: 'Sắp xếp: Số tiền' },
-              ]}
-            />
-            <Button
-              size="icon"
-              variant={showFilter ? 'primary' : 'outline'}
-              onClick={() => setShowFilter((f) => !f)}
-              icon={Search}
-              className={showFilter ? '' : 'border-gray-200'}
-            />
-            <SaveImageButton
-              onClick={() => setShowReportPreview(true)}
-              isCapturing={isCapturingTable}
-              title="Lưu ảnh báo cáo"
-            />
-          </div>
+          <SaveImageButton
+            onClick={() => setShowReportPreview(true)}
+            isCapturing={isCapturingTable}
+            title="Lưu ảnh báo cáo"
+          />
+          <ExcelButton onClick={exportExcel} size="icon" />
+          <SortButton
+            currentSort={sortBy}
+            onSortChange={(val: any) => setSortBy(val)}
+            options={[
+              { value: 'date', label: 'Sắp xếp: Ngày chi' },
+              { value: 'amount', label: 'Sắp xếp: Số tiền' },
+            ]}
+          />
+          <Button
+            size="icon"
+            variant={showFilter ? 'primary' : 'outline'}
+            onClick={() => setShowFilter((f) => !f)}
+            icon={Search}
+            className={showFilter ? '' : 'border-gray-200'}
+          />
         </div>
       </div>
 
@@ -734,7 +725,7 @@ export const Advances = ({
 
           <div className="mt-12 flex justify-between items-end border-t border-gray-100 pt-6">
             <div className="space-y-1">
-              <p className="text-xs font-black text-gray-300 uppercase tracking-[0.2em] italic">
+              <p className="text-xs font-black text-gray-300 uppercase tracking-[0.2em] italic whitespace-nowrap">
                 CDX ERP SYSTEM
               </p>
               <p className="text-[9px] text-gray-300 font-bold uppercase tracking-widest">
@@ -862,11 +853,11 @@ export const Advances = ({
           </table>
 
           <div className="mt-8 pt-6 border-t border-gray-100 flex justify-between items-end">
-            <div className="text-[10px] text-gray-400 font-bold">
+            <div className="text-[10px] text-gray-400 font-bold whitespace-nowrap">
               Ngày xuất: {new Date().toLocaleDateString('vi-VN')} •{' '}
               {new Date().toLocaleTimeString('vi-VN')}
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 whitespace-nowrap">
               <span className="text-[10px] font-black text-gray-300 uppercase italic">
                 CDX ERP SYSTEM
               </span>

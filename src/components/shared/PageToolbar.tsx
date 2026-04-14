@@ -3,18 +3,8 @@ import { Camera, Search, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Button } from './Button';
 import { SortButton, SortOption } from './SortButton';
+import { ExcelButton } from './ExcelButton';
 import { useTableCapture, CaptureOptions } from './useTableCapture';
-
-// Excel icon SVG (simple, inline)
-const ExcelIcon = () => (
-  <svg width="15" height="15" viewBox="0 0 24 24" fill="none">
-    <rect width="24" height="24" rx="5" fill="#2D5A27" />
-    <path
-      d="M7.5 6L11 12l-3.5 6h3.5l1.5-3.5 1.5 3.5h3.5L14 12l3.5-6h-3.5L12.5 9.5 11 6z"
-      fill="white"
-    />
-  </svg>
-);
 
 interface PageToolbarProps {
   /** Ref pointing to the DOM element (table wrapper) to capture as image */
@@ -90,11 +80,7 @@ export const PageToolbar: React.FC<PageToolbarProps> = ({
       )}
 
       {/* Export Excel */}
-      {onExportExcel && (
-        <Button size="icon" variant="outline" onClick={onExportExcel} title="Xuất Excel">
-          <ExcelIcon />
-        </Button>
-      )}
+      {onExportExcel && <ExcelButton onClick={onExportExcel} size="icon" />}
 
       {/* Sort */}
       {sortOptions && sortOptions.length > 0 && onSortChange && (
@@ -136,7 +122,7 @@ export const FilterPanel: React.FC<FilterPanelProps> = ({ show, onReset, childre
         initial={{ opacity: 0, height: 0 }}
         animate={{ opacity: 1, height: 'auto' }}
         exit={{ opacity: 0, height: 0 }}
-        className="overflow-hidden"
+        style={{ overflow: show ? 'visible' : 'hidden' }}
       >
         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 space-y-4">
           <div className="flex items-center justify-between">

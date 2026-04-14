@@ -1,5 +1,5 @@
 import { useState, useEffect, FormEvent, useRef, useCallback } from 'react';
-import * as XLSX from 'xlsx';
+
 import {
   Users,
   Plus,
@@ -306,37 +306,37 @@ export const HRRecords = ({
     });
 
   const handleExportExcel = useCallback(() => {
-    const data: any[][] = [
-      [
-        'Mã NV',
-        'Họ tên',
-        'Email',
-        'Điện thoại',
-        'Bộ phận',
-        'Chức vụ',
-        'Ngày vào làm',
-        'Trạng thái',
-        'Phân quyền',
-      ],
-    ];
-    filteredEmployees.forEach((emp) => {
-      data.push([
-        emp.code || emp.id.slice(0, 8),
-        emp.full_name,
-        emp.email || '',
-        emp.phone || '',
-        emp.department || '',
-        emp.position || '',
-        emp.join_date || '',
-        emp.status,
-        emp.role,
-      ]);
+    import('@/utils/excelExport').then(({ exportToExcel }) => {
+      exportToExcel({
+        title: 'Danh sách Nhân sự',
+        sheetName: 'Nhân sự',
+        columns: [
+          'Mã NV',
+          'Họ tên',
+          'Email',
+          'Điện thoại',
+          'Bộ phận',
+          'Chức vụ',
+          'Ngày vào làm',
+          'Trạng thái',
+          'Phân quyền',
+        ],
+        rows: filteredEmployees.map((emp) => [
+          emp.code || emp.id.slice(0, 8),
+          emp.full_name,
+          emp.email ?? '',
+          emp.phone ?? '',
+          emp.department ?? '',
+          emp.position ?? '',
+          emp.join_date ?? '',
+          emp.status,
+          emp.role,
+        ]),
+        fileName: `CDX_HoSoNhanSu_${new Date().toISOString().slice(0, 10)}.xlsx`,
+        addToast,
+      });
     });
-    const ws = XLSX.utils.aoa_to_sheet(data);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, 'DanhSachNhanSu');
-    XLSX.writeFile(wb, `CDX_HoSoNhanSu_${new Date().toISOString().slice(0, 10)}.xlsx`);
-  }, [filteredEmployees]);
+  }, [filteredEmployees, addToast]);
 
   return (
     <div className="p-4 md:p-6 space-y-6 pb-24 overflow-x-hidden">

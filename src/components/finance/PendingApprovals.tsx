@@ -1,3 +1,4 @@
+﻿import { CanvasLogo } from '@/components/shared/ReportExportHeader';
 import { exportTableImage } from '../../utils/reportExport';
 import { useState, useEffect } from 'react';
 import {
@@ -17,6 +18,8 @@ import {
   CheckCircle,
   Image as ImageIcon,
   Share2,
+  Search,
+  Filter,
 } from 'lucide-react';
 import { useRef } from 'react';
 
@@ -28,6 +31,7 @@ import { PageBreadcrumb } from '../shared/PageBreadcrumb';
 import { ToastType } from '../shared/Toast';
 import { formatDate, formatNumber, formatCurrency } from '@/utils/format';
 import { Button } from '../shared/Button';
+import { SortButton, SortOption } from '../shared/SortButton';
 
 interface ConfirmState {
   slip: any;
@@ -71,6 +75,9 @@ export const PendingApprovals = ({
   const [selectedSlip, setSelectedSlip] = useState<any | null>(null);
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [isCapturingTable, setIsCapturingTable] = useState(false);
+  const [showFilter, setShowFilter] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [sortBy, setSortBy] = useState<SortOption>('newest');
 
   const reportRef = useRef<HTMLDivElement>(null);
 
@@ -205,18 +212,27 @@ export const PendingApprovals = ({
       <div className="flex items-center justify-between gap-2">
         <PageBreadcrumb title="Phê duyệt phiếu" onBack={onBack} />
         <div className="flex items-center gap-2">
+          <SortButton
+            currentSort={sortBy}
+            onSortChange={(val) => setSortBy(val)}
+            options={[
+              { value: 'newest', label: 'Tương tác mới nhất' },
+              { value: 'date', label: 'Ngày chứng từ' },
+              { value: 'code', label: 'Mã chứng từ' },
+            ]}
+          />
           <Button
-            variant="ghost"
+            size="icon"
+            variant={showFilter ? 'primary' : 'outline'}
+            onClick={() => setShowFilter(!showFilter)}
+            icon={Search}
+          />
+          <Button
+            variant="outline"
+            size="icon"
             icon={RefreshCw}
             onClick={() => fetchPendingSlips()}
-            className="bg-gray-100 text-gray-600 hover:bg-gray-200"
-          >
-            Làm mới
-          </Button>
-          <SaveImageButton
-            onClick={handleSaveTableImage}
-            isCapturing={isCapturingTable}
-            title="Lưu ảnh danh sách chờ duyệt"
+            className="border-gray-200 text-gray-400"
           />
         </div>
       </div>
@@ -477,7 +493,7 @@ export const PendingApprovals = ({
           {/* Footer Branding */}
           <div className="mt-12 flex justify-between items-end border-t border-gray-100 pt-6">
             <div className="space-y-1">
-              <p className="text-xs font-black text-gray-300 uppercase tracking-[0.2em] italic">
+              <p className="text-xs font-black text-gray-300 uppercase tracking-[0.2em] italic whitespace-nowrap">
                 CDX ERP SYSTEM
               </p>
               <p className="text-[9px] text-gray-300 font-bold uppercase tracking-widest">
@@ -703,111 +719,132 @@ export const PendingApprovals = ({
                   </td>
                 </tr>
               ) : (
-                slips.map((item) => (
-                  <tr
-                    key={`${item.table}-${item.id}`}
-                    onClick={() => setSelectedSlip(item)}
-                    className={`hover:bg-primary/5 cursor-pointer transition-colors ${actionLoading === item.id ? 'opacity-50 pointer-events-none' : ''}`}
-                  >
-                    <td className="px-4 py-3">
-                      <div className="flex items-center gap-2">
-                        {typeIcon(item.type, 16)}
-                        <span className="text-xs font-bold text-gray-800">{item.type}</span>
-                        {item.notes?.includes('[SỬA') && (
-                          <span className="px-1.5 py-0.5 bg-yellow-100 text-yellow-700 text-[10px] font-bold rounded">
-                            Đã sửa
-                          </span>
-                        )}
-                      </div>
-                      <span className="text-[10px] font-mono text-gray-400 uppercase mt-0.5 block">
-                        #{slipCode(item)}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3">
-                      <div className="text-xs font-medium text-gray-700">
-                        {item.users?.full_name || '—'}
-                      </div>
-                      <div className="text-[10px] text-gray-400">{formatDate(item.date)}</div>
-                    </td>
-                    <td className="px-4 py-3">
-                      <div className="text-xs font-bold text-gray-800">
-                        {item.type === 'Chi phí'
-                          ? item.content
-                          : item.materials?.name || item.content || '—'}
-                      </div>
-                      <div className="flex flex-col items-start gap-1 mt-0.5">
-                        {item.type === 'Chi phí' && item.cost_type && (
-                          <span className="px-1.5 py-0.5 bg-gray-100 text-gray-600 rounded text-[10px] font-bold">
-                            {item.cost_type}
-                          </span>
-                        )}
-                        {item.type !== 'Chi phí' && (
-                          <span className="text-[10px] text-gray-500 italic">
-                            {item.type === 'Luân chuyển'
-                              ? `${item.from_wh?.name} → ${item.to_wh?.name}`
-                              : item.warehouses?.name || ''}
-                          </span>
-                        )}
-                      </div>
-                    </td>
-                    <td className="px-4 py-3 text-right">
-                      {item.type !== 'Chi phí' && item.quantity ? (
-                        <div className="text-xs font-bold text-gray-900">
-                          {formatNumber(item.quantity)} {item.materials?.unit || item.unit || ''}
-                        </div>
-                      ) : null}
-                      {item.total_amount > 0 && (
-                        <div
-                          className={`mt-0.5 font-medium ${item.type === 'Chi phí' ? 'text-xs font-bold text-red-600' : 'text-[10px] text-gray-400'}`}
-                        >
-                          {item.type === 'Chi phí'
-                            ? formatCurrency(item.total_amount)
-                            : `${formatNumber(item.total_amount)} ₫`}
-                        </div>
-                      )}
-                    </td>
-                    <td className="px-4 py-3">
-                      <div className="flex items-center justify-center gap-2">
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setConfirm({ slip: item, action: 'approve' });
-                          }}
-                          disabled={actionLoading === item.id}
-                          className="p-2 bg-green-50 text-green-600 rounded-xl hover:bg-green-600 hover:text-white transition-all shadow-sm disabled:opacity-50"
-                          title="Duyệt phiếu"
-                        >
-                          {actionLoading === item.id ? (
-                            <RefreshCw size={16} className="animate-spin" />
-                          ) : (
-                            <Check size={16} />
+                slips
+                  .filter((s) => {
+                    if (!searchTerm) return true;
+                    const search = searchTerm.toLowerCase();
+                    const sCode = slipCode(s).toLowerCase();
+                    const sContent = (s.materials?.name || s.content || '').toLowerCase();
+                    const sCreator = (s.users?.full_name || '').toLowerCase();
+                    return (
+                      sCode.includes(search) ||
+                      sContent.includes(search) ||
+                      sCreator.includes(search)
+                    );
+                  })
+                  .sort((a, b) => {
+                    if (sortBy === 'newest')
+                      return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+                    if (sortBy === 'date')
+                      return new Date(b.date).getTime() - new Date(a.date).getTime();
+                    if (sortBy === 'code') return slipCode(a).localeCompare(slipCode(b));
+                    return 0;
+                  })
+                  .map((item) => (
+                    <tr
+                      key={`${item.table}-${item.id}`}
+                      onClick={() => setSelectedSlip(item)}
+                      className={`hover:bg-primary/5 cursor-pointer transition-colors ${actionLoading === item.id ? 'opacity-50 pointer-events-none' : ''}`}
+                    >
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-2">
+                          {typeIcon(item.type, 16)}
+                          <span className="text-xs font-bold text-gray-800">{item.type}</span>
+                          {item.notes?.includes('[SỬA') && (
+                            <span className="px-1.5 py-0.5 bg-yellow-100 text-yellow-700 text-[10px] font-bold rounded">
+                              Đã sửa
+                            </span>
                           )}
-                        </button>
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setConfirm({ slip: item, action: 'reject' });
-                          }}
-                          disabled={actionLoading === item.id}
-                          className="p-2 bg-red-50 text-red-600 rounded-xl hover:bg-red-600 hover:text-white transition-all shadow-sm disabled:opacity-50"
-                          title="Từ chối"
-                        >
-                          <X size={16} />
-                        </button>
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setSelectedSlip(item);
-                          }}
-                          className="p-2 bg-gray-50 text-gray-500 rounded-xl hover:bg-gray-200 transition-all shadow-sm"
-                          title="Xem chi tiết"
-                        >
-                          <ChevronRight size={16} />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))
+                        </div>
+                        <span className="text-[10px] font-mono text-gray-400 uppercase mt-0.5 block">
+                          #{slipCode(item)}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="text-xs font-medium text-gray-700">
+                          {item.users?.full_name || '—'}
+                        </div>
+                        <div className="text-[10px] text-gray-400">{formatDate(item.date)}</div>
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="text-xs font-bold text-gray-800">
+                          {item.type === 'Chi phí'
+                            ? item.content
+                            : item.materials?.name || item.content || '—'}
+                        </div>
+                        <div className="flex flex-col items-start gap-1 mt-0.5">
+                          {item.type === 'Chi phí' && item.cost_type && (
+                            <span className="px-1.5 py-0.5 bg-gray-100 text-gray-600 rounded text-[10px] font-bold">
+                              {item.cost_type}
+                            </span>
+                          )}
+                          {item.type !== 'Chi phí' && (
+                            <span className="text-[10px] text-gray-500 italic">
+                              {item.type === 'Luân chuyển'
+                                ? `${item.from_wh?.name} → ${item.to_wh?.name}`
+                                : item.warehouses?.name || ''}
+                            </span>
+                          )}
+                        </div>
+                      </td>
+                      <td className="px-4 py-3 text-right">
+                        {item.type !== 'Chi phí' && item.quantity ? (
+                          <div className="text-xs font-bold text-gray-900">
+                            {formatNumber(item.quantity)} {item.materials?.unit || item.unit || ''}
+                          </div>
+                        ) : null}
+                        {item.total_amount > 0 && (
+                          <div
+                            className={`mt-0.5 font-medium ${item.type === 'Chi phí' ? 'text-xs font-bold text-red-600' : 'text-[10px] text-gray-400'}`}
+                          >
+                            {item.type === 'Chi phí'
+                              ? formatCurrency(item.total_amount)
+                              : `${formatNumber(item.total_amount)} ₫`}
+                          </div>
+                        )}
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="flex items-center justify-center gap-2">
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setConfirm({ slip: item, action: 'approve' });
+                            }}
+                            disabled={actionLoading === item.id}
+                            className="p-2 bg-green-50 text-green-600 rounded-xl hover:bg-green-600 hover:text-white transition-all shadow-sm disabled:opacity-50"
+                            title="Duyệt phiếu"
+                          >
+                            {actionLoading === item.id ? (
+                              <RefreshCw size={16} className="animate-spin" />
+                            ) : (
+                              <Check size={16} />
+                            )}
+                          </button>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setConfirm({ slip: item, action: 'reject' });
+                            }}
+                            disabled={actionLoading === item.id}
+                            className="p-2 bg-red-50 text-red-600 rounded-xl hover:bg-red-600 hover:text-white transition-all shadow-sm disabled:opacity-50"
+                            title="Từ chối"
+                          >
+                            <X size={16} />
+                          </button>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setSelectedSlip(item);
+                            }}
+                            className="p-2 bg-gray-50 text-gray-500 rounded-xl hover:bg-gray-200 transition-all shadow-sm"
+                            title="Xem chi tiết"
+                          >
+                            <ChevronRight size={16} />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))
               )}
             </tbody>
           </table>

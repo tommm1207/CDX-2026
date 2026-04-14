@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { BarChart3, RefreshCw, EyeOff, Download, Search } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { supabase } from '@/lib/supabase';
-import * as xlsx from 'xlsx';
+
 import { Employee } from '@/types';
 import { PageBreadcrumb } from '../shared/PageBreadcrumb';
 import { isActiveWarehouse } from '@/utils/inventory';
@@ -147,67 +147,53 @@ export const InventoryReport = ({
   );
 
   const handleExportExcel = () => {
-    if (report.length === 0) {
-      if (addToast) addToast('Không có dữ liệu để xuất Excel', 'warning');
-      return;
-    }
-
-    try {
-      const exportData = report.map((row) => ({
-        'Mã vật tư': row.materialCode || '',
-        'Tên vật tư': row.materialName || '',
-        Nhóm: row.materialGroup || '',
-        Kho: row.warehouseName || '',
-        'Tồn đầu kỳ': row.tonDau,
-        Nhập: row.tongNhap,
-        Xuất: row.tongXuat,
-        'Chuyển đến': row.chuyenDen,
-        'Chuyển đi': row.chuyenDi,
-        'Tồn cuối kỳ': row.tonCuoi,
-      }));
-
-      exportData.push({
-        'Mã vật tư': 'TỔNG CỘNG',
-        'Tên vật tư': '',
-        Nhóm: '',
-        Kho: '',
-        'Tồn đầu kỳ': totals.tonDau,
-        Nhập: totals.tongNhap,
-        Xuất: totals.tongXuat,
-        'Chuyển đến': totals.chuyenDen,
-        'Chuyển đi': totals.chuyenDi,
-        'Tồn cuối kỳ': totals.tonCuoi,
+    import('@/utils/excelExport').then(({ exportToExcel }) => {
+      const rowsWithTotal = [
+        ...report.map((r) => [
+          r.materialCode,
+          r.materialName,
+          r.materialGroup,
+          r.warehouseName,
+          r.tonDau,
+          r.tongNhap,
+          r.tongXuat,
+          r.chuyenDen,
+          r.chuyenDi,
+          r.tonCuoi,
+        ]),
+        [
+          'TỔNG CỘNG',
+          '',
+          '',
+          '',
+          totals.tonDau,
+          totals.tongNhap,
+          totals.tongXuat,
+          totals.chuyenDen,
+          totals.chuyenDi,
+          totals.tonCuoi,
+        ],
+      ];
+      exportToExcel({
+        title: 'Kiểm tra Tồn kho',
+        sheetName: 'Tồn kho',
+        columns: [
+          'Mã VT',
+          'Tên vật tư',
+          'Nhóm',
+          'Kho',
+          'Tồn đầu kỳ',
+          'Nhập',
+          'Xuất',
+          'Chuyển đến',
+          'Chuyển đi',
+          'Tồn cuối kỳ',
+        ],
+        rows: rowsWithTotal,
+        fileName: `CDX_TonKho_${new Date().toISOString().slice(0, 10)}.xlsx`,
+        addToast,
       });
-
-      const ws = xlsx.utils.json_to_sheet(exportData);
-
-      const colWidths = Object.keys(exportData[0] || {}).map((key) => {
-        let max = key.length;
-        exportData.forEach((row) => {
-          const val = (row as any)[key];
-          const len = val ? val.toString().length : 0;
-          if (len > max) max = len;
-        });
-        return { wch: Math.min(max + 2, 50) };
-      });
-      ws['!cols'] = colWidths;
-
-      const whName = selectedWarehouse
-        ? warehouses.find((w) => w.id === selectedWarehouse)?.name
-        : 'TatCaKho';
-      const cleanWhName = whName?.replace(/[^a-zA-Z0-9_\u0080-\uFFFF]/g, '') || 'TatCaKho';
-      const dateStr = new Date().toISOString().split('T')[0].replace(/-/g, '');
-      const fileName = `TonKho_${cleanWhName}_${dateStr}.xlsx`;
-
-      const wb = xlsx.utils.book_new();
-      xlsx.utils.book_append_sheet(wb, ws, 'Tồn Kho');
-      xlsx.writeFile(wb, fileName);
-
-      if (addToast) addToast('Xuất Excel thành công!', 'success');
-    } catch (err: any) {
-      console.error('Export Excel error:', err);
-      if (addToast) addToast('Lỗi xuất Excel: ' + err.message, 'error');
-    }
+    });
   };
 
   return (

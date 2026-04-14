@@ -1,5 +1,6 @@
+import { CanvasLogo } from '@/components/shared/ReportExportHeader';
 import { useState, useEffect, useRef, useCallback } from 'react';
-import * as XLSX from 'xlsx';
+
 import { Wallet, X, Image as ImageIcon, Camera, Search } from 'lucide-react';
 import { toPng } from 'html-to-image';
 import { logoBase64 } from '../../utils/logoBase64';
@@ -418,43 +419,8 @@ export const MonthlySalary = ({
   const netSalaryAll = displaySalaries.reduce((sum, s) => sum + s.netSalary, 0);
 
   // Excel always exports full data (not affected by hideZero)
+  // Excel always exports full data (not affected by hideZero)
   const handleExportExcel = () => {
-    const data = [
-      [
-        'Mã NV',
-        'Họ tên',
-        'Công',
-        'TC Ngày (h)',
-        'Lương/Ngày',
-        'Hệ số',
-        'TC Tháng',
-        'TC Ngày',
-        'Lương Công',
-        'Phụ cấp',
-        'Tạm ứng',
-        'Bảo hiểm',
-        'Thực lĩnh',
-      ],
-    ];
-
-    salaries.forEach((s) => {
-      data.push([
-        s.code || s.id.slice(0, 8),
-        s.full_name,
-        Number(s.totalDays.toFixed(1)),
-        `${s.totalOT.toFixed(1)}h`,
-        s.dailyRate,
-        s.monthlyCoeff,
-        s.monthOTSalary,
-        s.dayOTSalary,
-        s.earnedSalary + s.monthOTSalary + s.dayOTSalary,
-        s.totalAll,
-        s.totalAdv,
-        s.insuranceDeduction,
-        s.netSalary,
-      ]);
-    });
-
     const allTotal = {
       days: salaries.reduce((sum, s) => sum + s.totalDays, 0),
       ot: salaries.reduce((sum, s) => sum + s.totalOT, 0),
@@ -469,26 +435,61 @@ export const MonthlySalary = ({
       ins: salaries.reduce((sum, s) => sum + s.insuranceDeduction, 0),
       net: salaries.reduce((sum, s) => sum + s.netSalary, 0),
     };
-    data.push([
-      '',
-      'TỔNG CỘNG',
-      Number(allTotal.days.toFixed(1)),
-      `${allTotal.ot.toFixed(1)}h`,
-      '',
-      '',
-      allTotal.monthOT,
-      allTotal.dayOT,
-      allTotal.earned,
-      allTotal.all,
-      allTotal.adv,
-      allTotal.ins,
-      allTotal.net,
-    ]);
-
-    const ws = XLSX.utils.aoa_to_sheet(data);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, `Luong T${selectedMonth}-${selectedYear}`);
-    XLSX.writeFile(wb, `CDX_BangLuong_T${selectedMonth}_${selectedYear}.xlsx`);
+    import('@/utils/excelExport').then(({ exportToExcel }) => {
+      exportToExcel({
+        title: `Bảng Lương Tháng ${selectedMonth}/${selectedYear}`,
+        sheetName: `Lương T${selectedMonth}-${selectedYear}`,
+        columns: [
+          'Mã NV',
+          'Họ tên',
+          'Công',
+          'TC Ngày (h)',
+          'Lương/Ngày',
+          'Hệ số',
+          'TC Tháng',
+          'TC Ngày',
+          'Lương Công',
+          'Phụ cấp',
+          'Tạm ứng',
+          'Bảo hiểm',
+          'Thực lĩnh',
+        ],
+        rows: [
+          ...salaries.map((s) => [
+            s.code || s.id.slice(0, 8),
+            s.full_name,
+            Number(s.totalDays.toFixed(1)),
+            Number(s.totalOT.toFixed(1)),
+            s.dailyRate,
+            s.monthlyCoeff,
+            s.monthOTSalary,
+            s.dayOTSalary,
+            s.earnedSalary + s.monthOTSalary + s.dayOTSalary,
+            s.totalAll,
+            s.totalAdv,
+            s.insuranceDeduction,
+            s.netSalary,
+          ]),
+          [
+            '',
+            'TỔNG CỘNG',
+            Number(allTotal.days.toFixed(1)),
+            Number(allTotal.ot.toFixed(1)),
+            '',
+            '',
+            allTotal.monthOT,
+            allTotal.dayOT,
+            allTotal.earned,
+            allTotal.all,
+            allTotal.adv,
+            allTotal.ins,
+            allTotal.net,
+          ],
+        ],
+        fileName: `CDX_BangLuong_T${selectedMonth}_${selectedYear}.xlsx`,
+        addToast,
+      });
+    });
   };
 
   // Note: image capture handled by PageToolbar via captureOptions
@@ -878,11 +879,9 @@ export const MonthlySalary = ({
                     <div className="px-5 pt-5 pb-4 border-b border-gray-100">
                       {/* Logo row */}
                       <div className="flex items-center gap-2 mb-3">
-                        <img
-                          src={logoBase64}
-                          alt="Logo"
-                          className="logo-img rounded-lg flex-shrink-0"
-                          style={{ objectFit: 'contain' }}
+                        <CanvasLogo
+                          size={96}
+                          className="w-24 h-24 rounded-3xl object-contain shadow-sm"
                         />
                         <div>
                           <p className="text-[9px] font-black text-gray-700 uppercase tracking-wider">

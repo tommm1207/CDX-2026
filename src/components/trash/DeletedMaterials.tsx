@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+﻿import { useState, useEffect } from 'react';
 import {
   Package,
   RefreshCw,
@@ -320,7 +320,7 @@ export const DeletedMaterials = ({
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: 'auto' }}
             exit={{ opacity: 0, height: 0 }}
-            className="overflow-hidden"
+            style={{ overflow: showFilter ? 'visible' : 'hidden' }}
           >
             <div className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 space-y-2">
               <label className="text-[10px] font-bold text-gray-400 uppercase">Tìm kiếm</label>

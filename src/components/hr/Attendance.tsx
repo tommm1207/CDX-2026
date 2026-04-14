@@ -1,6 +1,8 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import * as XLSX from 'xlsx';
+
 import { CalendarCheck, Plus, X, Users, Check, RefreshCw, Search, Camera } from 'lucide-react';
+import { SaveImageButton } from '../shared/SaveImageButton';
+import { ExcelButton } from '../shared/ExcelButton';
 import { motion, AnimatePresence } from 'motion/react';
 import { supabase } from '@/lib/supabase';
 import { Employee } from '@/types';
@@ -366,57 +368,50 @@ export const Attendance = ({
   }, [tableRef, selectedMonth, selectedYear, captureElement, addToast]);
 
   const handleExportExcel = useCallback(() => {
-    const data: any[][] = [
-      [
-        'Mã NV',
-        'Họ tên',
-        ...Array.from(
-          { length: new Date(selectedYear, selectedMonth, 0).getDate() },
-          (_, i) => `${i + 1}`,
-        ),
-        'Tổng công',
-      ],
-    ];
-    employees.forEach((emp) => {
-      const row: any[] = [emp.code || emp.id.slice(0, 8), emp.full_name];
-      let total = 0;
-      const daysCount = new Date(selectedYear, selectedMonth, 0).getDate();
-      for (let d = 1; d <= daysCount; d++) {
-        const dateStr = `${selectedYear}-${String(selectedMonth).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
-        const att = attendance.find((a) => a.employee_id === emp.id && a.date === dateStr);
-        const val =
-          att?.status === 'present'
-            ? 1
-            : att?.status === 'half-day'
-              ? 0.5
-              : att?.status === 'absent'
-                ? 0
-                : '';
-        if (typeof val === 'number') total += val;
-        row.push(val === '' ? '' : val);
-      }
-      row.push(total);
-      data.push(row);
+    const daysCount = new Date(selectedYear, selectedMonth, 0).getDate();
+    const dayHeaders = Array.from({ length: daysCount }, (_, i) => String(i + 1));
+    import('@/utils/excelExport').then(({ exportToExcel }) => {
+      exportToExcel({
+        title: `Bảng Chấm công Tháng ${selectedMonth}/${selectedYear}`,
+        sheetName: 'Chấm công',
+        columns: ['Mã NV', 'Họ tên', ...dayHeaders, 'Tổng công'],
+        rows: employees.map((emp) => {
+          const row = [emp.code || emp.id.slice(0, 8), emp.full_name];
+          let total = 0;
+          for (let d = 1; d <= daysCount; d++) {
+            const dateStr = `${selectedYear}-${String(selectedMonth).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+            const att = attendance.find((a) => a.employee_id === emp.id && a.date === dateStr);
+            const val =
+              att?.status === 'present'
+                ? 1
+                : att?.status === 'half-day'
+                  ? 0.5
+                  : att?.status === 'absent'
+                    ? 0
+                    : '';
+            if (typeof val === 'number') total += val;
+            row.push(val === '' ? '' : val);
+          }
+          row.push(total);
+          return row;
+        }),
+        fileName: `CDX_ChamCong_T${selectedMonth}_${selectedYear}.xlsx`,
+        addToast,
+      });
     });
-    const ws = XLSX.utils.aoa_to_sheet(data);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, `ChamCong_T${selectedMonth}_${selectedYear}`);
-    XLSX.writeFile(wb, `CDX_ChamCong_T${selectedMonth}_${selectedYear}.xlsx`);
-  }, [employees, attendance, selectedMonth, selectedYear]);
+  }, [employees, attendance, selectedMonth, selectedYear, addToast]);
 
   return (
     <div className="p-4 md:p-6 space-y-6 pb-24 overflow-x-hidden">
       <div className="flex items-center justify-between gap-2 flex-wrap">
         <PageBreadcrumb title="Chấm công" onBack={onBack} />
-        {/* Toolbar: [Chấm công] [Lưu ảnh] [Excel] [Sắp xếp] [Lọc] */}
         <div className="flex items-center gap-1.5 flex-nowrap min-w-0 justify-end ml-auto">
-          {/* Nút Chấm công */}
           {user.role !== 'User' && (
             <Button
               size="sm"
               variant="primary"
               onClick={openBulkModal}
-              className="flex items-center gap-1.5 flex-shrink min-w-0"
+              className="flex items-center gap-1.5 flex-shrink min-w-0 px-3"
               title="Chấm công hàng loạt"
             >
               <Users size={14} className="flex-shrink-0" />
@@ -425,27 +420,12 @@ export const Attendance = ({
               </span>
             </Button>
           )}
-          {/* Lưu ảnh */}
-          <Button
-            size="icon"
-            variant="outline"
+          <SaveImageButton
             onClick={handleCaptureTable}
-            isLoading={isCapturingTable}
+            isCapturing={isCapturingTable}
             title="Lưu ảnh bảng chấm công"
-          >
-            {!isCapturingTable && <Camera size={16} />}
-          </Button>
-          {/* Xuất Excel */}
-          <Button size="icon" variant="outline" onClick={handleExportExcel} title="Xuất Excel">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none">
-              <rect width="24" height="24" rx="5" fill="#2D5A27" />
-              <path
-                d="M7.5 6L11 12l-3.5 6h3.5l1.5-3.5 1.5 3.5h3.5L14 12l3.5-6h-3.5L12.5 9.5 11 6z"
-                fill="white"
-              />
-            </svg>
-          </Button>
-          {/* Sắp xếp */}
+          />
+          <ExcelButton onClick={handleExportExcel} size="icon" />
           <SortButton
             currentSort={sortBy}
             onSortChange={(val) => {
@@ -457,15 +437,13 @@ export const Attendance = ({
               { value: 'newest', label: 'Tên A-Z' },
             ]}
           />
-          {/* Lọc */}
           <Button
             size="icon"
             variant={showFilter ? 'primary' : 'outline'}
-            onClick={() => setShowFilter((f) => !f)}
-            title="Lọc"
-          >
-            <Search size={16} />
-          </Button>
+            onClick={() => setShowFilter(!showFilter)}
+            icon={Search}
+            className={showFilter ? '' : 'border-gray-200'}
+          />
         </div>
       </div>
 
@@ -475,7 +453,7 @@ export const Attendance = ({
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: 'auto' }}
             exit={{ opacity: 0, height: 0 }}
-            className="overflow-hidden"
+            style={{ overflow: showFilter ? 'visible' : 'hidden' }}
           >
             <div className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 space-y-3">
               <div className="flex items-center justify-between">

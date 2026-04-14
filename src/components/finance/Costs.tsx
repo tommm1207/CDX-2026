@@ -1,4 +1,5 @@
-import { exportTableImage } from '../../utils/reportExport';
+﻿import { exportTableImage } from '../../utils/reportExport';
+import { CanvasLogo } from '../shared/ReportExportHeader';
 import { useState, useEffect, FormEvent, useRef, useMemo } from 'react';
 import {
   Search,
@@ -34,8 +35,7 @@ import {
 
 import { SaveImageButton } from '../shared/SaveImageButton';
 import { motion, AnimatePresence } from 'motion/react';
-import { utils, writeFile } from 'xlsx';
-import { supabase } from '@/lib/supabase';
+
 import { Employee } from '@/types';
 import { PageBreadcrumb } from '../shared/PageBreadcrumb';
 import { NumericInput } from '../shared/NumericInput';
@@ -423,20 +423,38 @@ export const Costs = ({
   };
 
   const exportToExcel = () => {
-    const data = costs.map((item) => ({
-      Mã: item.cost_code,
-      Ngày: item.date,
-      Loại: item.transaction_type,
-      'Người lập': item.users?.full_name,
-      'Hạng mục': item.cost_type,
-      'Nội dung': item.content,
-      Kho: item.warehouses?.name,
-      'Số lượng': item.quantity,
-      ĐVT: item.unit,
-      'Thành tiền': item.total_amount,
-    }));
-    utils.book_append_sheet(utils.book_new(), utils.json_to_sheet(data), 'Chi phí');
-    writeFile(utils.book_new(), `Costs_${new Date().toISOString().slice(0, 10)}.xlsx`);
+    import('@/utils/excelExport').then(({ exportToExcel: cdxExport }) => {
+      cdxExport({
+        title: 'B\u00e1o c\u00e1o Chi ph\u00ed',
+        sheetName: 'Chi ph\u00ed',
+        columns: [
+          'M\u00e3',
+          'Ng\u00e0y',
+          'Lo\u1ea1i',
+          'Ng\u01b0\u1eddi l\u1eadp',
+          'H\u1ea1ng m\u1ee5c',
+          'N\u1ed9i dung',
+          'Kho',
+          'S\u1ed1 l\u01b0\u1ee3ng',
+          '\u0110VT',
+          'Th\u00e0nh ti\u1ec1n',
+        ],
+        rows: filteredCosts.map((item) => [
+          item.cost_code,
+          item.date,
+          item.transaction_type,
+          item.users?.full_name ?? '',
+          item.cost_type ?? '',
+          item.content ?? '',
+          item.warehouses?.name ?? '',
+          item.quantity,
+          item.unit ?? '',
+          item.total_amount,
+        ]),
+        fileName: `CDX_ChiPhi_${new Date().toISOString().slice(0, 10)}.xlsx`,
+        addToast,
+      });
+    });
   };
 
   const filteredCosts = costs
@@ -467,30 +485,28 @@ export const Costs = ({
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <PageBreadcrumb title="Quản lý Chi phí" onBack={onBack} />
         <div className="flex items-center gap-1.5 justify-end flex-1">
-          <ExcelButton onClick={exportToExcel} />
-          <div className="flex items-center gap-1.5 ml-1">
-            <SortButton
-              currentSort={sortBy}
-              onSortChange={(val) => setSortBy(val)}
-              options={[
-                { value: 'newest', label: 'Sắp xếp: Mới nhất' },
-                { value: 'price', label: 'Sắp xếp: Thành tiền' },
-                { value: 'date', label: 'Sắp xếp: Ngày chi' },
-              ]}
-            />
-            <Button
-              size="icon"
-              variant={showFilter ? 'primary' : 'outline'}
-              onClick={() => setShowFilter((f) => !f)}
-              icon={Search}
-              className={showFilter ? '' : 'border-gray-200'}
-            />
-            <SaveImageButton
-              onClick={handleSaveTableImage}
-              isCapturing={isCapturingTable}
-              title="Lưu ảnh báo cáo A4"
-            />
-          </div>
+          <SaveImageButton
+            onClick={handleSaveTableImage}
+            isCapturing={isCapturingTable}
+            title="Lưu ảnh báo cáo A4"
+          />
+          <ExcelButton onClick={exportToExcel} size="icon" />
+          <SortButton
+            currentSort={sortBy}
+            onSortChange={(val) => setSortBy(val)}
+            options={[
+              { value: 'newest', label: 'Sắp xếp: Mới nhất' },
+              { value: 'price', label: 'Sắp xếp: Thành tiền' },
+              { value: 'date', label: 'Sắp xếp: Ngày chi' },
+            ]}
+          />
+          <Button
+            size="icon"
+            variant={showFilter ? 'primary' : 'outline'}
+            onClick={() => setShowFilter((f) => !f)}
+            icon={Search}
+            className={showFilter ? '' : 'border-gray-200'}
+          />
         </div>
       </div>
 
@@ -1101,7 +1117,7 @@ export const Costs = ({
           {/* Footer Branding */}
           <div className="mt-12 flex justify-between items-end border-t border-gray-100 pt-6">
             <div className="space-y-1">
-              <p className="text-xs font-black text-gray-300 uppercase tracking-[0.2em] italic">
+              <p className="text-xs font-black text-gray-300 uppercase tracking-[0.2em] italic whitespace-nowrap">
                 CDX ERP SYSTEM
               </p>
               <p className="text-[9px] text-gray-300 font-bold uppercase tracking-widest">

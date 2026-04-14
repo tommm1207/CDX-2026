@@ -1,3 +1,4 @@
+﻿import { CanvasLogo } from '@/components/shared/ReportExportHeader';
 import { exportTableImage } from '../../utils/reportExport';
 import { useState, useEffect } from 'react';
 import {
@@ -27,6 +28,7 @@ import { FAB } from '../shared/FAB';
 import { Button } from '../shared/Button';
 import { ConfirmModal } from '../shared/ConfirmModal';
 import { checkUsage } from '@/utils/dataIntegrity';
+import { ExcelButton } from '../shared/ExcelButton';
 
 export const Reminders = ({
   user,
@@ -129,6 +131,24 @@ export const Reminders = ({
         onEnd: () => setIsCapturingTable(false),
       });
     }
+  };
+
+  const handleExportExcel = () => {
+    import('@/utils/excelExport').then(({ exportToExcel }) => {
+      exportToExcel({
+        title: 'Thông báo & Nhắc việc',
+        sheetName: 'Nhắc việc',
+        columns: ['Tiêu đề', 'Nội dung', 'Hạn', 'Trạng thái'],
+        rows: filteredReminders.map((it) => [
+          it.title,
+          it.description ?? '',
+          it.due_date ?? '',
+          it.status ?? '',
+        ]),
+        fileName: `CDX_NhacViec_${new Date().toISOString().slice(0, 10)}.xlsx`,
+        addToast,
+      });
+    });
   };
 
   const handleSave = async () => {
@@ -302,27 +322,27 @@ export const Reminders = ({
   return (
     <div className="p-4 md:p-6 space-y-6 pb-24">
       <div className="flex items-center justify-between gap-2">
-        <PageBreadcrumb title="Thông báo" onBack={onBack} />
-        <div className="flex items-center gap-2 justify-end flex-1">
-          {filteredReminders.length > 0 && (
-            <Button
-              size="icon"
-              variant="danger"
-              icon={Trash2}
-              onClick={() => setShowDeleteAllConfirm(true)}
-              title="Xóa tất cả danh sách hiện tại"
-            />
-          )}
+        <PageBreadcrumb title="Báo cáo" onBack={onBack} />
+        <div className="flex items-center gap-1.5 justify-end flex-1">
+          <SaveImageButton
+            onClick={handleSaveTableImage}
+            isCapturing={isCapturingTable}
+            title="Lưu ảnh báo cáo thông báo"
+          />
+          <ExcelButton onClick={handleExportExcel} size="icon" />
+
+          <Button
+            size="icon"
+            variant="danger"
+            icon={Trash2}
+            onClick={() => setShowDeleteAllConfirm(true)}
+            title="Xóa tất cả danh sách hiện tại"
+          />
           <Button
             size="icon"
             variant={showFilter ? 'primary' : 'outline'}
             onClick={() => setShowFilter((f) => !f)}
             icon={Search}
-          />
-          <SaveImageButton
-            onClick={handleSaveTableImage}
-            isCapturing={isCapturingTable}
-            title="Lưu ảnh báo cáo thông báo"
           />
         </div>
       </div>
@@ -333,7 +353,7 @@ export const Reminders = ({
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: 'auto' }}
             exit={{ opacity: 0, height: 0 }}
-            className="overflow-hidden"
+            style={{ overflow: showFilter ? 'visible' : 'hidden' }}
           >
             <div className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 space-y-4">
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
@@ -902,7 +922,7 @@ export const Reminders = ({
           {/* Footer Branding */}
           <div className="mt-12 flex justify-between items-end border-t border-gray-100 pt-6">
             <div className="space-y-1">
-              <p className="text-xs font-black text-gray-300 uppercase tracking-[0.2em] italic">
+              <p className="text-xs font-black text-gray-300 uppercase tracking-[0.2em] italic whitespace-nowrap">
                 CDX ERP SYSTEM
               </p>
               <p className="text-[9px] text-gray-300 font-bold uppercase tracking-widest">

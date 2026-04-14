@@ -1,3 +1,4 @@
+﻿import { CanvasLogo } from '@/components/shared/ReportExportHeader';
 import { exportTableImage } from '../../utils/reportExport';
 import { useState, useEffect, FormEvent, useRef } from 'react';
 import {
@@ -37,6 +38,7 @@ import { formatDate, formatCurrency, formatNumber } from '@/utils/format';
 import { isUUID, generateCode, getAllowedWarehouses } from '@/utils/helpers';
 import { Button } from '../shared/Button';
 import { getAvailableStock, validateFutureImpact } from '@/utils/inventory';
+import { ExcelButton } from '../shared/ExcelButton';
 import { SortButton, SortOption } from '../shared/SortButton';
 
 import { SaveImageButton } from '../shared/SaveImageButton';
@@ -117,6 +119,37 @@ export const StockOut = ({
         onEnd: () => setIsCapturingTable(false),
       });
     }
+  };
+
+  const handleExportExcel = () => {
+    import('@/utils/excelExport').then(({ exportToExcel }) => {
+      exportToExcel({
+        title: 'Báo cáo Xuất kho',
+        sheetName: 'Xuất kho',
+        columns: [
+          'Mã phiếu',
+          'Ngày',
+          'Kho',
+          'Vật tư',
+          'Số lượng',
+          'Đơn giá',
+          'Ghi chú',
+          'Trạng thái',
+        ],
+        rows: slips.map((it) => [
+          it.export_code,
+          it.date,
+          it.warehouses?.name ?? '',
+          it.materials?.name ?? '',
+          it.quantity,
+          it.unit_price,
+          it.notes ?? '',
+          it.status,
+        ]),
+        fileName: `CDX_XuatKho_${new Date().toISOString().slice(0, 10)}.xlsx`,
+        addToast,
+      });
+    });
   };
 
   useEffect(() => {
@@ -500,8 +533,14 @@ export const StockOut = ({
   return (
     <div className="p-4 md:p-6 space-y-6 pb-24 overflow-x-hidden">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <PageBreadcrumb title="Xuất kho" onBack={onBack} />
-        <div className="flex items-center gap-2 justify-end flex-1">
+        <PageBreadcrumb title="Báo cáo" onBack={onBack} />
+        <div className="flex items-center gap-1.5 justify-end flex-1">
+          <SaveImageButton
+            onClick={handleSaveTableImage}
+            isCapturing={isCapturingTable}
+            title="Lưu ảnh báo cáo A4"
+          />
+          <ExcelButton onClick={handleExportExcel} size="icon" />
           <SortButton
             currentSort={sortBy}
             onSortChange={(val) => {
@@ -520,11 +559,6 @@ export const StockOut = ({
             variant={showFilter ? 'primary' : 'outline'}
             onClick={() => setShowFilter((f) => !f)}
             icon={Search}
-          />
-          <SaveImageButton
-            onClick={handleSaveTableImage}
-            isCapturing={isCapturingTable}
-            title="Lưu ảnh báo cáo A4"
           />
         </div>
       </div>
@@ -1333,7 +1367,7 @@ export const StockOut = ({
           {/* Footer Branding */}
           <div className="mt-12 flex justify-between items-end border-t border-gray-100 pt-6">
             <div className="space-y-1">
-              <p className="text-xs font-black text-gray-300 uppercase tracking-[0.2em] italic">
+              <p className="text-xs font-black text-gray-300 uppercase tracking-[0.2em] italic whitespace-nowrap">
                 CDX ERP SYSTEM
               </p>
               <p className="text-[9px] text-gray-300 font-bold uppercase tracking-widest">

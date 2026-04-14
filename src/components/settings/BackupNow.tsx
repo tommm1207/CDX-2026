@@ -4,6 +4,7 @@ import { motion } from 'motion/react';
 import ExcelJS from 'exceljs';
 import { supabase } from '@/lib/supabase';
 import { formatDataForExcel } from '@/utils/excelHelper';
+import { applyCDXSheetStyle } from '@/utils/excelExport';
 import { PageBreadcrumb } from '../shared/PageBreadcrumb';
 import { BACKUP_TABLES } from './Backup';
 
@@ -23,33 +24,40 @@ export const BackupNow = ({
 
     try {
       const workbook = new ExcelJS.Workbook();
-      workbook.creator = 'CDX Manager';
+      workbook.creator = 'CDX ERP System';
       workbook.lastModifiedBy = 'CDX System';
       workbook.created = new Date();
+      workbook.modified = new Date();
 
-      // 1. Tạo trang bìa TỔNG QUAN
+      // 1. Trang bìa TỔNG QUAN (CDX branded)
       const summarySheet = workbook.addWorksheet('TỔNG QUAN', {
         views: [{ showGridLines: false }],
       });
+      summarySheet.getColumn(1).width = 28;
+      summarySheet.getColumn(2).width = 55;
 
-      summarySheet.getCell('A1').value = 'HỆ THỐNG QUẢN LÝ KHO & NHÂN SỰ CDX 2026';
-      summarySheet.getCell('A1').font = { size: 18, bold: true, color: { argb: 'FF008060' } };
+      const t = summarySheet.getCell('A1');
+      t.value = 'CDX – CON ĐƯỜNG XANH';
+      t.font = { name: 'Calibri', size: 20, bold: true, color: { argb: 'FF2D5A27' } };
 
-      summarySheet.getCell('A3').value = 'BÁO CÁO SAO LƯU DỮ LIỆU TOÀN BỘ';
-      summarySheet.getCell('A3').font = { size: 14, bold: true };
+      const sub = summarySheet.getCell('A2');
+      sub.value = 'HỆ THỐNG QUẢN LÝ KHO & NHÂN SỰ CDX 2026';
+      sub.font = { name: 'Calibri', size: 11, italic: true, color: { argb: 'FF6B7280' } };
 
-      summarySheet.getCell('A5').value = 'Ngày thực hiện:';
-      summarySheet.getCell('B5').value = new Date().toLocaleString('vi-VN');
+      summarySheet.getCell('A4').value = 'BÁO CÁO SAO LƯU DỮ LIỆU TOÀN BỘ';
+      summarySheet.getCell('A4').font = { name: 'Calibri', size: 14, bold: true };
 
-      summarySheet.getCell('A6').value = 'Số lượng bảng:';
-      summarySheet.getCell('B6').value = BACKUP_TABLES.length;
+      summarySheet.getCell('A6').value = 'Ngày thực hiện:';
+      summarySheet.getCell('B6').value = new Date().toLocaleString('vi-VN');
+      summarySheet.getCell('A6').font = { bold: true };
 
-      summarySheet.getCell('A8').value =
+      summarySheet.getCell('A7').value = 'Số lượng bảng:';
+      summarySheet.getCell('B7').value = BACKUP_TABLES.length;
+      summarySheet.getCell('A7').font = { bold: true };
+
+      summarySheet.getCell('A9').value =
         'Dữ liệu chi tiết được trình bày trong các Tab tương ứng bên dưới.';
-      summarySheet.getCell('A8').font = { italic: true };
-
-      summarySheet.getColumn(1).width = 25;
-      summarySheet.getColumn(2).width = 50;
+      summarySheet.getCell('A9').font = { italic: true, color: { argb: 'FF6B7280' } };
 
       // 2. Chuẩn bị dữ liệu tra cứu (Lookup Data)
       setStatus('Đang chuẩn bị dữ liệu tra cứu...');
@@ -68,7 +76,7 @@ export const BackupNow = ({
       ]);
       const lookupData = { users, warehouses, materials, groups, boms };
 
-      // 3. Thêm dữ liệu các bảng
+      // 3. Thêm dữ liệu các bảng với CDX style
       const labels: string[] = [];
       const stats: Record<string, number> = {};
 
@@ -86,56 +94,14 @@ export const BackupNow = ({
         stats[table.label] = rowCount;
 
         if (data && rowCount > 0) {
-          const sheet = workbook.addWorksheet(table.label.substring(0, 31).replace(/\//g, '-'));
           const formattedData = formatDataForExcel(data, lookupData);
           const columns = Object.keys(formattedData[0]);
+          const rows = formattedData.map((item) => Object.values(item));
 
-          // Thiết lập tiêu đề (Header)
-          const headerRow = sheet.addRow(columns);
-          headerRow.height = 25;
-          headerRow.eachCell((cell) => {
-            cell.fill = {
-              type: 'pattern',
-              pattern: 'solid',
-              fgColor: { argb: 'FF2D5A27' },
-            };
-            cell.font = { bold: true, color: { argb: 'FFFFFFFF' }, size: 11 };
-            cell.alignment = { vertical: 'middle', horizontal: 'center' };
-            cell.border = {
-              top: { style: 'thin' },
-              left: { style: 'thin' },
-              bottom: { style: 'thin' },
-              right: { style: 'thin' },
-            };
+          const sheet = workbook.addWorksheet(table.label.substring(0, 31).replace(/\//g, '-'), {
+            views: [{ showGridLines: false }],
           });
-
-          // Thêm dữ liệu
-          formattedData.forEach((item) => {
-            const row = sheet.addRow(Object.values(item));
-            row.eachCell((cell) => {
-              cell.border = {
-                top: { style: 'thin' },
-                left: { style: 'thin' },
-                bottom: { style: 'thin' },
-                right: { style: 'thin' },
-              };
-              if (typeof cell.value === 'number') {
-                cell.alignment = { horizontal: 'right' };
-              }
-            });
-          });
-
-          // Tự động giãn cột và format
-          sheet.columns.forEach((column) => {
-            let maxColumnLength = 0;
-            column.eachCell!({ includeEmpty: true }, (cell) => {
-              const columnLength = cell.value ? cell.value.toString().length : 10;
-              if (columnLength > maxColumnLength) {
-                maxColumnLength = columnLength;
-              }
-            });
-            column.width = Math.min(maxColumnLength + 4, 50);
-          });
+          applyCDXSheetStyle(sheet, table.label, columns, rows);
         }
       }
 
@@ -143,7 +109,7 @@ export const BackupNow = ({
       const fileName = `CDX_Full_Backup_${new Date().toISOString().split('T')[0]}.xlsx`;
       const buffer = await workbook.xlsx.writeBuffer();
 
-      // --- NEW: Trực tiếp tải về máy local ---
+      // Tải về máy
       const blob = new Blob([buffer], {
         type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
       });
@@ -155,15 +121,12 @@ export const BackupNow = ({
       link.click();
       link.remove();
       window.URL.revokeObjectURL(url);
-      // ----------------------------------------
 
+      // Nếu có email thì gửi kèm
       const email = localStorage.getItem('backup_email');
-
       if (email) {
         setStatus(`Đang gửi email tới ${email}...`);
-
-        // Chuyển Buffer sang Base64
-        const uint8Array = new Uint8Array(buffer);
+        const uint8Array = new Uint8Array(buffer as ArrayBuffer);
         let binary = '';
         for (let i = 0; i < uint8Array.byteLength; i++) {
           binary += String.fromCharCode(uint8Array[i]);
@@ -176,13 +139,7 @@ export const BackupNow = ({
             'Content-Type': 'application/json',
             'x-api-key': 'cdx-secret-2026',
           },
-          body: JSON.stringify({
-            email,
-            fileName,
-            fileData,
-            tableList: labels,
-            tableStats: stats,
-          }),
+          body: JSON.stringify({ email, fileName, fileData, tableList: labels, tableStats: stats }),
         });
 
         if (!response.ok) {
@@ -199,61 +156,69 @@ export const BackupNow = ({
       );
     } catch (err: any) {
       console.error('Backup error:', err);
-      addToast('Đã xảy ra lỗi khi sao lưu dữ liệu: ' + err.message, 'error');
+      addToast('Lỗi sao lưu: ' + err.message, 'error');
+      setStatus('Lỗi!');
     } finally {
       setLoading(false);
+      setTimeout(() => setStatus(''), 4000);
     }
   };
 
   return (
-    <div className="p-4 md:p-6 space-y-6">
-      <PageBreadcrumb title="Sao lưu toàn phần" onBack={onBack} />
+    <div className="p-4 md:p-6 space-y-6 pb-24">
+      <PageBreadcrumb title="Sao lưu nhanh" onBack={onBack} />
 
-      <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-12 flex flex-col items-center justify-center text-center max-w-2xl mx-auto space-y-6">
-        <div
-          className={`p-8 rounded-full ${loading ? 'bg-primary/10 animate-pulse' : 'bg-primary/10'}`}
+      <div className="max-w-xl mx-auto">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="bg-white rounded-3xl shadow-sm border border-gray-100 p-8 space-y-6 text-center"
         >
-          <Download size={64} className="text-primary" />
-        </div>
-
-        <div className="space-y-2">
-          <h2 className="text-2xl font-bold text-gray-800">Sao lưu toàn bộ dữ liệu</h2>
-          <p className="text-gray-500 max-w-md">
-            Hệ thống sẽ xuất toàn bộ dữ liệu từ tất cả các bảng ra một file Excel duy nhất để bạn có
-            thể lưu trữ ngoại tuyến.
-          </p>
-        </div>
-
-        {loading && (
-          <div className="w-full max-w-xs bg-gray-100 rounded-full h-2 overflow-hidden">
-            <motion.div
-              initial={{ width: 0 }}
-              animate={{ width: '100%' }}
-              transition={{ duration: 2, repeat: Infinity }}
-              className="bg-primary h-full"
-            />
+          <div className="w-20 h-20 bg-primary/10 rounded-full flex items-center justify-center mx-auto">
+            <Download size={36} className="text-primary" />
           </div>
-        )}
 
-        <p className="text-sm font-medium text-primary h-5">{status}</p>
+          <div>
+            <h2 className="text-xl font-black text-gray-800">Sao lưu toàn bộ dữ liệu</h2>
+            <p className="text-sm text-gray-500 mt-2">
+              Xuất toàn bộ dữ liệu hệ thống ra file Excel (.xlsx) với định dạng CDX chuẩn, bao gồm
+              tất cả {BACKUP_TABLES.length} bảng dữ liệu.
+            </p>
+          </div>
 
-        <div className="flex gap-4 w-full">
+          {status && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              className="bg-primary/5 border border-primary/20 rounded-2xl px-4 py-3"
+            >
+              <p className="text-sm font-bold text-primary">{status}</p>
+            </motion.div>
+          )}
+
           <button
             onClick={handleFullBackup}
             disabled={loading}
-            className="flex-1 bg-primary text-white font-bold py-4 rounded-xl hover:bg-primary/90 transition-all flex items-center justify-center gap-3 shadow-lg shadow-green-900/20 disabled:opacity-50"
+            className="w-full py-4 bg-primary text-white font-black text-sm uppercase tracking-widest rounded-2xl hover:bg-primary/90 transition-all active:scale-98 disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2"
           >
-            <Download size={20} />
-            {loading ? 'ĐANG SAO LƯU...' : 'BẮT ĐẦU SAO LƯU'}
+            {loading ? (
+              <>
+                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                Đang sao lưu...
+              </>
+            ) : (
+              <>
+                <Download size={16} />
+                Bắt đầu sao lưu
+              </>
+            )}
           </button>
-          <button
-            onClick={onBack}
-            disabled={loading}
-            className="px-8 bg-gray-100 text-gray-600 font-bold py-4 rounded-xl hover:bg-gray-200 transition-all disabled:opacity-50"
-          >
-            Hủy
-          </button>
-        </div>
+
+          <p className="text-[10px] text-gray-400 italic">
+            File sẽ được tải về máy của bạn ngay lập tức. Nếu có cấu hình email trong Sao lưu qua
+            email, file cũng sẽ được gửi kèm.
+          </p>
+        </motion.div>
       </div>
     </div>
   );

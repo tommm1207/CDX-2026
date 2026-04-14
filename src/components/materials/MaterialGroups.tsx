@@ -1,3 +1,4 @@
+﻿import { CanvasLogo } from '@/components/shared/ReportExportHeader';
 import { exportTableImage } from '../../utils/reportExport';
 import { useState, useEffect, FormEvent, MouseEvent, ChangeEvent } from 'react';
 import {
@@ -28,6 +29,7 @@ import { ToastType } from '../shared/Toast';
 import { FAB } from '../shared/FAB';
 import { checkUsage } from '@/utils/dataIntegrity';
 import { generateNextGroupCode, generateNextMaterialCode } from '@/utils/inventory';
+import { ExcelButton } from '../shared/ExcelButton';
 import { SortButton, SortOption } from '../shared/SortButton';
 import { Button } from '../shared/Button';
 
@@ -103,6 +105,19 @@ export const MaterialGroups = ({
         onEnd: () => setIsCapturingTable(false),
       });
     }
+  };
+
+  const handleExportExcel = () => {
+    import('@/utils/excelExport').then(({ exportToExcel }) => {
+      exportToExcel({
+        title: 'Nhóm Vật tư',
+        sheetName: 'Nhóm vật tư',
+        columns: ['Mã nhóm', 'Tên nhóm', 'Ghi chú'],
+        rows: groups.map((it) => [it.code, it.name, it.notes ?? '']),
+        fileName: `CDX_NhomVatTu_${new Date().toISOString().slice(0, 10)}.xlsx`,
+        addToast,
+      });
+    });
   };
 
   const fetchGroups = async () => {
@@ -386,8 +401,14 @@ export const MaterialGroups = ({
   return (
     <div className="p-4 md:p-6 space-y-6 pb-24">
       <div className="flex items-center justify-between gap-2">
-        <PageBreadcrumb title="Nhóm vật tư" onBack={onBack} />
-        <div className="flex items-center gap-2 justify-end flex-1">
+        <PageBreadcrumb title="Báo cáo" onBack={onBack} />
+        <div className="flex items-center gap-1.5 justify-end flex-1">
+          <SaveImageButton
+            onClick={handleSaveTableImage}
+            isCapturing={isCapturingTable}
+            title="Lưu ảnh nhóm vật tư"
+          />
+          <ExcelButton onClick={handleExportExcel} size="icon" />
           <SortButton
             currentSort={sortBy}
             onSortChange={(val) => {
@@ -399,21 +420,6 @@ export const MaterialGroups = ({
               { value: 'newest', label: 'Mới nhất' },
             ]}
           />
-          <button
-            onClick={() => setShowFilter((f) => !f)}
-            className={`p-2.5 rounded-xl border transition-colors ${
-              showFilter
-                ? 'bg-primary text-white border-primary'
-                : 'bg-white text-gray-500 border-gray-200 hover:border-primary/40'
-            }`}
-          >
-            <Search size={16} />
-          </button>
-          <SaveImageButton
-            onClick={handleSaveTableImage}
-            isCapturing={isCapturingTable}
-            title="Lưu ảnh nhóm vật tư"
-          />
         </div>
       </div>
 
@@ -423,7 +429,7 @@ export const MaterialGroups = ({
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: 'auto' }}
             exit={{ opacity: 0, height: 0 }}
-            className="overflow-hidden"
+            style={{ overflow: showFilter ? 'visible' : 'hidden' }}
           >
             <div className="bg-white p-3 rounded-2xl shadow-sm border border-gray-100">
               <div className="relative">
@@ -932,7 +938,7 @@ export const MaterialGroups = ({
           {/* Footer Branding */}
           <div className="mt-12 flex justify-between items-end border-t border-gray-100 pt-6">
             <div className="space-y-1">
-              <p className="text-xs font-black text-gray-300 uppercase tracking-[0.2em] italic">
+              <p className="text-xs font-black text-gray-300 uppercase tracking-[0.2em] italic whitespace-nowrap">
                 CDX ERP SYSTEM
               </p>
               <p className="text-[9px] text-gray-300 font-bold uppercase tracking-widest">

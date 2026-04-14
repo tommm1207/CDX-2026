@@ -1,3 +1,4 @@
+﻿import { CanvasLogo } from '@/components/shared/ReportExportHeader';
 import { useState, useEffect } from 'react';
 import {
   Plus,
@@ -31,7 +32,6 @@ import { ExcelButton } from '../shared/ExcelButton';
 import { formatDate, formatNumber, formatCurrency } from '@/utils/format';
 import { isActiveWarehouse, getAvailableStock } from '@/utils/inventory';
 import { getAllowedWarehouses } from '@/utils/helpers';
-import { utils, writeFile } from 'xlsx';
 
 // ============================
 // Production Orders Component
@@ -60,7 +60,6 @@ export const ProductionOrders = ({
   const [showFilter, setShowFilter] = useState(true);
   const [isCapturingTable, setIsCapturingTable] = useState(false);
   const reportRef = useRef<HTMLDivElement>(null);
-  const logoBase64 = '/logo.png';
 
   // Form
   const [formData, setFormData] = useState({
@@ -385,21 +384,25 @@ export const ProductionOrders = ({
     );
   });
 
-  const exportToExcel = () => {
-    const data = filteredOrders.map((o) => ({
-      'Mã lệnh': o.ma_lenh,
-      'Sản phẩm': o.san_pham_bom?.ten_san_pham || '',
-      'Kho vật tư': o.warehouses?.name || '',
-      'SL kế hoạch': o.so_luong_ke_hoach,
-      'SL hoàn thành': o.so_luong_hoan_thanh,
-      'Ngày phát lệnh': formatDate(o.ngay_phat_lenh),
-      'Người phát lệnh': o.users?.full_name || '',
-      'Trạng thái': getStatusBadge(o.trang_thai).label,
-    }));
-    const ws = utils.json_to_sheet(data);
-    const wb = utils.book_new();
-    utils.book_append_sheet(wb, ws, 'LenhSX');
-    writeFile(wb, `LenhSanXuat_${new Date().toISOString().slice(0, 10)}.xlsx`);
+  const handleExportExcel = () => {
+    import('@/utils/excelExport').then(({ exportToExcel }) => {
+      exportToExcel({
+        title: 'Lệnh sản xuất & Tách ghép vật tư',
+        sheetName: 'Sản xuất',
+        columns: ['Mã lệnh', 'Ngày', 'Vật tư', 'Kho', 'Số lượng', 'Trạng thái', 'Ghi chú'],
+        rows: orders.map((o) => [
+          o.order_code ?? '',
+          o.date ?? '',
+          o.materials?.name ?? '',
+          o.warehouses?.name ?? '',
+          o.quantity,
+          o.status ?? '',
+          o.notes ?? '',
+        ]),
+        fileName: `CDX_LenhSanXuat_${new Date().toISOString().slice(0, 10)}.xlsx`,
+        addToast,
+      });
+    });
   };
 
   const bomOptions = boms.map((b) => ({ id: b.id, name: b.ten_san_pham }));
@@ -410,6 +413,21 @@ export const ProductionOrders = ({
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <PageBreadcrumb title="Lệnh sản xuất" onBack={onBack} />
         <div className="flex items-center gap-2 justify-end flex-1">
+          <SaveImageButton
+            onClick={() => {
+              if (reportRef.current) {
+                exportTableImage({
+                  element: reportRef.current,
+                  fileName: `Lenh_San_Xuat_${new Date().toLocaleDateString('vi-VN').replace(/\//g, '-')}.png`,
+                  addToast,
+                  onStart: () => setIsCapturingTable(true),
+                  onEnd: () => setIsCapturingTable(false),
+                });
+              }
+            }}
+            isCapturing={isCapturingTable}
+            title="Lưu ảnh báo cáo"
+          />
           <ExcelButton onClick={exportToExcel} />
           <SortButton
             currentSort={sortBy}
@@ -428,21 +446,6 @@ export const ProductionOrders = ({
             onClick={() => setShowFilter((f) => !f)}
             icon={Search}
           />
-          <SaveImageButton
-            onClick={() => {
-              if (reportRef.current) {
-                exportTableImage({
-                  element: reportRef.current,
-                  fileName: `Lenh_San_Xuat_${new Date().toLocaleDateString('vi-VN').replace(/\//g, '-')}.png`,
-                  addToast,
-                  onStart: () => setIsCapturingTable(true),
-                  onEnd: () => setIsCapturingTable(false),
-                });
-              }
-            }}
-            isCapturing={isCapturingTable}
-            title="Lưu ảnh báo cáo"
-          />
         </div>
       </div>
 
@@ -453,7 +456,7 @@ export const ProductionOrders = ({
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: 'auto' }}
             exit={{ opacity: 0, height: 0 }}
-            className="overflow-hidden"
+            style={{ overflow: showFilter ? 'visible' : 'hidden' }}
           >
             <div className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 space-y-3">
               <div className="flex flex-col sm:flex-row gap-3">
@@ -748,11 +751,11 @@ export const ProductionOrders = ({
           </table>
 
           <div className="mt-8 pt-6 border-t border-gray-100 flex justify-between items-end">
-            <div className="text-[10px] text-gray-400 font-bold">
+            <div className="text-[10px] text-gray-400 font-bold whitespace-nowrap">
               Ngày xuất: {new Date().toLocaleDateString('vi-VN')} •{' '}
               {new Date().toLocaleTimeString('vi-VN')}
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 whitespace-nowrap">
               <span className="text-[10px] font-black text-gray-300 uppercase italic">
                 CDX ERP SYSTEM
               </span>

@@ -104,8 +104,8 @@ export const useTableCapture = () => {
         footerEl = document.createElement('div');
         footerEl.innerHTML = `
           <div style="background:#fff;padding:8px 24px 14px;font-family:'Inter',system-ui,sans-serif;width:max-content;min-width:100%;box-sizing:border-box;">
-            ${showNetSalary ? '<p style="margin:0 0 6px;font-size:8px;font-weight:700;color:#9CA3AF;letter-spacing:0.2em;text-transform:uppercase;">NET SALARY DETAILS</p>' : ''}
-            <div style="display:flex;justify-content:space-between;align-items:center;border-top:1px solid #F3F4F6;padding-top:6px;">
+            ${showNetSalary ? '<div style="text-align:right;margin:-6px 0 8px;"><p style="margin:0;font-size:11.5px;font-weight:800;color:#6B7280;letter-spacing:0.15em;text-transform:uppercase;display:inline-block;">NET SALARY DETAILS</p></div>' : ''}
+            <div style="display:flex;justify-content:space-between;align-items:center;padding-top:4px;white-space:nowrap;">
               <span style="font-size:9px;font-weight:700;color:#D1D5DB;text-transform:uppercase;letter-spacing:0.12em;">CDX ERP SYSTEM</span>
               <span style="font-size:9px;font-weight:700;color:#D1D5DB;text-transform:uppercase;letter-spacing:0.12em;">${timeStr}</span>
             </div>

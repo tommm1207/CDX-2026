@@ -1,3 +1,4 @@
+﻿import { CanvasLogo } from '@/components/shared/ReportExportHeader';
 import { useState, useEffect } from 'react';
 import {
   Plus,
@@ -20,7 +21,7 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { supabase } from '@/lib/supabase';
-import * as xlsx from 'xlsx';
+
 import { useRef } from 'react';
 import { exportTableImage } from '../../utils/reportExport';
 
@@ -406,42 +407,42 @@ export const CostReport = ({
   };
 
   const handleExportExcel = () => {
-    if (costs.length === 0) {
-      if (addToast) addToast('Không có dữ liệu để xuất', 'warning');
-      return;
-    }
-
-    try {
-      const exportData = costs.map((item) => ({
-        Mã: item.cost_code || '',
-        Ngày: formatDate(item.date),
-        'Nhân viên': item.users?.full_name || '',
-        'Loại chi phí': item.cost_type || '',
-        'Nội dung': item.content || item.materials?.name || '',
-        Kho: item.warehouses?.name || '',
-        'Vật tư': item.materials?.name || '',
-        SL: item.quantity || 1,
-        'Đơn giá': item.unit_price || 0,
-        'Thành tiền': item.transaction_type === 'Thu' ? item.total_amount : -item.total_amount,
-        'Ghi chú': item.notes || '',
-      }));
-
-      const ws = xlsx.utils.json_to_sheet(exportData);
-
-      const now = new Date();
-      const month = String(now.getMonth() + 1).padStart(2, '0');
-      const year = now.getFullYear();
-      const fileName = `ChiPhi_${month}_${year}.xlsx`;
-
-      const wb = xlsx.utils.book_new();
-      xlsx.utils.book_append_sheet(wb, ws, 'ChiPhi');
-      xlsx.writeFile(wb, fileName);
-
-      if (addToast) addToast('Xuất Excel thành công!', 'success');
-    } catch (err: any) {
-      console.error('Export Excel error:', err);
-      if (addToast) addToast('Lỗi xuất Excel: ' + err.message, 'error');
-    }
+    import('@/utils/excelExport').then(({ exportToExcel }) => {
+      exportToExcel({
+        title: 'Báo cáo Tổng hợp Chi phí',
+        sheetName: 'Chi phí tổng hợp',
+        columns: [
+          'Mã phiếu',
+          'Ngày',
+          'Nhân viên',
+          'Nội dung',
+          'Hạng mục',
+          'Loại',
+          'Kho',
+          'SL',
+          'Đơn giá',
+          'Thành tiền',
+          'Ghi chú',
+        ],
+        rows: filteredHistory.flatMap((group) =>
+          group.items.map((item) => [
+            item.cost_code ?? '',
+            item.date ?? '',
+            group.employee_name,
+            item.content ?? '',
+            item.cost_type ?? '',
+            item.transaction_type ?? '',
+            item.warehouses?.name ?? '',
+            item.quantity ?? 1,
+            item.unit_price ?? 0,
+            item.transaction_type === 'Thu' ? item.total_amount : -item.total_amount,
+            item.notes ?? '',
+          ]),
+        ),
+        fileName: `CDX_BaoCaoChiPhi_${new Date().toISOString().slice(0, 10)}.xlsx`,
+        addToast,
+      });
+    });
   };
 
   return (
@@ -449,31 +450,28 @@ export const CostReport = ({
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <PageBreadcrumb title="Báo cáo chi phí" onBack={onBack} />
         <div className="flex items-center gap-1.5 justify-end flex-1">
-          <ExcelButton onClick={handleExportExcel} />
-
-          <div className="flex items-center gap-1.5 ml-1">
-            <SortButton
-              currentSort={sortBy}
-              onSortChange={(val) => setSortBy(val as any)}
-              options={[
-                { value: 'newest', label: 'Sắp xếp: Mới nhất' },
-                { value: 'price', label: 'Sắp xếp: Thành tiền' },
-                { value: 'date', label: 'Sắp xếp: Ngày chi' },
-              ]}
-            />
-            <Button
-              size="icon"
-              variant={showFilter ? 'primary' : 'outline'}
-              onClick={() => setShowFilter((f) => !f)}
-              icon={Search}
-              className={showFilter ? '' : 'border-gray-200'}
-            />
-            <SaveImageButton
-              onClick={handleExportImage}
-              isCapturing={isCapturingTable}
-              title="Lưu ảnh báo cáo chi phí"
-            />
-          </div>
+          <SaveImageButton
+            onClick={handleExportImage}
+            isCapturing={isCapturingTable}
+            title="Lưu ảnh báo cáo chi phí"
+          />
+          <ExcelButton onClick={handleExportExcel} size="icon" />
+          <SortButton
+            currentSort={sortBy}
+            onSortChange={(val) => setSortBy(val as any)}
+            options={[
+              { value: 'newest', label: 'Sắp xếp: Mới nhất' },
+              { value: 'price', label: 'Sắp xếp: Thành tiền' },
+              { value: 'date', label: 'Sắp xếp: Ngày chi' },
+            ]}
+          />
+          <Button
+            size="icon"
+            variant={showFilter ? 'primary' : 'outline'}
+            onClick={() => setShowFilter((f) => !f)}
+            icon={Search}
+            className={showFilter ? '' : 'border-gray-200'}
+          />
         </div>
       </div>
 
@@ -791,11 +789,11 @@ export const CostReport = ({
           </table>
 
           <div className="mt-8 pt-6 border-t border-gray-100 flex justify-between items-end">
-            <div className="text-[10px] text-gray-400 font-bold">
+            <div className="text-[10px] text-gray-400 font-bold whitespace-nowrap">
               Ngày xuất: {new Date().toLocaleDateString('vi-VN')} •{' '}
               {new Date().toLocaleTimeString('vi-VN')}
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 whitespace-nowrap">
               <span className="text-[10px] font-black text-gray-300 uppercase italic">
                 CDX ERP SYSTEM
               </span>
@@ -807,6 +805,7 @@ export const CostReport = ({
           </div>
         </div>
       </div>
+
       <ReportPreviewModal
         isOpen={showReportPreview}
         onClose={() => setShowReportPreview(false)}
@@ -976,11 +975,11 @@ export const CostReport = ({
           </table>
 
           <div className="mt-8 pt-6 border-t border-gray-100 flex justify-between items-end">
-            <div className="text-[10px] text-gray-400 font-bold">
+            <div className="text-[10px] text-gray-400 font-bold whitespace-nowrap">
               Ngày xuất: {new Date().toLocaleDateString('vi-VN')} •{' '}
               {new Date().toLocaleTimeString('vi-VN')}
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 whitespace-nowrap">
               <span className="text-[10px] font-black text-gray-300 uppercase italic">
                 CDX ERP SYSTEM
               </span>

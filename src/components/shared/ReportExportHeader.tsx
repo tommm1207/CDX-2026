@@ -1,7 +1,15 @@
 import { logoBase64 } from '@/utils/logoBase64';
 import { useRef, useEffect } from 'react';
 
-const CanvasLogo = () => {
+export const CanvasLogo = ({
+  size = 44,
+  className,
+  style,
+}: {
+  size?: number;
+  className?: string;
+  style?: React.CSSProperties;
+}) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
   useEffect(() => {
@@ -10,21 +18,20 @@ const CanvasLogo = () => {
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
-    // Kích thước canvas 4K (gấp 4 lần kích thước hiển thị)
-    const size = 44;
-    const scale = 4;
+    // Kích thước canvas 8K (Retina++ scale)
+    const scale = 8;
     canvas.width = size * scale;
     canvas.height = size * scale;
 
     const img = new Image();
     img.src = logoBase64;
     img.onload = () => {
-      // Làm mịn ảnh
+      // Làm mịn ảnh tối đa
       ctx.imageSmoothingEnabled = true;
       ctx.imageSmoothingQuality = 'high';
 
-      // Bo góc (chuẩn gấp 4)
-      const radius = 10 * scale;
+      // Bo góc (chuẩn gấp 8, ước tính bo góc khoảng 22% của size)
+      const radius = size * 0.22 * scale;
       ctx.beginPath();
       ctx.moveTo(radius, 0);
       ctx.lineTo(canvas.width - radius, 0);
@@ -38,22 +45,24 @@ const CanvasLogo = () => {
       ctx.closePath();
       ctx.clip();
 
-      // Nền trắng dự phòng nếu logo PNG trong suốt
+      // Nền trắng dự phòng nếu logo PNG/JPEG có lỗi nhiễu vùng biên
       ctx.fillStyle = '#ffffff';
       ctx.fillRect(0, 0, canvas.width, canvas.height);
 
       ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
     };
-  }, []);
+  }, [size]);
 
   return (
     <canvas
       ref={canvasRef}
+      className={className}
       style={{
-        width: 44,
-        height: 44,
+        width: size,
+        height: size,
         flexShrink: 0,
         display: 'block',
+        ...style,
       }}
     />
   );

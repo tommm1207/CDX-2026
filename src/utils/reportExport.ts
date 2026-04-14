@@ -28,15 +28,23 @@ export const exportTableImage = async ({
     onStart?.();
     if (addToast) addToast('Đang tạo ảnh báo cáo...', 'info');
 
-    // Stabilization wait (Safari / WebKit)
-    await new Promise((resolve) => setTimeout(resolve, 600));
+    // EXTREMELY IMPORTANT: Ensure all images (including logo) are decoded
+    const images = Array.from(element.getElementsByTagName('img'));
+    await Promise.all(
+      images.map((img) => {
+        if (img.complete) return Promise.resolve();
+        return img.decode().catch(() => {});
+      }),
+    );
+
+    // Additional stabilization wait (Safari / WebKit)
+    await new Promise((resolve) => setTimeout(resolve, 300));
 
     // Lấy kích thước thực tế kể cả phần cuộn
     const width = element.scrollWidth;
     const height = element.scrollHeight;
 
-    // EXTREMELY IMPORTANT: Warmup capture to resolve blank image/logo issue on first attempt
-    // This allows the browser to compute styles and load all required image resources into memory.
+    // Warmup capture to resolve blank image issue on first attempt
     await toPng(element, { quality: 0.1, pixelRatio: 1 });
     await new Promise((resolve) => setTimeout(resolve, 200));
 
@@ -44,7 +52,7 @@ export const exportTableImage = async ({
       cacheBust: true,
       backgroundColor: '#FFFFFF',
       quality: 1,
-      pixelRatio: 2, // Giảm xuống 2 để tránh lỗi tràn RAM trên mobile Safari
+      pixelRatio: 2,
       skipFonts: false,
       width,
       height,

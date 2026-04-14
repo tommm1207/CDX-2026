@@ -1,4 +1,4 @@
-﻿import { CanvasLogo } from '@/components/shared/ReportExportHeader';
+import { CanvasLogo } from '@/components/shared/ReportExportHeader';
 import { useState, useEffect, useRef, useCallback } from 'react';
 
 import { Wallet, X, Image as ImageIcon, Camera, Search } from 'lucide-react';
@@ -9,7 +9,7 @@ import { supabase } from '@/lib/supabase';
 import { Employee } from '@/types';
 import { PageBreadcrumb } from '../shared/PageBreadcrumb';
 import { ToastType } from '../shared/Toast';
-import { formatCurrency } from '@/utils/format';
+import { formatCurrency, formatNumber } from '@/utils/format';
 import { MonthYearPicker } from '../shared/MonthYearPicker';
 import { Button } from '../shared/Button';
 import { SortOption } from '../shared/SortButton';
@@ -906,21 +906,9 @@ export const MonthlySalary = ({
                         {isCustomRange
                           ? `Kỳ lương: ${formatDate(customRange.start)} — ${formatDate(customRange.end)}`
                           : (() => {
-                              const dates = (selectedSalary.attendanceDetails || [])
-                                .map((a: any) => a.date)
-                                .filter(Boolean)
-                                .sort();
-                              const firstDate = dates[0];
-                              const lastDate = dates[dates.length - 1];
-                              const fmt = (d: string) => {
-                                const [y, m, day] = d.split('-');
-                                return `${parseInt(day)}/${parseInt(m)}`;
-                              };
-                              const range =
-                                firstDate && lastDate
-                                  ? ` (${fmt(firstDate)} - ${fmt(lastDate)})`
-                                  : '';
-                              return `Kỳ lương: Tháng ${selectedMonth}/${selectedYear}${range}`;
+                              const firstDay = `01/${String(selectedMonth).padStart(2, '0')}`;
+                              const lastDay = `${new Date(selectedYear, selectedMonth, 0).getDate()}/${String(selectedMonth).padStart(2, '0')}`;
+                              return `Kỳ lương: Tháng ${selectedMonth}/${selectedYear} (${firstDay} - ${lastDay})`;
                             })()}
                       </p>
                       {/* Employee name row with Autofit logic */}
@@ -929,7 +917,7 @@ export const MonthlySalary = ({
                           Tên nhân viên:
                         </span>
                         <span
-                          className="font-black text-gray-900 whitespace-nowrap text-right"
+                          className="font-black text-red-600 whitespace-nowrap text-right"
                           style={{
                             fontSize: selectedSalary.full_name?.length > 20 ? '13px' : '16px',
                             maxWidth: '220px',
@@ -947,16 +935,16 @@ export const MonthlySalary = ({
                         {/* Attendance rows */}
                         <div className="flex justify-between items-center py-2.5 border-b border-gray-100 gap-2">
                           <span className="text-[11px] font-bold text-gray-500 whitespace-nowrap">
-                            Giờ công:
+                            Tổng ngày công:
                           </span>
                           <span className="text-[11px] font-bold text-gray-800 whitespace-nowrap">
-                            {(selectedSalary.totalDays * 8).toFixed(0)} giờ (
-                            {selectedSalary.totalDays.toFixed(1)} công)
+                            {selectedSalary.totalDays.toFixed(1)} công (
+                            {(selectedSalary.totalDays * 8).toFixed(0)} giờ)
                           </span>
                         </div>
                         <div className="flex justify-between items-center py-2.5 border-b border-gray-100 gap-2">
                           <span className="text-[11px] font-bold text-gray-500 whitespace-nowrap">
-                            Tăng ca:
+                            Tổng số giờ tăng ca:
                           </span>
                           <span className="text-[11px] font-bold text-gray-800 whitespace-nowrap">
                             {selectedSalary.totalOT.toFixed(1)} giờ
@@ -966,46 +954,46 @@ export const MonthlySalary = ({
                         {/* Financial rows */}
                         <div className="flex justify-between items-center py-2.5 border-b border-gray-100 gap-2">
                           <span className="text-[11px] font-bold text-gray-500 whitespace-nowrap">
-                            Lương cơ bản:
+                            Tổng tiền Lương ngày công:
                           </span>
                           <span className="text-[11px] font-bold text-gray-800 whitespace-nowrap">
-                            {formatCurrency(selectedSalary.earnedSalary)}
+                            {formatNumber(selectedSalary.earnedSalary)}
                           </span>
                         </div>
                         <div className="flex justify-between items-center py-2.5 border-b border-gray-100 gap-2">
                           <span className="text-[11px] font-bold text-gray-500 whitespace-nowrap">
-                            Tiền tăng ca:
+                            Tổng tiền tăng ca:
                           </span>
                           <span className="text-[11px] font-bold text-gray-800 whitespace-nowrap">
-                            {formatCurrency(
+                            {formatNumber(
                               selectedSalary.dayOTSalary + selectedSalary.monthOTSalary,
                             )}
                           </span>
                         </div>
                         <div className="flex justify-between items-center py-2.5 border-b border-gray-100 gap-2">
                           <span className="text-[11px] font-bold text-gray-500 whitespace-nowrap">
-                            Phụ cấp:
+                            Cộng thêm Phụ cấp:
                           </span>
                           <span className="text-[11px] font-bold text-gray-800 whitespace-nowrap">
-                            {formatCurrency(selectedSalary.totalAll)}
+                            {formatNumber(selectedSalary.totalAll)}
                           </span>
                         </div>
                         <div className="flex justify-between items-center py-2.5 border-b border-gray-100 gap-2">
                           <span className="text-[11px] font-bold text-gray-500 whitespace-nowrap">
-                            Thưởng:
+                            Cộng thêm tiền Thưởng:
                           </span>
                           <span className="text-[11px] font-bold text-gray-800 whitespace-nowrap">
-                            0 đ
+                            0
                           </span>
                         </div>
 
                         {/* Total Earnings */}
                         <div className="flex justify-between items-center py-3 border-b border-gray-100 gap-2 bg-gray-50/30 px-2 -mx-2">
                           <span className="text-[11px] font-black text-gray-900 uppercase tracking-wide whitespace-nowrap">
-                            TỔNG THU NHẬP:
+                            Tổng cộng tiền Lương :
                           </span>
                           <span className="text-[11px] font-black text-gray-900 whitespace-nowrap">
-                            {formatCurrency(
+                            {formatNumber(
                               selectedSalary.earnedSalary +
                                 selectedSalary.dayOTSalary +
                                 selectedSalary.monthOTSalary +
@@ -1017,37 +1005,37 @@ export const MonthlySalary = ({
                         {/* Deductions rows */}
                         <div className="flex justify-between items-center py-2.5 border-b border-gray-100 gap-2">
                           <span className="text-[11px] font-bold text-gray-500 whitespace-nowrap">
-                            Tạm ứng:
+                            Trừ số tiền Đã tạm ứng:
                           </span>
                           <span className="text-[11px] font-bold text-gray-800 whitespace-nowrap">
-                            -{formatCurrency(selectedSalary.totalAdv)}
+                            -{formatNumber(selectedSalary.totalAdv)}
                           </span>
                         </div>
                         <div className="flex justify-between items-center py-2.5 border-b border-gray-100 gap-2">
                           <span className="text-[11px] font-bold text-gray-500 whitespace-nowrap">
-                            Bảo hiểm:
+                            Trừ % số tiền BHXH, BHYT phải nộp:
                           </span>
                           <span className="text-[11px] font-bold text-gray-800 whitespace-nowrap">
-                            -{formatCurrency(selectedSalary.insuranceDeduction)}
+                            -{formatNumber(selectedSalary.insuranceDeduction)}
                           </span>
                         </div>
                         <div className="flex justify-between items-center py-2.5 border-b border-gray-100 gap-2">
                           <span className="text-[11px] font-bold text-gray-500 whitespace-nowrap">
-                            Giảm trừ:
+                            Giảm trừ lý do khác:
                           </span>
                           <span className="text-[11px] font-bold text-gray-800 whitespace-nowrap">
-                            0 đ
+                            0
                           </span>
                         </div>
 
                         {/* Total Deductions */}
                         <div className="flex justify-between items-center py-3 border-b border-gray-100 gap-2 bg-gray-50/30 px-2 -mx-2">
                           <span className="text-[11px] font-black text-gray-900 uppercase tracking-wide whitespace-nowrap">
-                            TỔNG GIẢM:
+                            Tổng số tiền Giảm, trừ:
                           </span>
                           <span className="text-[11px] font-black text-gray-900 whitespace-nowrap">
                             -
-                            {formatCurrency(
+                            {formatNumber(
                               selectedSalary.totalAdv + selectedSalary.insuranceDeduction,
                             )}
                           </span>
@@ -1055,11 +1043,11 @@ export const MonthlySalary = ({
 
                         {/* Net Pay (RENAMED) */}
                         <div className="flex justify-between items-center pt-4 pb-1 border-primary/20 bg-primary/5 px-2 -mx-2">
-                          <span className="text-xs font-black text-primary uppercase tracking-wider whitespace-nowrap italic">
-                            CÒN ĐƯỢC NHẬN:
+                          <span className="text-xs font-black text-red-600 uppercase tracking-wider whitespace-nowrap italic">
+                            Số tiền Còn được nhận là:
                           </span>
-                          <span className="text-sm font-black text-primary whitespace-nowrap">
-                            {formatCurrency(selectedSalary.netSalary)}
+                          <span className="text-sm font-black text-red-600 whitespace-nowrap">
+                            {formatNumber(selectedSalary.netSalary)}
                           </span>
                         </div>
                         <div className="bg-primary/5 px-2 -mx-2 pb-3 border-b-2 border-primary/20">
@@ -1085,21 +1073,9 @@ export const MonthlySalary = ({
                             {isCustomRange
                               ? `${customRange.start} — ${customRange.end}`
                               : (() => {
-                                  const dates = (selectedSalary.attendanceDetails || [])
-                                    .map((a: any) => a.date)
-                                    .filter(Boolean)
-                                    .sort();
-                                  const firstDate = dates[0];
-                                  const lastDate = dates[dates.length - 1];
-                                  const fmt = (d: string) => {
-                                    const [y, m, day] = d.split('-');
-                                    return `${parseInt(day)}/${parseInt(m)}`;
-                                  };
-                                  const range =
-                                    firstDate && lastDate
-                                      ? ` (${fmt(firstDate)} - ${fmt(lastDate)})`
-                                      : '';
-                                  return `Tháng ${selectedMonth}/${selectedYear}${range}`;
+                                  const firstDay = `01/${String(selectedMonth).padStart(2, '0')}`;
+                                  const lastDay = `${new Date(selectedYear, selectedMonth, 0).getDate()}/${String(selectedMonth).padStart(2, '0')}`;
+                                  return `Tháng ${selectedMonth}/${selectedYear} (${firstDay} - ${lastDay})`;
                                 })()}
                           </span>
                         </div>

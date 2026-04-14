@@ -1,5 +1,7 @@
+import React, { useRef, useEffect } from 'react';
 import { logoBase64 } from '@/utils/logoBase64';
-import { useRef, useEffect } from 'react';
+
+let cachedLogoDataUrl: string | null = null;
 
 export const CanvasLogo = ({
   size = 44,
@@ -11,27 +13,29 @@ export const CanvasLogo = ({
   style?: React.CSSProperties;
 }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const imgRef = useRef<HTMLImageElement>(null);
 
   useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
+    if (cachedLogoDataUrl) {
+      if (imgRef.current) imgRef.current.src = cachedLogoDataUrl;
+      return;
+    }
+
+    const canvas = canvasRef.current || document.createElement('canvas');
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
-    // Kích thước canvas 8K (Retina++ scale)
-    const scale = 8;
+    const scale = 4; // High density enough for 44px
     canvas.width = size * scale;
     canvas.height = size * scale;
 
     const img = new Image();
     img.src = logoBase64;
     img.onload = () => {
-      // Làm mịn ảnh tối đa
       ctx.imageSmoothingEnabled = true;
       ctx.imageSmoothingQuality = 'high';
 
-      // Bo góc (chuẩn gấp 8, ước tính bo góc khoảng 22% của size)
-      const radius = size * 0.22 * scale;
+      const radius = size * 0.2 * scale;
       ctx.beginPath();
       ctx.moveTo(radius, 0);
       ctx.lineTo(canvas.width - radius, 0);
@@ -45,26 +49,32 @@ export const CanvasLogo = ({
       ctx.closePath();
       ctx.clip();
 
-      // Nền trắng dự phòng nếu logo PNG/JPEG có lỗi nhiễu vùng biên
       ctx.fillStyle = '#ffffff';
       ctx.fillRect(0, 0, canvas.width, canvas.height);
-
       ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+
+      const dataUrl = canvas.toDataURL('image/png');
+      cachedLogoDataUrl = dataUrl;
+      if (imgRef.current) imgRef.current.src = dataUrl;
     };
   }, [size]);
 
   return (
-    <canvas
-      ref={canvasRef}
-      className={className}
-      style={{
-        width: size,
-        height: size,
-        flexShrink: 0,
-        display: 'block',
-        ...style,
-      }}
-    />
+    <>
+      <canvas ref={canvasRef} style={{ display: 'none' }} />
+      <img
+        ref={imgRef}
+        className={className}
+        style={{
+          width: size,
+          height: size,
+          display: 'block',
+          borderRadius: size * 0.2, // Visual fallback
+          ...style,
+        }}
+        alt="Logo"
+      />
+    </>
   );
 };
 
@@ -140,10 +150,12 @@ export const ReportExportHeader = ({ reportTitle, subtitle }: ReportExportHeader
       {/* Row 3: Subtitle */}
       <p
         style={{
-          margin: '6px 0 0',
-          fontSize: 22,
-          fontWeight: 900,
-          color: '#4B5563',
+          margin: '8px 0 0',
+          fontSize: 24,
+          fontWeight: 1000,
+          color: '#374151',
+          textTransform: 'uppercase',
+          letterSpacing: '-0.02em',
         }}
       >
         {subtitle ?? defaultSubtitle}

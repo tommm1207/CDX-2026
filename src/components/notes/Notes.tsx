@@ -1,4 +1,4 @@
-﻿import { CanvasLogo } from '@/components/shared/ReportExportHeader';
+import { CanvasLogo } from '@/components/shared/ReportExportHeader';
 import { exportTableImage } from '../../utils/reportExport';
 import { useState, useEffect } from 'react';
 import {
@@ -594,14 +594,14 @@ export const Notes = ({
       <AnimatePresence>
         {showQuickNote && (
           <div
-            className="fixed inset-0 z-[150] flex items-center justify-center p-4 bg-black/50 backdrop-blur-md overflow-hidden"
+            className="fixed inset-0 z-[150] flex items-center justify-center p-2 sm:p-4 bg-black/60 backdrop-blur-md overflow-hidden no-print"
             onClick={() => setShowQuickNote(false)}
           >
             <motion.div
-              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              initial={{ opacity: 0, scale: 0.95, y: 30 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.95, y: 20 }}
-              className="bg-white rounded-[2rem] md:rounded-[2.5rem] shadow-2xl w-full max-w-lg overflow-hidden relative z-10 flex flex-col max-h-[calc(100vh-40px)]"
+              exit={{ opacity: 0, scale: 0.95, y: 30 }}
+              className="bg-white rounded-[1.5rem] md:rounded-[2.5rem] shadow-2xl w-full max-w-lg overflow-hidden relative z-10 flex flex-col max-h-[96dvh] md:max-h-[90dvh]"
               onClick={(e) => e.stopPropagation()}
             >
               <div className="p-6 text-white flex items-center justify-between bg-amber-500 rounded-t-[2rem] md:rounded-t-[2.5rem]">
@@ -724,14 +724,14 @@ export const Notes = ({
       <AnimatePresence>
         {showAddNew && (
           <div
-            className="fixed inset-0 z-[150] flex items-center justify-center p-2 sm:p-4 bg-black/50 backdrop-blur-md overflow-hidden"
+            className="fixed inset-0 z-[150] flex items-center justify-center p-2 sm:p-4 bg-black/60 backdrop-blur-md overflow-hidden no-print"
             onClick={() => setShowAddNew(false)}
           >
             <motion.div
-              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              initial={{ opacity: 0, scale: 0.95, y: 30 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.95, y: 20 }}
-              className="bg-white rounded-[1.5rem] md:rounded-[2.5rem] shadow-2xl w-full max-w-4xl max-h-[96vh] md:max-h-[90vh] overflow-hidden relative z-10 flex flex-col"
+              exit={{ opacity: 0, scale: 0.95, y: 30 }}
+              className="bg-white rounded-[1.5rem] md:rounded-[2.5rem] shadow-2xl w-full max-w-4xl max-h-[96dvh] md:max-h-[90vh] overflow-hidden relative z-10 flex flex-col"
               onClick={(e) => e.stopPropagation()}
             >
               <div className="p-4 sm:p-6 text-white flex items-center justify-between bg-primary rounded-t-[1.5rem] md:rounded-t-[2.5rem] flex-shrink-0">

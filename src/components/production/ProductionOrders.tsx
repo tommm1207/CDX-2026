@@ -1,4 +1,4 @@
-﻿import { CanvasLogo } from '@/components/shared/ReportExportHeader';
+import { CanvasLogo } from '@/components/shared/ReportExportHeader';
 import { useState, useEffect } from 'react';
 import {
   Plus,
@@ -773,14 +773,14 @@ export const ProductionOrders = ({
       <AnimatePresence>
         {showModal && (
           <div
-            className="fixed inset-0 z-[150] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
+            className="fixed inset-0 z-[150] flex items-center justify-center p-2 sm:p-4 bg-black/60 backdrop-blur-md overflow-hidden no-print"
             onClick={() => setShowModal(false)}
           >
             <motion.div
-              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              initial={{ opacity: 0, scale: 0.95, y: 30 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.95, y: 20 }}
-              className="bg-white rounded-[2rem] md:rounded-[2.5rem] shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden relative z-10"
+              exit={{ opacity: 0, scale: 0.95, y: 30 }}
+              className="bg-white rounded-[1.5rem] md:rounded-[2.5rem] shadow-2xl w-full max-w-2xl flex flex-col max-h-[96dvh] md:max-h-[90dvh] overflow-hidden relative z-10"
               onClick={(e) => e.stopPropagation()}
             >
               {/* Header */}

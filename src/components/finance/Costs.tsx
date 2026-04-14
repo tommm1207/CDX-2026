@@ -1,4 +1,4 @@
-﻿import { exportTableImage } from '../../utils/reportExport';
+import { exportTableImage } from '../../utils/reportExport';
 import { CanvasLogo } from '../shared/ReportExportHeader';
 import { supabase } from '@/lib/supabase';
 import { useState, useEffect, FormEvent, useRef, useMemo } from 'react';
@@ -652,19 +652,16 @@ export const Costs = ({
 
       <AnimatePresence>
         {showDetailModal && selectedCost && (
-          <div className="fixed inset-0 z-[120] flex items-center justify-center p-4">
+          <div
+            className="fixed inset-0 z-[150] flex items-center justify-center p-2 sm:p-4 bg-black/60 backdrop-blur-md no-print"
+            onClick={() => setShowDetailModal(false)}
+          >
             <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              onClick={() => setShowDetailModal(false)}
-              className="fixed inset-0 bg-black/40 backdrop-blur-sm"
-            />
-            <motion.div
-              initial={{ scale: 0.9, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.9, opacity: 0 }}
-              className="bg-white rounded-3xl p-6 shadow-2xl z-10 w-full max-w-sm"
+              initial={{ scale: 0.95, opacity: 0, y: 30 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.95, opacity: 0, y: 30 }}
+              className="bg-white rounded-[1.5rem] md:rounded-[2.5rem] p-6 shadow-2xl z-10 w-full max-w-sm relative"
+              onClick={(e) => e.stopPropagation()}
             >
               <div className="flex justify-between items-center mb-6">
                 <h3 className="font-bold text-lg text-primary">{selectedCost.cost_code}</h3>
@@ -775,23 +772,34 @@ export const Costs = ({
 
       <AnimatePresence>
         {showModal && (
-          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-            <div
-              className="fixed inset-0 bg-black/40 backdrop-blur-md"
-              onClick={() => setShowModal(false)}
-            />
+          <div
+            className="fixed inset-0 z-[150] flex items-center justify-center p-2 sm:p-4 bg-black/60 backdrop-blur-md overflow-hidden no-print"
+            onClick={() => setShowModal(false)}
+          >
             <motion.div
-              initial={{ y: 20, opacity: 0 }}
-              animate={{ y: 0, opacity: 1 }}
-              className="bg-white rounded-[2rem] shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col z-10"
+              initial={{ y: 30, opacity: 0, scale: 0.95 }}
+              animate={{ y: 0, opacity: 1, scale: 1 }}
+              exit={{ y: 30, opacity: 0, scale: 0.95 }}
+              className="bg-white rounded-[1.5rem] md:rounded-[2.5rem] shadow-2xl w-full max-w-2xl max-h-[96dvh] md:max-h-[85vh] overflow-hidden flex flex-col z-10"
+              onClick={(e) => e.stopPropagation()}
             >
-              <div className="bg-primary p-6 text-white flex justify-between items-center">
-                <h3 className="font-bold text-lg">{isEditing ? 'Sửa chi phí' : 'Nhập chi phí'}</h3>
-                <button onClick={() => setShowModal(false)}>
-                  <X size={24} />
+              <div className="bg-primary p-5 sm:p-6 text-white flex justify-between items-center flex-shrink-0">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center">
+                    <Plus size={24} />
+                  </div>
+                  <h3 className="font-bold text-lg">
+                    {isEditing ? 'Sửa chi phí' : 'Nhập chi phí'}
+                  </h3>
+                </div>
+                <button
+                  onClick={() => setShowModal(false)}
+                  className="w-8 h-8 flex items-center justify-center bg-black/10 rounded-full hover:bg-black/20"
+                >
+                  <X size={20} />
                 </button>
               </div>
-              <div className="flex-1 overflow-y-auto p-6 scrollbar-hide">
+              <div className="flex-1 overflow-y-auto p-4 sm:p-6 scrollbar-hide">
                 <form onSubmit={handleSubmit} className="space-y-6">
                   <div className="bg-primary/5 p-4 rounded-2xl border border-primary/10">
                     <p className="text-[10px] font-bold text-primary uppercase mb-1">

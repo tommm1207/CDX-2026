@@ -881,7 +881,7 @@ export const MonthlySalary = ({
                     .bill-capture .italic { font-style: italic !important; }
                     .bill-capture .uppercase { text-transform: uppercase !important; }
                     .bill-capture .text-primary { color: #2D5A27 !important; }
-                    .bill-capture .logo-img { width: 36px !important; height: 36px !important; opacity: 1 !important; display: block !important; background-color: transparent !important; transform: translateZ(0) !important; -webkit-transform: translateZ(0) !important; }
+                    .bill-capture .logo-img { width: 44px !important; height: 44px !important; opacity: 1 !important; display: block !important; background-color: #ffffff !important; transform: translateZ(0) !important; -webkit-transform: translateZ(0) !important; object-fit: contain !important; border-radius: 9px !important; }
                     .bill-capture .main-title { color: #2D5A27 !important; font-weight: 900 !important; letter-spacing: -0.02em !important; text-shadow: none !important; }
                     .bill-capture .text-gray-400 { color: #9CA3AF !important; }
                     .bill-capture .text-gray-500 { color: #6B7280 !important; }
@@ -902,7 +902,7 @@ export const MonthlySalary = ({
                         <div className="flex items-center gap-2 mb-3">
                           <CanvasLogo
                             size={44}
-                            className="w-11 h-11 rounded-xl object-contain shadow-sm"
+                            className="logo-img w-11 h-11 rounded-xl object-contain shadow-sm"
                           />
                           <div>
                             <p className="text-[9px] font-black text-gray-700 uppercase tracking-wider">

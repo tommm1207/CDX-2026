@@ -57,7 +57,8 @@ export const tongXuat = async (
 
 /**
  * Tổng giảm trừ do chuyển kho đi (kho này là kho xuất/from) trong khoảng [startDate, endDate].
- * Chỉ tính phiếu ĐÃ DUYỆT.
+ * Tính cả ĐÃ DUYỆT và CHỜ DUYỆT để giữ chỗ tồn kho ngay khi tạo phiếu chuyển,
+ * đồng bộ với cách tính tongXuat (tránh tình trạng tồn kho âm khi phiếu chuyển được duyệt).
  */
 export const giamTruChuyenDi = async (
   materialId: string,
@@ -70,7 +71,7 @@ export const giamTruChuyenDi = async (
     .select('quantity')
     .eq('material_id', materialId)
     .eq('from_warehouse_id', warehouseId)
-    .eq('status', 'Đã duyệt')
+    .in('status', ['Đã duyệt', 'Chờ duyệt'])
     .gte('date', startDate)
     .lte('date', endDate);
   return (data || []).reduce((sum, item) => sum + Number(item.quantity), 0);
@@ -376,7 +377,7 @@ export const getTonKhoTable = async (
       end?: string,
     ) => {
       // stock_out: tính cả Chờ duyệt để giữ chỗ tồn kho (tránh xuất vượt tồn)
-      // stock_in & transfers: chỉ tính Đã duyệt (hàng chưa về / chưa chuyển thì chưa tính)
+      // stock_in & transfers: chỉ tính Đã duyệt (báo cáo chỉ hiển thị giao dịch chính thức)
       const statusFilter = table === 'stock_out' ? ['Đã duyệt', 'Chờ duyệt'] : ['Đã duyệt'];
       let q = supabase
         .from(table)

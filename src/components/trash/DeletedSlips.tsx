@@ -159,10 +159,10 @@ export const DeletedSlips = ({
       const id = selectedItem.id;
       const slip = slips.find((s) => s.id === id && s.table === table);
 
-      // Chặn khôi phục phiếu thuộc xả/gộp — phải khôi phục từ phiếu gốc
+      // Chặn khôi phục phiếu thuộc rã/gộp — phải khôi phục từ phiếu gốc
       if (slip && isFromSplitMerge(slip)) {
         throw new Error(
-          `Phiếu này được tạo từ phiếu Xả/Gộp. Vui lòng khôi phục từ mục Xả / Gộp vật tư trong Thùng rác.`,
+          `Phiếu này được tạo từ phiếu Rã/Gộp. Vui lòng khôi phục từ mục Rã / Gộp vật tư trong Thùng rác.`,
         );
       }
 
@@ -197,10 +197,10 @@ export const DeletedSlips = ({
     try {
       const slip = slips.find((s) => s.id === selectedItem.id && s.table === selectedItem.table);
 
-      // Chặn xóa vĩnh viễn phiếu thuộc xả/gộp — phải xóa từ phiếu gốc
+      // Chặn xóa vĩnh viễn phiếu thuộc rã/gộp — phải xóa từ phiếu gốc
       if (slip && isFromSplitMerge(slip)) {
         throw new Error(
-          `Phiếu này được tạo từ phiếu Xả/Gộp. Vui lòng xóa vĩnh viễn từ mục Xả / Gộp vật tư trong Thùng rác.`,
+          `Phiếu này được tạo từ phiếu Rã/Gộp. Vui lòng xóa vĩnh viễn từ mục Rã / Gộp vật tư trong Thùng rác.`,
         );
       }
 
@@ -235,7 +235,7 @@ export const DeletedSlips = ({
         else failCount++;
       }
       addToast(
-        `Đã xóa vĩnh viễn ${successCount} phiếu.${failCount > 0 ? ` Bỏ qua ${failCount} phiếu từ Xả/Gộp.` : ''}`,
+        `Đã xóa vĩnh viễn ${successCount} phiếu.${failCount > 0 ? ` Bỏ qua ${failCount} phiếu từ Rã/Gộp.` : ''}`,
         successCount > 0 ? 'success' : 'error',
       );
       setSelectedIds(new Set());
@@ -263,7 +263,7 @@ export const DeletedSlips = ({
         else failCount++;
       }
       addToast(
-        `Đã xóa vĩnh viễn ${successCount} phiếu.${failCount > 0 ? ` Bỏ qua ${failCount} phiếu từ Xả/Gộp.` : ''}`,
+        `Đã xóa vĩnh viễn ${successCount} phiếu.${failCount > 0 ? ` Bỏ qua ${failCount} phiếu từ Rã/Gộp.` : ''}`,
         successCount > 0 ? 'success' : 'error',
       );
       setSelectedIds(new Set());
@@ -622,7 +622,7 @@ export const DeletedSlips = ({
       <ConfirmModal
         show={showBulkDeleteModal}
         title="Xóa vĩnh viễn các phiếu đã chọn"
-        message={`Xóa vĩnh viễn ${selectedIds.size} phiếu đã chọn? Phiếu từ Xả/Gộp sẽ bị bỏ qua. Hành động này không thể hoàn tác.`}
+        message={`Xóa vĩnh viễn ${selectedIds.size} phiếu đã chọn? Phiếu từ Rã/Gộp sẽ bị bỏ qua. Hành động này không thể hoàn tác.`}
         onConfirm={bulkDelete}
         onCancel={() => setShowBulkDeleteModal(false)}
         confirmText="Xóa vĩnh viễn"
@@ -633,7 +633,7 @@ export const DeletedSlips = ({
       <ConfirmModal
         show={showEmptyTrashModal}
         title="Dọn sạch thùng rác"
-        message={`Xóa vĩnh viễn tất cả ${slips.length} phiếu trong thùng rác? Phiếu từ Xả/Gộp sẽ bị bỏ qua. Hành động này không thể hoàn tác.`}
+        message={`Xóa vĩnh viễn tất cả ${slips.length} phiếu trong thùng rác? Phiếu từ Rã/Gộp sẽ bị bỏ qua. Hành động này không thể hoàn tác.`}
         onConfirm={emptyTrash}
         onCancel={() => setShowEmptyTrashModal(false)}
         confirmText="Xóa tất cả"

@@ -656,7 +656,7 @@ export const StockIn = ({
                             <div className="flex items-center gap-1">
                               {(item.import_code || '').startsWith('XA') && (
                                 <span className="px-1.5 py-px rounded text-[9px] font-black bg-orange-50 text-orange-400 border border-orange-100 leading-none whitespace-nowrap">
-                                  Xả
+                                  Rã
                                 </span>
                               )}
                               {(item.import_code || '').startsWith('GOP') && (
@@ -830,7 +830,7 @@ export const StockIn = ({
                     <div className="px-3 py-2 bg-orange-50 border border-orange-100 rounded-xl text-xs text-orange-600 font-medium text-center">
                       {(selectedSlip.import_code || '').startsWith('SX-')
                         ? 'Phiếu từ Sản xuất Cọc — duyệt từ màn hình Sản xuất Cọc'
-                        : 'Phiếu từ Xả/Gộp — duyệt từ màn hình Xả/Gộp vật tư'}
+                        : 'Phiếu từ Rã/Gộp — duyệt từ màn hình Rã/Gộp vật tư'}
                     </div>
                   ) : (
                     <div className="grid grid-cols-2 gap-2">

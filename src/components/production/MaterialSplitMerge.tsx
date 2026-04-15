@@ -95,7 +95,7 @@ export const MaterialSplitMerge = ({
   const [kho_id, setKhoId] = useState('');
   const [ghi_chu, setGhiChu] = useState('');
 
-  // Xả: 1 nguồn → N output
+  // Rã: 1 nguồn → N output
   const [nguonXa, setNguonXa] = useState({
     material_id: '',
     material_name: '',
@@ -127,7 +127,6 @@ export const MaterialSplitMerge = ({
         (tk) => setNguonXa((p) => ({ ...p, ton_kho: tk })),
       );
     }
-     
   }, [kho_id]);
 
   const fetchHistory = async () => {
@@ -346,7 +345,7 @@ export const MaterialSplitMerge = ({
         );
         if (stockInfo.available < Number(nguonXa.so_luong)) {
           throw new Error(`
-❌ Không đủ tồn kho thực hiện Xả:
+❌ Không đủ tồn kho thực hiện Rã:
 - Vật tư: ${nguonXa.material_name}
 - Tồn thực tế: ${formatNumber(stockInfo.actual)}
 - Đang giữ chỗ (Chờ duyệt): ${formatNumber(stockInfo.pendingOut)}
@@ -468,7 +467,7 @@ export const MaterialSplitMerge = ({
             unit_price: 0,
             total_amount: 0,
             employee_id: user.id,
-            notes: `Xả vật tư${isEditing ? ' (Cập nhật)' : ''} - Phiếu: ${ma_phieu}`,
+            notes: `Rã vật tư${isEditing ? ' (Cập nhật)' : ''} - Phiếu: ${ma_phieu}`,
             status: 'Chờ duyệt',
           },
         ]);
@@ -484,7 +483,7 @@ export const MaterialSplitMerge = ({
           unit_price: 0,
           total_amount: 0,
           employee_id: user.id,
-          notes: `Mảnh ra từ xả vật tư${isEditing ? ' (Cập nhật)' : ''} - Phiếu: ${ma_phieu}`,
+          notes: `Mảnh ra từ rã vật tư${isEditing ? ' (Cập nhật)' : ''} - Phiếu: ${ma_phieu}`,
           status: 'Chờ duyệt',
         }));
         const { error: stockInErr } = await supabase.from('stock_in').insert(stockInItems);
@@ -825,7 +824,7 @@ export const MaterialSplitMerge = ({
           const tongSL = chiTiet.reduce((sum: number, d: any) => sum + Number(d.so_luong || 0), 0);
           return [
             s.ma_phieu ?? '',
-            s.loai === 'xa' ? 'Xả' : 'Gộp',
+            s.loai === 'xa' ? 'Rã' : 'Gộp',
             formatDate(s.ngay) ?? '',
             s.warehouses?.name ?? '',
             nguon,
@@ -843,7 +842,7 @@ export const MaterialSplitMerge = ({
   return (
     <div className="p-4 md:p-6 space-y-6 pb-24">
       <div className="flex items-center justify-between gap-2 mb-4">
-        <PageBreadcrumb title="Xả / Gộp vật tư" onBack={onBack} />
+        <PageBreadcrumb title="Rã / Gộp vật tư" onBack={onBack} />
         <div className="flex items-center gap-1.5 justify-end flex-1 flex-shrink-0">
           <SaveImageButton
             onClick={() => {
@@ -892,7 +891,7 @@ export const MaterialSplitMerge = ({
             <Scissors size={20} className="text-orange-600" />
           </div>
           <div className="text-left">
-            <h3 className="text-sm font-bold text-gray-800">Xả vật tư</h3>
+            <h3 className="text-sm font-bold text-gray-800">Rã vật tư</h3>
             <p className="text-[10px] text-gray-400">1 nguồn → N mảnh</p>
           </div>
         </button>
@@ -1011,7 +1010,7 @@ export const MaterialSplitMerge = ({
                 <span
                   className={`px-1 py-0.5 rounded text-[7px] font-black shrink-0 ${item.loai === 'xa' ? 'text-orange-400 border border-orange-100' : 'text-blue-400 border border-blue-100'}`}
                 >
-                  {item.loai === 'xa' ? 'Xả' : 'Gộp'}
+                  {item.loai === 'xa' ? 'Rã' : 'Gộp'}
                 </span>
               </div>
             );
@@ -1049,7 +1048,7 @@ export const MaterialSplitMerge = ({
                       {isEditing
                         ? `Sửa phiếu ${editingPhieu?.ma_phieu}`
                         : mode === 'xa'
-                          ? 'Xả vật tư'
+                          ? 'Rã vật tư'
                           : 'Gộp vật tư'}
                     </h3>
                     <p className="text-xs text-white/70">
@@ -1076,7 +1075,7 @@ export const MaterialSplitMerge = ({
 
                 {mode === 'xa' ? (
                   <>
-                    {/* Nguồn xả */}
+                    {/* Nguồn rã */}
                     <div className="bg-orange-50/50 rounded-3xl p-5 border border-orange-100 shadow-sm relative">
                       <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3 mb-4">
                         <div className="flex flex-col gap-1">
@@ -1102,7 +1101,7 @@ export const MaterialSplitMerge = ({
                           handleSelectNguonXa(val);
                         }}
                         allowCreate={false}
-                        placeholder="Chọn vật tư cần xả..."
+                        placeholder="Chọn vật tư cần rã..."
                       />
                       {nguonXa.material_id && (
                         <div className="mt-4 flex flex-col gap-4">
@@ -1141,7 +1140,7 @@ export const MaterialSplitMerge = ({
                       )}
                     </div>
 
-                    {/* Output xả */}
+                    {/* Output rã */}
                     <div className="bg-gray-50/50 rounded-3xl p-5 border border-gray-100 shadow-sm">
                       <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3 mb-4">
                         <div className="flex flex-col gap-1">
@@ -1438,7 +1437,7 @@ export const MaterialSplitMerge = ({
                     </h2>
                     <p className="text-[10px] text-white/80 font-bold uppercase tracking-widest mt-0.5">
                       Mã: {selectedPhieu.ma_phieu} •{' '}
-                      {selectedPhieu.loai === 'xa' ? 'Xả vật tư' : 'Gộp vật tư'}
+                      {selectedPhieu.loai === 'xa' ? 'Rã vật tư' : 'Gộp vật tư'}
                     </p>
                   </div>
                 </div>
@@ -1531,7 +1530,7 @@ export const MaterialSplitMerge = ({
 
                   <div>
                     <h4 className="text-xs font-bold text-gray-400 uppercase mb-2 ml-1">
-                      {selectedPhieu.loai === 'xa' ? '✂️ Mảnh xả ra' : '🔗 Vật tư gộp lại'}
+                      {selectedPhieu.loai === 'xa' ? '✂️ Mảnh rã ra' : '🔗 Vật tư gộp lại'}
                     </h4>
                     <div className="bg-green-50/50 border border-green-100 rounded-2xl overflow-hidden">
                       <table className="w-full text-left text-xs">
@@ -1771,7 +1770,7 @@ export const MaterialSplitMerge = ({
                     </td>
                     <td className="px-4 py-3.5 text-xs font-bold uppercase">
                       <span className={item.loai === 'xa' ? 'text-orange-500' : 'text-blue-500'}>
-                        {item.loai === 'xa' ? 'Xả' : 'Gộp'}
+                        {item.loai === 'xa' ? 'Rã' : 'Gộp'}
                       </span>
                     </td>
                     <td className="px-4 py-3.5 text-xs font-bold text-gray-600">

@@ -109,7 +109,7 @@ export const DeletedProduction = ({
     }
     if (activeTab === 'boms') return item.ten_san_pham || 'Không tên';
     if (activeTab === 'split_merge_history')
-      return `${item.loai === 'xa' ? 'Xả' : 'Gộp'} vật tư - ${item.ghi_chu || ''}`;
+      return `${item.loai === 'xa' ? 'Rã' : 'Gộp'} vật tư - ${item.ghi_chu || ''}`;
     if (activeTab === 'construction_diaries')
       return `Nhật ký: ${item.work_progress || ''} (${formatDate(item.date)})`;
     return 'Không rõ';
@@ -158,7 +158,7 @@ export const DeletedProduction = ({
         .eq('id', selectedItem.id);
       if (error) throw error;
 
-      // Khôi phục stock_in/stock_out liên quan nếu là phiếu xả/gộp
+      // Khôi phục stock_in/stock_out liên quan nếu là phiếu rã/gộp
       if (selectedItem.table === 'split_merge_history') {
         const { data: phieu } = await supabase
           .from('xasa_gop_phieu')
@@ -209,7 +209,7 @@ export const DeletedProduction = ({
         if (err1) throw err1;
       }
 
-      // Xóa vĩnh viễn stock_in/stock_out liên quan nếu là phiếu xả/gộp
+      // Xóa vĩnh viễn stock_in/stock_out liên quan nếu là phiếu rã/gộp
       if (selectedItem.table === 'split_merge_history') {
         const { data: phieu } = await supabase
           .from('xasa_gop_phieu')
@@ -360,7 +360,7 @@ export const DeletedProduction = ({
         {[
           { id: 'production_orders', label: 'Lệnh SX', icon: ClipboardList },
           { id: 'boms', label: 'Định mức', icon: Layers },
-          { id: 'split_merge_history', label: 'Xả/Gộp', icon: Factory },
+          { id: 'split_merge_history', label: 'Rã/Gộp', icon: Factory },
           { id: 'construction_diaries', label: 'Nhật ký thi công', icon: FileText },
         ].map((tab) => (
           <button

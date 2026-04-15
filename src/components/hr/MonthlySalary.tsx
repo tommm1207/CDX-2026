@@ -699,9 +699,8 @@ export const MonthlySalary = ({
                   className="hover:bg-gray-50 transition-colors cursor-pointer"
                 >
                   <td className="px-4 py-3">
-                    <div className="bg-primary/5 px-3 py-1.5 rounded-xl border border-primary/10 text-[10px] font-black text-primary uppercase shadow-inner italic inline-block">
-                      SL-{slugify(s.full_name)}-{selectedMonth.toString().padStart(2, '0')}
-                      {selectedYear.toString().slice(-2)}
+                    <div className="bg-primary/5 px-3 py-1.5 rounded-xl border border-primary/10 text-[10px] font-black text-primary uppercase shadow-inner italic whitespace-nowrap">
+                      {`SL-${slugify(s.full_name)}-${selectedMonth.toString().padStart(2, '0')}${selectedYear.toString().slice(-2)}`}
                     </div>
                   </td>
                   <td className="px-4 py-3">

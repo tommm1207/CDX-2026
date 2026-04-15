@@ -682,7 +682,7 @@ export const StockOut = ({
                     <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-center">
                       SL
                     </th>
-                    <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider">
+                    <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider w-44">
                       Trạng thái
                     </th>
                   </tr>
@@ -718,21 +718,28 @@ export const StockOut = ({
                             {item.materials?.unit || ''}
                           </span>
                         </td>
-                        <td className="px-4 py-3 text-xs">
-                          <div className="flex items-center justify-between gap-1">
+                        <td className="px-4 py-3 text-xs w-44">
+                          <div className="flex items-center justify-between gap-2">
                             <div className="flex items-center gap-1">
-                              {(item.export_code || '').startsWith('XA-') && (
-                                <span className="px-1.5 py-0.5 rounded text-[9px] font-black bg-orange-50 text-orange-400 border border-orange-100">
+                              {(item.export_code || '').startsWith('XA') && (
+                                <span className="px-1.5 py-px rounded text-[9px] font-black bg-orange-50 text-orange-400 border border-orange-100 leading-none whitespace-nowrap">
                                   Xả
                                 </span>
                               )}
-                              {(item.export_code || '').startsWith('GOP-') && (
-                                <span className="px-1.5 py-0.5 rounded text-[9px] font-black bg-blue-50 text-blue-400 border border-blue-100">
+                              {(item.export_code || '').startsWith('GOP') && (
+                                <span className="px-1.5 py-px rounded text-[9px] font-black bg-blue-50 text-blue-400 border border-blue-100 leading-none whitespace-nowrap">
                                   Gộp
                                 </span>
                               )}
+                              {(item.export_code || '').startsWith('SX-') && (
+                                <span className="px-1.5 py-px rounded text-[9px] font-black bg-green-50 text-green-600 border border-green-100 leading-none whitespace-nowrap">
+                                  SX Cọc
+                                </span>
+                              )}
+                            </div>
+                            <div className="flex items-center gap-1">
                               <span
-                                className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                                className={`px-2 py-px rounded-full text-[10px] font-bold leading-none whitespace-nowrap ${
                                   item.status === 'Đã duyệt'
                                     ? 'bg-green-100 text-green-600'
                                     : item.status === 'Từ chối'
@@ -742,11 +749,11 @@ export const StockOut = ({
                               >
                                 {item.status || 'Chờ duyệt'}
                               </span>
+                              <ChevronRight
+                                size={14}
+                                className="text-gray-300 group-hover:text-primary transition-colors"
+                              />
                             </div>
-                            <ChevronRight
-                              size={14}
-                              className="text-gray-300 group-hover:text-primary transition-colors"
-                            />
                           </div>
                         </td>
                       </tr>
@@ -850,10 +857,13 @@ export const StockOut = ({
                 {selectedSlip.status !== 'Đã xóa' &&
                   (user.role === 'Admin' || user.role === 'Develop') &&
                   selectedSlip.status === 'Chờ duyệt' &&
-                  ((selectedSlip.export_code || '').startsWith('XA-') ||
-                  (selectedSlip.export_code || '').startsWith('GOP-') ? (
+                  ((selectedSlip.export_code || '').startsWith('XA') ||
+                  (selectedSlip.export_code || '').startsWith('GOP') ||
+                  (selectedSlip.export_code || '').startsWith('SX-') ? (
                     <div className="px-3 py-2 bg-orange-50 border border-orange-100 rounded-xl text-xs text-orange-600 font-medium text-center">
-                      Phiếu từ Xả/Gộp — duyệt từ màn hình Xả/Gộp vật tư
+                      {(selectedSlip.export_code || '').startsWith('SX-')
+                        ? 'Phiếu từ Sản xuất Cọc — duyệt từ màn hình Sản xuất Cọc'
+                        : 'Phiếu từ Xả/Gộp — duyệt từ màn hình Xả/Gộp vật tư'}
                     </div>
                   ) : (
                     <div className="grid grid-cols-2 gap-2">

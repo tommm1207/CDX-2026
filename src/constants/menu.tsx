@@ -21,6 +21,7 @@ import {
   Bell,
   BellRing,
   ClipboardList,
+  Hammer,
 } from 'lucide-react';
 
 export const getMenuGroups = (pendingCount: number) => [
@@ -51,7 +52,7 @@ export const getMenuGroups = (pendingCount: number) => [
       { id: 'construction-diary', label: 'Nhật ký thi công', icon: FileText },
       { id: 'xasa-gop', label: 'Xả / Gộp vật tư', icon: Layers },
       { id: 'bom-lenh-sx', label: 'Định mức & Lệnh sản xuất', icon: ClipboardList },
-      { id: 'nhap-thanh-pham', label: 'Nhập kho thành phẩm', icon: Package },
+      { id: 'san-xuat-coc', label: 'Sản xuất Cọc', icon: Hammer },
     ],
   },
   {

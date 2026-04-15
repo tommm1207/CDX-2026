@@ -1,5 +1,6 @@
 import { CanvasLogo } from '@/components/shared/ReportExportHeader';
 import { exportTableImage } from '../../utils/reportExport';
+import { ConfirmModal } from '../shared/ConfirmModal';
 import { useState, useEffect } from 'react';
 import {
   Plus,
@@ -56,6 +57,7 @@ export const BomManager = ({
   );
   const [showFilter, setShowFilter] = useState(false);
   const [isCapturingTable, setIsCapturingTable] = useState(false);
+  const [bomToDelete, setBomToDelete] = useState<any>(null);
 
   const reportRef = useRef<HTMLDivElement>(null);
 
@@ -253,11 +255,16 @@ export const BomManager = ({
     }
   };
 
-  const handleDelete = async (bom: any) => {
+  const handleDelete = async () => {
+    if (!bomToDelete) return;
     try {
-      await supabase.from('san_pham_bom').update({ dang_hoat_dong: false }).eq('id', bom.id);
+      await supabase
+        .from('san_pham_bom')
+        .update({ dang_hoat_dong: false })
+        .eq('id', bomToDelete.id);
       if (addToast) addToast('Đã xóa định mức', 'success');
-      if (selectedBom?.id === bom.id) setSelectedBom(null);
+      if (selectedBom?.id === bomToDelete.id) setSelectedBom(null);
+      setBomToDelete(null);
       fetchBoms();
     } catch (err: any) {
       if (addToast) addToast('Lỗi: ' + err.message, 'error');
@@ -378,7 +385,7 @@ export const BomManager = ({
                 key={bom.id}
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
-                onClick={() => setSelectedBom(bom)}
+                onClick={() => setSelectedBom((prev: any) => (prev?.id === bom.id ? null : bom))}
                 className={`bg-white rounded-2xl p-4 border cursor-pointer transition-all hover:shadow-md ${
                   selectedBom?.id === bom.id
                     ? 'border-primary shadow-md ring-2 ring-primary/10'
@@ -423,13 +430,16 @@ export const BomManager = ({
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
-                        handleDelete(bom);
+                        setBomToDelete(bom);
                       }}
                       className="p-1.5 hover:bg-red-50 rounded-lg text-red-400 transition-colors"
                     >
                       <Trash2 size={14} />
                     </button>
-                    <ChevronRight size={16} className="text-gray-300 ml-1" />
+                    <ChevronRight
+                      size={16}
+                      className={`text-gray-300 ml-1 transition-transform ${selectedBom?.id === bom.id ? 'rotate-90' : ''}`}
+                    />
                   </div>
                 </div>
               </motion.div>
@@ -817,6 +827,17 @@ export const BomManager = ({
           </div>
         )}
       </AnimatePresence>
+
+      <ConfirmModal
+        show={!!bomToDelete}
+        title="Xóa định mức"
+        message={`Bạn có chắc muốn xóa định mức "${bomToDelete?.ten_san_pham}"? Hành động này không thể hoàn tác.`}
+        confirmText="Xóa"
+        cancelText="Hủy"
+        onConfirm={handleDelete}
+        onCancel={() => setBomToDelete(null)}
+        type="danger"
+      />
     </div>
   );
 };

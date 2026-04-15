@@ -21,7 +21,7 @@ import { MaterialCatalog } from '@/components/materials/MaterialCatalog';
 import { ConstructionDiaryComponent } from '@/components/production/ConstructionDiary';
 import { BomManager } from '@/components/production/BomManager';
 import { ProductionOrders } from '@/components/production/ProductionOrders';
-import { FinishedGoodsIntake } from '@/components/production/FinishedGoodsIntake';
+import { SanXuatCoc } from '@/components/production/SanXuatCoc';
 import { MaterialSplitMerge } from '@/components/production/MaterialSplitMerge';
 import { PlaceholderPage } from '@/components/materials/PlaceholderPage';
 import { Trash } from '@/components/trash/Trash';
@@ -249,10 +249,10 @@ export const AppRouter = ({
         </ErrorBoundary>
       );
 
-    case 'nhap-thanh-pham':
+    case 'san-xuat-coc':
       return (
         <ErrorBoundary onBack={goBack}>
-          <FinishedGoodsIntake user={user} onBack={goBack} addToast={addToast} />
+          <SanXuatCoc user={user} onBack={goBack} addToast={addToast} />
         </ErrorBoundary>
       );
 

@@ -17,5 +17,6 @@ get_admin_creds.js
 get_users.js
 
 # Claude Code files
-CLAUDE.md
+claude_plan.md
+claude_logic.md
 .claude/settings.local.json

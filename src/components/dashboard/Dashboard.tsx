@@ -12,10 +12,10 @@ import {
   Plus,
   Package,
   Layers,
-  ClipboardCheck,
   ClipboardList,
   BarChart3,
   Download,
+  Hammer,
 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { Employee } from '@/types';
@@ -91,11 +91,11 @@ export const Dashboard = ({ user, onNavigate, addToast, pendingApprovals = 0 }: 
       description: 'Chuyển vật tư giữa các kho',
     },
     {
-      id: isAdmin ? 'cost-report' : 'costs',
-      label: isAdmin ? 'Báo cáo chi phí' : 'Nhập chi phí',
+      id: 'costs',
+      label: 'Lệnh Chi phí',
       icon: FileText,
       color: 'bg-primary',
-      description: isAdmin ? 'Phân tích tổng quan tài chính' : 'Ghi chép chi tiêu dự án',
+      description: 'Nhập lệnh chi phí dự án',
     },
     {
       id: 'inventory-report',
@@ -128,11 +128,11 @@ export const Dashboard = ({ user, onNavigate, addToast, pendingApprovals = 0 }: 
       description: isAdmin ? 'Tổng hợp lương toàn công ty' : 'Xem lương tháng của bạn',
     },
     {
-      id: 'pending-approvals',
-      label: 'Phê duyệt',
-      icon: ClipboardCheck,
+      id: 'san-xuat-coc',
+      label: 'Sản xuất Cọc',
+      icon: Hammer,
       color: 'bg-amber-600',
-      description: 'Duyệt phiếu chờ xử lý',
+      description: 'Tạo lệnh sản xuất cọc mới',
       adminOnly: true,
     },
     {

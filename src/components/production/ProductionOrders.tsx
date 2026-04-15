@@ -428,7 +428,8 @@ export const ProductionOrders = ({
   };
 
   const filteredOrders = orders.filter((order) => {
-    if (statusFilter !== 'Tất cả' && order.trang_thai !== statusFilter) return false;
+    if (statusFilter === 'Tất cả') return order.trang_thai !== 'da_huy';
+    if (order.trang_thai !== statusFilter) return false;
     if (!searchTerm) return true;
     const s = searchTerm.toLowerCase();
     return (

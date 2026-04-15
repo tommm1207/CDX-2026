@@ -1,4 +1,4 @@
-﻿import { CanvasLogo } from '@/components/shared/ReportExportHeader';
+import { CanvasLogo } from '@/components/shared/ReportExportHeader';
 import { useState, useEffect, useRef } from 'react';
 import {
   Plus,
@@ -511,7 +511,7 @@ export const Advances = ({
                   <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">
                     Mã tham chiếu ({activeTab === 'advances' ? 'Tạm ứng' : 'Phụ cấp'})
                   </label>
-                  <div className="bg-primary/5 px-5 py-3.5 rounded-2xl border border-primary/10 text-sm font-black text-primary uppercase shadow-inner italic">
+                  <div className="bg-primary/5 px-5 py-3.5 rounded-2xl border border-primary/10 text-sm font-black text-primary uppercase shadow-inner">
                     {activeTab === 'advances' ? 'TU-' : 'PC-'}
                     {new Date(formData.date).toISOString().slice(2, 10).replace(/-/g, '')}-
                     {isEditing ? selectedItem?.id?.slice(0, 3).toUpperCase() : '001'}
@@ -662,10 +662,10 @@ export const Advances = ({
           </div>
 
           <div className="mb-6">
-            <h1 className="text-3xl font-black italic text-[#2D5A27] tracking-tighter mb-1 uppercase">
+            <h1 className="text-3xl font-black text-[#2D5A27] tracking-tighter mb-1 uppercase">
               {activeTab === 'advances' ? 'BẢNG TẠM ỨNG' : 'BẢNG PHỤ CẤP'}
             </h1>
-            <p className="text-sm font-bold text-gray-500 italic">
+            <p className="text-sm font-bold text-gray-500">
               Kỳ báo cáo: Tháng {selectedMonth}/{selectedYear} • CDX-2026 Edition
             </p>
           </div>
@@ -673,19 +673,19 @@ export const Advances = ({
           <table className="w-full text-left border-collapse whitespace-nowrap">
             <thead>
               <tr className="bg-primary text-white">
-                <th className="px-4 py-4 text-[10px] font-black uppercase tracking-widest italic border-r border-white/10">
+                <th className="px-4 py-4 text-[10px] font-black uppercase tracking-widest border-r border-white/10">
                   Mã hiệu
                 </th>
-                <th className="px-4 py-4 text-[10px] font-black uppercase tracking-widest italic border-r border-white/10">
+                <th className="px-4 py-4 text-[10px] font-black uppercase tracking-widest border-r border-white/10">
                   Ngày
                 </th>
-                <th className="px-4 py-4 text-[10px] font-black uppercase tracking-widest italic border-r border-white/10">
+                <th className="px-4 py-4 text-[10px] font-black uppercase tracking-widest border-r border-white/10">
                   Nhân viên
                 </th>
-                <th className="px-4 py-4 text-[10px] font-black uppercase tracking-widest italic border-r border-white/10">
+                <th className="px-4 py-4 text-[10px] font-black uppercase tracking-widest border-r border-white/10">
                   Số tiền
                 </th>
-                <th className="px-4 py-4 text-[10px] font-black uppercase tracking-widest italic">
+                <th className="px-4 py-4 text-[10px] font-black uppercase tracking-widest">
                   {activeTab === 'advances' ? 'Lý do' : 'Ghi chú'}
                 </th>
               </tr>
@@ -703,7 +703,7 @@ export const Advances = ({
                   <td className="px-4 py-3 font-black text-primary">
                     {formatCurrency(item.amount)}
                   </td>
-                  <td className="px-4 py-3 font-bold text-gray-500 italic max-w-xs truncate">
+                  <td className="px-4 py-3 font-bold text-gray-500 max-w-xs truncate">
                     {item.notes || item.reason || '-'}
                   </td>
                 </tr>
@@ -711,7 +711,7 @@ export const Advances = ({
               <tr className="bg-primary/5 font-black border-t-2 border-primary/20">
                 <td
                   colSpan={3}
-                  className="px-4 py-4 text-sm text-right uppercase tracking-[0.15em] italic"
+                  className="px-4 py-4 text-sm text-right uppercase tracking-[0.15em]"
                 >
                   Tổng số tiền:
                 </td>
@@ -725,7 +725,7 @@ export const Advances = ({
 
           <div className="mt-12 flex justify-between items-end border-t border-gray-100 pt-6">
             <div className="space-y-1">
-              <p className="text-xs font-black text-gray-300 uppercase tracking-[0.2em] italic whitespace-nowrap">
+              <p className="text-xs font-black text-gray-300 uppercase tracking-[0.2em] whitespace-nowrap">
                 CDX ERP SYSTEM
               </p>
               <p className="text-[9px] text-gray-300 font-bold uppercase tracking-widest">
@@ -738,7 +738,7 @@ export const Advances = ({
               </p>
               <div className="text-[10px] text-gray-400 font-bold bg-gray-50 px-3 py-1 rounded-full border border-gray-100">
                 Audit Hash:{' '}
-                <span className="text-primary font-black tracking-widest italic ml-1 underline">
+                <span className="text-primary font-black tracking-widest ml-1 underline">
                   {new Date().getTime().toString(16).toUpperCase()}
                 </span>
               </div>
@@ -787,10 +787,10 @@ export const Advances = ({
           </div>
 
           <div className="mb-6">
-            <h1 className="text-3xl font-black italic text-[#2D5A27] tracking-tighter mb-1 uppercase">
+            <h1 className="text-3xl font-black text-[#2D5A27] tracking-tighter mb-1 uppercase">
               {activeTab === 'advances' ? 'BẢNG TẠM ỨNG' : 'BẢNG PHỤ CẤP'}
             </h1>
-            <p className="text-sm font-bold text-gray-500 italic">
+            <p className="text-sm font-bold text-gray-500">
               Kỳ báo cáo: Tháng {selectedMonth}/{selectedYear} • CDX ERP
             </p>
           </div>

@@ -1086,7 +1086,7 @@ export const ConstructionDiaryComponent = ({
                 <CanvasLogo size={96} className="w-24 h-24 rounded-3xl object-contain shadow-sm" />
               </div>
               <div className="space-y-1">
-                <h1 className="text-3xl font-black text-indigo-600 tracking-tighter uppercase italic">
+                <h1 className="text-3xl font-black text-indigo-600 tracking-tighter uppercase">
                   CDX ERP SYSTEM
                 </h1>
                 <p className="text-[10px] text-gray-400 font-bold uppercase tracking-[0.3em]">

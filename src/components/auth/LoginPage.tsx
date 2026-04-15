@@ -31,10 +31,7 @@ export const LoginPage = ({ onLogin }: { onLogin: (user: Employee) => void }) =>
   const checkConnection = async () => {
     try {
       setConnectionStatus('checking');
-      const { error } = await supabase
-        .from('users')
-        .select('id', { count: 'exact', head: true })
-        .limit(1);
+      const { error } = await supabase.auth.getSession();
       if (error) throw error;
       setConnectionStatus('ok');
     } catch (err) {
@@ -86,6 +83,23 @@ export const LoginPage = ({ onLogin }: { onLogin: (user: Employee) => void }) =>
       if (!isHashed) {
         const hashed = await bcrypt.hash(password, 10);
         await supabase.from('users').update({ app_pass: hashed }).eq('id', data.id);
+      }
+
+      // Tạo Supabase Auth session để RLS hoạt động
+      const authEmail = `${data.code?.toLowerCase()}@cdx.internal`;
+      const authPassword = `cdx-${data.id}`;
+      const { error: signInError } = await supabase.auth.signInWithPassword({
+        email: authEmail,
+        password: authPassword,
+      });
+      if (signInError) {
+        // Tài khoản chưa tồn tại → tạo mới
+        const { error: signUpError } = await supabase.auth.signUp({
+          email: authEmail,
+          password: authPassword,
+        });
+        if (signUpError) throw signUpError;
+        await supabase.auth.signInWithPassword({ email: authEmail, password: authPassword });
       }
 
       onLogin(data as Employee);

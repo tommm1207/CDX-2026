@@ -1,4 +1,4 @@
-﻿import { CanvasLogo } from '@/components/shared/ReportExportHeader';
+import { CanvasLogo } from '@/components/shared/ReportExportHeader';
 import { useState, useEffect } from 'react';
 import {
   Plus,
@@ -731,10 +731,10 @@ export const CostReport = ({
           </div>
 
           <div className="mb-6">
-            <h1 className="text-3xl font-black italic text-[#2D5A27] tracking-tighter mb-1">
+            <h1 className="text-3xl font-black text-[#2D5A27] tracking-tighter mb-1">
               BÁO CÁO CHI PHÍ
             </h1>
-            <p className="text-sm font-bold text-gray-500 italic">
+            <p className="text-sm font-bold text-gray-500">
               Dữ liệu vận hành hệ thống CDX-2026 • {new Date().toLocaleDateString('vi-VN')}
             </p>
           </div>
@@ -778,7 +778,7 @@ export const CostReport = ({
                 </tr>
               ))}
               <tr className="bg-gray-50 font-black">
-                <td colSpan={4} className="px-4 py-4 text-xs text-right italic">
+                <td colSpan={4} className="px-4 py-4 text-xs text-right">
                   TỔNG CHI PHÍ THỰC TẾ:
                 </td>
                 <td className="px-4 py-4 text-sm text-red-600 text-right">
@@ -794,9 +794,7 @@ export const CostReport = ({
               {new Date().toLocaleTimeString('vi-VN')}
             </div>
             <div className="flex items-center gap-2 whitespace-nowrap">
-              <span className="text-[10px] font-black text-gray-300 uppercase italic">
-                CDX ERP SYSTEM
-              </span>
+              <span className="text-[10px] font-black text-gray-300 uppercase">CDX ERP SYSTEM</span>
               <div className="w-1 h-1 bg-gray-200 rounded-full"></div>
               <span className="text-[10px] font-bold text-gray-300 uppercase">
                 Financial Integrity
@@ -841,10 +839,10 @@ export const CostReport = ({
           </div>
 
           <div className="mb-6">
-            <h1 className="text-3xl font-black italic text-[#245D51] tracking-tighter mb-1 uppercase">
+            <h1 className="text-3xl font-black text-[#245D51] tracking-tighter mb-1 uppercase">
               BÁO CÁO TỔNG HỢP
             </h1>
-            <p className="text-sm font-bold text-gray-500 italic uppercase">
+            <p className="text-sm font-bold text-gray-500 uppercase">
               Operational Cost Summary • CDX ERP v2026
             </p>
           </div>
@@ -883,7 +881,7 @@ export const CostReport = ({
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <p className="text-[12px] text-gray-500 font-bold">Tổng lô:</p>
-                  <p className="text-md font-black text-primary italic">
+                  <p className="text-md font-black text-primary">
                     {filteredHistory.length} cụm phí
                   </p>
                 </div>
@@ -899,25 +897,25 @@ export const CostReport = ({
           <table className="w-full text-left border-collapse min-w-[1000px] whitespace-nowrap">
             <thead>
               <tr className="bg-primary/5 text-primary border-b-2 border-primary/20">
-                <th className="px-6 py-4 text-[11px] font-black uppercase tracking-widest italic border-r border-primary/5 w-16 text-center">
+                <th className="px-6 py-4 text-[11px] font-black uppercase tracking-widest border-r border-primary/5 w-16 text-center">
                   STT
                 </th>
-                <th className="px-6 py-4 text-[11px] font-black uppercase tracking-widest italic border-r border-primary/5">
+                <th className="px-6 py-4 text-[11px] font-black uppercase tracking-widest border-r border-primary/5">
                   Mã phí
                 </th>
-                <th className="px-6 py-4 text-[11px] font-black uppercase tracking-widest italic border-r border-primary/5">
+                <th className="px-6 py-4 text-[11px] font-black uppercase tracking-widest border-r border-primary/5">
                   Ngày ghi
                 </th>
-                <th className="px-6 py-4 text-[11px] font-black uppercase tracking-widest italic border-r border-primary/5">
+                <th className="px-6 py-4 text-[11px] font-black uppercase tracking-widest border-r border-primary/5">
                   Nhân sự
                 </th>
-                <th className="px-6 py-4 text-[11px] font-black uppercase tracking-widest italic border-r border-primary/5">
+                <th className="px-6 py-4 text-[11px] font-black uppercase tracking-widest border-r border-primary/5">
                   Nội dung chính
                 </th>
-                <th className="px-6 py-4 text-[11px] font-black uppercase tracking-widest italic border-r border-primary/5 text-center">
+                <th className="px-6 py-4 text-[11px] font-black uppercase tracking-widest border-r border-primary/5 text-center">
                   Hạng mục
                 </th>
-                <th className="px-6 py-4 text-[11px] font-black uppercase tracking-widest italic text-right">
+                <th className="px-6 py-4 text-[11px] font-black uppercase tracking-widest text-right">
                   Tổng tiền
                 </th>
               </tr>
@@ -935,7 +933,7 @@ export const CostReport = ({
                       {group.cost_code}
                     </span>
                   </td>
-                  <td className="px-6 py-4 text-xs font-bold text-gray-600 italic">
+                  <td className="px-6 py-4 text-xs font-bold text-gray-600">
                     {formatDate(group.date)}
                   </td>
                   <td className="px-6 py-4">
@@ -961,10 +959,7 @@ export const CostReport = ({
                 </tr>
               ))}
               <tr className="bg-primary/5 font-black border-t-2 border-primary/20">
-                <td
-                  colSpan={6}
-                  className="px-6 py-4 text-xs uppercase tracking-widest italic text-right"
-                >
+                <td colSpan={6} className="px-6 py-4 text-xs uppercase tracking-widest text-right">
                   Tổng phát sinh ròng:
                 </td>
                 <td className="px-6 py-4 text-sm text-right tabular-nums text-primary underline decoration-double">
@@ -980,9 +975,7 @@ export const CostReport = ({
               {new Date().toLocaleTimeString('vi-VN')}
             </div>
             <div className="flex items-center gap-2 whitespace-nowrap">
-              <span className="text-[10px] font-black text-gray-300 uppercase italic">
-                CDX ERP SYSTEM
-              </span>
+              <span className="text-[10px] font-black text-gray-300 uppercase">CDX ERP SYSTEM</span>
               <div className="w-1 h-1 bg-gray-200 rounded-full"></div>
               <span className="text-[10px] font-bold text-gray-300 uppercase">
                 Operational Excellence

@@ -364,155 +364,138 @@ export const BomManager = ({
         )}
       </AnimatePresence>
 
-      {/* BOM List + Detail split view */}
-      <div className="flex flex-col lg:flex-row gap-6">
-        {/* Left: BOM list */}
-        <div className="flex-1 space-y-3">
-          {loading ? (
-            <div className="flex flex-col items-center py-12 text-gray-400">
-              <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin mb-2" />
-              <p className="text-sm">Đang tải...</p>
-            </div>
-          ) : filteredBoms.length === 0 ? (
-            <div className="flex flex-col items-center py-12 text-gray-400 bg-white rounded-2xl border border-dashed border-gray-200">
-              <Package size={48} className="mb-3 text-gray-300" />
-              <p className="font-medium">Chưa có định mức nào</p>
-              <p className="text-xs mt-1">Bấm nút + để tạo định mức sản phẩm</p>
-            </div>
-          ) : (
-            filteredBoms.map((bom) => (
-              <motion.div
-                key={bom.id}
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
+      <div className="space-y-4">
+        {loading ? (
+          <div className="flex flex-col items-center py-12 text-gray-400">
+            <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin mb-2" />
+            <p className="text-sm">Đang tải...</p>
+          </div>
+        ) : filteredBoms.length === 0 ? (
+          <div className="flex flex-col items-center py-12 text-gray-400 bg-white rounded-2xl border border-dashed border-gray-200">
+            <Package size={48} className="mb-3 text-gray-300" />
+            <p className="font-medium">Chưa có định mức nào</p>
+            <p className="text-xs mt-1">Bấm nút + để tạo định mức sản phẩm</p>
+          </div>
+        ) : (
+          filteredBoms.map((bom) => (
+            <motion.div
+              key={bom.id}
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className={`bg-white rounded-2xl border transition-all hover:shadow-md ${
+                selectedBom?.id === bom.id
+                  ? 'border-primary shadow-md ring-2 ring-primary/10'
+                  : 'border-gray-100'
+              }`}
+            >
+              <div
+                className="p-4 flex items-center justify-between cursor-pointer"
                 onClick={() => setSelectedBom((prev: any) => (prev?.id === bom.id ? null : bom))}
-                className={`bg-white rounded-2xl p-4 border cursor-pointer transition-all hover:shadow-md ${
-                  selectedBom?.id === bom.id
-                    ? 'border-primary shadow-md ring-2 ring-primary/10'
-                    : 'border-gray-100'
-                }`}
               >
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3 flex-1 min-w-0">
-                    <div className="w-10 h-10 bg-primary/10 rounded-xl flex items-center justify-center shrink-0">
-                      <Layers size={20} className="text-primary" />
-                    </div>
-                    <div className="min-w-0">
-                      <h3 className="font-bold text-gray-800 text-sm truncate">
-                        {bom.ten_san_pham}
-                      </h3>
-                      <p className="text-[10px] text-gray-400">
-                        {(bom.san_pham_bom_chi_tiet || []).length} vật tư
-                        {bom.mo_ta ? ` • ${bom.mo_ta}` : ''}
-                      </p>
-                    </div>
+                <div className="flex items-center gap-3 flex-1 min-w-0">
+                  <div className="w-10 h-10 bg-primary/10 rounded-xl flex items-center justify-center shrink-0">
+                    <Layers size={20} className="text-primary" />
                   </div>
-                  <div className="flex items-center gap-1">
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleDuplicate(bom);
-                      }}
-                      className="p-1.5 hover:bg-gray-100 rounded-lg text-gray-400 transition-colors"
-                      title="Nhân bản"
-                    >
-                      <Copy size={14} />
-                    </button>
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleEdit(bom);
-                      }}
-                      className="p-1.5 hover:bg-blue-50 rounded-lg text-blue-500 transition-colors"
-                    >
-                      <Edit size={14} />
-                    </button>
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setBomToDelete(bom);
-                      }}
-                      className="p-1.5 hover:bg-red-50 rounded-lg text-red-400 transition-colors"
-                    >
-                      <Trash2 size={14} />
-                    </button>
-                    <ChevronRight
-                      size={16}
-                      className={`text-gray-300 ml-1 transition-transform ${selectedBom?.id === bom.id ? 'rotate-90' : ''}`}
-                    />
+                  <div className="min-w-0">
+                    <h3 className="font-bold text-gray-800 text-sm truncate">{bom.ten_san_pham}</h3>
+                    <p className="text-[10px] text-gray-400">
+                      {(bom.san_pham_bom_chi_tiet || []).length} vật tư
+                      {bom.mo_ta ? ` • ${bom.mo_ta}` : ''}
+                    </p>
                   </div>
                 </div>
-              </motion.div>
-            ))
-          )}
-        </div>
-
-        {/* Right: BOM Detail */}
-        {selectedBom && (
-          <motion.div
-            initial={{ opacity: 0, x: 20 }}
-            animate={{ opacity: 1, x: 0 }}
-            className="flex-1 bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden"
-          >
-            <div className="bg-primary/5 p-4 border-b border-gray-100 flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-primary/10 rounded-xl flex items-center justify-center">
-                  <ClipboardList size={20} className="text-primary" />
-                </div>
-                <div>
-                  <h3 className="font-bold text-gray-800">{selectedBom.ten_san_pham}</h3>
-                  {selectedBom.mo_ta && (
-                    <p className="text-[10px] text-gray-500">{selectedBom.mo_ta}</p>
-                  )}
+                <div className="flex items-center gap-1">
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleDuplicate(bom);
+                    }}
+                    className="p-1.5 hover:bg-gray-100 rounded-lg text-gray-400 transition-colors"
+                    title="Nhân bản"
+                  >
+                    <Copy size={14} />
+                  </button>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleEdit(bom);
+                    }}
+                    className="p-1.5 hover:bg-blue-50 rounded-lg text-blue-500 transition-colors"
+                  >
+                    <Edit size={14} />
+                  </button>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setBomToDelete(bom);
+                    }}
+                    className="p-1.5 hover:bg-red-50 rounded-lg text-red-400 transition-colors"
+                  >
+                    <Trash2 size={14} />
+                  </button>
+                  <ChevronRight
+                    size={16}
+                    className={`text-gray-300 ml-1 transition-transform ${selectedBom?.id === bom.id ? 'rotate-90' : ''}`}
+                  />
                 </div>
               </div>
-              <button
-                onClick={() => setSelectedBom(null)}
-                className="p-1 hover:bg-gray-200 rounded-full lg:block hidden"
-              >
-                <X size={16} className="text-gray-500" />
-              </button>
-            </div>
 
-            <div className="p-4">
-              <table className="w-full text-left">
-                <thead>
-                  <tr className="border-b border-gray-100">
-                    <th className="py-2 text-[10px] font-bold text-gray-400 uppercase">Vật tư</th>
-                    <th className="py-2 text-[10px] font-bold text-gray-400 uppercase text-right">
-                      Định mức
-                    </th>
-                    <th className="py-2 text-[10px] font-bold text-gray-400 uppercase text-right">
-                      ĐVT
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-50">
-                  {(selectedBom.san_pham_bom_chi_tiet || []).map((item: any) => (
-                    <tr key={item.id}>
-                      <td className="py-3 text-sm text-gray-800">
-                        {item.materials?.name || 'N/A'}
-                        {item.materials?.code && (
-                          <span className="text-[10px] text-gray-400 ml-1">
-                            ({item.materials.code})
-                          </span>
-                        )}
-                      </td>
-                      <td className="py-3 text-sm font-bold text-primary text-right">
-                        {formatNumber(item.dinh_muc)}
-                      </td>
-                      <td className="py-3 text-xs text-gray-500 text-right">{item.don_vi}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-              {(selectedBom.san_pham_bom_chi_tiet || []).length === 0 && (
-                <p className="text-center text-gray-400 text-sm py-8 italic">
-                  Chưa có vật tư nào trong định mức
-                </p>
-              )}
-            </div>
-          </motion.div>
+              {/* Inline Expansion (Accordion) */}
+              <AnimatePresence>
+                {selectedBom?.id === bom.id && (
+                  <motion.div
+                    initial={{ height: 0, opacity: 0 }}
+                    animate={{ height: 'auto', opacity: 1 }}
+                    exit={{ height: 0, opacity: 0 }}
+                    className="overflow-hidden border-t border-gray-50 bg-gray-50/30"
+                  >
+                    <div className="p-4 pt-2">
+                      <table className="w-full text-left">
+                        <thead>
+                          <tr className="border-b border-gray-200">
+                            <th className="py-2 text-[10px] font-bold text-gray-400 uppercase">
+                              Vật tư
+                            </th>
+                            <th className="py-2 text-[10px] font-bold text-gray-400 uppercase text-right">
+                              Định mức
+                            </th>
+                            <th className="py-2 text-[10px] font-bold text-gray-400 uppercase text-right">
+                              ĐVT
+                            </th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-gray-100">
+                          {(bom.san_pham_bom_chi_tiet || []).map((item: any) => (
+                            <tr key={item.id}>
+                              <td className="py-3 text-sm text-gray-800">
+                                {item.materials?.name || 'N/A'}
+                                {item.materials?.code && (
+                                  <span className="text-[10px] text-gray-400 ml-1 font-mono">
+                                    #{item.materials.code}
+                                  </span>
+                                )}
+                              </td>
+                              <td className="py-3 text-sm font-bold text-primary text-right">
+                                {formatNumber(item.dinh_muc)}
+                              </td>
+                              <td className="py-3 text-xs text-gray-500 text-right">
+                                {item.don_vi}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                      {(bom.san_pham_bom_chi_tiet || []).length === 0 && (
+                        <p className="text-center text-gray-400 text-sm py-8">
+                          Chưa có vật tư nào trong định mức
+                        </p>
+                      )}
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </motion.div>
+          ))
         )}
       </div>
 
@@ -532,7 +515,7 @@ export const BomManager = ({
                 <CanvasLogo size={96} className="w-24 h-24 rounded-3xl object-contain shadow-sm" />
               </div>
               <div className="space-y-1">
-                <h1 className="text-3xl font-black text-primary tracking-tighter uppercase italic">
+                <h1 className="text-3xl font-black text-primary tracking-tighter uppercase">
                   CDX ERP SYSTEM
                 </h1>
                 <p className="text-[10px] text-gray-400 font-bold uppercase tracking-[0.3em]">
@@ -553,7 +536,7 @@ export const BomManager = ({
               <h2 className="text-3xl font-black text-gray-900 uppercase tracking-tighter mb-1">
                 Thiết Lập Định Mức Vật Tư
               </h2>
-              <p className="text-xs text-gray-500 font-bold italic">
+              <p className="text-xs text-gray-500 font-bold">
                 Thời gian xuất: {new Date().toLocaleString('vi-VN')}
               </p>
               <div className="mt-4 flex flex-col items-end gap-1">
@@ -709,21 +692,63 @@ export const BomManager = ({
                       {bomItems.map((item, index) => (
                         <div
                           key={index}
-                          className="flex items-center justify-between bg-gray-50 rounded-xl px-4 py-3"
+                          className="flex items-center gap-2 bg-gray-50 rounded-xl px-2 py-1.5"
                         >
-                          <div className="min-w-0 flex-1">
-                            <p className="text-sm font-medium text-gray-800 truncate">
-                              {item.material_name}
-                            </p>
-                            <p className="text-[10px] text-gray-400">
-                              Định mức: {formatNumber(item.dinh_muc)} {item.don_vi}
-                            </p>
+                          <div className="flex-1 min-w-0">
+                            <CreatableSelect
+                              value={item.material_id}
+                              options={materialOptions}
+                              onChange={(val) => {
+                                const mat = materials.find((m) => m.id === val);
+                                const updated = [...bomItems];
+                                updated[index] = {
+                                  ...updated[index],
+                                  material_id: val,
+                                  material_name: mat?.name || val,
+                                  don_vi: mat?.unit || updated[index].don_vi,
+                                };
+                                setBomItems(updated);
+                              }}
+                              placeholder="Vật tư..."
+                              allowCreate={false}
+                              className="text-[11px]"
+                            />
+                          </div>
+                          <div className="shrink-0">
+                            <input
+                              type="number"
+                              min="0"
+                              step="any"
+                              value={item.dinh_muc}
+                              onChange={(e) => {
+                                const updated = [...bomItems];
+                                updated[index] = {
+                                  ...updated[index],
+                                  dinh_muc: parseFloat(e.target.value) || 0,
+                                };
+                                setBomItems(updated);
+                              }}
+                              className="w-16 px-1.5 py-1 rounded-lg border border-gray-200 text-[11px] text-right font-bold outline-none focus:ring-2 focus:ring-primary/20 bg-white"
+                            />
+                          </div>
+                          <div className="shrink-0">
+                            <input
+                              type="text"
+                              value={item.don_vi}
+                              onChange={(e) => {
+                                const updated = [...bomItems];
+                                updated[index] = { ...updated[index], don_vi: e.target.value };
+                                setBomItems(updated);
+                              }}
+                              placeholder="ĐVT"
+                              className="w-12 px-1.5 py-1 rounded-lg border border-gray-200 text-[10px] outline-none focus:ring-2 focus:ring-primary/20 bg-white"
+                            />
                           </div>
                           <button
                             onClick={() => handleRemoveItem(index)}
-                            className="p-1.5 hover:bg-red-100 rounded-lg text-red-400 shrink-0 ml-2"
+                            className="p-1 hover:bg-red-100 rounded-lg text-red-400 shrink-0"
                           >
-                            <Trash2 size={14} />
+                            <Trash2 size={12} />
                           </button>
                         </div>
                       ))}

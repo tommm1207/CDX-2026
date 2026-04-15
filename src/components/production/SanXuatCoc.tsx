@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Plus, X, Hammer, ChevronDown, ChevronUp, Trash2 } from 'lucide-react';
+import { Plus, X, Hammer, ChevronDown, ChevronUp, Trash2, PackagePlus, Edit } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { supabase } from '@/lib/supabase';
 import { Employee } from '@/types';
@@ -8,9 +8,12 @@ import { PageBreadcrumb } from '../shared/PageBreadcrumb';
 import { FAB } from '../shared/FAB';
 import { ConfirmModal } from '../shared/ConfirmModal';
 import { NumericInput } from '../shared/NumericInput';
+import { CreatableSelect } from '../shared/CreatableSelect';
+import { QuickAddMaterialModal } from '../shared/QuickAddMaterialModal';
 import { PageToolbar, FilterPanel, FilterSearchInput } from '../shared/PageToolbar';
 import { ReportImagePreviewModal } from '../shared/ReportImagePreviewModal';
 import { formatNumber } from '@/utils/format';
+import { tonKho } from '@/utils/inventory';
 
 // ============================
 // Sản xuất Cọc
@@ -26,8 +29,11 @@ export const SanXuatCoc = ({
 }) => {
   const [boms, setBoms] = useState<any[]>([]);
   const [materials, setMaterials] = useState<any[]>([]);
+  const [materialGroups, setMaterialGroups] = useState<any[]>([]);
   const [warehouses, setWarehouses] = useState<any[]>([]);
   const [records, setRecords] = useState<any[]>([]);
+  const [showQuickAdd, setShowQuickAdd] = useState(false);
+  const [quickAddInitialName, setQuickAddInitialName] = useState('');
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -40,6 +46,8 @@ export const SanXuatCoc = ({
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('Tất cả');
   const [previewImageUrl, setPreviewImageUrl] = useState<string | null>(null);
+  const [isEditing, setIsEditing] = useState(false);
+  const [selectedRecord, setSelectedRecord] = useState<any>(null);
 
   const tableRef = useRef<HTMLDivElement>(null);
 
@@ -60,7 +68,7 @@ export const SanXuatCoc = ({
   const fetchAll = async () => {
     setLoading(true);
     try {
-      const [bomsRes, matsRes, warehousesRes, recordsRes] = await Promise.all([
+      const [bomsRes, matsRes, warehousesRes, recordsRes, groupsRes] = await Promise.all([
         supabase
           .from('san_pham_bom')
           .select('*, san_pham_bom_chi_tiet(*, materials(name, code, unit))')
@@ -76,14 +84,15 @@ export const SanXuatCoc = ({
           .from('stock_in')
           .select('*, materials(name, code, unit), warehouses(name)')
           .ilike('import_code', 'SX-%')
-          .neq('status', 'Đã xóa')
           .order('created_at', { ascending: false })
-          .limit(50),
+          .limit(100),
+        supabase.from('material_groups').select('id, name').order('name'),
       ]);
       if (bomsRes.data) setBoms(bomsRes.data);
       if (matsRes.data) setMaterials(matsRes.data);
       if (warehousesRes.data) setWarehouses(warehousesRes.data);
       if (recordsRes.data) setRecords(recordsRes.data);
+      if (groupsRes.data) setMaterialGroups(groupsRes.data);
     } finally {
       setLoading(false);
     }
@@ -113,26 +122,82 @@ export const SanXuatCoc = ({
 
     setSubmitting(true);
     try {
-      const code = await generateCode();
+      // Kiểm tra tồn kho cho từng NVL trong định mức (Logic thực tế)
+      const startDate = '2020-01-01';
+      const endDate = new Date(Date.now() + 86400000).toISOString().split('T')[0];
+      const shortfalls: string[] = [];
+
+      // Nếu đang sửa và lệnh hiện tại đã duyệt, ta "hoàn lại" NVL đang dùng vào tồn kho để tính toán
+      // (Bởi vì nếu lưu thành công, phiếu cũ sẽ bị hủy/thay thế bằng phiếu chờ duyệt)
+      const currentApprovedOuts =
+        isEditing && selectedRecord?.status === 'Đã duyệt'
+          ? await (async () => {
+              const { data } = await supabase
+                .from('stock_out')
+                .select('material_id, quantity')
+                .ilike('export_code', `${selectedRecord.import_code}-%`)
+                .eq('status', 'Đã duyệt');
+              return data || [];
+            })()
+          : [];
+
+      await Promise.all(
+        bomItems.map(async (item: any) => {
+          const needed = item.dinh_muc * quantity;
+          let available = await tonKho(item.material_id, rawWarehouseId, startDate, endDate);
+
+          // Cộng lại phần vật tư của chính lệnh này nếu nó đang ở trạng thái Đã duyệt
+          const currentlyUsed = currentApprovedOuts
+            .filter((out) => out.material_id === item.material_id)
+            .reduce((sum, out) => sum + out.quantity, 0);
+
+          available += currentlyUsed;
+
+          if (available < needed) {
+            const matName = item.materials?.name || item.material_name || item.material_id;
+            shortfalls.push(
+              `${matName}: cần ${formatNumber(needed)} ${item.don_vi}, tồn ${formatNumber(available)}`,
+            );
+          }
+        }),
+      );
+      if (shortfalls.length > 0) {
+        addToast?.(`Không đủ NVL:\n${shortfalls.join('\n')}`, 'error');
+        setSubmitting(false);
+        return;
+      }
+
+      const code = isEditing ? selectedRecord.import_code : await generateCode();
       const cocMat = materials.find((m) => m.id === cocMaterialId);
 
-      // 1. Phiếu nhập kho: cọc thành phẩm
-      const { error: stockInErr } = await supabase.from('stock_in').insert([
-        {
-          import_code: code,
-          date,
-          material_id: cocMaterialId,
-          warehouse_id: cocWarehouseId,
-          quantity,
-          unit: cocMat?.unit || 'Cái',
-          unit_price: cocUnitPrice,
-          total_amount: quantity * cocUnitPrice,
-          employee_id: user.id,
-          notes: notes || `Sản xuất cọc - ${selectedBom.ten_san_pham}`,
-          status: 'Chờ duyệt',
-        },
-      ]);
-      if (stockInErr) throw stockInErr;
+      // 1. Cập nhật/Thêm Phiếu nhập kho: cọc thành phẩm
+      const stockInData = {
+        import_code: code,
+        date,
+        material_id: cocMaterialId,
+        warehouse_id: cocWarehouseId,
+        quantity,
+        unit: cocMat?.unit || 'Cái',
+        unit_price: cocUnitPrice,
+        total_amount: quantity * cocUnitPrice,
+        employee_id: user.id,
+        notes: notes || `Sản xuất cọc - ${selectedBom.ten_san_pham}`,
+        status: 'Chờ duyệt',
+      };
+
+      if (isEditing) {
+        const { error } = await supabase
+          .from('stock_in')
+          .update(stockInData)
+          .eq('id', selectedRecord.id);
+        if (error) throw error;
+
+        // Xóa các phiếu xuất cũ để thay bằng phiếu mới (Đảm bảo đồng bộ BOM/Số lượng)
+        await supabase.from('stock_out').delete().ilike('export_code', `${code}-%`);
+      } else {
+        const { error } = await supabase.from('stock_in').insert([stockInData]);
+        if (error) throw error;
+      }
 
       // 2. Phiếu xuất kho: nguyên vật liệu từ định mức
       const stockOuts = bomItems.map((item: any, idx: number) => ({
@@ -151,7 +216,10 @@ export const SanXuatCoc = ({
       const { error: stockOutErr } = await supabase.from('stock_out').insert(stockOuts);
       if (stockOutErr) throw stockOutErr;
 
-      addToast?.(`Đã tạo lệnh sản xuất ${code} thành công!`, 'success');
+      addToast?.(
+        `${isEditing ? 'Đã cập nhật' : 'Đã tạo'} lệnh sản xuất ${code} thành công! (Chờ duyệt lại)`,
+        'success',
+      );
       setShowModal(false);
       resetForm();
       fetchAll();
@@ -184,7 +252,71 @@ export const SanXuatCoc = ({
     }
   };
 
+  const handleRestore = async (rec: any) => {
+    setLoading(true);
+    try {
+      const { error: inErr } = await supabase
+        .from('stock_in')
+        .update({ status: 'Chờ duyệt' })
+        .eq('id', rec.id);
+      if (inErr) throw inErr;
+
+      const { error: outErr } = await supabase
+        .from('stock_out')
+        .update({ status: 'Chờ duyệt' })
+        .ilike('export_code', `${rec.import_code}-%`);
+      if (outErr) throw outErr;
+
+      addToast?.(`Đã khôi phục lệnh ${rec.import_code} (Trạng thái: Chờ duyệt)`, 'success');
+      fetchAll();
+    } catch (err: any) {
+      addToast?.('Lỗi khôi phục: ' + err.message, 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleEdit = async (rec: any) => {
+    setLoading(true);
+    try {
+      // Tìm định mức - dựa trên tên sản phẩm (rec.materials?.name là tên cọc)
+      // Logic link BOM của dự án này thường là dùng bomId, ta lấy từ DB
+      // Nhưng stock_in không lưu bomId, ta phải mò trong stock_out để xem ghi chú hoặc logic khác
+      // Hoặc đơn giản là để người dùng chọn lại định mức nếu không khớp
+      setIsEditing(true);
+      setSelectedRecord(rec);
+      setCocMaterialId(rec.material_id);
+      setQuantity(rec.quantity);
+      setCocWarehouseId(rec.warehouse_id);
+      setDate(rec.date);
+      setNotes(rec.notes || '');
+      setCocUnitPrice(rec.unit_price || 0);
+
+      // Lấy kho xuất NVL từ stock_out
+      const { data: outs } = await supabase
+        .from('stock_out')
+        .select('warehouse_id, notes')
+        .ilike('export_code', `${rec.import_code}-%`)
+        .limit(1);
+
+      if (outs && outs[0]) {
+        setRawWarehouseId(outs[0].warehouse_id);
+      }
+
+      // Tìm BOM khớp nhất (nếu có ghi chú lưu bomId thì tốt)
+      // Hiện tại ta dựa vào tên sản phẩm để highlight BOM gợi ý
+      const matchedBom = boms.find((b) => b.ten_san_pham === rec.materials?.name);
+      if (matchedBom) setBomId(matchedBom.id);
+
+      setShowModal(true);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const resetForm = () => {
+    setIsEditing(false);
+    setSelectedRecord(null);
     setCocMaterialId('');
     setBomId('');
     setQuantity(0);
@@ -217,7 +349,8 @@ export const SanXuatCoc = ({
   const selectedBomDetail = boms.find((b) => b.id === bomId);
 
   const filteredRecords = records.filter((r) => {
-    if (filterStatus !== 'Tất cả' && r.status !== filterStatus) return false;
+    if (filterStatus === 'Tất cả') return r.status !== 'Đã xóa';
+    if (r.status !== filterStatus) return false;
     if (searchTerm) {
       const s = searchTerm.toLowerCase();
       return (
@@ -262,6 +395,7 @@ export const SanXuatCoc = ({
   const statusColor = (status: string) => {
     if (status === 'Đã duyệt') return 'bg-green-100 text-green-700';
     if (status === 'Từ chối') return 'bg-red-100 text-red-600';
+    if (status === 'Đã xóa') return 'bg-gray-100 text-gray-600';
     return 'bg-yellow-100 text-yellow-700';
   };
 
@@ -301,7 +435,7 @@ export const SanXuatCoc = ({
               onChange={(e) => setFilterStatus(e.target.value)}
               className="w-full px-3 py-2 rounded-xl border border-gray-200 text-xs outline-none focus:ring-2 focus:ring-primary/20 bg-white"
             >
-              {['Tất cả', 'Chờ duyệt', 'Đã duyệt', 'Từ chối'].map((s) => (
+              {['Tất cả', 'Chờ duyệt', 'Đã duyệt', 'Từ chối', 'Đã xóa'].map((s) => (
                 <option key={s}>{s}</option>
               ))}
             </select>
@@ -355,15 +489,56 @@ export const SanXuatCoc = ({
                   >
                     {rec.status}
                   </span>
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setRecordToDelete(rec);
-                    }}
-                    className="p-1.5 hover:bg-red-50 rounded-lg text-red-400"
-                  >
-                    <Trash2 size={14} />
-                  </button>
+                  <div className="flex items-center gap-1 border-l border-gray-100 pl-2">
+                    {rec.status === 'Đã xóa' ? (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleRestore(rec);
+                        }}
+                        className="p-1.5 hover:bg-indigo-50 rounded-lg text-indigo-500 transition-colors"
+                        title="Khôi phục"
+                      >
+                        <motion.div whileHover={{ rotate: -45 }}>
+                          <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            width="14"
+                            height="14"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="2.5"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          >
+                            <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
+                            <path d="M3 3v5h5" />
+                          </svg>
+                        </motion.div>
+                      </button>
+                    ) : (
+                      <>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleEdit(rec);
+                          }}
+                          className="p-1.5 hover:bg-blue-50 rounded-lg text-blue-500 transition-colors"
+                        >
+                          <Edit size={14} />
+                        </button>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setRecordToDelete(rec);
+                          }}
+                          className="p-1.5 hover:bg-red-50 rounded-lg text-red-400 transition-colors"
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      </>
+                    )}
+                  </div>
                   {expandedId === rec.id ? (
                     <ChevronUp size={16} className="text-gray-400" />
                   ) : (
@@ -411,31 +586,43 @@ export const SanXuatCoc = ({
                             Đang tải...
                           </div>
                         ) : expandedOuts.length === 0 ? (
-                          <p className="text-xs text-gray-400 italic">
-                            Không có phiếu xuất liên quan
-                          </p>
+                          <p className="text-xs text-gray-400">Không có phiếu xuất liên quan</p>
                         ) : (
-                          <div className="space-y-1.5">
-                            {expandedOuts.map((out) => (
-                              <div
-                                key={out.id}
-                                className="flex items-center justify-between text-xs"
-                              >
-                                <span className="text-gray-600 flex-1 min-w-0 truncate">
-                                  {out.materials?.name || out.export_code}
-                                </span>
-                                <div className="flex items-center gap-2 shrink-0 ml-2">
-                                  <span className="font-bold text-gray-700">
-                                    {formatNumber(out.quantity)} {out.materials?.unit || out.unit}
-                                  </span>
-                                  <span
-                                    className={`text-[9px] font-bold px-1.5 py-px rounded-full ${statusColor(out.status)}`}
-                                  >
-                                    {out.status}
-                                  </span>
-                                </div>
-                              </div>
-                            ))}
+                          <div className="overflow-x-auto">
+                            <table className="w-full text-left">
+                              <thead>
+                                <tr className="border-b border-gray-200">
+                                  <th className="py-2 text-[10px] font-bold text-gray-400 uppercase">
+                                    Vật tư
+                                  </th>
+                                  <th className="py-2 text-[10px] font-bold text-gray-400 uppercase text-right">
+                                    Sl xuất
+                                  </th>
+                                  <th className="py-2 text-[10px] font-bold text-gray-400 uppercase text-right w-12">
+                                    Trạng thái
+                                  </th>
+                                </tr>
+                              </thead>
+                              <tbody className="divide-y divide-gray-100">
+                                {expandedOuts.map((out) => (
+                                  <tr key={out.id}>
+                                    <td className="py-2 text-xs text-gray-700">
+                                      {out.materials?.name || out.export_code}
+                                    </td>
+                                    <td className="py-2 text-xs font-bold text-gray-900 text-right whitespace-nowrap">
+                                      {formatNumber(out.quantity)} {out.materials?.unit || out.unit}
+                                    </td>
+                                    <td className="py-2 text-right">
+                                      <span
+                                        className={`text-[8px] font-black px-1.5 py-px rounded-full ${statusColor(out.status)} inline-block`}
+                                      >
+                                        {out.status}
+                                      </span>
+                                    </td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
                           </div>
                         )}
                       </div>
@@ -465,39 +652,65 @@ export const SanXuatCoc = ({
               onClick={(e) => e.stopPropagation()}
             >
               {/* Header */}
-              <div className="bg-primary p-5 text-white flex items-center gap-3 rounded-t-3xl shrink-0">
+              <div
+                className={`${isEditing ? 'bg-blue-600' : 'bg-primary'} p-5 text-white flex items-center justify-between rounded-t-3xl shrink-0`}
+              >
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-white/20 rounded-xl">
+                    {isEditing ? <Edit size={20} /> : <Plus size={20} />}
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-lg leading-none">
+                      {isEditing ? 'Sửa lệnh sản xuất' : 'Tạo lệnh sản xuất mới'}
+                    </h3>
+                    <p className="text-[10px] text-white/70 mt-1 uppercase tracking-wider font-medium">
+                      {isEditing
+                        ? `Phiếu: ${selectedRecord?.import_code}`
+                        : 'Nhập thông tin sản xuất'}
+                    </p>
+                  </div>
+                </div>
                 <button
                   onClick={() => setShowModal(false)}
-                  className="p-1 hover:bg-white/20 rounded-full"
+                  className="p-2 hover:bg-white/20 rounded-full transition-colors"
                 >
                   <X size={20} />
                 </button>
-                <div>
-                  <h2 className="font-bold text-lg">Tạo lệnh sản xuất cọc</h2>
-                  <p className="text-xs text-white/70">Nhập thành phẩm + Xuất nguyên vật liệu</p>
-                </div>
               </div>
 
               {/* Body */}
               <div className="flex-1 overflow-y-auto p-5 space-y-4">
                 {/* Loại cọc */}
                 <div className="space-y-1">
-                  <label className="text-[10px] font-bold text-gray-400 uppercase">
-                    Loại cọc (thành phẩm) *
-                  </label>
-                  <select
+                  <div className="flex items-center justify-between">
+                    <label className="text-[10px] font-bold text-gray-400 uppercase">
+                      Loại cọc (thành phẩm) *
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setQuickAddInitialName('');
+                        setShowQuickAdd(true);
+                      }}
+                      className="flex items-center gap-1 text-[10px] text-primary font-bold hover:underline"
+                    >
+                      <PackagePlus size={12} /> Thêm vật tư mới
+                    </button>
+                  </div>
+                  <CreatableSelect
                     value={cocMaterialId}
-                    onChange={(e) => setCocMaterialId(e.target.value)}
-                    className="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20 bg-white"
-                  >
-                    <option value="">-- Chọn loại cọc --</option>
-                    {materials.map((m) => (
-                      <option key={m.id} value={m.id}>
-                        {m.name}
-                        {m.code ? ` (${m.code})` : ''}
-                      </option>
-                    ))}
-                  </select>
+                    options={materials.map((m) => ({
+                      id: m.id,
+                      name: `${m.name}${m.code ? ` (${m.code})` : ''}`,
+                    }))}
+                    onChange={setCocMaterialId}
+                    onCreate={(name) => {
+                      setQuickAddInitialName(name);
+                      setShowQuickAdd(true);
+                    }}
+                    placeholder="Tìm & chọn loại cọc..."
+                    allowCreate={true}
+                  />
                 </div>
 
                 {/* Định mức */}
@@ -505,19 +718,16 @@ export const SanXuatCoc = ({
                   <label className="text-[10px] font-bold text-gray-400 uppercase">
                     Định mức áp dụng *
                   </label>
-                  <select
+                  <CreatableSelect
                     value={bomId}
-                    onChange={(e) => setBomId(e.target.value)}
-                    className="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20 bg-white"
-                  >
-                    <option value="">-- Chọn định mức --</option>
-                    {boms.map((b) => (
-                      <option key={b.id} value={b.id}>
-                        {b.ten_san_pham}
-                        {b.mo_ta ? ` — ${b.mo_ta}` : ''}
-                      </option>
-                    ))}
-                  </select>
+                    options={boms.map((b) => ({
+                      id: b.id,
+                      name: `${b.ten_san_pham}${b.mo_ta ? ` — ${b.mo_ta}` : ''}`,
+                    }))}
+                    onChange={setBomId}
+                    placeholder="Tìm & chọn định mức..."
+                    allowCreate={false}
+                  />
                   {/* Preview BOM items */}
                   {selectedBomDetail && (
                     <div className="mt-2 bg-primary/5 rounded-xl p-3 space-y-1">
@@ -534,7 +744,7 @@ export const SanXuatCoc = ({
                         </div>
                       ))}
                       {quantity > 1 && (
-                        <p className="text-[10px] text-gray-400 italic pt-1">
+                        <p className="text-[10px] text-gray-400 pt-1">
                           * Đã nhân với số lượng sản xuất ({quantity})
                         </p>
                       )}
@@ -642,17 +852,17 @@ export const SanXuatCoc = ({
                 <button
                   onClick={handleSubmit}
                   disabled={submitting}
-                  className="px-8 py-2.5 rounded-xl text-sm font-bold bg-primary text-white hover:bg-primary/90 shadow-lg shadow-primary/20 disabled:opacity-50 flex items-center gap-2"
+                  className={`px-8 py-2.5 rounded-xl text-sm font-bold ${isEditing ? 'bg-blue-600' : 'bg-primary'} text-white shadow-lg disabled:opacity-50 flex items-center gap-2`}
                 >
                   {submitting ? (
                     <>
                       <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                      Đang tạo...
+                      {isEditing ? 'Đang cập nhật...' : 'Đang tạo...'}
                     </>
                   ) : (
                     <>
-                      <Plus size={16} />
-                      Tạo lệnh sản xuất
+                      {isEditing ? <Edit size={16} /> : <Plus size={16} />}
+                      {isEditing ? 'Lưu chỉnh sửa' : 'Tạo lệnh sản xuất'}
                     </>
                   )}
                 </button>
@@ -661,6 +871,20 @@ export const SanXuatCoc = ({
           </div>
         )}
       </AnimatePresence>
+
+      <QuickAddMaterialModal
+        show={showQuickAdd}
+        onClose={() => setShowQuickAdd(false)}
+        onSuccess={(newMat) => {
+          setMaterials((prev) => [...prev, newMat].sort((a, b) => a.name.localeCompare(b.name)));
+          setCocMaterialId(newMat.id);
+          setShowQuickAdd(false);
+        }}
+        addToast={addToast}
+        groups={materialGroups}
+        warehouses={warehouses}
+        initialName={quickAddInitialName}
+      />
 
       <ConfirmModal
         show={!!recordToDelete}

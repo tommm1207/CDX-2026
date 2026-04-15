@@ -1,4 +1,4 @@
-﻿import { CanvasLogo } from '@/components/shared/ReportExportHeader';
+import { CanvasLogo } from '@/components/shared/ReportExportHeader';
 import { exportTableImage } from '../../utils/reportExport';
 import { useState, useEffect } from 'react';
 import {
@@ -143,9 +143,21 @@ export const PendingApprovals = ({
     }
   };
 
+  const isChildSlip = (slip: any) => {
+    return slip.table === 'stock_out' && (slip.export_code || '').startsWith('SX-');
+  };
+
   const executeAction = async () => {
     if (!confirm) return;
     const { slip, action } = confirm;
+    if (isChildSlip(slip)) {
+      addToast?.(
+        'Không thể duyệt trực tiếp phiếu NVL. Hãy duyệt tại phiếu Nhập cọc tương ứng.',
+        'error',
+      );
+      setConfirm(null);
+      return;
+    }
     setConfirm(null);
     setActionLoading(slip.id);
     setErrorMsg(null);
@@ -157,6 +169,19 @@ export const PendingApprovals = ({
         .eq('id', slip.id);
 
       if (error) throw error;
+
+      // Duyệt liên đới: khi duyệt phiếu nhập SX-, tự động duyệt phiếu xuất NVL liên quan
+      if (
+        action === 'approve' &&
+        slip.table === 'stock_in' &&
+        slip.import_code?.startsWith('SX-')
+      ) {
+        await supabase
+          .from('stock_out')
+          .update({ status: 'Đã duyệt' })
+          .ilike('export_code', `${slip.import_code}-%`)
+          .eq('status', 'Chờ duyệt');
+      }
 
       // Optimistic update
       setSlips((prev) => prev.filter((s) => !(s.id === slip.id && s.table === slip.table)));
@@ -331,10 +356,10 @@ export const PendingApprovals = ({
           </div>
 
           <div className="mb-6">
-            <h1 className="text-3xl font-black italic text-[#2D5A27] tracking-tighter mb-1 uppercase">
+            <h1 className="text-3xl font-black text-[#2D5A27] tracking-tighter mb-1 uppercase">
               DANH SÁCH CHỜ DUYỆT
             </h1>
-            <p className="text-sm font-bold text-gray-500 italic uppercase">
+            <p className="text-sm font-bold text-gray-500 uppercase">
               Management Audit Pool • Total: {slips.length} Slips
             </p>
           </div>
@@ -348,14 +373,14 @@ export const PendingApprovals = ({
                 <CanvasLogo size={96} className="w-24 h-24 rounded-3xl object-contain shadow-sm" />
               </div>
               <div className="space-y-1">
-                <h1 className="text-3xl font-black text-primary tracking-tighter uppercase italic">
+                <h1 className="text-3xl font-black text-primary tracking-tighter uppercase">
                   CDX ERP SYSTEM
                 </h1>
                 <p className="text-[10px] text-gray-400 font-bold uppercase tracking-[0.3em]">
                   Smart Construction Management • 2026 Edition
                 </p>
                 <div className="flex items-center gap-3 mt-2">
-                  <span className="px-3 py-1 bg-amber-50 text-amber-600 rounded-full text-[10px] font-black uppercase tracking-widest border border-amber-100 italic">
+                  <span className="px-3 py-1 bg-amber-50 text-amber-600 rounded-full text-[10px] font-black uppercase tracking-widest border border-amber-100">
                     Management Audit Pool
                   </span>
                   <span className="w-1.5 h-1.5 bg-gray-200 rounded-full" />
@@ -614,26 +639,37 @@ export const PendingApprovals = ({
               <div className="p-4 border-t border-gray-100 rounded-b-3xl bg-gray-50 flex flex-col gap-3 w-full mt-auto">
                 {isAdmin && (
                   <div className="grid grid-cols-2 gap-3 w-full">
-                    <Button
-                      fullWidth
-                      variant="danger"
-                      icon={X}
-                      onClick={() => setConfirm({ slip: selectedSlip, action: 'reject' })}
-                      isLoading={actionLoading === selectedSlip.id}
-                      className="h-full"
-                    >
-                      Từ chối
-                    </Button>
-                    <Button
-                      fullWidth
-                      variant="success"
-                      icon={Check}
-                      onClick={() => setConfirm({ slip: selectedSlip, action: 'approve' })}
-                      isLoading={actionLoading === selectedSlip.id}
-                      className="h-full"
-                    >
-                      Duyệt
-                    </Button>
+                    {isChildSlip(selectedSlip) ? (
+                      <div className="col-span-2 p-3 bg-amber-50 border border-amber-100 rounded-xl text-[10px] text-amber-700 font-bold text-center leading-tight">
+                        ⚠️ Phiếu này được tạo từ Lệnh sản xuất.
+                        <br />
+                        Bạn cần duyệt qua Phiếu nhập cọc tổng (Mã{' '}
+                        {selectedSlip.export_code.split('-').slice(0, 3).join('-')}).
+                      </div>
+                    ) : (
+                      <>
+                        <Button
+                          fullWidth
+                          variant="danger"
+                          icon={X}
+                          onClick={() => setConfirm({ slip: selectedSlip, action: 'reject' })}
+                          isLoading={actionLoading === selectedSlip.id}
+                          className="h-full"
+                        >
+                          Từ chối
+                        </Button>
+                        <Button
+                          fullWidth
+                          variant="success"
+                          icon={Check}
+                          onClick={() => setConfirm({ slip: selectedSlip, action: 'approve' })}
+                          isLoading={actionLoading === selectedSlip.id}
+                          className="h-full"
+                        >
+                          Duyệt
+                        </Button>
+                      </>
+                    )}
                   </div>
                 )}
 
@@ -799,38 +835,47 @@ export const PendingApprovals = ({
                           >
                             {item.type === 'Chi phí'
                               ? formatCurrency(item.total_amount)
-                              : `${formatNumber(item.total_amount)} ₫`}
+                              : formatCurrency(item.total_amount)}
                           </div>
                         )}
                       </td>
                       <td className="px-4 py-3">
                         <div className="flex items-center justify-center gap-2">
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setConfirm({ slip: item, action: 'approve' });
-                            }}
-                            disabled={actionLoading === item.id}
-                            className="p-2 bg-green-50 text-green-600 rounded-xl hover:bg-green-600 hover:text-white transition-all shadow-sm disabled:opacity-50"
-                            title="Duyệt phiếu"
-                          >
-                            {actionLoading === item.id ? (
-                              <RefreshCw size={16} className="animate-spin" />
-                            ) : (
-                              <Check size={16} />
-                            )}
-                          </button>
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setConfirm({ slip: item, action: 'reject' });
-                            }}
-                            disabled={actionLoading === item.id}
-                            className="p-2 bg-red-50 text-red-600 rounded-xl hover:bg-red-600 hover:text-white transition-all shadow-sm disabled:opacity-50"
-                            title="Từ chối"
-                          >
-                            <X size={16} />
-                          </button>
+                          {isAdmin && !isChildSlip(item) && (
+                            <>
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setConfirm({ slip: item, action: 'approve' });
+                                }}
+                                disabled={actionLoading === item.id}
+                                className="p-2 bg-green-50 text-green-600 rounded-xl hover:bg-green-600 hover:text-white transition-all shadow-sm disabled:opacity-50"
+                                title="Duyệt phiếu"
+                              >
+                                {actionLoading === item.id ? (
+                                  <RefreshCw size={16} className="animate-spin" />
+                                ) : (
+                                  <Check size={16} />
+                                )}
+                              </button>
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setConfirm({ slip: item, action: 'reject' });
+                                }}
+                                disabled={actionLoading === item.id}
+                                className="p-2 bg-red-50 text-red-600 rounded-xl hover:bg-red-600 hover:text-white transition-all shadow-sm disabled:opacity-50"
+                                title="Từ chối"
+                              >
+                                <X size={16} />
+                              </button>
+                            </>
+                          )}
+                          {isChildSlip(item) && (
+                            <div className="text-[9px] text-amber-600 font-bold bg-amber-50 px-2 py-1 rounded-lg border border-amber-100 italic whitespace-normal max-w-[120px] text-center leading-tight">
+                              Cần duyệt lệnh SX chính
+                            </div>
+                          )}
                           <button
                             onClick={(e) => {
                               e.stopPropagation();

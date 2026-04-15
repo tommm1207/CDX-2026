@@ -87,6 +87,7 @@ export const ReportExportHeader = ({ reportTitle, subtitle }: ReportExportHeader
               textTransform: 'uppercase',
               letterSpacing: '0.06em',
               marginTop: 1,
+              whiteSpace: 'nowrap',
             }}
           >
             HỆ THỐNG QUẢN LÝ KHO & NHÂN SỰ CDX
@@ -100,7 +101,6 @@ export const ReportExportHeader = ({ reportTitle, subtitle }: ReportExportHeader
           margin: 0,
           fontSize: 26,
           fontWeight: 900,
-          fontStyle: 'italic',
           color: '#2D5A27',
           letterSpacing: '-0.01em',
           lineHeight: 1.1,

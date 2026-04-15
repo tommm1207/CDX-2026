@@ -1002,10 +1002,10 @@ export const Costs = ({
           </div>
 
           <div className="mb-6">
-            <h1 className="text-3xl font-black italic text-primary tracking-tighter mb-1 uppercase">
+            <h1 className="text-3xl font-black text-primary tracking-tighter mb-1 uppercase">
               BÁO CÁO CHI PHÍ
             </h1>
-            <p className="text-sm font-bold text-gray-500 italic uppercase">
+            <p className="text-sm font-bold text-gray-500 uppercase">
               Operational Cost Summary • {new Date().toLocaleDateString('vi-VN')}
             </p>
           </div>
@@ -1044,7 +1044,7 @@ export const Costs = ({
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <p className="text-[11px] text-gray-500 font-bold">Tổng mục:</p>
-                  <p className="text-sm font-black text-primary italic uppercase tracking-widest">
+                  <p className="text-sm font-black text-primary uppercase tracking-widest">
                     {filteredCosts.length} bản ghi
                   </p>
                 </div>
@@ -1060,19 +1060,19 @@ export const Costs = ({
           <table className="w-full text-left border-collapse rounded-3xl overflow-hidden shadow-sm border border-gray-100">
             <thead>
               <tr className="bg-primary text-white">
-                <th className="px-4 py-4 text-[10px] font-black uppercase tracking-widest italic border-r border-white/10">
+                <th className="px-4 py-4 text-[10px] font-black uppercase tracking-widest border-r border-white/10">
                   Ngày
                 </th>
-                <th className="px-4 py-4 text-[10px] font-black uppercase tracking-widest italic border-r border-white/10">
+                <th className="px-4 py-4 text-[10px] font-black uppercase tracking-widest border-r border-white/10">
                   Mã phiếu
                 </th>
-                <th className="px-4 py-4 text-[10px] font-black uppercase tracking-widest italic border-r border-white/10">
+                <th className="px-4 py-4 text-[10px] font-black uppercase tracking-widest border-r border-white/10">
                   Loại chi
                 </th>
-                <th className="px-4 py-4 text-[10px] font-black uppercase tracking-widest italic border-r border-white/10">
+                <th className="px-4 py-4 text-[10px) font-black uppercase tracking-widest border-r border-white/10">
                   Nội dung
                 </th>
-                <th className="px-4 py-4 text-[10px] font-black uppercase tracking-widest italic text-right">
+                <th className="px-4 py-4 text-[10px) font-black uppercase tracking-widest text-right">
                   Thành tiền
                 </th>
               </tr>
@@ -1080,7 +1080,7 @@ export const Costs = ({
             <tbody className="divide-y divide-gray-100 text-sm">
               {filteredCosts.map((item, idx) => (
                 <tr key={idx} className={idx % 2 === 0 ? 'bg-white' : 'bg-primary/5'}>
-                  <td className="px-4 py-3 text-xs text-gray-600 font-medium italic">
+                  <td className="px-4 py-3 text-xs text-gray-600 font-medium">
                     {formatDate(item.date)}
                   </td>
                   <td className="px-4 py-3 text-xs font-black text-primary tracking-tight">
@@ -1103,7 +1103,7 @@ export const Costs = ({
               <tr className="bg-primary/5 font-black border-t-2 border-primary/20">
                 <td
                   colSpan={4}
-                  className="px-4 py-4 text-[11px] text-primary uppercase text-right italic tracking-[0.1em]"
+                  className="px-4 py-4 text-[11px] text-primary uppercase text-right tracking-[0.1em]"
                 >
                   Tổng số dư phát sinh:
                 </td>
@@ -1126,7 +1126,7 @@ export const Costs = ({
           {/* Footer Branding */}
           <div className="mt-12 flex justify-between items-end border-t border-gray-100 pt-6">
             <div className="space-y-1">
-              <p className="text-xs font-black text-gray-300 uppercase tracking-[0.2em] italic whitespace-nowrap">
+              <p className="text-xs font-black text-gray-300 uppercase tracking-[0.2em] whitespace-nowrap">
                 CDX ERP SYSTEM
               </p>
               <p className="text-[9px] text-gray-300 font-bold uppercase tracking-widest">
@@ -1139,7 +1139,7 @@ export const Costs = ({
               </p>
               <div className="text-[10px] text-gray-400 font-bold bg-gray-50 px-3 py-1 rounded-full border border-gray-100">
                 Verif-ID:{' '}
-                <span className="text-primary font-black tracking-widest italic ml-1 underline">
+                <span className="text-primary font-black tracking-widest ml-1 underline">
                   {new Date().getTime().toString(16).toUpperCase()}
                 </span>
               </div>

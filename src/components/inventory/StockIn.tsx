@@ -665,7 +665,7 @@ export const StockIn = ({
                                 </span>
                               )}
                               {(item.import_code || '').startsWith('SX-') && (
-                                <span className="px-1.5 py-px rounded text-[9px] font-black bg-green-50 text-green-600 border border-green-100 leading-none whitespace-nowrap">
+                                <span className="px-1.5 py-px rounded text-[9px] font-black bg-purple-50 text-purple-600 border border-purple-100 leading-none whitespace-nowrap">
                                   SX Cọc
                                 </span>
                               )}

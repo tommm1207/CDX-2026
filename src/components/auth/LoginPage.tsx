@@ -1,6 +1,15 @@
 import { useState, useEffect, FormEvent } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { User as UserIcon, Lock, AlertCircle, CheckCircle } from 'lucide-react';
+import {
+  User as UserIcon,
+  Lock,
+  AlertCircle,
+  CheckCircle,
+  RefreshCw,
+  ArrowRight,
+  Download,
+} from 'lucide-react';
+import bcrypt from 'bcryptjs';
 import { supabase } from '@/lib/supabase';
 import { Employee } from '@/types';
 import { isUUID } from '@/utils/helpers';
@@ -48,16 +57,38 @@ export const LoginPage = ({ onLogin }: { onLogin: (user: Employee) => void }) =>
         query = query.ilike('code', employeeId);
       }
 
-      const { data, error: fetchError } = await query.eq('app_pass', password).maybeSingle();
+      const { data, error: fetchError } = await query.maybeSingle();
 
       if (fetchError) {
         console.error('Login error:', fetchError);
         setError(`Lỗi kết nối: ${fetchError.message}. Vui lòng kiểm tra lại Supabase URL/Key.`);
-      } else if (!data) {
-        setError('Mã nhân viên hoặc mật khẩu không đúng');
-      } else {
-        onLogin(data as Employee);
+        return;
       }
+
+      if (!data) {
+        setError('Mã nhân viên hoặc mật khẩu không đúng');
+        return;
+      }
+
+      // Support cả plaintext (chưa migrate) lẫn bcrypt hash
+      const storedPass: string = data.app_pass || '';
+      const isHashed = storedPass.startsWith('$2');
+      const passwordMatch = isHashed
+        ? await bcrypt.compare(password, storedPass)
+        : password === storedPass;
+
+      if (!passwordMatch) {
+        setError('Mã nhân viên hoặc mật khẩu không đúng');
+        return;
+      }
+
+      // Nếu còn plaintext → tự động hash và lưu lại
+      if (!isHashed) {
+        const hashed = await bcrypt.hash(password, 10);
+        await supabase.from('users').update({ app_pass: hashed }).eq('id', data.id);
+      }
+
+      onLogin(data as Employee);
     } catch (err: any) {
       console.error('Unexpected login error:', err);
       setError('Đã xảy ra lỗi hệ thống: ' + (err.message || 'Không rõ nguyên nhân'));

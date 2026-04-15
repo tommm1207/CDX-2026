@@ -195,7 +195,7 @@ export const SanXuatCoc = ({
 
   return (
     <div className="p-4 md:p-6 space-y-6 pb-24">
-      <PageBreadcrumb title="Sản xuất Cọc" onBack={onBack} />
+      <PageBreadcrumb title="Lệnh sản xuất cọc" onBack={onBack} />
 
       {loading ? (
         <div className="flex flex-col items-center py-16 text-gray-400">
@@ -296,7 +296,7 @@ export const SanXuatCoc = ({
         </div>
       )}
 
-      <FAB onClick={() => setShowModal(true)} label="Tạo lệnh sản xuất" />
+      <FAB onClick={() => setShowModal(true)} label="Tạo lệnh sản xuất cọc" />
 
       {/* Create Modal */}
       <AnimatePresence>

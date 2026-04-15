@@ -51,8 +51,8 @@ export const getMenuGroups = (pendingCount: number) => [
     items: [
       { id: 'construction-diary', label: 'Nhật ký thi công', icon: FileText },
       { id: 'xasa-gop', label: 'Xả / Gộp vật tư', icon: Layers },
-      { id: 'bom-lenh-sx', label: 'Định mức & Lệnh sản xuất', icon: ClipboardList },
-      { id: 'san-xuat-coc', label: 'Sản xuất Cọc', icon: Hammer },
+      { id: 'bom-lenh-sx', label: 'Định mức sản xuất', icon: ClipboardList },
+      { id: 'san-xuat-coc', label: 'Lệnh sản xuất cọc', icon: Hammer },
     ],
   },
   {

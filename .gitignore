@@ -15,3 +15,7 @@ check_db.js
 get_admin.js
 get_admin_creds.js
 get_users.js
+
+# Claude Code files
+CLAUDE.md
+.claude/settings.local.json

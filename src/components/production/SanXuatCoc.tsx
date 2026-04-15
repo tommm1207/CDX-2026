@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { Plus, X, Hammer, ChevronDown, ChevronUp, Package, Trash2 } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
+import { Plus, X, Hammer, ChevronDown, ChevronUp, Trash2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { supabase } from '@/lib/supabase';
 import { Employee } from '@/types';
@@ -8,6 +8,8 @@ import { PageBreadcrumb } from '../shared/PageBreadcrumb';
 import { FAB } from '../shared/FAB';
 import { ConfirmModal } from '../shared/ConfirmModal';
 import { NumericInput } from '../shared/NumericInput';
+import { PageToolbar, FilterPanel, FilterSearchInput } from '../shared/PageToolbar';
+import { ReportImagePreviewModal } from '../shared/ReportImagePreviewModal';
 import { formatNumber } from '@/utils/format';
 
 // ============================
@@ -30,8 +32,16 @@ export const SanXuatCoc = ({
   const [showModal, setShowModal] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [expandedOuts, setExpandedOuts] = useState<any[]>([]);
+  const [loadingOuts, setLoadingOuts] = useState(false);
   const [recordToDelete, setRecordToDelete] = useState<any>(null);
   const [deleting, setDeleting] = useState(false);
+  const [showFilter, setShowFilter] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [filterStatus, setFilterStatus] = useState('Tất cả');
+  const [previewImageUrl, setPreviewImageUrl] = useState<string | null>(null);
+
+  const tableRef = useRef<HTMLDivElement>(null);
 
   // Form state
   const [cocMaterialId, setCocMaterialId] = useState('');
@@ -185,7 +195,69 @@ export const SanXuatCoc = ({
     setCocUnitPrice(0);
   };
 
+  const handleExpand = async (rec: any) => {
+    if (expandedId === rec.id) {
+      setExpandedId(null);
+      setExpandedOuts([]);
+      return;
+    }
+    setExpandedId(rec.id);
+    setExpandedOuts([]);
+    setLoadingOuts(true);
+    const { data } = await supabase
+      .from('stock_out')
+      .select('*, materials(name, unit)')
+      .ilike('export_code', `${rec.import_code}-%`)
+      .neq('status', 'Đã xóa')
+      .order('export_code');
+    setExpandedOuts(data || []);
+    setLoadingOuts(false);
+  };
+
   const selectedBomDetail = boms.find((b) => b.id === bomId);
+
+  const filteredRecords = records.filter((r) => {
+    if (filterStatus !== 'Tất cả' && r.status !== filterStatus) return false;
+    if (searchTerm) {
+      const s = searchTerm.toLowerCase();
+      return (
+        (r.import_code || '').toLowerCase().includes(s) ||
+        (r.materials?.name || '').toLowerCase().includes(s)
+      );
+    }
+    return true;
+  });
+
+  const handleExportExcel = () => {
+    import('@/utils/excelExport').then(({ exportToExcel }) => {
+      exportToExcel({
+        title: 'Lệnh Sản Xuất Cọc',
+        sheetName: 'SX Cọc',
+        columns: [
+          'Mã lệnh',
+          'Ngày',
+          'Loại cọc',
+          'Số lượng',
+          'ĐVT',
+          'Kho nhập',
+          'Trạng thái',
+          'Ghi chú',
+        ],
+        rows: filteredRecords.map((r) => [
+          r.import_code,
+          new Date(r.date).toLocaleDateString('vi-VN'),
+          r.materials?.name || '',
+          r.quantity,
+          r.unit,
+          r.warehouses?.name || '',
+          r.status,
+          r.notes || '',
+        ]),
+        fileName: `CDX_LenhSanXuatCoc_${new Date().toISOString().split('T')[0]}.xlsx`,
+        addToast,
+      });
+    });
+  };
 
   const statusColor = (status: string) => {
     if (status === 'Đã duyệt') return 'bg-green-100 text-green-700';
@@ -195,29 +267,73 @@ export const SanXuatCoc = ({
 
   return (
     <div className="p-4 md:p-6 space-y-6 pb-24">
-      <PageBreadcrumb title="Lệnh sản xuất cọc" onBack={onBack} />
+      <div className="flex items-center justify-between gap-2">
+        <PageBreadcrumb title="Lệnh sản xuất cọc" onBack={onBack} />
+        <PageToolbar
+          tableRef={tableRef}
+          captureOptions={{ reportTitle: 'LỆNH SẢN XUẤT CỌC' }}
+          onImageCaptured={setPreviewImageUrl}
+          onExportExcel={handleExportExcel}
+          showFilter={showFilter}
+          onFilterToggle={() => setShowFilter((f) => !f)}
+          hideFilterButton={false}
+        />
+      </div>
+
+      <FilterPanel
+        show={showFilter}
+        hideTitle={true}
+        onReset={() => {
+          setSearchTerm('');
+          setFilterStatus('Tất cả');
+        }}
+      >
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <FilterSearchInput
+            value={searchTerm}
+            onChange={setSearchTerm}
+            placeholder="Tìm mã lệnh, loại cọc..."
+          />
+          <div className="space-y-1">
+            <label className="text-[10px] font-bold text-gray-400 uppercase">Trạng thái</label>
+            <select
+              value={filterStatus}
+              onChange={(e) => setFilterStatus(e.target.value)}
+              className="w-full px-3 py-2 rounded-xl border border-gray-200 text-xs outline-none focus:ring-2 focus:ring-primary/20 bg-white"
+            >
+              {['Tất cả', 'Chờ duyệt', 'Đã duyệt', 'Từ chối'].map((s) => (
+                <option key={s}>{s}</option>
+              ))}
+            </select>
+          </div>
+        </div>
+      </FilterPanel>
 
       {loading ? (
         <div className="flex flex-col items-center py-16 text-gray-400">
           <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin mb-2" />
           <p className="text-sm">Đang tải...</p>
         </div>
-      ) : records.length === 0 ? (
+      ) : filteredRecords.length === 0 ? (
         <div className="flex flex-col items-center py-16 text-gray-400 bg-white rounded-2xl border border-dashed border-gray-200">
           <Hammer size={48} className="mb-3 text-gray-300" />
-          <p className="font-medium">Chưa có lệnh sản xuất nào</p>
-          <p className="text-xs mt-1">Bấm nút + để tạo lệnh sản xuất mới</p>
+          <p className="font-medium">
+            {records.length === 0 ? 'Chưa có lệnh sản xuất nào' : 'Không tìm thấy kết quả'}
+          </p>
+          <p className="text-xs mt-1">
+            {records.length === 0 ? 'Bấm nút + để tạo lệnh sản xuất mới' : 'Thử thay đổi bộ lọc'}
+          </p>
         </div>
       ) : (
-        <div className="space-y-3">
-          {records.map((rec) => (
+        <div className="space-y-3" ref={tableRef}>
+          {filteredRecords.map((rec) => (
             <div
               key={rec.id}
               className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden"
             >
               <div
                 className="p-4 flex items-center justify-between cursor-pointer"
-                onClick={() => setExpandedId(expandedId === rec.id ? null : rec.id)}
+                onClick={() => handleExpand(rec)}
               >
                 <div className="flex items-center gap-3 flex-1 min-w-0">
                   <div className="w-9 h-9 bg-primary/10 rounded-xl flex items-center justify-center shrink-0">
@@ -263,10 +379,7 @@ export const SanXuatCoc = ({
                     exit={{ height: 0, opacity: 0 }}
                     className="overflow-hidden border-t border-gray-50"
                   >
-                    <div className="p-4 space-y-2 bg-gray-50/50">
-                      <p className="text-[10px] font-bold text-gray-400 uppercase">
-                        Chi tiết lệnh sản xuất
-                      </p>
+                    <div className="p-4 space-y-3 bg-gray-50/50">
                       <div className="grid grid-cols-2 gap-2 text-xs">
                         <div>
                           <p className="text-gray-400">Kho nhập cọc</p>
@@ -284,6 +397,45 @@ export const SanXuatCoc = ({
                           <div className="col-span-2">
                             <p className="text-gray-400">Ghi chú</p>
                             <p className="font-semibold text-gray-700">{rec.notes}</p>
+                          </div>
+                        )}
+                      </div>
+                      {/* Vật tư xuất theo định mức */}
+                      <div className="border-t border-gray-100 pt-3">
+                        <p className="text-[10px] font-bold text-gray-400 uppercase mb-2">
+                          Vật tư xuất theo định mức
+                        </p>
+                        {loadingOuts ? (
+                          <div className="flex items-center gap-2 text-xs text-gray-400 py-2">
+                            <div className="w-3 h-3 border border-gray-300 border-t-transparent rounded-full animate-spin" />
+                            Đang tải...
+                          </div>
+                        ) : expandedOuts.length === 0 ? (
+                          <p className="text-xs text-gray-400 italic">
+                            Không có phiếu xuất liên quan
+                          </p>
+                        ) : (
+                          <div className="space-y-1.5">
+                            {expandedOuts.map((out) => (
+                              <div
+                                key={out.id}
+                                className="flex items-center justify-between text-xs"
+                              >
+                                <span className="text-gray-600 flex-1 min-w-0 truncate">
+                                  {out.materials?.name || out.export_code}
+                                </span>
+                                <div className="flex items-center gap-2 shrink-0 ml-2">
+                                  <span className="font-bold text-gray-700">
+                                    {formatNumber(out.quantity)} {out.materials?.unit || out.unit}
+                                  </span>
+                                  <span
+                                    className={`text-[9px] font-bold px-1.5 py-px rounded-full ${statusColor(out.status)}`}
+                                  >
+                                    {out.status}
+                                  </span>
+                                </div>
+                              </div>
+                            ))}
                           </div>
                         )}
                       </div>
@@ -520,6 +672,14 @@ export const SanXuatCoc = ({
         onCancel={() => setRecordToDelete(null)}
         type="danger"
       />
+
+      {previewImageUrl && (
+        <ReportImagePreviewModal
+          imageDataUrl={previewImageUrl}
+          fileName={`CDX_LenhSanXuatCoc_${new Date().toISOString().slice(0, 10)}.png`}
+          onClose={() => setPreviewImageUrl(null)}
+        />
+      )}
     </div>
   );
 };

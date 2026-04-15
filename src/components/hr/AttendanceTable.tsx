@@ -258,10 +258,10 @@ export const AttendanceTable = ({
                 </button>
               </div>
 
-              <div className="p-6 space-y-6 overflow-y-auto custom-scrollbar">
+              <div className="p-4 space-y-3">
                 {/* Trạng thái công */}
                 <div>
-                  <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1 mb-2 block">
+                  <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1 mb-1.5 block">
                     Trạng thái công
                   </label>
                   <div className="grid grid-cols-3 gap-2">
@@ -269,7 +269,7 @@ export const AttendanceTable = ({
                       <button
                         key={s}
                         onClick={() => setSelectedAction(s)}
-                        className={`py-3 rounded-2xl text-xs font-bold border transition-all active:scale-95 flex flex-col items-center justify-center gap-1 ${
+                        className={`py-2.5 rounded-2xl text-xs font-bold border transition-all active:scale-95 flex flex-col items-center justify-center gap-0.5 ${
                           selectedAction === s
                             ? s === 'present'
                               ? 'bg-primary text-white border-primary shadow-lg shadow-primary/20'
@@ -279,7 +279,7 @@ export const AttendanceTable = ({
                             : 'bg-gray-50 text-gray-400 border-gray-100 hover:bg-gray-100'
                         }`}
                       >
-                        <span className="text-sm">
+                        <span className="text-sm font-black">
                           {s === 'present' ? 'X' : s === 'half-day' ? '½' : 'V'}
                         </span>
                         <span className="text-[9px] opacity-80 uppercase tracking-wider">
@@ -292,15 +292,15 @@ export const AttendanceTable = ({
 
                 {/* Giờ tăng ca (TC) */}
                 <div>
-                  <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1 mb-2 block">
+                  <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1 mb-1.5 block">
                     Giờ tăng ca (TC)
                   </label>
-                  <div className="flex flex-wrap gap-2 mb-3">
+                  <div className="grid grid-cols-6 gap-1.5 mb-2">
                     {[0.5, 1, 1.5, 2, 2.5, 3, 3.5, 4, 4.5, 5, 5.5, 6].map((num) => (
                       <button
                         key={num}
                         onClick={() => setOtInput(String(num))}
-                        className={`px-3 py-2 rounded-xl text-xs font-bold border transition-all active:scale-95 ${
+                        className={`py-1.5 rounded-xl text-[11px] font-bold border transition-all active:scale-95 ${
                           parseFloat(otInput) === num
                             ? 'bg-amber-500 text-white border-amber-500 shadow-sm'
                             : 'bg-gray-50 text-gray-400 border-gray-100 hover:bg-gray-100'
@@ -319,7 +319,7 @@ export const AttendanceTable = ({
                         const val = e.target.value.replace(/[^0-9.,]/g, '');
                         setOtInput(val);
                       }}
-                      className="w-full pl-4 pr-12 py-3 rounded-2xl border border-gray-100 text-sm font-bold text-amber-600 outline-none focus:ring-2 focus:ring-primary/20 bg-gray-50"
+                      className="w-full pl-4 pr-12 py-2.5 rounded-2xl border border-gray-100 text-sm font-bold text-amber-600 outline-none focus:ring-2 focus:ring-primary/20 bg-gray-50"
                     />
                     <span className="absolute right-4 top-1/2 -translate-y-1/2 text-xs font-bold text-gray-300 uppercase">
                       Giờ
@@ -329,12 +329,9 @@ export const AttendanceTable = ({
                     const numOt = parseFloat(String(otInput).replace(',', '.'));
                     if (numOt > 6) {
                       return (
-                        <div className="mt-2 p-3 bg-red-50 border border-red-100 rounded-xl">
+                        <div className="mt-1.5 p-2 bg-red-50 border border-red-100 rounded-xl">
                           <p className="text-[10px] text-red-600 font-bold uppercase leading-tight">
-                            ⚠ CẢNH BÁO: GIỜ TĂNG CA CAO ({otInput}h)
-                          </p>
-                          <p className="text-[9px] text-red-400 mt-1 italic">
-                            Bạn có chắc chắn đây là số giờ tăng ca chính xác?
+                            ⚠ GIỜ TĂNG CA CAO ({otInput}h) — xác nhận trước khi lưu
                           </p>
                         </div>
                       );
@@ -345,19 +342,20 @@ export const AttendanceTable = ({
 
                 {/* Ghi chú công việc */}
                 <div>
-                  <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1 mb-2 block">
+                  <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1 mb-1.5 block">
                     Ghi chú công việc
                   </label>
                   <textarea
+                    rows={2}
                     value={notesInput}
                     onChange={(e) => setNotesInput(e.target.value)}
                     placeholder="Ví dụ: Lắp cốt pha dầm sàn, xây tường..."
-                    className="w-full p-4 rounded-2xl border border-gray-100 text-sm outline-none focus:ring-2 focus:ring-primary/20 bg-gray-50 min-h-[80px] resize-none"
+                    className="w-full p-3 rounded-2xl border border-gray-100 text-sm outline-none focus:ring-2 focus:ring-primary/20 bg-gray-50 resize-none"
                   />
                 </div>
 
                 {/* Nút lưu */}
-                <div className="flex flex-col gap-2 pt-2">
+                <div className="flex flex-col gap-2 pt-1">
                   <button
                     onClick={() => {
                       const numOt = parseFloat(String(otInput).replace(',', '.'));
@@ -368,7 +366,7 @@ export const AttendanceTable = ({
                       }
                     }}
                     disabled={!selectedAction}
-                    className={`w-full py-4 rounded-2xl text-sm font-bold transition-all active:scale-95 shadow-lg ${
+                    className={`w-full py-3.5 rounded-2xl text-sm font-bold transition-all active:scale-95 shadow-lg ${
                       selectedAction
                         ? 'bg-primary text-white shadow-primary/20 hover:brightness-110'
                         : 'bg-gray-100 text-gray-300 cursor-not-allowed shadow-none'
@@ -376,17 +374,16 @@ export const AttendanceTable = ({
                   >
                     {selectedAction ? '✓ Lưu chấm công' : 'Chưa chọn trạng thái'}
                   </button>
-
                   <div className="flex gap-2">
                     <button
                       onClick={() => setShowDeleteConfirm(true)}
-                      className="flex-1 py-3 rounded-2xl bg-gray-100 text-gray-500 text-[10px] font-bold hover:bg-gray-200 active:scale-95 transition-all uppercase"
+                      className="flex-1 py-2.5 rounded-2xl bg-gray-100 text-gray-500 text-[10px] font-bold hover:bg-gray-200 active:scale-95 transition-all uppercase"
                     >
                       Xóa chấm công
                     </button>
                     <button
                       onClick={() => setConfirmPopup(null)}
-                      className="flex-1 py-3 rounded-2xl bg-white border border-gray-200 text-gray-400 text-[10px] font-bold hover:bg-gray-50 active:scale-95 transition-all uppercase"
+                      className="flex-1 py-2.5 rounded-2xl bg-white border border-gray-200 text-gray-400 text-[10px] font-bold hover:bg-gray-50 active:scale-95 transition-all uppercase"
                     >
                       Hủy bỏ
                     </button>

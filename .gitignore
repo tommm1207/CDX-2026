@@ -19,4 +19,7 @@ get_users.js
 # Claude Code files
 claude_plan.md
 claude_logic.md
-.claude/settings.local.json
+.claude/
+.agents/
+scratch/
+skills-lock.json

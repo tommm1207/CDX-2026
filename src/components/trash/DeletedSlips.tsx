@@ -1,4 +1,4 @@
-﻿import { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import {
   FileText,
   RefreshCw,
@@ -597,10 +597,12 @@ export const DeletedSlips = ({
                     fullWidth
                     variant="danger"
                     onClick={confirmDelete}
-                    disabled={usageInfo.inUse && user.role !== 'Develop'}
+                    disabled={usageInfo.inUse && user.role?.toLowerCase() !== 'develop'}
                     isLoading={submitting}
                   >
-                    Xác nhận xóa
+                    {usageInfo.inUse && user.role?.toLowerCase() === 'develop'
+                      ? 'XÓA CƯỞNG BỨC'
+                      : 'Xác nhận xóa'}
                   </Button>
                 </div>
               </div>

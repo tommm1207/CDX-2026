@@ -1,4 +1,4 @@
-﻿import { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Package,
   RefreshCw,
@@ -603,10 +603,12 @@ export const DeletedMaterials = ({
                     fullWidth
                     variant="danger"
                     onClick={confirmDelete}
-                    disabled={usageInfo.inUse && user.role !== 'Develop'}
+                    disabled={usageInfo.inUse && user.role?.toLowerCase() !== 'develop'}
                     isLoading={submitting}
                   >
-                    {usageInfo.inUse && user.role === 'Develop' ? 'XÓA CƯỞNG BỨC' : 'Xác nhận xóa'}
+                    {usageInfo.inUse && user.role?.toLowerCase() === 'develop'
+                      ? 'XÓA CƯỞNG BỨC'
+                      : 'Xác nhận xóa'}
                   </Button>
                 </div>
               </div>

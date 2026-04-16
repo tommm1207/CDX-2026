@@ -1,4 +1,4 @@
-﻿import { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Warehouse,
   RefreshCw,
@@ -146,7 +146,7 @@ export const DeletedWarehouses = ({
     if (!selectedItem) return;
     setSubmitting(true);
     try {
-      const isDevelop = user.role === 'Develop';
+      const isDevelop = user.role?.toLowerCase() === 'develop';
       if (isDevelop && usageInfo.inUse) {
         await purgeDependencies('warehouse', selectedItem.id);
       }
@@ -184,7 +184,7 @@ export const DeletedWarehouses = ({
   const bulkDelete = async () => {
     setSubmitting(true);
     try {
-      const isDevelop = user.role === 'Develop';
+      const isDevelop = user.role?.toLowerCase() === 'develop';
       let successCount = 0;
       let failCount = 0;
 
@@ -215,7 +215,7 @@ export const DeletedWarehouses = ({
   const emptyTrash = async () => {
     setSubmitting(true);
     try {
-      const isDevelop = user.role === 'Develop';
+      const isDevelop = user.role?.toLowerCase() === 'develop';
       let count = 0;
       for (const w of warehouses) {
         const usage = await checkUsage('warehouse', w.id);
@@ -540,7 +540,7 @@ export const DeletedWarehouses = ({
               </div>
 
               <div className="flex flex-col gap-3">
-                {usageInfo.inUse && user.role === 'Develop' && (
+                {usageInfo.inUse && user.role?.toLowerCase() === 'develop' && (
                   <div className="p-3 bg-red-50 rounded-2xl border border-red-100 mb-2">
                     <p className="text-[10px] text-red-600 font-bold leading-relaxed italic">
                       Lưu ý: Bạn đang thực hiện "Xóa cưỡng bức". Mọi phiếu nhập/xuất, tồn kho và
@@ -557,10 +557,12 @@ export const DeletedWarehouses = ({
                     fullWidth
                     variant="danger"
                     onClick={confirmDelete}
-                    disabled={usageInfo.inUse && user.role !== 'Develop'}
+                    disabled={usageInfo.inUse && user.role?.toLowerCase() !== 'develop'}
                     isLoading={submitting}
                   >
-                    {usageInfo.inUse && user.role === 'Develop' ? 'XÓA CƯỞNG BỨC' : 'Xác nhận xóa'}
+                    {usageInfo.inUse && user.role?.toLowerCase() === 'develop'
+                      ? 'XÓA CƯỞNG BỨC'
+                      : 'Xác nhận xóa'}
                   </Button>
                 </div>
               </div>

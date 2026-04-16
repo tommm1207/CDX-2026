@@ -1,4 +1,4 @@
-﻿import { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Factory,
   RefreshCw,
@@ -13,16 +13,19 @@ import {
   ClipboardList,
   Layers,
   FileText,
+  ChevronDown,
+  ChevronUp,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { supabase } from '@/lib/supabase';
 import { Employee } from '@/types';
 import { PageBreadcrumb } from '../shared/PageBreadcrumb';
-import { ConfirmModal } from '../shared/ConfirmModal';
 import { ToastType } from '../shared/Toast';
 import { Button } from '../shared/Button';
 import { SortButton } from '../shared/SortButton';
 import { formatCurrency, formatDate } from '@/utils/format';
+import { checkUsage, UsageResult, UsageType } from '@/utils/dataIntegrity';
+import { purgeDependencies } from '@/utils/dataFixer';
 
 type TabType = 'production_orders' | 'boms' | 'split_merge_history' | 'construction_diaries';
 type SortOption = 'newest' | 'code' | 'name';
@@ -51,8 +54,12 @@ export const DeletedProduction = ({
   const [showBulkRestoreModal, setShowBulkRestoreModal] = useState(false);
   const [showBulkDeleteModal, setShowBulkDeleteModal] = useState(false);
   const [showEmptyTrashModal, setShowEmptyTrashModal] = useState(false);
-  const [showActionModal, setShowActionModal] = useState(false);
-  const [submitting, setSubmitting] = useState(false);
+  const [showUsageDetails, setShowUsageDetails] = useState(false);
+  const [usageInfo, setUsageInfo] = useState<UsageResult>({
+    inUse: false,
+    tables: [],
+    details: [],
+  });
 
   const [selectedItem, setSelectedItem] = useState<{
     id: string;
@@ -136,6 +143,27 @@ export const DeletedProduction = ({
     setShowActionModal(true);
   };
 
+  const handleDeleteClick = async (item: any) => {
+    setSelectedItem({ id: item.id, table: activeTab, code: getCode(item), name: getName(item) });
+    setShowActionModal(false);
+    setShowDeleteModal(true);
+    setShowUsageDetails(false);
+    setUsageInfo({ inUse: false, tables: [], details: [] });
+
+    try {
+      // Mapping activeTab to UsageType for checkUsage
+      let type: UsageType | null = null;
+      if (activeTab === 'boms') type = 'bom';
+
+      if (type) {
+        const usage = await checkUsage(type, item.id);
+        setUsageInfo(usage);
+      }
+    } catch (err) {
+      console.error('Error checking usage:', err);
+    }
+  };
+
   const confirmRestore = async () => {
     if (!selectedItem) return;
     setSubmitting(true);
@@ -191,6 +219,8 @@ export const DeletedProduction = ({
     if (!selectedItem) return;
     setSubmitting(true);
     try {
+      const isDevelop = user.role?.toLowerCase() === 'develop';
+
       const actualTable =
         selectedItem.table === 'production_orders'
           ? 'lenh_san_xuat'
@@ -200,16 +230,24 @@ export const DeletedProduction = ({
               ? 'xasa_gop_phieu'
               : selectedItem.table;
 
-      // BOM configs have chi tiết taking cascade deletion or needing manual clean up.
+      // Handle BOM force delete (purgeDependencies handles its chi_tiet and production orders)
       if (selectedItem.table === 'boms') {
-        const { error: err1 } = await supabase
-          .from('san_pham_bom_chi_tiet')
-          .delete()
-          .eq('san_pham_bom_id', selectedItem.id);
-        if (err1) throw err1;
+        if (isDevelop && usageInfo.inUse) {
+          await purgeDependencies('bom', selectedItem.id);
+        } else if (!isDevelop && usageInfo.inUse) {
+          throw new Error(
+            'Dữ liệu Định mức đang được sử dụng ở các Lệnh sản xuất, không thể xóa vĩnh viễn.',
+          );
+        } else {
+          // Normal delete for children
+          await supabase
+            .from('san_pham_bom_chi_tiet')
+            .delete()
+            .eq('san_pham_bom_id', selectedItem.id);
+        }
       }
 
-      // Xóa vĩnh viễn stock_in/stock_out liên quan nếu là phiếu rã/gộp
+      // Permanent delete for related stock_in/stock_out if it's a split/merge slip
       if (selectedItem.table === 'split_merge_history') {
         const { data: phieu } = await supabase
           .from('xasa_gop_phieu')
@@ -227,7 +265,7 @@ export const DeletedProduction = ({
       const { error } = await supabase.from(actualTable).delete().eq('id', selectedItem.id);
       if (error) {
         if (error.code === '23503' || error.message.includes('violates foreign key constraint')) {
-          throw new Error('Dữ liệu đang được sử dụng, không thể xóa vĩnh viễn.');
+          throw new Error('Dữ liệu đang được sử dụng ở phân hệ khác, không thể xóa vĩnh viễn.');
         }
         throw error;
       }
@@ -246,8 +284,19 @@ export const DeletedProduction = ({
     setSubmitting(true);
     try {
       const promises = Array.from(selectedIds).map((key) => {
-        const [_, id] = key.split('-');
-        return supabase.from(activeTab).update({ status: 'Chờ duyệt' }).eq('id', id);
+        const [table, id] = key.split('-');
+        const isBom = table === 'boms';
+        const actualTable =
+          table === 'production_orders'
+            ? 'lenh_san_xuat'
+            : table === 'boms'
+              ? 'san_pham_bom'
+              : table === 'split_merge_history'
+                ? 'xasa_gop_phieu'
+                : table;
+        const updateData = isBom ? { dang_hoat_dong: true } : { status: 'Chờ duyệt' };
+
+        return supabase.from(actualTable).update(updateData).eq('id', id);
       });
       await Promise.all(promises);
       if (addToast) addToast(`Đã khôi phục ${selectedIds.size} bản ghi thành công!`, 'success');
@@ -509,13 +558,7 @@ export const DeletedProduction = ({
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
-                            setSelectedItem({
-                              id: item.id,
-                              table: activeTab,
-                              code: getCode(item),
-                              name: getName(item),
-                            });
-                            setShowDeleteModal(true);
+                            handleDeleteClick(item);
                           }}
                           className="p-2 bg-red-50 text-red-600 rounded-lg hover:bg-red-100 transition-colors"
                         >
@@ -530,6 +573,98 @@ export const DeletedProduction = ({
           </tbody>
         </table>
       </div>
+
+      {/* Delete Confirmation Modal */}
+      <AnimatePresence>
+        {showDeleteModal && selectedItem && (
+          <div
+            className="fixed inset-0 z-[130] flex items-center justify-center p-4 bg-black/50 backdrop-blur-md overflow-hidden"
+            onClick={() => setShowDeleteModal(false)}
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              className="bg-white rounded-[2rem] md:rounded-[2.5rem] shadow-2xl p-8 max-w-sm w-full text-center relative z-10"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="w-16 h-16 bg-red-50 text-red-600 rounded-2xl flex items-center justify-center mx-auto mb-4 border border-red-100">
+                <Trash2 size={32} />
+              </div>
+              <h3 className="text-xl font-bold text-gray-800 mb-2">Xác nhận xóa?</h3>
+              <div className="text-sm text-gray-500 mb-6 text-left bg-gray-50 p-4 rounded-xl border border-gray-100 space-y-2">
+                <p>
+                  Đối tượng: <strong className="text-primary">{selectedItem.name}</strong>
+                </p>
+                {selectedItem.code && (
+                  <p>
+                    Mã: <strong className="text-primary">{selectedItem.code}</strong>
+                  </p>
+                )}
+
+                {usageInfo.inUse ? (
+                  <div className="mt-2 pt-2 border-t border-gray-200">
+                    <button
+                      onClick={() => setShowUsageDetails(!showUsageDetails)}
+                      className="flex items-center justify-between w-full text-[10px] text-red-500 font-black uppercase tracking-tighter hover:text-red-600"
+                    >
+                      <div className="flex items-center gap-1">
+                        <AlertCircle size={12} /> Có dữ liệu liên quan
+                      </div>
+                      {showUsageDetails ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
+                    </button>
+                    {showUsageDetails && (
+                      <div className="mt-2 space-y-1 max-h-32 overflow-y-auto pr-1">
+                        {usageInfo.details.map((d, idx) => (
+                          <div
+                            key={idx}
+                            className="flex justify-between text-[10px] text-gray-500 bg-white p-1.5 rounded-lg border border-gray-100"
+                          >
+                            <span>{d.label}</span>
+                            <span className="font-bold text-red-500">{d.count}</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <p className="text-[10px] text-green-600 font-bold flex items-center gap-1 uppercase tracking-widest ">
+                    <CheckCircle size={12} /> Sẵn sàng để xóa
+                  </p>
+                )}
+              </div>
+
+              <div className="flex flex-col gap-3">
+                {usageInfo.inUse && user.role?.toLowerCase() === 'develop' && (
+                  <div className="p-3 bg-red-50 rounded-2xl border border-red-100 mb-2">
+                    <p className="text-[10px] text-red-600 font-bold leading-relaxed italic text-center">
+                      Lưu ý: Bạn đang thực hiện "Xóa cưỡng bức". Dữ liệu liên quan sẽ bị xóa hoặc
+                      dọn dẹp sạch sẽ.
+                    </p>
+                  </div>
+                )}
+
+                <div className="flex gap-3">
+                  <Button fullWidth variant="outline" onClick={() => setShowDeleteModal(false)}>
+                    Hủy bỏ
+                  </Button>
+                  <Button
+                    fullWidth
+                    variant="danger"
+                    onClick={confirmDelete}
+                    disabled={usageInfo.inUse && user.role?.toLowerCase() !== 'develop'}
+                    isLoading={submitting}
+                  >
+                    {usageInfo.inUse && user.role?.toLowerCase() === 'develop'
+                      ? 'XÓA CƯỞNG BỨC'
+                      : 'Xác nhận xóa'}
+                  </Button>
+                </div>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
 
       <AnimatePresence>
         {showActionModal && selectedItem && (
@@ -586,16 +721,6 @@ export const DeletedProduction = ({
           </div>
         )}
       </AnimatePresence>
-
-      <ConfirmModal
-        show={showDeleteModal}
-        title="Xác nhận xóa?"
-        message={`Bạn đang xóa vĩnh viễn [${selectedItem?.code}] - [${selectedItem?.name}]. Hành động này không thể hoàn tác!`}
-        onConfirm={confirmDelete}
-        onCancel={() => setShowDeleteModal(false)}
-        type="danger"
-        isLoading={submitting}
-      />
 
       <ConfirmModal
         show={showRestoreModal}

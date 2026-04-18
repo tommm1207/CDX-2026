@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { BarChart3, RefreshCw, EyeOff, Download, Search } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { supabase } from '@/lib/supabase';
@@ -164,7 +164,7 @@ export const InventoryReport = ({
         [
           'TỔNG CỘNG',
           '',
-          '',
+          totals.tonCuoi,
           '',
           totals.tonDau,
           totals.tongNhap,
@@ -292,6 +292,9 @@ export const InventoryReport = ({
               <tr className="bg-primary text-white">
                 <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider">Vật tư</th>
                 <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider">Kho</th>
+                <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-center">
+                  Tồn
+                </th>
                 <th
                   className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-center"
                   title="Đơn vị tính"
@@ -360,6 +363,13 @@ export const InventoryReport = ({
                         )}
                       </td>
                       <td className="px-4 py-3 text-xs text-gray-600">{row.warehouseName}</td>
+                      <td className="px-4 py-3 text-center">
+                        <span
+                          className={`px-2 py-1 rounded-lg text-xs font-bold ${row.tonCuoi <= 0 ? 'bg-red-50 text-red-600' : 'bg-primary/10 text-primary'}`}
+                        >
+                          {formatNumber(row.tonCuoi)}
+                        </span>
+                      </td>
                       <td className="px-4 py-3 text-xs text-gray-500 text-center">{row.unit}</td>
                       <td className="px-4 py-3 text-xs text-right font-medium text-gray-700">
                         {formatNumber(row.tonDau)}
@@ -387,8 +397,16 @@ export const InventoryReport = ({
                   ))}
                   {/* Dòng tổng */}
                   <tr className="bg-gray-50 border-t-2 border-gray-200 font-bold">
-                    <td className="px-4 py-3 text-xs font-bold text-gray-700" colSpan={3}>
-                      TỔNG CỘNG ({report.length} mặt hàng)
+                    <td className="px-4 py-3 text-xs font-bold text-gray-700" colSpan={2}>
+                      TỔNG CỘNG
+                    </td>
+                    <td className="px-4 py-3 text-xs text-center">
+                      <span className="px-2 py-1 rounded-lg bg-primary/20 text-primary font-bold">
+                        {formatNumber(totals.tonCuoi)}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 text-xs text-center text-gray-400 font-normal italic">
+                      ({report.length} VT)
                     </td>
                     <td className="px-4 py-3 text-xs text-right text-gray-700">
                       {formatNumber(totals.tonDau)}

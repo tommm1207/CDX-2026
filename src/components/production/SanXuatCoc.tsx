@@ -65,6 +65,14 @@ export const SanXuatCoc = ({
     fetchAll();
   }, []);
 
+  useEffect(() => {
+    if (showModal || !!recordToDelete || !!previewImageUrl) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = 'auto';
+    }
+  }, [showModal, recordToDelete, previewImageUrl]);
+
   const fetchAll = async () => {
     setLoading(true);
     try {
@@ -639,9 +647,9 @@ export const SanXuatCoc = ({
 
       {/* Create Modal */}
       <AnimatePresence>
-        {showModal && (
+        {showModal && selectedOrder && (
           <div
-            className="fixed inset-0 z-[150] flex items-center justify-center p-2 sm:p-4 bg-black/60 backdrop-blur-md"
+            className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
             onClick={() => setShowModal(false)}
           >
             <motion.div

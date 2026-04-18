@@ -89,9 +89,14 @@ export const Costs = ({
 
   useEffect(() => {
     if (setHideBottomNav) {
-      setHideBottomNav(showModal || showDetailModal);
+      setHideBottomNav(showModal || showDeleteModal || showDetailModal);
     }
-  }, [showModal, showDetailModal, setHideBottomNav]);
+    if (showModal || showDeleteModal || showDetailModal) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = 'auto';
+    }
+  }, [showModal, showDeleteModal, showDetailModal, setHideBottomNav]);
 
   const [selectedCost, setSelectedCost] = useState<any>(null);
   const [costs, setCosts] = useState<any[]>([]);
@@ -653,7 +658,7 @@ export const Costs = ({
       <AnimatePresence>
         {showDetailModal && selectedCost && (
           <div
-            className="fixed inset-0 z-[150] flex items-center justify-center p-2 sm:p-4 bg-black/60 backdrop-blur-md no-print"
+            className="fixed inset-0 z-[200] flex items-center justify-center p-2 sm:p-4 bg-black/60 backdrop-blur-md no-print"
             onClick={() => setShowDetailModal(false)}
           >
             <motion.div
@@ -723,7 +728,7 @@ export const Costs = ({
       <AnimatePresence>
         {showDeleteModal && (
           <div
-            className="fixed inset-0 z-[130] flex items-center justify-center p-4 bg-black/50 backdrop-blur-md overflow-hidden"
+            className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/50 backdrop-blur-md overflow-hidden"
             onClick={() => setShowDeleteModal(false)}
           >
             <motion.div
@@ -773,7 +778,7 @@ export const Costs = ({
       <AnimatePresence>
         {showModal && (
           <div
-            className="fixed inset-0 z-[150] flex items-center justify-center p-2 sm:p-4 bg-black/60 backdrop-blur-md overflow-hidden no-print"
+            className="fixed inset-0 z-[200] flex items-center justify-center p-2 sm:p-4 bg-black/60 backdrop-blur-md overflow-hidden no-print"
             onClick={() => setShowModal(false)}
           >
             <motion.div

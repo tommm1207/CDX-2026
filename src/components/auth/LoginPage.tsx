@@ -12,7 +12,7 @@ import {
 import bcrypt from 'bcryptjs';
 import { supabase } from '@/lib/supabase';
 import { Employee } from '@/types';
-import { isUUID } from '@/utils/helpers';
+import { isUUID, slugify } from '@/utils/helpers';
 import { LOGO_URL } from '@/constants/options';
 import { AppInstructionsModal } from '../shared/AppInstructionsModal';
 
@@ -85,23 +85,6 @@ export const LoginPage = ({ onLogin }: { onLogin: (user: Employee) => void }) =>
         await supabase.from('users').update({ app_pass: hashed }).eq('id', data.id);
       }
 
-      // Tạo Supabase Auth session để RLS hoạt động
-      const authEmail = `${data.code?.toLowerCase()}@cdx.internal`;
-      const authPassword = `cdx-${data.id}`;
-      const { error: signInError } = await supabase.auth.signInWithPassword({
-        email: authEmail,
-        password: authPassword,
-      });
-      if (signInError) {
-        // Tài khoản chưa tồn tại → tạo mới
-        const { error: signUpError } = await supabase.auth.signUp({
-          email: authEmail,
-          password: authPassword,
-        });
-        if (signUpError) throw signUpError;
-        await supabase.auth.signInWithPassword({ email: authEmail, password: authPassword });
-      }
-
       onLogin(data as Employee);
     } catch (err: any) {
       console.error('Unexpected login error:', err);
@@ -142,7 +125,7 @@ export const LoginPage = ({ onLogin }: { onLogin: (user: Employee) => void }) =>
           </div>
         </div>
 
-        <form onSubmit={handleLogin} className="space-y-6">
+        <form onSubmit={handleLogin} className="space-y-6" noValidate>
           <div className="space-y-4">
             <div>
               <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2 ml-1">

@@ -65,6 +65,11 @@ export const StockOut = ({
     if (setHideBottomNav) {
       setHideBottomNav(showModal || showDetailModal);
     }
+    if (showModal || showDetailModal) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = 'auto';
+    }
   }, [showModal, showDetailModal, setHideBottomNav]);
   const [selectedSlip, setSelectedSlip] = useState<any>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -775,13 +780,13 @@ export const StockOut = ({
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               onClick={() => setShowDetailModal(false)}
-              className="fixed inset-0 z-[110] bg-black/40 backdrop-blur-sm"
+              className="fixed inset-0 z-[200] bg-black/40 backdrop-blur-sm"
             />
             <motion.div
               initial={{ y: '100%' }}
               animate={{ y: 0 }}
               exit={{ y: '100%' }}
-              className="fixed inset-x-0 bottom-0 z-[111] bg-white rounded-t-3xl shadow-2xl flex flex-col max-h-[90dvh]
+              className="fixed inset-x-0 bottom-0 z-[201] bg-white rounded-t-3xl shadow-2xl flex flex-col max-h-[90dvh]
                          md:inset-x-auto md:inset-y-0 md:right-0 md:w-[420px] md:rounded-t-none md:rounded-l-3xl md:max-h-full"
               transition={{ type: 'spring', damping: 28, stiffness: 240 }}
             >
@@ -925,7 +930,7 @@ export const StockOut = ({
       <AnimatePresence>
         {showModal && (
           <div
-            className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/50 backdrop-blur-md overflow-hidden"
+            className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/50 backdrop-blur-md overflow-hidden"
             onClick={() => setShowModal(false)}
           >
             <motion.div

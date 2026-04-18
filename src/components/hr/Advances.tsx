@@ -25,8 +25,8 @@ import { SaveImageButton } from '../shared/SaveImageButton';
 import { Button } from '../shared/Button';
 import { SortButton, SortOption } from '../shared/SortButton';
 import { ReportPreviewModal } from '../shared/ReportPreviewModal';
-import { MonthYearPicker } from '../shared/MonthYearPicker';
 import { ExcelButton } from '../shared/ExcelButton';
+import { DateRangeFilter, FilterSearchInput } from '../shared/PageToolbar';
 
 export const Advances = ({
   user,
@@ -63,15 +63,15 @@ export const Advances = ({
 
   const [formData, setFormData] = useState(initialFormState);
   const [isEditing, setIsEditing] = useState(false);
-  const [selectedItem, setSelectedItem] = useState<any>(null);
-  const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
-
-  // Filter & Sort States
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [showFilter, setShowFilter] = useState(false);
-  const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1);
-  const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
+  const [filterStartDate, setFilterStartDate] = useState(() => {
+    const d = new Date();
+    return new Date(d.getFullYear(), d.getMonth(), 1).toISOString().split('T')[0];
+  });
+  const [filterEndDate, setFilterEndDate] = useState(new Date().toISOString().split('T')[0]);
   const [sortBy, setSortBy] = useState<'date' | 'amount'>('date');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
 
@@ -81,8 +81,19 @@ export const Advances = ({
   const reportRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
+    if (setHideBottomNav) {
+      setHideBottomNav(showModal || showDeleteModal || showDetailModal);
+    }
+    if (showModal || showDeleteModal || showDetailModal) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = 'auto';
+    }
+  }, [showModal, showDeleteModal, showDetailModal, setHideBottomNav]);
+
+  useEffect(() => {
     fetchData();
-  }, [selectedMonth, selectedYear]);
+  }, [filterStartDate, filterEndDate]);
 
   const fetchData = async () => {
     setLoading(true);
@@ -148,7 +159,7 @@ export const Advances = ({
     setLoading(false);
   };
 
-  const handleSubmit = async (e: FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSubmitting(true);
     try {
@@ -205,25 +216,19 @@ export const Advances = ({
     if (!deletingId) return;
 
     try {
-      console.log(`[CDX] Attempting to delete from ${activeTab}...`);
       if (addToast) addToast('Đang thực hiện xóa...', 'info');
 
       const table = activeTab === 'advances' ? 'advances' : 'allowances';
-      const { error, status } = await supabase.from(table).delete().eq('id', deletingId);
+      const { error } = await supabase.from(table).delete().eq('id', deletingId);
 
-      if (error) {
-        console.error(`[CDX] Error deleting from ${table}:`, error);
-        throw new Error(`${error.message} (Status: ${status})`);
-      }
+      if (error) throw error;
 
-      console.log('[CDX] Deletion successful');
       if (addToast) addToast('Xóa thành công!', 'success');
 
       setShowDeleteModal(false);
       setDeletingId(null);
       fetchData();
     } catch (err: any) {
-      console.error('[CDX] Deletion failed:', err);
       if (addToast) addToast('Không thể xóa: ' + err.message, 'error');
       else alert('Không thể xóa: ' + err.message);
     }
@@ -236,10 +241,9 @@ export const Advances = ({
 
   const filteredItems = (activeTab === 'advances' ? advances : allowances)
     .filter((item) => {
-      const itemDate = new Date(item.date);
-      const start = new Date(selectedYear, selectedMonth - 1, 1);
-      const end = new Date(selectedYear, selectedMonth, 0, 23, 59, 59);
-      if (itemDate < start || itemDate > end) return false;
+      const itemDate = item.date;
+      if (filterStartDate && itemDate < filterStartDate) return false;
+      if (filterEndDate && itemDate > filterEndDate) return false;
 
       if (searchTerm) {
         const name = item.users?.full_name?.toLowerCase() || '';
@@ -271,7 +275,7 @@ export const Advances = ({
           activeTab === 'advances' ? 'Tạm ứng' : (item.type ?? ''),
           item.notes ?? '',
         ]),
-        fileName: `CDX_TamUng_PhuCap_T${selectedMonth}_${selectedYear}.xlsx`,
+        fileName: `CDX_TamUng_PhuCap_${filterStartDate}_den_${filterEndDate}.xlsx`,
         addToast,
       });
     });
@@ -333,40 +337,28 @@ export const Advances = ({
             style={{ overflow: showFilter ? 'visible' : 'hidden' }}
           >
             <div className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 mb-4 space-y-5">
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {/* 1. Chọn thời kỳ */}
-                <div className="bg-gray-50/50 p-4 rounded-2xl border border-gray-100 space-y-3">
-                  <p className="text-[10px] font-black text-primary/40 uppercase tracking-widest text-center">
-                    Chọn thời kỳ
-                  </p>
-                  <MonthYearPicker
-                    selectedMonth={selectedMonth}
-                    selectedYear={selectedYear}
-                    onMonthChange={setSelectedMonth}
-                    onYearChange={setSelectedYear}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-2">
+                  <label className="text-[10px] font-bold text-gray-400 uppercase ml-1">
+                    Khoảng thời gian
+                  </label>
+                  <DateRangeFilter
+                    startDate={filterStartDate}
+                    endDate={filterEndDate}
+                    onStartChange={setFilterStartDate}
+                    onEndChange={setFilterEndDate}
                   />
                 </div>
 
-                {/* 2. Tìm kiếm */}
-                <div className="space-y-4">
-                  <div className="space-y-1.5">
-                    <label className="text-[10px] font-bold text-gray-400 uppercase ml-1">
-                      Tìm nhân viên
-                    </label>
-                    <div className="relative group">
-                      <Search
-                        className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-primary transition-colors"
-                        size={16}
-                      />
-                      <input
-                        type="text"
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                        placeholder="Họ tên hoặc mã nhân viên..."
-                        className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-gray-200 text-sm outline-none focus:ring-4 focus:ring-primary/10 transition-all"
-                      />
-                    </div>
-                  </div>
+                <div className="space-y-2">
+                  <label className="text-[10px] font-bold text-gray-400 uppercase ml-1">
+                    Tìm nhân viên
+                  </label>
+                  <FilterSearchInput
+                    value={searchTerm}
+                    onChange={setSearchTerm}
+                    placeholder="Họ tên hoặc mã nhân viên..."
+                  />
                 </div>
               </div>
             </div>
@@ -464,7 +456,7 @@ export const Advances = ({
       <AnimatePresence>
         {showModal && (
           <div
-            className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-black/50 backdrop-blur-md overflow-hidden"
+            className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/50 backdrop-blur-md overflow-hidden"
             onClick={() => {
               setShowModal(false);
               setIsEditing(false);
@@ -595,7 +587,7 @@ export const Advances = ({
       <AnimatePresence>
         {showDeleteModal && (
           <div
-            className="fixed inset-0 z-[120] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm"
+            className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm"
             onClick={() => {
               setShowDeleteModal(false);
               setDeletingId(null);
@@ -666,7 +658,8 @@ export const Advances = ({
               {activeTab === 'advances' ? 'BẢNG TẠM ỨNG' : 'BẢNG PHỤ CẤP'}
             </h1>
             <p className="text-sm font-bold text-gray-500">
-              Kỳ báo cáo: Tháng {selectedMonth}/{selectedYear} • CDX-2026 Edition
+              Kỳ báo cáo: Từ {formatDate(filterStartDate)} đến {formatDate(filterEndDate)} •
+              CDX-2026 Edition
             </p>
           </div>
 
@@ -791,7 +784,7 @@ export const Advances = ({
               {activeTab === 'advances' ? 'BẢNG TẠM ỨNG' : 'BẢNG PHỤ CẤP'}
             </h1>
             <p className="text-sm font-bold text-gray-500">
-              Kỳ báo cáo: Tháng {selectedMonth}/{selectedYear} • CDX ERP
+              Kỳ báo cáo: Từ {formatDate(filterStartDate)} đến {formatDate(filterEndDate)} • CDX ERP
             </p>
           </div>
 

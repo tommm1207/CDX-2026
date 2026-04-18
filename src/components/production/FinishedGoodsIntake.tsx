@@ -59,6 +59,14 @@ export const FinishedGoodsIntake = ({
     fetchWarehouses();
   }, []);
 
+  useEffect(() => {
+    if (showModal) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = 'auto';
+    }
+  }, [showModal]);
+
   const handleSaveTableImage = () => {
     const reportElem = reportRef.current || tableBillRef.current;
     if (reportElem) {
@@ -600,7 +608,7 @@ export const FinishedGoodsIntake = ({
       <AnimatePresence>
         {showModal && selectedOrder && (
           <div
-            className="fixed inset-0 z-[150] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
+            className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
             onClick={() => setShowModal(false)}
           >
             <motion.div

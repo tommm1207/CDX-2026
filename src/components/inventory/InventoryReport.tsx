@@ -287,54 +287,56 @@ export const InventoryReport = ({
         className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden"
       >
         <div className="overflow-x-auto custom-scrollbar relative">
-          <table className="w-full text-left border-collapse min-w-[900px] whitespace-nowrap">
+          <table className="w-full text-left border-collapse min-w-[800px]">
             <thead>
               <tr className="bg-primary text-white">
-                <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider sticky left-0 z-10 bg-primary">
+                <th className="px-2 md:px-4 py-3 text-[10px] font-bold uppercase tracking-wider sticky left-0 z-10 bg-primary min-w-[110px] max-w-[130px] md:max-w-none">
                   Vật tư
                 </th>
-                <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider">Kho</th>
-                <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-center">
+                <th className="px-2 md:px-4 py-3 text-[10px] font-bold uppercase tracking-wider whitespace-nowrap">
+                  Kho
+                </th>
+                <th className="px-2 md:px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-center whitespace-nowrap">
                   Tồn
                 </th>
                 <th
-                  className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-center"
+                  className="px-2 md:px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-center whitespace-nowrap"
                   title="Đơn vị tính"
                 >
                   Đ.V.T
                 </th>
                 <th
-                  className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-right"
+                  className="px-2 md:px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-right whitespace-nowrap"
                   title="Số lượng tồn kho ban đầu tính đến ngày Đầu Kỳ"
                 >
                   Tồn đầu kỳ
                 </th>
                 <th
-                  className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-right"
+                  className="px-2 md:px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-right whitespace-nowrap"
                   title="Số lượng nhập vào kho trong khoảng thời gian chọn"
                 >
                   Nhập trong kỳ
                 </th>
                 <th
-                  className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-right"
+                  className="px-2 md:px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-right whitespace-nowrap"
                   title="Số lượng xuất ra khỏi kho trong khoảng thời gian chọn"
                 >
                   Xuất trong kỳ
                 </th>
                 <th
-                  className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-right"
+                  className="px-2 md:px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-right whitespace-nowrap"
                   title="Số lượng chuyển từ kho khác đến kho này"
                 >
                   Chuyển đến
                 </th>
                 <th
-                  className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-right"
+                  className="px-2 md:px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-right whitespace-nowrap"
                   title="Số lượng chuyển từ kho này đi kho khác"
                 >
                   Chuyển đi
                 </th>
                 <th
-                  className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-right"
+                  className="px-2 md:px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-right whitespace-nowrap"
                   title="Tồn đầu + Nhập - Xuất + Chuyển đến - Chuyển đi"
                 >
                   Tồn cuối kỳ
@@ -358,39 +360,47 @@ export const InventoryReport = ({
                 <>
                   {report.map((row, idx) => (
                     <tr key={idx} className="hover:bg-gray-50/60 transition-colors">
-                      <td className="px-4 py-3 sticky left-0 z-10 bg-white border-r border-gray-100">
-                        <p className="text-xs font-bold text-gray-800">{row.materialName}</p>
+                      <td className="px-2 md:px-4 py-3 sticky left-0 z-10 bg-white border-r border-gray-100 min-w-[110px] max-w-[130px] md:max-w-none whitespace-normal">
+                        <p className="text-[10px] md:text-xs font-bold text-gray-800 leading-tight">
+                          {row.materialName}
+                        </p>
                         {row.materialCode && (
-                          <p className="text-[10px] text-gray-400 font-mono">#{row.materialCode}</p>
+                          <p className="text-[9px] text-gray-400 font-mono mt-0.5">
+                            #{row.materialCode}
+                          </p>
                         )}
                       </td>
-                      <td className="px-4 py-3 text-xs text-gray-600">{row.warehouseName}</td>
-                      <td className="px-4 py-3 text-center">
+                      <td className="px-2 md:px-4 py-3 text-[10px] md:text-xs text-gray-600 whitespace-nowrap">
+                        {row.warehouseName}
+                      </td>
+                      <td className="px-2 md:px-4 py-3 text-center whitespace-nowrap">
                         <span
-                          className={`px-2 py-1 rounded-lg text-xs font-bold ${row.tonCuoi <= 0 ? 'bg-red-50 text-red-600' : 'bg-primary/10 text-primary'}`}
+                          className={`px-1.5 md:px-2 py-0.5 md:py-1 rounded-lg text-[10px] md:text-xs font-bold ${row.tonCuoi <= 0 ? 'bg-red-50 text-red-600' : 'bg-primary/10 text-primary'}`}
                         >
                           {formatNumber(row.tonCuoi)}
                         </span>
                       </td>
-                      <td className="px-4 py-3 text-xs text-gray-500 text-center">{row.unit}</td>
-                      <td className="px-4 py-3 text-xs text-right font-medium text-gray-700">
+                      <td className="px-2 md:px-4 py-3 text-[10px] md:text-xs text-gray-500 text-center whitespace-nowrap">
+                        {row.unit}
+                      </td>
+                      <td className="px-2 md:px-4 py-3 text-[10px] md:text-xs text-right font-medium text-gray-700 whitespace-nowrap">
                         {formatNumber(row.tonDau)}
                       </td>
-                      <td className="px-4 py-3 text-xs text-right font-medium text-blue-600">
+                      <td className="px-2 md:px-4 py-3 text-[10px] md:text-xs text-right font-medium text-blue-600 whitespace-nowrap">
                         {row.tongNhap > 0 ? `+${formatNumber(row.tongNhap)}` : '—'}
                       </td>
-                      <td className="px-4 py-3 text-xs text-right font-medium text-orange-600">
+                      <td className="px-2 md:px-4 py-3 text-[10px] md:text-xs text-right font-medium text-orange-600 whitespace-nowrap">
                         {row.tongXuat > 0 ? `-${formatNumber(row.tongXuat)}` : '—'}
                       </td>
-                      <td className="px-4 py-3 text-xs text-right font-medium text-teal-600">
+                      <td className="px-2 md:px-4 py-3 text-[10px] md:text-xs text-right font-medium text-teal-600 whitespace-nowrap">
                         {row.chuyenDen > 0 ? `+${formatNumber(row.chuyenDen)}` : '—'}
                       </td>
-                      <td className="px-4 py-3 text-xs text-right font-medium text-purple-600">
+                      <td className="px-2 md:px-4 py-3 text-[10px] md:text-xs text-right font-medium text-purple-600 whitespace-nowrap">
                         {row.chuyenDi > 0 ? `-${formatNumber(row.chuyenDi)}` : '—'}
                       </td>
-                      <td className="px-4 py-3 text-right">
+                      <td className="px-2 md:px-4 py-3 text-right whitespace-nowrap">
                         <span
-                          className={`px-2 py-1 rounded-lg text-xs font-bold ${row.tonCuoi <= 0 ? 'bg-red-50 text-red-600' : row.tonCuoi <= 5 ? 'bg-amber-50 text-amber-600' : 'bg-green-50 text-green-600'}`}
+                          className={`px-1.5 md:px-2 py-0.5 md:py-1 rounded-lg text-[10px] md:text-xs font-bold ${row.tonCuoi <= 0 ? 'bg-red-50 text-red-600' : row.tonCuoi <= 5 ? 'bg-amber-50 text-amber-600' : 'bg-green-50 text-green-600'}`}
                         >
                           {formatNumber(row.tonCuoi)}
                         </span>
@@ -428,7 +438,7 @@ export const InventoryReport = ({
                     <td className="px-4 py-3 text-xs text-right text-purple-600">
                       -{formatNumber(totals.chuyenDi)}
                     </td>
-                    <td className="px-4 py-3 text-xs text-right">
+                    <td className="px-4 py-3 text-[10px] md:text-xs text-right whitespace-nowrap">
                       <span className="px-2 py-1 rounded-lg bg-primary/10 text-primary font-bold">
                         {formatNumber(totals.tonCuoi)}
                       </span>

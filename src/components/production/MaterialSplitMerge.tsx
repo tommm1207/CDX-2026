@@ -81,6 +81,7 @@ export const MaterialSplitMerge = ({
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [phieuToDelete, setPhieuToDelete] = useState<any>(null);
   const [selectedPhieu, setSelectedPhieu] = useState<any>(null);
+  const [expandedId, setExpandedId] = useState<string | null>(null);
   const [quickAddTarget, setQuickAddTarget] = useState<{
     type: 'nguonXa' | 'outputXa' | 'nguonGop' | 'outputGop';
     index?: number;
@@ -885,26 +886,34 @@ export const MaterialSplitMerge = ({
       <div className="grid grid-cols-2 gap-3">
         <button
           onClick={() => openModal('xa')}
-          className="bg-white rounded-2xl p-4 border border-gray-100 hover:shadow-md transition-all flex items-center gap-3 active:scale-[0.98]"
+          className="group relative bg-white rounded-2xl p-3 border border-gray-100 hover:border-orange-200 hover:shadow-lg transition-all flex items-center gap-3 active:scale-[0.98] overflow-hidden"
         >
-          <div className="w-10 h-10 bg-orange-100 rounded-xl flex items-center justify-center">
-            <Scissors size={20} className="text-orange-600" />
+          <div className="absolute top-0 right-0 w-20 h-20 bg-orange-500/5 rounded-full -mr-10 -mt-10 group-hover:scale-110 transition-transform" />
+          <div className="w-9 h-9 bg-orange-100 rounded-xl flex items-center justify-center shrink-0 shadow-sm group-hover:bg-orange-500 group-hover:text-white transition-colors duration-300">
+            <Scissors size={18} className="text-orange-600 group-hover:text-white" />
           </div>
-          <div className="text-left">
-            <h3 className="text-sm font-bold text-gray-800">Rã vật tư</h3>
-            <p className="text-[10px] text-gray-400">1 nguồn → N mảnh</p>
+          <div className="text-left relative z-10 min-w-0">
+            <h3 className="text-xs font-black text-gray-800 uppercase tracking-tight whitespace-nowrap">
+              Rã vật tư
+            </h3>
+            <p className="text-[9px] text-gray-400 font-bold whitespace-nowrap">1 nguồn → N mảnh</p>
           </div>
         </button>
         <button
           onClick={() => openModal('gop')}
-          className="bg-white rounded-2xl p-4 border border-gray-100 hover:shadow-md transition-all flex items-center gap-3 active:scale-[0.98]"
+          className="group relative bg-white rounded-2xl p-3 border border-gray-100 hover:border-blue-200 hover:shadow-lg transition-all flex items-center gap-3 active:scale-[0.98] overflow-hidden"
         >
-          <div className="w-10 h-10 bg-blue-100 rounded-xl flex items-center justify-center">
-            <Merge size={20} className="text-blue-600" />
+          <div className="absolute top-0 right-0 w-20 h-20 bg-blue-500/5 rounded-full -mr-10 -mt-10 group-hover:scale-110 transition-transform" />
+          <div className="w-9 h-9 bg-blue-100 rounded-xl flex items-center justify-center shrink-0 shadow-sm group-hover:bg-blue-500 group-hover:text-white transition-colors duration-300">
+            <Merge size={18} className="text-blue-600 group-hover:text-white" />
           </div>
-          <div className="text-left">
-            <h3 className="text-sm font-bold text-gray-800">Gộp vật tư</h3>
-            <p className="text-[10px] text-gray-400">N mảnh → 1 vật tư</p>
+          <div className="text-left relative z-10 min-w-0">
+            <h3 className="text-xs font-black text-gray-800 uppercase tracking-tight whitespace-nowrap">
+              Gộp vật tư
+            </h3>
+            <p className="text-[9px] text-gray-400 font-bold whitespace-nowrap">
+              N mảnh → 1 vật tư
+            </p>
           </div>
         </button>
       </div>
@@ -950,37 +959,35 @@ export const MaterialSplitMerge = ({
             );
             const raItems = (item.xasa_gop_chi_tiet || []).filter((d: any) => d.vai_tro === 'ra');
 
+            const isExpanded = expandedId === item.id;
+
             return (
-              <div
-                key={item.id}
-                onClick={() => {
-                  setSelectedPhieu(item);
-                  setShowDetailPhieu(true);
-                }}
-                className="bg-white rounded-xl py-1.5 px-3 border border-gray-100 shadow-sm transition-all hover:shadow-md cursor-pointer group active:scale-[0.99] flex items-center justify-between gap-2"
-              >
-                <div className="flex items-center gap-2 min-w-0 flex-1">
-                  <div className="relative shrink-0">
-                    <div
-                      className={`w-7 h-7 rounded-lg flex items-center justify-center ${item.loai === 'xa' ? 'bg-orange-50' : 'bg-blue-50'}`}
-                    >
-                      {item.loai === 'xa' ? (
-                        <Scissors size={14} className="text-orange-500" />
-                      ) : (
-                        <Merge size={14} className="text-blue-500" />
-                      )}
+              <div key={item.id} className="group">
+                <div
+                  onClick={() => setExpandedId(isExpanded ? null : item.id)}
+                  className={`bg-white rounded-xl py-1.5 px-3 border border-gray-100 shadow-sm transition-all hover:shadow-md cursor-pointer active:scale-[0.99] flex items-center justify-between gap-2 relative z-10 ${isExpanded ? 'ring-2 ring-primary/10 border-primary/20' : ''}`}
+                >
+                  <div className="flex items-center gap-2 min-w-0 flex-1">
+                    <div className="relative shrink-0">
+                      <div
+                        className={`w-8 h-8 rounded-xl flex items-center justify-center shadow-sm ${item.loai === 'xa' ? 'bg-orange-50 border border-orange-100' : 'bg-blue-50 border border-blue-100'}`}
+                      >
+                        {item.loai === 'xa' ? (
+                          <Scissors size={14} className="text-orange-500" />
+                        ) : (
+                          <Merge size={14} className="text-blue-500" />
+                        )}
+                      </div>
                     </div>
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-1.5 no-wrap overflow-hidden">
-                      <h4 className="font-bold text-gray-800 text-[11px] truncate shrink min-w-0">
+                    <div className="min-w-0 flex-1 flex flex-col justify-center">
+                      <h4 className="font-bold text-gray-800 text-[11px] truncate leading-none mb-1">
                         {nguonItems
                           .map(
                             (n: any) =>
                               `${n.materials?.name || '...'}${n.so_luong ? ` (${formatNumber(n.so_luong)}${n.don_vi ? ' ' + n.don_vi : ''})` : ''}`,
                           )
                           .join(', ')}
-                        <ArrowRight size={10} className="inline mx-1 text-gray-400" />
+                        <ArrowRight size={10} className="inline align-middle mx-1 text-gray-300" />
                         {raItems
                           .map(
                             (r: any) =>
@@ -988,30 +995,168 @@ export const MaterialSplitMerge = ({
                           )
                           .join(', ')}
                       </h4>
-                      <span className="text-[7px] font-normal text-gray-200 shrink-0">
-                        {item.ma_phieu.split('-')[1] || item.ma_phieu}
-                      </span>
+                      <p className="text-[8px] text-gray-400/40 font-medium truncate">
+                        {item.ma_phieu.split('-')[1] || item.ma_phieu} • {formatDate(item.ngay)} •{' '}
+                        {item.warehouses?.name}
+                      </p>
+                    </div>
+
+                    <div className="flex items-center gap-1 shrink-0 translate-y-[-1px]">
                       {(() => {
                         const badge = getStatusBadge(item.status);
                         return (
                           <span
-                            className={`px-2 py-0.5 rounded-full text-[10px] font-bold shrink-0 ${badge.bg} ${badge.text}`}
+                            className={`px-1.5 py-0.5 rounded-md text-[8px] font-bold shrink-0 border uppercase tracking-widest leading-none ${badge.bg} ${badge.text} ${item.status === 'Đã duyệt' ? 'border-green-100' : item.status === 'Chờ duyệt' ? 'border-yellow-100' : 'border-red-100'}`}
                           >
                             {badge.label}
                           </span>
                         );
                       })()}
+                      <div
+                        className={`px-1.5 py-0.5 flex items-center justify-center rounded-md text-[8px] font-black shrink-0 border leading-none ${item.loai === 'xa' ? 'text-orange-500 bg-orange-50/30 border-orange-100' : 'text-blue-500 bg-blue-50/30 border-blue-100'}`}
+                      >
+                        {item.loai === 'xa' ? 'RÃ' : 'GỘP'}
+                      </div>
                     </div>
-                    <p className="text-[8px] text-gray-400/40 font-medium truncate">
-                      {formatDate(item.ngay)} • {item.warehouses?.name} • {item.users?.full_name}
-                    </p>
                   </div>
+                  <motion.div
+                    animate={{ rotate: isExpanded ? 90 : 0 }}
+                    className="text-gray-300 pointer-events-none"
+                  >
+                    <ChevronRight size={16} />
+                  </motion.div>
                 </div>
-                <span
-                  className={`px-1 py-0.5 rounded text-[7px] font-black shrink-0 ${item.loai === 'xa' ? 'text-orange-400 border border-orange-100' : 'text-blue-400 border border-blue-100'}`}
-                >
-                  {item.loai === 'xa' ? 'Rã' : 'Gộp'}
-                </span>
+
+                <AnimatePresence>
+                  {isExpanded && (
+                    <motion.div
+                      initial={{ height: 0, opacity: 0 }}
+                      animate={{ height: 'auto', opacity: 1 }}
+                      exit={{ height: 0, opacity: 0 }}
+                      className="overflow-hidden"
+                    >
+                      <div className="bg-white/50 border border-t-0 border-gray-100 rounded-b-xl mx-2 pt-1 pb-3 px-4 shadow-inner space-y-3">
+                        {/* Detail Tables */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-2">
+                          <div>
+                            <p className="text-[8px] font-bold text-gray-400 uppercase mb-1 ml-1">
+                              📦 Nguồn ({nguonItems.length})
+                            </p>
+                            <div className="border border-blue-100 rounded-lg overflow-hidden bg-white shadow-sm">
+                              <table className="w-full text-left text-[9px]">
+                                <tbody className="divide-y divide-blue-50">
+                                  {nguonItems.map((d: any, i: number) => (
+                                    <tr key={i}>
+                                      <td className="px-2 py-1.5">
+                                        <p className="font-bold text-gray-700">
+                                          {d.materials?.name}
+                                        </p>
+                                        <p className="text-[7px] text-gray-400">
+                                          {d.materials?.code}
+                                        </p>
+                                      </td>
+                                      <td className="px-2 py-1.5 text-right font-black text-blue-600">
+                                        {formatNumber(d.so_luong)} {d.don_vi}
+                                      </td>
+                                    </tr>
+                                  ))}
+                                </tbody>
+                              </table>
+                            </div>
+                          </div>
+
+                          <div>
+                            <p className="text-[8px] font-bold text-gray-400 uppercase mb-1 ml-1">
+                              {item.loai === 'xa' ? '✂️ Mảnh rã' : '🔗 Gộp vào'} ({raItems.length})
+                            </p>
+                            <div className="border border-green-100 rounded-lg overflow-hidden bg-white shadow-sm">
+                              <table className="w-full text-left text-[9px]">
+                                <tbody className="divide-y divide-green-50">
+                                  {raItems.map((d: any, i: number) => (
+                                    <tr key={i}>
+                                      <td className="px-2 py-1.5">
+                                        <p className="font-bold text-gray-700">
+                                          {d.materials?.name}
+                                        </p>
+                                        <p className="text-[7px] text-gray-400">
+                                          {d.materials?.code}
+                                        </p>
+                                      </td>
+                                      <td className="px-2 py-1.5 text-right font-black text-green-600">
+                                        {formatNumber(d.so_luong)} {d.don_vi}
+                                      </td>
+                                    </tr>
+                                  ))}
+                                </tbody>
+                              </table>
+                            </div>
+                          </div>
+                        </div>
+
+                        {item.ghi_chu && (
+                          <div className="bg-gray-100/50 p-2 rounded-lg border border-gray-100 italic">
+                            <p className="text-[7px] text-gray-400 font-bold uppercase mb-0.5">
+                              Ghi chú
+                            </p>
+                            <p className="text-[10px] text-gray-600 font-medium leading-relaxed">
+                              “{item.ghi_chu}”
+                            </p>
+                          </div>
+                        )}
+
+                        {/* Quick Actions */}
+                        <div className="flex gap-2 pt-2 border-t border-gray-100/50">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="flex-1 rounded-lg text-red-500 border-red-50 hover:bg-red-50 text-[9px] font-bold uppercase h-8 bg-white shadow-sm"
+                            icon={Trash2}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDeletePhieu(item);
+                            }}
+                            isLoading={submitting}
+                          >
+                            Xóa
+                          </Button>
+                          {(item.status === 'Chờ duyệt' ||
+                            item.status === 'Từ chối' ||
+                            item.status === 'Đã duyệt') && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="flex-1 rounded-lg text-[9px] font-bold uppercase h-8 bg-white shadow-sm"
+                              icon={Edit}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleEditPhieu(item);
+                              }}
+                              isLoading={submitting}
+                            >
+                              Sửa
+                            </Button>
+                          )}
+                          {item.status === 'Chờ duyệt' &&
+                            (user.role === 'Admin' || user.role === 'Develop') && (
+                              <Button
+                                variant="success"
+                                size="sm"
+                                className="flex-1 rounded-lg text-[9px] font-bold uppercase shadow-sm h-8"
+                                icon={Check}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleApprovePhieu(item);
+                                }}
+                                isLoading={submitting}
+                              >
+                                Duyệt
+                              </Button>
+                            )}
+                        </div>
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
               </div>
             );
           })
@@ -1405,242 +1550,6 @@ export const MaterialSplitMerge = ({
                     'XÁC NHẬN PHIẾU'
                   )}
                 </button>
-              </div>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
-
-      <AnimatePresence>
-        {showDetailPhieu && selectedPhieu && (
-          <div
-            className="fixed inset-0 z-[150] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
-            onClick={() => setShowDetailPhieu(false)}
-          >
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95, y: 20 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.95, y: 20 }}
-              className="bg-white rounded-[2rem] md:rounded-[2.5rem] shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <div
-                className={`p-6 text-white flex items-center justify-between flex-shrink-0 bg-gradient-to-r ${selectedPhieu.loai === 'xa' ? 'from-orange-500 to-orange-600' : 'from-blue-500 to-blue-600'}`}
-              >
-                <div className="flex items-center gap-4">
-                  <div className="p-3 bg-white/20 rounded-2xl backdrop-blur-md shadow-inner">
-                    {selectedPhieu.loai === 'xa' ? <Scissors size={24} /> : <Merge size={24} />}
-                  </div>
-                  <div>
-                    <h2 className="font-extrabold text-xl uppercase tracking-wider">
-                      Chi tiết phiếu
-                    </h2>
-                    <p className="text-[10px] text-white/80 font-bold uppercase tracking-widest mt-0.5">
-                      Mã: {selectedPhieu.ma_phieu} •{' '}
-                      {selectedPhieu.loai === 'xa' ? 'Rã vật tư' : 'Gộp vật tư'}
-                    </p>
-                  </div>
-                </div>
-                <button
-                  onClick={() => setShowDetailPhieu(false)}
-                  className="p-3 hover:bg-white/20 rounded-2xl transition-all active:scale-90"
-                >
-                  <X size={24} />
-                </button>
-              </div>
-
-              <div className="flex-1 overflow-y-auto p-4 space-y-4">
-                {/* Meta info */}
-                <div className="grid grid-cols-2 gap-4 bg-gray-50/50 p-6 rounded-3xl border border-gray-100 shadow-inner">
-                  <div className="space-y-1">
-                    <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">
-                      Ngày thực hiện
-                    </p>
-                    <p className="text-sm font-extrabold text-gray-800">
-                      {formatDate(selectedPhieu.ngay)}
-                    </p>
-                  </div>
-                  <div className="space-y-1">
-                    <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">
-                      Kho xử lý
-                    </p>
-                    <p className="text-sm font-extrabold text-gray-800">
-                      {selectedPhieu.warehouses?.name}
-                    </p>
-                  </div>
-                  <div className="space-y-1 mt-2">
-                    <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">
-                      Người tạo
-                    </p>
-                    <div className="flex items-center gap-2">
-                      <div className="w-5 h-5 bg-primary/10 rounded-full flex items-center justify-center text-[10px] font-bold text-primary">
-                        {selectedPhieu.users?.full_name?.charAt(0)}
-                      </div>
-                      <p className="text-sm font-extrabold text-gray-800">
-                        {selectedPhieu.users?.full_name}
-                      </p>
-                    </div>
-                  </div>
-                  <div className="space-y-2 mt-2">
-                    <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">
-                      Trạng thái
-                    </p>
-                    <div
-                      className={`inline-flex px-3 py-1 rounded-full text-[10px] font-black tracking-widest uppercase ${getStatusBadge(selectedPhieu.status).bg} ${getStatusBadge(selectedPhieu.status).text} border border-current opacity-80`}
-                    >
-                      {getStatusBadge(selectedPhieu.status).label}
-                    </div>
-                  </div>
-                </div>
-
-                {/* Groups */}
-                <div className="space-y-4">
-                  <div>
-                    <h4 className="text-xs font-bold text-gray-400 uppercase mb-2 ml-1">
-                      📦 Vật tư nguồn
-                    </h4>
-                    <div className="bg-blue-50/50 border border-blue-100 rounded-2xl overflow-hidden">
-                      <table className="w-full text-left text-xs">
-                        <thead className="bg-blue-100/50">
-                          <tr>
-                            <th className="px-4 py-2 font-bold text-blue-800">Tên vật tư</th>
-                            <th className="px-4 py-2 font-bold text-blue-800 text-center">
-                              Số lượng
-                            </th>
-                          </tr>
-                        </thead>
-                        <tbody className="divide-y divide-blue-100">
-                          {(selectedPhieu.xasa_gop_chi_tiet || [])
-                            .filter((d: any) => d.vai_tro === 'nguon')
-                            .map((d: any, i: number) => (
-                              <tr key={i}>
-                                <td className="px-4 py-3">
-                                  <p className="font-bold text-gray-800">{d.materials?.name}</p>
-                                  <p className="text-[10px] text-gray-400">{d.materials?.code}</p>
-                                </td>
-                                <td className="px-4 py-3 text-center font-bold text-blue-700">
-                                  {formatNumber(d.so_luong)} {d.don_vi}
-                                </td>
-                              </tr>
-                            ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  </div>
-
-                  <div>
-                    <h4 className="text-xs font-bold text-gray-400 uppercase mb-2 ml-1">
-                      {selectedPhieu.loai === 'xa' ? '✂️ Mảnh rã ra' : '🔗 Vật tư gộp lại'}
-                    </h4>
-                    <div className="bg-green-50/50 border border-green-100 rounded-2xl overflow-hidden">
-                      <table className="w-full text-left text-xs">
-                        <thead className="bg-green-100/50">
-                          <tr>
-                            <th className="px-4 py-2 font-bold text-green-800">Tên vật tư</th>
-                            <th className="px-4 py-2 font-bold text-green-800 text-center">
-                              Số lượng
-                            </th>
-                          </tr>
-                        </thead>
-                        <tbody className="divide-y divide-green-100">
-                          {(selectedPhieu.xasa_gop_chi_tiet || [])
-                            .filter((d: any) => d.vai_tro === 'ra')
-                            .map((d: any, i: number) => (
-                              <tr key={i}>
-                                <td className="px-4 py-3">
-                                  <p className="font-bold text-gray-800">{d.materials?.name}</p>
-                                  <p className="text-[10px] text-gray-400">{d.materials?.code}</p>
-                                </td>
-                                <td className="px-4 py-3 text-center font-bold text-green-700">
-                                  {formatNumber(d.so_luong)} {d.don_vi}
-                                </td>
-                              </tr>
-                            ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  </div>
-                </div>
-
-                {selectedPhieu.ghi_chu && (
-                  <div className="bg-gray-50/50 p-5 rounded-3xl border border-gray-100 shadow-inner">
-                    <p className="text-[10px] text-gray-400 font-black uppercase tracking-widest mb-2 ml-1">
-                      📖 Ghi chú & Diễn giải
-                    </p>
-                    <p className="text-sm text-gray-600 font-medium italic leading-relaxed">
-                      “{selectedPhieu.ghi_chu}”
-                    </p>
-                  </div>
-                )}
-              </div>
-
-              <div className="p-3 border-t border-gray-100 bg-gray-50 flex flex-col gap-2">
-                <div className="flex gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="flex-1 rounded-lg text-red-500 border-red-50 hover:bg-red-50 text-[10px] font-bold uppercase h-8"
-                    icon={Trash2}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleDeletePhieu(selectedPhieu);
-                    }}
-                    isLoading={submitting}
-                  >
-                    Xóa phiếu
-                  </Button>
-                  {(selectedPhieu.status === 'Chờ duyệt' ||
-                    selectedPhieu.status === 'Từ chối' ||
-                    selectedPhieu.status === 'Đã duyệt') && (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="flex-1 rounded-lg text-[10px] font-bold uppercase h-8"
-                      icon={Edit}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleEditPhieu(selectedPhieu);
-                      }}
-                      isLoading={submitting}
-                    >
-                      Sửa
-                    </Button>
-                  )}
-                </div>
-
-                {selectedPhieu.status === 'Chờ duyệt' &&
-                  (user.role === 'Admin' || user.role === 'Develop') && (
-                    <div className="flex gap-2 pt-2 border-t border-gray-100">
-                      <Button
-                        variant="danger"
-                        size="sm"
-                        className="flex-1 rounded-lg text-[10px] font-bold uppercase shadow-sm h-8"
-                        icon={X}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleRejectPhieu(selectedPhieu);
-                          setShowDetailPhieu(false);
-                        }}
-                        isLoading={submitting}
-                      >
-                        Từ chối
-                      </Button>
-                      <Button
-                        variant="success"
-                        size="sm"
-                        className="flex-1 rounded-lg text-[10px] font-bold uppercase shadow-sm h-8"
-                        icon={Package}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleApprovePhieu(selectedPhieu);
-                          setShowDetailPhieu(false);
-                        }}
-                        isLoading={submitting}
-                      >
-                        Duyệt phiếu
-                      </Button>
-                    </div>
-                  )}
               </div>
             </motion.div>
           </div>

@@ -257,7 +257,7 @@ export const MainLayout = ({
           {children}
 
           <footer className="p-4 text-center text-[10px] text-gray-400 border-t border-gray-100 mt-auto">
-            HỆ THỐNG QUẢN LÝ CÔNG TY CON ĐƯỜNG XANH © 2026
+            HỆ THỐNG QUẢN LÝ CÔNG TY CON ĐƯỜNG XANH © since 2026
           </footer>
         </main>
       </div>

@@ -286,11 +286,13 @@ export const InventoryReport = ({
         ref={mainTableRef}
         className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden"
       >
-        <div className="overflow-x-auto custom-scrollbar">
+        <div className="overflow-x-auto custom-scrollbar relative">
           <table className="w-full text-left border-collapse min-w-[900px] whitespace-nowrap">
             <thead>
               <tr className="bg-primary text-white">
-                <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider">Vật tư</th>
+                <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider sticky left-0 z-10 bg-primary">
+                  Vật tư
+                </th>
                 <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider">Kho</th>
                 <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-center">
                   Tồn
@@ -356,7 +358,7 @@ export const InventoryReport = ({
                 <>
                   {report.map((row, idx) => (
                     <tr key={idx} className="hover:bg-gray-50/60 transition-colors">
-                      <td className="px-4 py-3">
+                      <td className="px-4 py-3 sticky left-0 z-10 bg-white border-r border-gray-100">
                         <p className="text-xs font-bold text-gray-800">{row.materialName}</p>
                         {row.materialCode && (
                           <p className="text-[10px] text-gray-400 font-mono">#{row.materialCode}</p>
@@ -397,7 +399,10 @@ export const InventoryReport = ({
                   ))}
                   {/* Dòng tổng */}
                   <tr className="bg-gray-50 border-t-2 border-gray-200 font-bold">
-                    <td className="px-4 py-3 text-xs font-bold text-gray-700" colSpan={2}>
+                    <td
+                      className="px-4 py-3 text-xs font-bold text-gray-700 sticky left-0 z-10 bg-gray-50"
+                      colSpan={2}
+                    >
                       TỔNG CỘNG
                     </td>
                     <td className="px-4 py-3 text-xs text-center">

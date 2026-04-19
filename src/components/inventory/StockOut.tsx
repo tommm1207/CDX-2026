@@ -675,19 +675,19 @@ export const StockOut = ({
               <table className="w-full text-left border-collapse min-w-[700px] whitespace-nowrap">
                 <thead>
                   <tr className="bg-red-600 text-white">
-                    <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider">
+                    <th className="px-2 md:px-4 py-2 md:py-3 text-[9px] md:text-[10px] font-bold uppercase tracking-wider border-r border-white/10">
                       Ngày
                     </th>
-                    <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider">
+                    <th className="px-2 md:px-4 py-2 md:py-3 text-[9px] md:text-[10px] font-bold uppercase tracking-wider border-r border-white/10">
                       Kho
                     </th>
-                    <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider">
+                    <th className="px-2 md:px-4 py-2 md:py-3 text-[9px] md:text-[10px] font-bold uppercase tracking-wider border-r border-white/10">
                       Vật tư
                     </th>
-                    <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-center">
+                    <th className="px-2 md:px-4 py-2 md:py-3 text-[9px] md:text-[10px] font-bold uppercase tracking-wider border-r border-white/10 text-center">
                       SL
                     </th>
-                    <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider w-44">
+                    <th className="px-2 md:px-4 py-2 md:py-3 text-[9px] md:text-[10px] font-bold uppercase tracking-wider text-center w-36">
                       Trạng thái
                     </th>
                   </tr>
@@ -706,63 +706,86 @@ export const StockOut = ({
                       </td>
                     </tr>
                   ) : (
-                    filteredSlips.map((item) => (
-                      <tr
-                        key={item.id}
-                        onClick={() => handleRowClick(item)}
-                        className="hover:bg-gray-50 transition-colors cursor-pointer group"
-                      >
-                        <td className="px-4 py-3 text-xs text-gray-600">{formatDate(item.date)}</td>
-                        <td className="px-4 py-3 text-xs text-gray-600">{item.warehouses?.name}</td>
-                        <td className="px-4 py-3 text-xs text-gray-800 font-bold">
-                          {item.materials?.name}
-                        </td>
-                        <td className="px-4 py-3 text-xs text-red-600 text-center font-bold">
-                          -{formatNumber(item.quantity)}{' '}
-                          <span className="text-[10px] text-gray-400 font-normal">
-                            {item.materials?.unit || ''}
-                          </span>
-                        </td>
-                        <td className="px-4 py-3 text-xs w-44">
-                          <div className="flex items-center justify-between gap-2">
-                            <div className="flex items-center gap-1">
-                              {(item.export_code || '').startsWith('XA') && (
-                                <span className="px-1.5 py-px rounded text-[9px] font-black bg-orange-50 text-orange-400 border border-orange-100 leading-none whitespace-nowrap">
-                                  Rã
-                                </span>
-                              )}
-                              {(item.export_code || '').startsWith('GOP') && (
-                                <span className="px-1.5 py-px rounded text-[9px] font-black bg-blue-50 text-blue-400 border border-blue-100 leading-none whitespace-nowrap">
-                                  Gộp
-                                </span>
-                              )}
-                              {(item.export_code || '').startsWith('SX-') && (
-                                <span className="px-1.5 py-px rounded text-[9px] font-black bg-purple-50 text-purple-600 border border-purple-100 leading-none whitespace-nowrap">
-                                  SX Cọc
-                                </span>
-                              )}
-                            </div>
-                            <div className="flex items-center gap-1">
-                              <span
-                                className={`px-2 py-px rounded-full text-[10px] font-bold leading-none whitespace-nowrap ${
-                                  item.status === 'Đã duyệt'
-                                    ? 'bg-green-100 text-green-600'
-                                    : item.status === 'Từ chối'
-                                      ? 'bg-red-100 text-red-600'
-                                      : 'bg-amber-100 text-amber-600'
-                                }`}
-                              >
-                                {item.status || 'Chờ duyệt'}
+                    (() => {
+                      let currentBackgroundColor = 'bg-white';
+                      let lastGroupKey = '';
+
+                      return filteredSlips.map((item) => {
+                        let groupKey = item.date;
+                        if (sortBy === 'code' || sortBy === 'newest') {
+                          const dateMatch = item.export_code?.match(/-(\d+)-/);
+                          groupKey = dateMatch ? dateMatch[1] : item.date;
+                        }
+
+                        if (groupKey !== lastGroupKey) {
+                          currentBackgroundColor =
+                            currentBackgroundColor === 'bg-white' ? 'bg-gray-100' : 'bg-white';
+                          lastGroupKey = groupKey;
+                        }
+
+                        return (
+                          <tr
+                            key={item.id}
+                            onClick={() => handleRowClick(item)}
+                            className={`transition-colors cursor-pointer group ${currentBackgroundColor} hover:brightness-95`}
+                          >
+                            <td className="px-2 md:px-4 py-2.5 md:py-3 text-[10px] md:text-xs text-gray-600 border-b border-gray-100/50">
+                              {formatDate(item.date)}
+                            </td>
+                            <td className="px-2 md:px-4 py-2.5 md:py-3 text-[10px] md:text-xs text-gray-600 border-b border-gray-100/50 max-w-[80px] truncate">
+                              {item.warehouses?.name}
+                            </td>
+                            <td className="px-2 md:px-4 py-2.5 md:py-3 text-[11px] md:text-xs text-gray-800 font-bold border-b border-gray-100/50">
+                              {item.materials?.name}
+                            </td>
+                            <td className="px-2 md:px-4 py-2.5 md:py-3 text-[11px] md:text-xs text-red-600 text-center font-bold border-b border-gray-100/50">
+                              -{formatNumber(item.quantity)}{' '}
+                              <span className="text-[9px] md:text-[10px] text-gray-400 font-normal">
+                                {item.materials?.unit || ''}
                               </span>
-                              <ChevronRight
-                                size={14}
-                                className="text-gray-300 group-hover:text-primary transition-colors"
-                              />
-                            </div>
-                          </div>
-                        </td>
-                      </tr>
-                    ))
+                            </td>
+                            <td className="px-2 md:px-4 py-2.5 md:py-3 text-[10px] md:text-xs w-36 border-b border-gray-100/50">
+                              <div className="flex items-center justify-between gap-1">
+                                <div className="flex flex-wrap items-center gap-1">
+                                  {(item.export_code || '').startsWith('XA') && (
+                                    <span className="px-1.5 py-px rounded text-[8px] font-black bg-orange-50 text-orange-400 border border-orange-100 leading-none whitespace-nowrap">
+                                      Rã
+                                    </span>
+                                  )}
+                                  {(item.export_code || '').startsWith('GOP') && (
+                                    <span className="px-1.5 py-px rounded text-[8px] font-black bg-blue-50 text-blue-400 border border-blue-100 leading-none whitespace-nowrap">
+                                      Gộp
+                                    </span>
+                                  )}
+                                  {(item.export_code || '').startsWith('SX-') && (
+                                    <span className="px-1.5 py-px rounded text-[8px] font-black bg-purple-50 text-purple-600 border border-purple-100 leading-none whitespace-nowrap">
+                                      SX Cọc
+                                    </span>
+                                  )}
+                                </div>
+                                <div className="flex items-center gap-1">
+                                  <span
+                                    className={`px-1.5 md:px-2 py-0.5 rounded-md md:rounded-full text-[9px] md:text-[10px] font-bold leading-none whitespace-nowrap ${
+                                      item.status === 'Đã duyệt'
+                                        ? 'bg-green-100 text-green-600'
+                                        : item.status === 'Từ chối'
+                                          ? 'bg-red-100 text-red-600'
+                                          : 'bg-amber-100 text-amber-600'
+                                    }`}
+                                  >
+                                    {item.status || 'Chờ duyệt'}
+                                  </span>
+                                  <ChevronRight
+                                    size={14}
+                                    className="text-gray-300 group-hover:text-primary transition-colors hidden md:block"
+                                  />
+                                </div>
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      });
+                    })()
                   )}
                 </tbody>
               </table>

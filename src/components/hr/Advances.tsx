@@ -370,18 +370,22 @@ export const Advances = ({
         <table className="w-full text-left border-collapse min-w-[600px] whitespace-nowrap">
           <thead>
             <tr className="bg-primary text-white">
-              <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider w-24">
+              <th className="px-2 md:px-4 py-2 md:py-3 text-[9px] md:text-[10px] font-bold uppercase tracking-wider border-r border-white/10 w-24">
                 Mã hiệu
               </th>
-              <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider">Ngày</th>
-              <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider">
+              <th className="px-2 md:px-4 py-2 md:py-3 text-[9px] md:text-[10px] font-bold uppercase tracking-wider border-r border-white/10">
+                Ngày
+              </th>
+              <th className="px-2 md:px-4 py-2 md:py-3 text-[9px] md:text-[10px] font-bold uppercase tracking-wider border-r border-white/10">
                 Nhân viên
               </th>
-              <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider">Số tiền</th>
-              <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider">
+              <th className="px-2 md:px-4 py-2 md:py-3 text-[9px] md:text-[10px] font-bold uppercase tracking-wider border-r border-white/10">
+                Số tiền
+              </th>
+              <th className="px-2 md:px-4 py-2 md:py-3 text-[9px] md:text-[10px] font-bold uppercase tracking-wider border-r border-white/10">
                 {activeTab === 'advances' ? 'Lý do' : 'Loại / Ghi chú'}
               </th>
-              <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-right">
+              <th className="px-2 md:px-4 py-2 md:py-3 text-[9px] md:text-[10px] font-bold uppercase tracking-wider text-right">
                 Thao tác
               </th>
             </tr>
@@ -394,60 +398,76 @@ export const Advances = ({
                 </td>
               </tr>
             ) : (
-              filteredItems.map((item) => (
-                <tr
-                  key={item.id}
-                  className="hover:bg-gray-50/50 transition-colors group border-b border-gray-100 last:border-0"
-                >
-                  <td className="px-4 py-3.5 text-xs font-mono font-bold text-gray-400">
-                    {item.id.slice(0, 8).toUpperCase()}
-                  </td>
-                  <td className="px-4 py-3.5 text-xs font-bold text-gray-600">
-                    {formatDate(item.date)}
-                  </td>
-                  <td className="px-4 py-3.5 text-xs font-bold text-gray-800">
-                    <div className="flex items-center gap-2">
-                      <div className="w-8 h-8 rounded-full bg-primary/10 text-primary flex items-center justify-center text-[10px] font-black uppercase">
-                        {item.users?.full_name?.charAt(0) || 'U'}
-                      </div>
-                      {item.users?.full_name || '...'}
-                    </div>
-                  </td>
-                  <td className="px-4 py-3.5 text-xs font-black text-primary">
-                    {formatCurrency(item.amount)}
-                  </td>
-                  <td className="px-4 py-3.5 text-xs font-bold text-gray-500 max-w-xs truncate">
-                    <span className="bg-gray-100 px-2 py-1 rounded-lg text-[10px] uppercase font-black tracking-widest mr-2">
-                      {activeTab === 'advances'
-                        ? 'ADV'
-                        : item.type === 'meal'
-                          ? 'MEAL'
-                          : item.type === 'travel'
-                            ? 'FUEL'
-                            : 'ALLOW'}
-                    </span>
-                    {item.notes || item.reason || '-'}
-                  </td>
-                  <td className="px-4 py-3.5 text-right">
-                    <div className="flex items-center justify-end gap-1">
-                      <button
-                        onClick={() => handleEdit(item)}
-                        className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors border border-blue-100"
-                        title="Sửa"
-                      >
-                        <Edit2 size={14} />
-                      </button>
-                      <button
-                        onClick={() => confirmDelete(item.id)}
-                        className="p-1.5 text-red-600 hover:bg-red-50 rounded-lg transition-colors border border-red-100"
-                        title="Xóa"
-                      >
-                        <Trash2 size={14} />
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))
+              (() => {
+                let currentBackgroundColor = 'bg-white';
+                let lastGroupKey = '';
+
+                return filteredItems.map((item) => {
+                  const groupKey = item.date;
+                  if (groupKey !== lastGroupKey) {
+                    currentBackgroundColor =
+                      currentBackgroundColor === 'bg-white' ? 'bg-gray-100' : 'bg-white';
+                    lastGroupKey = groupKey;
+                  }
+
+                  return (
+                    <tr
+                      key={item.id}
+                      className={`transition-colors group border-b border-gray-100/50 last:border-0 hover:brightness-95 ${currentBackgroundColor}`}
+                    >
+                      <td className="px-2 md:px-4 py-2.5 md:py-3.5 text-[10px] md:text-xs font-mono font-bold text-gray-400">
+                        {item.id.slice(0, 8).toUpperCase()}
+                      </td>
+                      <td className="px-2 md:px-4 py-2.5 md:py-3.5 text-[10px] md:text-xs font-bold text-gray-600">
+                        {formatDate(item.date)}
+                      </td>
+                      <td className="px-2 md:px-4 py-2.5 md:py-3.5 text-[10px] md:text-xs font-bold text-gray-800">
+                        <div className="flex items-center gap-1 md:gap-2">
+                          <div className="w-5 h-5 md:w-8 md:h-8 rounded-full bg-primary/10 text-primary flex items-center justify-center text-[8px] md:text-[10px] font-black uppercase shrink-0">
+                            {item.users?.full_name?.charAt(0) || 'U'}
+                          </div>
+                          <span className="truncate max-w-[100px] md:max-w-none">
+                            {item.users?.full_name || '...'}
+                          </span>
+                        </div>
+                      </td>
+                      <td className="px-2 md:px-4 py-2.5 md:py-3.5 text-[11px] md:text-xs font-black text-primary">
+                        {formatCurrency(item.amount)}
+                      </td>
+                      <td className="px-2 md:px-4 py-2.5 md:py-3.5 text-[10px] md:text-xs font-bold text-gray-500 max-w-[100px] md:max-w-xs truncate">
+                        <span className="bg-gray-200/50 px-1.5 py-0.5 rounded text-[8px] md:text-[10px] uppercase font-black tracking-widest mr-1 md:mr-2">
+                          {activeTab === 'advances'
+                            ? 'ADV'
+                            : item.type === 'meal'
+                              ? 'MEAL'
+                              : item.type === 'travel'
+                                ? 'FUEL'
+                                : 'ALLOW'}
+                        </span>
+                        {item.notes || item.reason || '-'}
+                      </td>
+                      <td className="px-2 md:px-4 py-2.5 md:py-3.5 text-right w-16 md:w-auto">
+                        <div className="flex items-center justify-end gap-1">
+                          <button
+                            onClick={() => handleEdit(item)}
+                            className="p-1 md:p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors border border-blue-100"
+                            title="Sửa"
+                          >
+                            <Edit2 size={12} className="md:w-[14px] md:h-[14px]" />
+                          </button>
+                          <button
+                            onClick={() => confirmDelete(item.id)}
+                            className="p-1 md:p-1.5 text-red-600 hover:bg-red-50 rounded-lg transition-colors border border-red-100"
+                            title="Xóa"
+                          >
+                            <Trash2 size={12} className="md:w-[14px] md:h-[14px]" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                });
+              })()
             )}
           </tbody>
         </table>

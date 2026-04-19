@@ -86,6 +86,7 @@ export const Costs = ({
 }) => {
   const [showModal, setShowModal] = useState(initialAction === 'add');
   const [showDetailModal, setShowDetailModal] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
 
   useEffect(() => {
     if (setHideBottomNav) {
@@ -128,7 +129,6 @@ export const Costs = ({
   const [employees, setEmployees] = useState<any[]>([]);
   const [costItems, setCostItems] = useState<any[]>([]);
 
-  const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [itemToDelete, setItemToDelete] = useState<string | null>(null);
   const [usageInfo, setUsageInfo] = useState<any>({ inUse: false, details: [] });
 
@@ -598,58 +598,86 @@ export const Costs = ({
 
       <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse whitespace-nowrap">
+          <table className="w-full text-left border-collapse whitespace-nowrap min-w-[700px] md:min-w-0">
             <thead>
-              <tr className="bg-primary text-white text-[10px] font-bold uppercase tracking-wider">
-                <th className="px-4 py-3 border-r border-white/10">Ngày</th>
-                <th className="px-4 py-3 border-r border-white/10">Mã</th>
-                <th className="px-4 py-3 border-r border-white/10 text-center">Loại</th>
-                <th className="px-4 py-3 border-r border-white/10">Kho</th>
-                <th className="px-4 py-3 border-r border-white/10">Hạng mục / Nội dung</th>
-                <th className="px-4 py-3 border-r border-white/10 text-right">Số tiền</th>
-                <th className="px-4 py-3 text-center">Trạng thái</th>
+              <tr className="bg-primary text-white text-[9px] md:text-[10px] font-bold uppercase tracking-wider">
+                <th className="px-2 md:px-4 py-2 md:py-3 border-r border-white/10">Ngày</th>
+                <th className="px-2 md:px-4 py-2 md:py-3 border-r border-white/10">Mã</th>
+                <th className="px-2 md:px-4 py-2 md:py-3 border-r border-white/10 text-center">
+                  Loại
+                </th>
+                <th className="px-2 md:px-4 py-2 md:py-3 border-r border-white/10">Kho</th>
+                <th className="px-2 md:px-4 py-2 md:py-3 border-r border-white/10">
+                  Hạng mục / Nội dung
+                </th>
+                <th className="px-2 md:px-4 py-2 md:py-3 border-r border-white/10 text-right">
+                  Số tiền
+                </th>
+                <th className="px-2 md:px-4 py-2 md:py-3 text-center w-28">Trạng thái</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
-              {filteredCosts.map((item) => (
-                <tr
-                  key={item.id}
-                  onClick={() => {
-                    setSelectedCost(item);
-                    setShowDetailModal(true);
-                  }}
-                  className="hover:bg-gray-50 cursor-pointer text-xs"
-                >
-                  <td className="px-4 py-3">{formatDate(item.date)}</td>
-                  <td className="px-4 py-3 font-bold text-primary">{item.cost_code}</td>
-                  <td className="px-4 py-3 text-center">
-                    <span
-                      className={`px-3 py-1 rounded-full font-bold text-[10px] ${item.transaction_type === 'Thu' ? 'bg-green-100 text-green-700 border border-green-200' : 'bg-red-100 text-red-700 border border-red-200'}`}
+              {(() => {
+                let currentBackgroundColor = 'bg-white';
+                let lastGroupKey = '';
+
+                return filteredCosts.map((item) => {
+                  const groupKey = item.date;
+                  if (groupKey !== lastGroupKey) {
+                    currentBackgroundColor =
+                      currentBackgroundColor === 'bg-white' ? 'bg-gray-100' : 'bg-white';
+                    lastGroupKey = groupKey;
+                  }
+
+                  return (
+                    <tr
+                      key={item.id}
+                      onClick={() => {
+                        setSelectedCost(item);
+                        setShowDetailModal(true);
+                      }}
+                      className={`transition-colors cursor-pointer text-[10px] md:text-xs group hover:brightness-95 border-b border-gray-100/50 ${currentBackgroundColor}`}
                     >
-                      {item.transaction_type}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3 text-gray-500 font-medium">
-                    {item.warehouses?.name || '---'}
-                  </td>
-                  <td className="px-4 py-3 max-w-[200px]">
-                    <p className="font-bold text-gray-700 truncate">{item.cost_type}</p>
-                    <p className="text-[10px] text-gray-400 truncate italic">{item.content}</p>
-                  </td>
-                  <td
-                    className={`px-4 py-3 font-black text-right ${item.transaction_type === 'Thu' ? 'text-green-600' : 'text-red-600'}`}
-                  >
-                    {formatCurrency(item.total_amount)}
-                  </td>
-                  <td className="px-4 py-3 text-center">
-                    <span
-                      className={`px-2 py-1 rounded-lg text-[10px] font-bold ${item.status === 'Đã duyệt' ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'}`}
-                    >
-                      {item.status || 'Chờ duyệt'}
-                    </span>
-                  </td>
-                </tr>
-              ))}
+                      <td className="px-2 md:px-4 py-2.5 md:py-3 border-r border-gray-100/50">
+                        {formatDate(item.date)}
+                      </td>
+                      <td className="px-2 md:px-4 py-2.5 md:py-3 font-bold text-primary border-r border-gray-100/50">
+                        {item.cost_code}
+                      </td>
+                      <td className="px-2 md:px-4 py-2.5 md:py-3 text-center border-r border-gray-100/50">
+                        <span
+                          className={`px-1.5 md:px-3 py-0.5 md:py-1 rounded-md md:rounded-full font-bold text-[8px] md:text-[10px] ${item.transaction_type === 'Thu' ? 'bg-green-100 text-green-700 border border-green-200' : 'bg-red-100 text-red-700 border border-red-200'}`}
+                        >
+                          {item.transaction_type}
+                        </span>
+                      </td>
+                      <td className="px-2 md:px-4 py-2.5 md:py-3 text-gray-500 font-medium border-r border-gray-100/50 max-w-[80px] md:max-w-none truncate">
+                        {item.warehouses?.name || '---'}
+                      </td>
+                      <td className="px-2 md:px-4 py-2.5 md:py-3 max-w-[150px] md:max-w-[200px] border-r border-gray-100/50">
+                        <p className="font-bold text-gray-700 truncate text-[10px] md:text-xs">
+                          {item.cost_type}
+                        </p>
+                        <p className="text-[9px] md:text-[10px] text-gray-400 truncate italic">
+                          {item.content}
+                        </p>
+                      </td>
+                      <td
+                        className={`px-2 md:px-4 py-2.5 md:py-3 font-black text-right border-r border-gray-100/50 text-[11px] md:text-xs ${item.transaction_type === 'Thu' ? 'text-green-600' : 'text-red-600'}`}
+                      >
+                        {formatCurrency(item.total_amount)}
+                      </td>
+                      <td className="px-2 md:px-4 py-2.5 md:py-3 text-center w-28">
+                        <span
+                          className={`px-1.5 md:px-2 py-0.5 md:py-1 rounded-md md:rounded-lg text-[9px] md:text-[10px] font-bold ${item.status === 'Đã duyệt' ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'}`}
+                        >
+                          {item.status || 'Chờ duyệt'}
+                        </span>
+                      </td>
+                    </tr>
+                  );
+                });
+              })()}
             </tbody>
           </table>
         </div>

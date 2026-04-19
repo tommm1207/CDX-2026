@@ -65,6 +65,7 @@ export const ConstructionDiaryComponent = ({
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [warehouses, setWarehouses] = useState<Warehouse[]>([]);
   const [showDetail, setShowDetail] = useState(false);
+  const [selectedDiary, setSelectedDiary] = useState<ConstructionDiary | null>(null);
   const [users, setUsers] = useState<Employee[]>([]);
   const [userSearchTerm, setUserSearchTerm] = useState('');
 
@@ -414,82 +415,28 @@ export const ConstructionDiaryComponent = ({
         )}
       </AnimatePresence>
 
-      {/* Main Content Area - Table for Desktop, Cards for Mobile */}
+      {/* Main Content Area - Responsive Table */}
       <div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
-        {/* Mobile View - Cards */}
-        <div className="grid grid-cols-1 md:hidden overflow-y-auto no-scrollbar">
-          {loading ? (
-            Array(5)
-              .fill(0)
-              .map((_, i) => (
-                <div
-                  key={i}
-                  className="h-32 bg-gray-50/50 animate-pulse border-b border-gray-50 last:border-0"
-                />
-              ))
-          ) : filteredDiaries.length === 0 ? (
-            <div className="p-10 text-center text-gray-400 italic text-sm">Chưa có nhật ký nào</div>
-          ) : (
-            filteredDiaries.map((diary) => (
-              <div
-                key={diary.id}
-                onClick={() => {
-                  setSelectedDiary(diary);
-                  setShowDetail(true);
-                }}
-                className="p-4 border-b border-gray-50 last:border-0 flex items-center justify-between group active:bg-gray-50"
-              >
-                <div className="space-y-1 min-w-0">
-                  <div className="flex items-center gap-2">
-                    <p className="text-xs font-black text-gray-900">{formatDate(diary.date)}</p>
-                    <span className="text-[9px] font-bold text-primary bg-primary/10 px-1.5 py-0.5 rounded-md uppercase">
-                      {diary.diary_code}
-                    </span>
-                  </div>
-                  <p className="text-[10px] text-gray-400 font-bold uppercase truncate">
-                    {(diary as any).warehouses?.name}
-                  </p>
-                  <p className="text-[11px] text-gray-600 line-clamp-1 italic">
-                    {diary.work_progress}
-                  </p>
-                </div>
-                <div className="flex items-center gap-3">
-                  {diary.image_urls && diary.image_urls.length > 0 && (
-                    <div className="text-gray-300">
-                      <ImageIcon size={14} />
-                    </div>
-                  )}
-                  <ChevronRight
-                    size={16}
-                    className="text-gray-300 group-hover:text-primary transition-colors"
-                  />
-                </div>
-              </div>
-            ))
-          )}
-        </div>
-
-        {/* Desktop View - Professional Table */}
-        <div className="hidden md:block overflow-x-auto">
+        <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse whitespace-nowrap">
             <thead>
               <tr className="bg-primary text-white">
-                <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest border-r border-white/10">
+                <th className="px-1.5 md:px-3 py-2 md:py-3 text-[9px] md:text-[10px] font-black uppercase tracking-wider border-r border-white/10">
                   Ngày
                 </th>
-                <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest border-r border-white/10 text-center">
+                <th className="px-1.5 md:px-3 py-2 md:py-3 text-[9px] md:text-[10px] font-black uppercase tracking-wider border-r border-white/10 text-center">
                   Mã hiệu
                 </th>
-                <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest border-r border-white/10">
+                <th className="px-1.5 md:px-3 py-2 md:py-3 text-[9px] md:text-[10px] font-black uppercase tracking-wider border-r border-white/10">
                   Địa điểm / Dự án
                 </th>
-                <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest border-r border-white/10">
+                <th className="px-1.5 md:px-3 py-2 md:py-3 text-[9px] md:text-[10px] font-black uppercase tracking-wider border-r border-white/10">
                   Nhân sự chính
                 </th>
-                <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest border-r border-white/10">
+                <th className="px-1.5 md:px-3 py-2 md:py-3 text-[9px] md:text-[10px] font-black uppercase tracking-wider border-r border-white/10">
                   Diễn biến thi công
                 </th>
-                <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-center">
+                <th className="px-1.5 md:px-3 py-2 md:py-3 text-[9px] md:text-[10px] font-black uppercase tracking-wider text-center">
                   Ảnh
                 </th>
               </tr>
@@ -516,54 +463,79 @@ export const ConstructionDiaryComponent = ({
                   </td>
                 </tr>
               ) : (
-                filteredDiaries.map((diary) => (
-                  <tr
-                    key={diary.id}
-                    onClick={() => {
-                      setSelectedDiary(diary);
-                      setShowDetail(true);
-                    }}
-                    className="hover:bg-gray-50 transition-colors cursor-pointer group"
-                  >
-                    <td className="px-6 py-4 text-[11px] font-bold text-gray-600">
-                      {formatDate(diary.date)}
-                    </td>
-                    <td className="px-6 py-4 text-center">
-                      <span className="text-[10px] font-black text-primary bg-primary/5 px-2 py-1 rounded-full border border-primary/10">
-                        {diary.diary_code}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 text-xs font-black text-gray-800 uppercase tracking-tight">
-                      {(diary as any).warehouses?.name}
-                    </td>
-                    <td className="px-6 py-4 text-xs text-gray-600 italic truncate max-w-[200px]">
-                      {diary.labor_info || '-'}
-                    </td>
-                    <td className="px-6 py-4">
-                      <p className="text-xs text-gray-600 truncate max-w-[350px]">
-                        {diary.work_progress}
-                      </p>
-                    </td>
-                    <td className="px-6 py-4 text-center">
-                      <div className="flex items-center justify-center gap-1.5">
-                        {diary.image_urls && diary.image_urls.length > 0 ? (
-                          <div className="relative group/img">
-                            <div className="p-1.5 bg-gray-50 rounded-lg text-primary border border-gray-100 group-hover/img:bg-primary group-hover/img:text-white transition-all">
-                              <ImageIcon size={14} />
-                            </div>
-                            <span className="absolute -top-2 -right-2 bg-red-500 text-[8px] font-black text-white px-1 py-0.5 rounded-full ring-2 ring-white">
-                              {diary.image_urls.length}
-                            </span>
-                          </div>
-                        ) : (
-                          <span className="text-[10px] text-gray-300 font-bold uppercase tracking-tight">
-                            Ko có
+                (() => {
+                  let currentBackgroundColor = 'bg-white';
+                  let lastGroupKey = '';
+
+                  return filteredDiaries.map((diary) => {
+                    let groupKey = diary.date; // Default group by date
+                    if (sortBy === 'code' || sortBy === 'newest') {
+                      // Mẫu mã: NKTC-260419-... -> Lấy 11 ký tự đầu để nhóm các mã cùng ngày
+                      groupKey = diary.diary_code ? diary.diary_code.substring(0, 11) : diary.date;
+                    }
+
+                    if (groupKey !== lastGroupKey) {
+                      currentBackgroundColor =
+                        currentBackgroundColor === 'bg-white' ? 'bg-gray-100' : 'bg-white';
+                      lastGroupKey = groupKey;
+                    }
+
+                    return (
+                      <tr
+                        key={diary.id}
+                        onClick={() => {
+                          setSelectedDiary(diary);
+                          setShowDetail(true);
+                        }}
+                        className={`transition-colors cursor-pointer group ${currentBackgroundColor} hover:brightness-95`}
+                      >
+                        <td className="px-1.5 md:px-3 py-1.5 md:py-2.5 text-[9px] md:text-xs font-bold text-gray-600 border-b border-gray-100/50">
+                          {formatDate(diary.date)}
+                        </td>
+                        <td className="px-1.5 md:px-3 py-1.5 md:py-2.5 text-center border-b border-gray-100/50">
+                          <span className="text-[8px] md:text-[10px] font-black text-primary bg-primary/5 px-1.5 md:px-2 py-1 md:py-1.5 rounded-md md:rounded-full border border-primary/10 whitespace-nowrap hidden sm:inline-block">
+                            {diary.diary_code}
                           </span>
-                        )}
-                      </div>
-                    </td>
-                  </tr>
-                ))
+                          <span className="text-[8px] font-black text-primary bg-primary/5 px-1.5 py-1 rounded-md border border-primary/10 whitespace-nowrap sm:hidden">
+                            {(diary.diary_code || '').substring(0, 11)}..
+                          </span>
+                        </td>
+                        <td
+                          className="px-1.5 md:px-3 py-1.5 md:py-2.5 text-[9px] md:text-xs font-black text-gray-800 uppercase tracking-tight border-b border-gray-100/50 max-w-[120px] md:max-w-none truncate"
+                          title={(diary as any).warehouses?.name}
+                        >
+                          {(diary as any).warehouses?.name}
+                        </td>
+                        <td className="px-1.5 md:px-3 py-1.5 md:py-2.5 text-[9px] md:text-xs text-gray-600 italic truncate max-w-[80px] md:max-w-[200px] border-b border-gray-100/50">
+                          {diary.labor_info || '-'}
+                        </td>
+                        <td className="px-1.5 md:px-3 py-1.5 md:py-2.5 border-b border-gray-100/50">
+                          <p className="text-[9px] md:text-xs text-gray-600 truncate max-w-[120px] md:max-w-[250px]">
+                            {diary.work_progress}
+                          </p>
+                        </td>
+                        <td className="px-1.5 md:px-3 py-1.5 md:py-2.5 text-center border-b border-gray-100/50">
+                          <div className="flex items-center justify-center gap-1">
+                            {diary.image_urls && diary.image_urls.length > 0 ? (
+                              <div className="relative group/img">
+                                <div className="p-1 md:p-1.5 bg-white shadow-sm rounded-lg text-primary border border-gray-200 group-hover/img:bg-primary group-hover/img:text-white transition-all">
+                                  <ImageIcon size={12} className="md:w-3.5 md:h-3.5" />
+                                </div>
+                                <span className="absolute -top-1.5 -right-1.5 bg-red-500 text-[8px] font-black text-white px-1 py-0.5 rounded-full ring-2 ring-white z-10 w-3.5 h-3.5 md:w-4 md:h-4 flex items-center justify-center">
+                                  {diary.image_urls.length}
+                                </span>
+                              </div>
+                            ) : (
+                              <span className="text-[8px] md:text-[9px] text-gray-300 font-bold uppercase tracking-tight">
+                                ---
+                              </span>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  });
+                })()
               )}
             </tbody>
           </table>
@@ -609,13 +581,6 @@ export const ConstructionDiaryComponent = ({
                   </div>
                 </div>
                 <div className="flex gap-2">
-                  <button
-                    onClick={() => handleEdit(selectedDiary)}
-                    className="p-2 bg-white/10 hover:bg-white/20 rounded-xl transition-colors"
-                    title="Sửa nhật ký"
-                  >
-                    <Edit size={20} />
-                  </button>
                   <button
                     onClick={() => setShowDetail(false)}
                     className="p-2 hover:bg-white/20 rounded-xl transition-colors"
@@ -756,6 +721,14 @@ export const ConstructionDiaryComponent = ({
                   }}
                 >
                   Xóa nhật ký
+                </Button>
+                <Button
+                  variant="outline"
+                  icon={Edit}
+                  onClick={() => handleEdit(selectedDiary)}
+                  className="font-bold border-gray-200 hover:bg-white shadow-sm"
+                >
+                  Sửa
                 </Button>
                 <Button variant="primary" onClick={() => setShowDetail(false)}>
                   Đóng

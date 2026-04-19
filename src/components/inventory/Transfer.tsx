@@ -733,22 +733,22 @@ export const Transfer = ({
               <table className="w-full text-left border-collapse min-w-[700px] whitespace-nowrap">
                 <thead>
                   <tr className="bg-orange-500 text-white">
-                    <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider">
+                    <th className="px-2 md:px-4 py-2 md:py-3 text-[9px] md:text-[10px] font-bold uppercase tracking-wider border-r border-white/10">
                       Ngày
                     </th>
-                    <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider">
+                    <th className="px-2 md:px-4 py-2 md:py-3 text-[9px] md:text-[10px] font-bold uppercase tracking-wider border-r border-white/10">
                       Từ kho
                     </th>
-                    <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider">
+                    <th className="px-2 md:px-4 py-2 md:py-3 text-[9px] md:text-[10px] font-bold uppercase tracking-wider border-r border-white/10">
                       Đến kho
                     </th>
-                    <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider">
+                    <th className="px-2 md:px-4 py-2 md:py-3 text-[9px] md:text-[10px] font-bold uppercase tracking-wider border-r border-white/10">
                       Vật tư
                     </th>
-                    <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-center">
+                    <th className="px-2 md:px-4 py-2 md:py-3 text-[9px] md:text-[10px] font-bold uppercase tracking-wider text-center border-r border-white/10">
                       SL
                     </th>
-                    <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider">
+                    <th className="px-2 md:px-4 py-2 md:py-3 text-[9px] md:text-[10px] font-bold uppercase tracking-wider w-32 border-r border-white/10">
                       Trạng thái
                     </th>
                   </tr>
@@ -767,39 +767,64 @@ export const Transfer = ({
                       </td>
                     </tr>
                   ) : (
-                    filteredSlips.map((item) => (
-                      <tr
-                        key={item.id}
-                        onClick={() => handleRowClick(item)}
-                        className="hover:bg-gray-50 transition-colors cursor-pointer"
-                      >
-                        <td className="px-4 py-3 text-xs text-gray-600">{formatDate(item.date)}</td>
-                        <td className="px-4 py-3 text-xs text-gray-600">{item.from_wh?.name}</td>
-                        <td className="px-4 py-3 text-xs text-gray-600">{item.to_wh?.name}</td>
-                        <td className="px-4 py-3 text-xs text-gray-600 font-medium">
-                          {item.materials?.name}
-                        </td>
-                        <td className="px-4 py-3 text-xs text-orange-600 text-center font-bold">
-                          {formatNumber(item.quantity)}{' '}
-                          <span className="text-[10px] text-gray-400 font-normal">
-                            {item.materials?.unit || ''}
-                          </span>
-                        </td>
-                        <td className="px-4 py-3 text-xs">
-                          <span
-                            className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
-                              item.status === 'Đã duyệt'
-                                ? 'bg-green-100 text-green-600'
-                                : item.status === 'Từ chối'
-                                  ? 'bg-red-100 text-red-600'
-                                  : 'bg-amber-100 text-amber-600'
-                            }`}
+                    (() => {
+                      let currentBackgroundColor = 'bg-white';
+                      let lastGroupKey = '';
+
+                      return filteredSlips.map((item) => {
+                        let groupKey = item.date;
+                        if (sortBy === 'code' || sortBy === 'newest') {
+                          const dateMatch = item.transfer_code?.match(/-(\d+)-/);
+                          groupKey = dateMatch ? dateMatch[1] : item.date;
+                        }
+
+                        if (groupKey !== lastGroupKey) {
+                          currentBackgroundColor =
+                            currentBackgroundColor === 'bg-white' ? 'bg-gray-100' : 'bg-white';
+                          lastGroupKey = groupKey;
+                        }
+
+                        return (
+                          <tr
+                            key={item.id}
+                            onClick={() => handleRowClick(item)}
+                            className={`transition-colors cursor-pointer group hover:brightness-95 ${currentBackgroundColor}`}
                           >
-                            {item.status || 'Chờ duyệt'}
-                          </span>
-                        </td>
-                      </tr>
-                    ))
+                            <td className="px-2 md:px-4 py-2.5 md:py-3 text-[10px] md:text-xs text-gray-600 border-b border-gray-100/50">
+                              {formatDate(item.date)}
+                            </td>
+                            <td className="px-2 md:px-4 py-2.5 md:py-3 text-[10px] md:text-xs text-gray-600 max-w-[80px] break-words border-b border-gray-100/50">
+                              {item.from_wh?.name}
+                            </td>
+                            <td className="px-2 md:px-4 py-2.5 md:py-3 text-[10px] md:text-xs text-gray-600 max-w-[80px] break-words border-b border-gray-100/50">
+                              {item.to_wh?.name}
+                            </td>
+                            <td className="px-2 md:px-4 py-2.5 md:py-3 text-[11px] md:text-xs text-gray-800 font-bold border-b border-gray-100/50">
+                              {item.materials?.name}
+                            </td>
+                            <td className="px-2 md:px-4 py-2.5 md:py-3 text-[11px] md:text-xs text-orange-600 text-center font-bold border-b border-gray-100/50">
+                              {formatNumber(item.quantity)}{' '}
+                              <span className="text-[9px] md:text-[10px] text-gray-400 font-normal">
+                                {item.materials?.unit || ''}
+                              </span>
+                            </td>
+                            <td className="px-2 md:px-4 py-2.5 md:py-3 text-[10px] md:text-xs w-32 border-b border-gray-100/50">
+                              <span
+                                className={`px-1.5 md:px-2 py-0.5 md:py-1 rounded-md md:rounded-full text-[9px] md:text-[10px] font-bold block text-center ${
+                                  item.status === 'Đã duyệt'
+                                    ? 'bg-green-100 text-green-600'
+                                    : item.status === 'Từ chối'
+                                      ? 'bg-red-100 text-red-600'
+                                      : 'bg-amber-100 text-amber-600'
+                                }`}
+                              >
+                                {item.status || 'Chờ duyệt'}
+                              </span>
+                            </td>
+                          </tr>
+                        );
+                      });
+                    })()
                   )}
                 </tbody>
               </table>

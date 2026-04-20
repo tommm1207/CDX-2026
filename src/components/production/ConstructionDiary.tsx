@@ -113,7 +113,7 @@ export const ConstructionDiaryComponent = ({
   };
 
   const handleSaveTableImage = () => {
-    const reportElem = reportRef.current || tableBillRef.current;
+    const reportElem = reportRef.current;
     if (reportElem) {
       exportTableImage({
         element: reportElem,
@@ -130,7 +130,7 @@ export const ConstructionDiaryComponent = ({
     try {
       const { data: diaryData } = await supabase
         .from('construction_diaries')
-        .select('*, warehouses(id, name, code)')
+        .select('*, warehouses:warehouse_id(id, name, code)')
         .or('status.is.null,status.neq.Đã xóa')
         .order('date', { ascending: false });
       if (diaryData) setDiaries(diaryData);
@@ -424,17 +424,14 @@ export const ConstructionDiaryComponent = ({
                 <th className="px-1.5 md:px-3 py-2 md:py-3 text-[9px] md:text-[10px] font-black uppercase tracking-wider border-r border-white/10">
                   Ngày
                 </th>
-                <th className="px-1.5 md:px-3 py-2 md:py-3 text-[9px] md:text-[10px] font-black uppercase tracking-wider border-r border-white/10 text-center">
-                  Mã hiệu
-                </th>
                 <th className="px-1.5 md:px-3 py-2 md:py-3 text-[9px] md:text-[10px] font-black uppercase tracking-wider border-r border-white/10">
                   Địa điểm / Dự án
                 </th>
-                <th className="px-1.5 md:px-3 py-2 md:py-3 text-[9px] md:text-[10px] font-black uppercase tracking-wider border-r border-white/10">
-                  Nhân sự chính
+                <th className="px-1.5 md:px-3 py-2 md:py-3 text-[9px] md:text-[10px] font-black uppercase tracking-wider border-r border-white/10 w-1/3">
+                  Diễn biến thi công
                 </th>
                 <th className="px-1.5 md:px-3 py-2 md:py-3 text-[9px] md:text-[10px] font-black uppercase tracking-wider border-r border-white/10">
-                  Diễn biến thi công
+                  Nhân sự chính
                 </th>
                 <th className="px-1.5 md:px-3 py-2 md:py-3 text-[9px] md:text-[10px] font-black uppercase tracking-wider text-center">
                   Ảnh
@@ -489,39 +486,42 @@ export const ConstructionDiaryComponent = ({
                         }}
                         className={`transition-colors cursor-pointer group ${currentBackgroundColor} hover:brightness-95`}
                       >
-                        <td className="px-1.5 md:px-3 py-1.5 md:py-2.5 text-[9px] md:text-xs font-bold text-gray-600 border-b border-gray-100/50">
+                        <td className="px-1.5 md:px-3 py-2.5 md:py-4 text-[10px] md:text-sm font-bold text-gray-600 border-b border-gray-100/50">
                           {formatDate(diary.date)}
                         </td>
-                        <td className="px-1.5 md:px-3 py-1.5 md:py-2.5 text-center border-b border-gray-100/50">
-                          <span className="text-[8px] md:text-[10px] font-black text-primary bg-primary/5 px-1.5 md:px-2 py-1 md:py-1.5 rounded-md md:rounded-full border border-primary/10 whitespace-nowrap hidden sm:inline-block">
-                            {diary.diary_code}
-                          </span>
-                          <span className="text-[8px] font-black text-primary bg-primary/5 px-1.5 py-1 rounded-md border border-primary/10 whitespace-nowrap sm:hidden">
-                            {(diary.diary_code || '').substring(0, 11)}..
-                          </span>
-                        </td>
                         <td
-                          className="px-1.5 md:px-3 py-1.5 md:py-2.5 text-[9px] md:text-xs font-black text-gray-800 uppercase tracking-tight border-b border-gray-100/50 max-w-[120px] md:max-w-none truncate"
+                          className="px-1.5 md:px-3 py-2.5 md:py-4 text-[10px] md:text-sm font-black text-gray-800 uppercase tracking-tight border-b border-gray-100/50 max-w-[120px] md:max-w-[200px] truncate"
                           title={(diary as any).warehouses?.name}
                         >
                           {(diary as any).warehouses?.name}
                         </td>
-                        <td className="px-1.5 md:px-3 py-1.5 md:py-2.5 text-[9px] md:text-xs text-gray-600 italic truncate max-w-[80px] md:max-w-[200px] border-b border-gray-100/50">
-                          {diary.labor_info || '-'}
-                        </td>
-                        <td className="px-1.5 md:px-3 py-1.5 md:py-2.5 border-b border-gray-100/50">
-                          <p className="text-[9px] md:text-xs text-gray-600 truncate max-w-[120px] md:max-w-[250px]">
+                        <td className="px-1.5 md:px-3 py-2.5 md:py-4 border-b border-gray-100/50">
+                          <p className="text-[11px] md:text-sm text-gray-800 whitespace-normal line-clamp-3">
                             {diary.work_progress}
                           </p>
                         </td>
-                        <td className="px-1.5 md:px-3 py-1.5 md:py-2.5 text-center border-b border-gray-100/50">
+                        <td className="px-1.5 md:px-3 py-2.5 md:py-4 text-[10px] md:text-sm text-gray-600 italic whitespace-normal border-b border-gray-100/50">
+                          {diary.labor_info?.split(', ').map((info) => {
+                            const trimmedInfo = info.trim();
+                            // If info already contains a code (e.g. "[CDX001] ...")
+                            return (
+                              <span
+                                key={info}
+                                className="inline-block bg-gray-100 px-1.5 py-0.5 rounded text-[9px] md:text-xs mb-1 mr-1"
+                              >
+                                {trimmedInfo}
+                              </span>
+                            );
+                          }) || '-'}
+                        </td>
+                        <td className="px-1.5 md:px-3 py-2.5 md:py-4 text-center border-b border-gray-100/50">
                           <div className="flex items-center justify-center gap-1">
                             {diary.image_urls && diary.image_urls.length > 0 ? (
                               <div className="relative group/img">
-                                <div className="p-1 md:p-1.5 bg-white shadow-sm rounded-lg text-primary border border-gray-200 group-hover/img:bg-primary group-hover/img:text-white transition-all">
-                                  <ImageIcon size={12} className="md:w-3.5 md:h-3.5" />
+                                <div className="p-1 md:p-2 bg-white shadow-sm rounded-lg text-primary border border-gray-200 group-hover/img:bg-primary group-hover/img:text-white transition-all">
+                                  <ImageIcon size={14} className="md:w-4 md:h-4" />
                                 </div>
-                                <span className="absolute -top-1.5 -right-1.5 bg-red-500 text-[8px] font-black text-white px-1 py-0.5 rounded-full ring-2 ring-white z-10 w-3.5 h-3.5 md:w-4 md:h-4 flex items-center justify-center">
+                                <span className="absolute -top-1.5 -right-1.5 bg-red-500 text-[8px] font-black text-white px-1 py-0.5 rounded-full ring-2 ring-white z-10 w-4 h-4 md:w-5 md:h-5 flex items-center justify-center">
                                   {diary.image_urls.length}
                                 </span>
                               </div>
@@ -783,7 +783,10 @@ export const ConstructionDiaryComponent = ({
                 </button>
               </div>
 
-              <div className="p-4 sm:p-8 overflow-y-auto custom-scrollbar space-y-8 bg-gray-50/50 flex-1">
+              <div
+                className="p-4 sm:p-8 overflow-y-auto overflow-x-hidden custom-scrollbar space-y-8 bg-gray-50/50 flex-1 overscroll-contain"
+                style={{ touchAction: 'pan-y' }}
+              >
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                   <div className="space-y-2">
                     <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">
@@ -834,19 +837,23 @@ export const ConstructionDiaryComponent = ({
                     </label>
                     <CreatableSelect
                       value={formData.weather || ''}
-                      options={[
-                        ...WEATHER_OPTIONS.map((o) => ({ id: o.value, name: o.label })),
-                        ...Array.from(
-                          new Set(
-                            diaries
-                              .map((d) => d.weather)
-                              .filter(
-                                (w) =>
-                                  w && !WEATHER_OPTIONS.find((o) => o.value === w || o.label === w),
-                              ),
-                          ),
-                        ).map((w) => ({ id: w, name: w })),
-                      ]}
+                      options={
+                        [
+                          ...WEATHER_OPTIONS.map((o) => ({ id: o.value, name: o.label })),
+                          ...Array.from(
+                            new Set(
+                              diaries
+                                .map((d) => d.weather)
+                                .filter(
+                                  (w): w is string =>
+                                    typeof w === 'string' &&
+                                    w.length > 0 &&
+                                    !WEATHER_OPTIONS.find((o) => o.value === w || o.label === w),
+                                ),
+                            ),
+                          ).map((w) => ({ id: String(w), name: String(w) })),
+                        ] as { id: string; name: string }[]
+                      }
                       onChange={(id) => setFormData({ ...formData, weather: id })}
                       onCreate={(name) => setFormData({ ...formData, weather: name })}
                       placeholder="Chọn hoặc nhập thời tiết..."
@@ -873,7 +880,10 @@ export const ConstructionDiaryComponent = ({
                       Nhân sự & Tổ đội công trường
                     </label>
                     <div className="space-y-3">
-                      <div className="bg-white rounded-2xl border border-gray-100 p-3 max-h-[160px] overflow-y-auto no-scrollbar space-y-1">
+                      <div
+                        className="bg-white rounded-2xl border border-gray-100 p-3 max-h-[200px] overflow-y-auto overflow-x-hidden no-scrollbar space-y-1 overscroll-contain"
+                        style={{ touchAction: 'pan-y' }}
+                      >
                         <div className="relative mb-2">
                           <Search
                             size={14}
@@ -887,22 +897,21 @@ export const ConstructionDiaryComponent = ({
                             onChange={(e) => setUserSearchTerm(e.target.value)}
                           />
                         </div>
-                        <div className="grid grid-cols-2 gap-2">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                           {users
                             .filter((u) =>
                               u.full_name.toLowerCase().includes(userSearchTerm.toLowerCase()),
                             )
                             .map((u) => {
-                              const isSelected = formData.labor_info
-                                ?.split(', ')
-                                .includes(u.full_name);
+                              const label = `[${u.code}] ${u.full_name}`;
+                              const isSelected = formData.labor_info?.split(', ').includes(label);
                               return (
                                 <label
                                   key={u.id}
-                                  className={`flex items-center gap-2 p-2 rounded-xl border transition-all cursor-pointer ${
+                                  className={`flex items-center gap-3 p-3.5 rounded-2xl border transition-all cursor-pointer active:scale-95 ${
                                     isSelected
-                                      ? 'bg-primary/5 border-primary/20 text-primary'
-                                      : 'bg-gray-50/50 border-transparent text-gray-500 hover:bg-gray-50'
+                                      ? 'bg-primary border-primary text-white shadow-md shadow-primary/20'
+                                      : 'bg-white border-gray-100 text-gray-700 hover:border-primary/30 hover:bg-gray-50'
                                   }`}
                                 >
                                   <input
@@ -910,21 +919,32 @@ export const ConstructionDiaryComponent = ({
                                     className="hidden"
                                     checked={isSelected}
                                     onChange={(e) => {
+                                      const label = `[${u.code}] ${u.full_name}`;
                                       const current = formData.labor_info
                                         ? formData.labor_info.split(', ').filter(Boolean)
                                         : [];
                                       let next;
                                       if (e.target.checked) {
-                                        next = [...current, u.full_name];
+                                        next = [...current, label];
                                       } else {
-                                        next = current.filter((n) => n !== u.full_name);
+                                        next = current.filter((n) => n !== label);
                                       }
                                       setFormData({ ...formData, labor_info: next.join(', ') });
                                     }}
                                   />
-                                  <span className="text-[11px] font-bold truncate">
-                                    {u.full_name}
-                                  </span>
+                                  {isSelected ? (
+                                    <CheckCircle size={16} className="flex-shrink-0" />
+                                  ) : (
+                                    <Plus size={16} className="text-gray-300 flex-shrink-0" />
+                                  )}
+                                  <div className="flex flex-col min-w-0">
+                                    <span className="text-[10px] font-black opacity-70 leading-none mb-1">
+                                      {u.code}
+                                    </span>
+                                    <span className="text-xs font-bold truncate">
+                                      {u.full_name}
+                                    </span>
+                                  </div>
                                 </label>
                               );
                             })}
@@ -1097,10 +1117,9 @@ export const ConstructionDiaryComponent = ({
             <thead>
               <tr className="bg-indigo-600 text-white text-[10px] font-black uppercase tracking-widest italic">
                 <th className="px-4 py-4 border-r border-white/10">Ngày</th>
-                <th className="px-4 py-4 border-r border-white/10 text-center">Mã hiệu</th>
                 <th className="px-4 py-4 border-r border-white/10">Địa điểm / Dự án</th>
+                <th className="px-4 py-4 border-r border-white/10 w-1/3">Diễn biến thi công</th>
                 <th className="px-4 py-4 border-r border-white/10">Nhân sự chính</th>
-                <th className="px-4 py-4 border-r border-white/10">Diễn biến thi công</th>
                 <th className="px-4 py-4 text-center">Ảnh</th>
               </tr>
             </thead>
@@ -1108,19 +1127,14 @@ export const ConstructionDiaryComponent = ({
               {filteredDiaries.map((diary, idx) => (
                 <tr key={idx} className={idx % 2 === 0 ? 'bg-white' : 'bg-indigo-50/10'}>
                   <td className="px-4 py-3 font-bold text-gray-600">{formatDate(diary.date)}</td>
-                  <td className="px-4 py-3 text-center">
-                    <span className="font-black text-indigo-600 font-mono tracking-tighter">
-                      #{diary.diary_code}
-                    </span>
-                  </td>
                   <td className="px-4 py-3 font-black text-gray-900 uppercase tracking-tight">
                     {(diary as any).warehouses?.name}
                   </td>
+                  <td className="px-4 py-3 text-gray-800 leading-relaxed break-words">
+                    {diary.work_progress}
+                  </td>
                   <td className="px-4 py-3 text-gray-600 italic font-medium">
                     {diary.labor_info || '—'}
-                  </td>
-                  <td className="px-4 py-3 text-gray-800 leading-relaxed max-w-[400px] break-words">
-                    {diary.work_progress}
                   </td>
                   <td className="px-4 py-3 text-center">
                     {diary.image_urls && diary.image_urls.length > 0 ? (

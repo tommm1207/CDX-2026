@@ -639,7 +639,7 @@ export const HRRecords = ({
               </div>
 
               <div className="flex-1 overflow-y-auto overflow-x-hidden custom-scrollbar">
-                <form onSubmit={handleSubmit} className="p-4 sm:p-6">
+                <form id="hr-employee-form" onSubmit={handleSubmit} className="p-4 sm:p-6">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div className="md:col-span-2 space-y-2 mb-2">
                       <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">
@@ -845,22 +845,23 @@ export const HRRecords = ({
                       </select>
                     </div>
                   </div>
-
-                  <div className="p-6 bg-gray-50 flex justify-end gap-3 flex-shrink-0">
-                    <Button variant="ghost" onClick={() => setShowModal(false)}>
-                      Hủy bỏ
-                    </Button>
-                    <Button
-                      type="submit"
-                      disabled={submitting}
-                      variant="primary"
-                      isLoading={submitting}
-                      className="min-w-[120px]"
-                    >
-                      Lưu dữ liệu
-                    </Button>
-                  </div>
                 </form>
+              </div>
+
+              <div className="p-4 sm:p-6 bg-gray-50 flex justify-end gap-3 flex-shrink-0 border-t border-gray-100 rounded-b-[1.5rem] md:rounded-b-[2.5rem]">
+                <Button variant="ghost" onClick={() => setShowModal(false)}>
+                  Hủy bỏ
+                </Button>
+                <Button
+                  type="submit"
+                  form="hr-employee-form"
+                  disabled={submitting}
+                  variant="primary"
+                  isLoading={submitting}
+                  className="min-w-[120px]"
+                >
+                  Lưu dữ liệu
+                </Button>
               </div>
             </motion.div>
           </div>

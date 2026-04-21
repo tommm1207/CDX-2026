@@ -415,25 +415,26 @@ export const ConstructionDiaryComponent = ({
         )}
       </AnimatePresence>
 
-      {/* Main Content Area - Responsive Table */}
+      {/* Main Content Area - Responsive Container */}
       <div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
-        <div className="overflow-x-auto">
+        {/* Desktop Table View */}
+        <div className="hidden md:block overflow-x-auto custom-scrollbar">
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="bg-primary text-white">
-                <th className="px-1.5 md:px-3 py-2 md:py-3 text-[9px] md:text-[10px] font-black uppercase tracking-wider border-r border-white/10 whitespace-nowrap">
+                <th className="px-3 py-3 text-[10px] font-black uppercase tracking-wider border-r border-white/10 whitespace-nowrap">
                   Ngày
                 </th>
-                <th className="px-1.5 md:px-3 py-2 md:py-3 text-[9px] md:text-[10px] font-black uppercase tracking-wider border-r border-white/10 whitespace-nowrap">
+                <th className="px-3 py-3 text-[10px] font-black uppercase tracking-wider border-r border-white/10 whitespace-nowrap">
                   Địa điểm / Dự án
                 </th>
-                <th className="px-1.5 md:px-3 py-2 md:py-3 text-[9px] md:text-[10px] font-black uppercase tracking-wider border-r border-white/10 w-1/3 min-w-[120px]">
+                <th className="px-3 py-3 text-[10px] font-black uppercase tracking-wider border-r border-white/10 w-1/3 min-w-[120px]">
                   Diễn biến thi công
                 </th>
-                <th className="px-1.5 md:px-3 py-2 md:py-3 text-[9px] md:text-[10px] font-black uppercase tracking-wider border-r border-white/10 min-w-[100px]">
+                <th className="px-3 py-3 text-[10px] font-black uppercase tracking-wider border-r border-white/10 min-w-[100px]">
                   Nhân sự chính
                 </th>
-                <th className="px-1.5 md:px-3 py-2 md:py-3 text-[9px] md:text-[10px] font-black uppercase tracking-wider text-center whitespace-nowrap">
+                <th className="px-3 py-3 text-[10px] font-black uppercase tracking-wider text-center whitespace-nowrap">
                   Ảnh
                 </th>
               </tr>
@@ -444,7 +445,7 @@ export const ConstructionDiaryComponent = ({
                   .fill(0)
                   .map((_, i) => (
                     <tr key={i} className="animate-pulse">
-                      {Array(6)
+                      {Array(5)
                         .fill(0)
                         .map((_, j) => (
                           <td key={j} className="px-6 py-4">
@@ -455,7 +456,7 @@ export const ConstructionDiaryComponent = ({
                   ))
               ) : filteredDiaries.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="px-6 py-20 text-center text-gray-400 italic">
+                  <td colSpan={5} className="px-6 py-20 text-center text-gray-400 italic">
                     Chưa có nhật ký nào được ghi nhận
                   </td>
                 </tr>
@@ -465,9 +466,8 @@ export const ConstructionDiaryComponent = ({
                   let lastGroupKey = '';
 
                   return filteredDiaries.map((diary) => {
-                    let groupKey = diary.date; // Default group by date
+                    let groupKey = diary.date;
                     if (sortBy === 'code' || sortBy === 'newest') {
-                      // Mẫu mã: NKTC-260419-... -> Lấy 11 ký tự đầu để nhóm các mã cùng ngày
                       groupKey = diary.diary_code ? diary.diary_code.substring(0, 11) : diary.date;
                     }
 
@@ -486,51 +486,45 @@ export const ConstructionDiaryComponent = ({
                         }}
                         className={`transition-colors cursor-pointer group ${currentBackgroundColor} hover:brightness-95`}
                       >
-                        <td className="px-1.5 md:px-3 py-2.5 md:py-4 text-[10px] md:text-sm font-bold text-gray-600 border-b border-gray-100/50">
+                        <td className="px-3 py-4 text-sm font-bold text-gray-600 border-b border-gray-100/50">
                           {formatDate(diary.date)}
                         </td>
                         <td
-                          className="px-1.5 md:px-3 py-2.5 md:py-4 text-[10px] md:text-sm font-black text-gray-800 uppercase tracking-tight border-b border-gray-100/50 max-w-[120px] md:max-w-[200px] truncate"
+                          className="px-3 py-4 text-sm font-black text-gray-800 uppercase tracking-tight border-b border-gray-100/50 max-w-[200px] truncate"
                           title={(diary as any).warehouses?.name}
                         >
                           {(diary as any).warehouses?.name}
                         </td>
-                        <td className="px-1.5 md:px-3 py-2.5 md:py-4 border-b border-gray-100/50">
-                          <p className="text-[11px] md:text-sm text-gray-800 whitespace-normal line-clamp-3">
+                        <td className="px-3 py-4 border-b border-gray-100/50">
+                          <p className="text-sm text-gray-800 whitespace-normal line-clamp-3">
                             {diary.work_progress}
                           </p>
                         </td>
-                        <td className="px-1.5 md:px-3 py-2.5 md:py-4 text-[10px] md:text-sm text-gray-600 italic whitespace-normal border-b border-gray-100/50">
-                          {diary.labor_info?.split(', ').map((info) => {
-                            const trimmedInfo = info.trim();
-                            // If info already contains a code (e.g. "[CDX001] ...")
-                            return (
-                              <span
-                                key={info}
-                                className="inline-block bg-gray-100 px-1.5 py-0.5 rounded text-[9px] md:text-xs mb-1 mr-1"
-                              >
-                                {trimmedInfo}
-                              </span>
-                            );
-                          }) || '-'}
+                        <td className="px-3 py-4 text-sm text-gray-600 italic whitespace-normal border-b border-gray-100/50">
+                          {diary.labor_info?.split(', ').map((info) => (
+                            <span
+                              key={info}
+                              className="inline-block bg-gray-100 px-1.5 py-0.5 rounded text-xs mb-1 mr-1 shadow-sm"
+                            >
+                              {info.trim()}
+                            </span>
+                          )) || '-'}
                         </td>
-                        <td className="px-1.5 md:px-3 py-2.5 md:py-4 text-center border-b border-gray-100/50">
-                          <div className="flex items-center justify-center gap-1">
-                            {diary.image_urls && diary.image_urls.length > 0 ? (
-                              <div className="relative group/img">
-                                <div className="p-1 md:p-2 bg-white shadow-sm rounded-lg text-primary border border-gray-200 group-hover/img:bg-primary group-hover/img:text-white transition-all">
-                                  <ImageIcon size={14} className="md:w-4 md:h-4" />
-                                </div>
-                                <span className="absolute -top-1.5 -right-1.5 bg-red-500 text-[8px] font-black text-white px-1 py-0.5 rounded-full ring-2 ring-white z-10 w-4 h-4 md:w-5 md:h-5 flex items-center justify-center">
-                                  {diary.image_urls.length}
-                                </span>
+                        <td className="px-3 py-4 text-center border-b border-gray-100/50">
+                          {diary.image_urls && diary.image_urls.length > 0 ? (
+                            <div className="relative group/img inline-block">
+                              <div className="p-2 bg-white shadow-sm rounded-lg text-primary border border-gray-200 group-hover/img:bg-primary group-hover/img:text-white transition-all">
+                                <ImageIcon size={16} />
                               </div>
-                            ) : (
-                              <span className="text-[8px] md:text-[9px] text-gray-300 font-bold uppercase tracking-tight">
-                                ---
+                              <span className="absolute -top-1.5 -right-1.5 bg-red-500 text-[9px] font-black text-white px-1 py-0.5 rounded-full ring-2 ring-white">
+                                {diary.image_urls.length}
                               </span>
-                            )}
-                          </div>
+                            </div>
+                          ) : (
+                            <span className="text-[9px] text-gray-300 font-bold uppercase tracking-tight">
+                              ---
+                            </span>
+                          )}
                         </td>
                       </tr>
                     );
@@ -539,6 +533,78 @@ export const ConstructionDiaryComponent = ({
               )}
             </tbody>
           </table>
+        </div>
+
+        {/* Mobile Card View */}
+        <div className="md:hidden divide-y divide-gray-100">
+          {loading ? (
+            <div className="p-12 text-center text-gray-400">
+              <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-2"></div>
+              <p className="text-xs">Đang tải dữ liệu...</p>
+            </div>
+          ) : filteredDiaries.length === 0 ? (
+            <div className="p-12 text-center text-gray-400 italic text-xs">
+              Chưa có nhật ký nào được ghi nhận
+            </div>
+          ) : (
+            filteredDiaries.map((diary) => (
+              <div
+                key={diary.id}
+                onClick={() => {
+                  setSelectedDiary(diary);
+                  setShowDetail(true);
+                }}
+                className="p-4 space-y-3 bg-white active:bg-gray-50 transition-colors"
+              >
+                <div className="flex items-center justify-between">
+                  <div className="flex flex-col">
+                    <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">
+                      {formatDate(diary.date)}
+                    </span>
+                    <span className="text-xs font-bold text-primary uppercase">
+                      {diary.diary_code || 'NKTC-...'}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {diary.image_urls && diary.image_urls.length > 0 && (
+                      <span className="bg-red-50 text-red-600 text-[9px] font-black px-1.5 py-0.5 rounded-md flex items-center gap-1 border border-red-100">
+                        <ImageIcon size={10} /> {diary.image_urls.length}
+                      </span>
+                    )}
+                    <ChevronRight size={16} className="text-gray-300" />
+                  </div>
+                </div>
+
+                <div>
+                  <h4 className="text-sm font-black text-gray-800 uppercase leading-snug break-words">
+                    {(diary as any).warehouses?.name || '---'}
+                  </h4>
+                  <p className="text-xs text-gray-500 line-clamp-2 mt-1 leading-relaxed">
+                    {diary.work_progress}
+                  </p>
+                </div>
+
+                <div className="flex flex-wrap gap-1">
+                  {diary.labor_info
+                    ?.split(', ')
+                    .slice(0, 3)
+                    .map((info, idx) => (
+                      <span
+                        key={idx}
+                        className="text-[9px] font-medium bg-gray-50 text-gray-600 px-1.5 py-0.5 rounded border border-gray-100 truncate max-w-[100px]"
+                      >
+                        {info.trim()}
+                      </span>
+                    ))}
+                  {(diary.labor_info?.split(', ').length || 0) > 3 && (
+                    <span className="text-[9px] font-medium bg-gray-50 text-gray-400 px-1.5 py-0.5 rounded border border-gray-100">
+                      +{(diary.labor_info?.split(', ').length || 0) - 3}
+                    </span>
+                  )}
+                </div>
+              </div>
+            ))
+          )}
         </div>
       </div>
 

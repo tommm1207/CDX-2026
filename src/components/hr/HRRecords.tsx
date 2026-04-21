@@ -389,10 +389,9 @@ export const HRRecords = ({
 
       <div
         ref={tableRef}
-        className="bg-white p-2 md:p-4 rounded-2xl md:rounded-3xl shadow-sm border border-gray-100 space-y-4"
+        className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 space-y-4"
       >
-        {/* Desktop Table View */}
-        <div className="hidden md:block overflow-x-auto custom-scrollbar pb-2">
+        <div className="overflow-x-auto custom-scrollbar pb-2">
           <table className="w-full text-left border-separate border-spacing-0">
             <thead>
               <tr className="bg-primary text-white text-[11px] uppercase tracking-wider whitespace-nowrap">
@@ -507,109 +506,6 @@ export const HRRecords = ({
               )}
             </tbody>
           </table>
-        </div>
-
-        {/* Mobile Card View */}
-        <div className="md:hidden space-y-3 pb-4">
-          {loading ? (
-            <div className="p-12 text-center text-gray-400">
-              <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-2"></div>
-              <p className="text-xs">Đang tải...</p>
-            </div>
-          ) : filteredEmployees.length === 0 ? (
-            <p className="p-8 text-center text-gray-400 text-xs">Không tìm thấy nhân sự</p>
-          ) : (
-            filteredEmployees.map((emp) => (
-              <div
-                key={emp.id}
-                onClick={() => handleEdit(emp)}
-                className="bg-gray-50/50 rounded-2xl p-4 border border-gray-100 space-y-3 active:bg-gray-100 transition-colors"
-              >
-                <div className="flex items-start justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 bg-primary/10 rounded-xl flex items-center justify-center text-primary">
-                      <Users size={20} />
-                    </div>
-                    <div>
-                      <h4 className="font-bold text-gray-800 text-sm leading-tight">
-                        {emp.full_name}
-                      </h4>
-                      <p className="text-[10px] font-black text-primary uppercase tracking-wider">
-                        {emp.code || emp.id.slice(0, 8)}
-                      </p>
-                    </div>
-                  </div>
-                  <div className="flex flex-col items-end gap-1">
-                    <span
-                      className={`px-2 py-0.5 rounded-full text-[9px] font-black uppercase ${
-                        emp.status === 'Đang làm việc' || emp.status === 'Hoạt động'
-                          ? 'bg-green-100 text-green-600'
-                          : 'bg-red-100 text-red-600'
-                      }`}
-                    >
-                      {emp.status}
-                    </span>
-                    <span className="text-[9px] font-bold text-gray-400">
-                      {emp.department || '-'}
-                    </span>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-2 text-[10px]">
-                  <div className="bg-white p-2 rounded-xl border border-gray-50 flex flex-col">
-                    <span className="text-gray-400 uppercase font-bold text-[8px]">
-                      Số điện thoại
-                    </span>
-                    <span className="text-gray-700 font-medium truncate">{emp.phone || '-'}</span>
-                  </div>
-                  <div className="bg-white p-2 rounded-xl border border-gray-50 flex flex-col">
-                    <span className="text-gray-400 uppercase font-bold text-[8px]">Ngày vào</span>
-                    <span className="text-gray-700 font-medium truncate">
-                      {emp.join_date || '-'}
-                    </span>
-                  </div>
-                </div>
-
-                <div className="flex items-center justify-between pt-2 border-t border-gray-100">
-                  <span
-                    className={`px-2 py-0.5 rounded-full text-[9px] font-bold ${
-                      emp.role === 'Develop'
-                        ? 'bg-purple-100 text-purple-600'
-                        : emp.role === 'Admin'
-                          ? 'bg-blue-100 text-blue-600'
-                          : 'bg-gray-100 text-gray-600'
-                    }`}
-                  >
-                    Quyền: {emp.role}
-                  </span>
-                  <div className="flex gap-2">
-                    <Button
-                      size="icon"
-                      variant="ghost"
-                      className="w-8 h-8 text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-lg"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleEdit(emp);
-                      }}
-                      icon={Edit}
-                      iconSize={14}
-                    />
-                    <Button
-                      size="icon"
-                      variant="ghost"
-                      className="w-8 h-8 text-red-600 bg-red-50 hover:bg-red-100 rounded-lg"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleDeleteClick(emp.id);
-                      }}
-                      icon={Trash2}
-                      iconSize={14}
-                    />
-                  </div>
-                </div>
-              </div>
-            ))
-          )}
         </div>
       </div>
 
@@ -742,7 +638,7 @@ export const HRRecords = ({
                 </button>
               </div>
 
-              <div className="flex-1 overflow-y-auto custom-scrollbar">
+              <div className="flex-1 overflow-y-auto overflow-x-hidden custom-scrollbar">
                 <form onSubmit={handleSubmit} className="p-4 sm:p-6">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div className="md:col-span-2 space-y-2 mb-2">

@@ -418,7 +418,7 @@ export const ConstructionDiaryComponent = ({
       {/* Main Content Area - Responsive Container */}
       <div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
         {/* Desktop Table View */}
-        <div className="hidden md:block overflow-x-auto custom-scrollbar">
+        <div className="overflow-x-auto custom-scrollbar">
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="bg-primary text-white">
@@ -533,78 +533,6 @@ export const ConstructionDiaryComponent = ({
               )}
             </tbody>
           </table>
-        </div>
-
-        {/* Mobile Card View */}
-        <div className="md:hidden divide-y divide-gray-100">
-          {loading ? (
-            <div className="p-12 text-center text-gray-400">
-              <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-2"></div>
-              <p className="text-xs">Đang tải dữ liệu...</p>
-            </div>
-          ) : filteredDiaries.length === 0 ? (
-            <div className="p-12 text-center text-gray-400 italic text-xs">
-              Chưa có nhật ký nào được ghi nhận
-            </div>
-          ) : (
-            filteredDiaries.map((diary) => (
-              <div
-                key={diary.id}
-                onClick={() => {
-                  setSelectedDiary(diary);
-                  setShowDetail(true);
-                }}
-                className="p-4 space-y-3 bg-white active:bg-gray-50 transition-colors"
-              >
-                <div className="flex items-center justify-between">
-                  <div className="flex flex-col">
-                    <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">
-                      {formatDate(diary.date)}
-                    </span>
-                    <span className="text-xs font-bold text-primary uppercase">
-                      {diary.diary_code || 'NKTC-...'}
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    {diary.image_urls && diary.image_urls.length > 0 && (
-                      <span className="bg-red-50 text-red-600 text-[9px] font-black px-1.5 py-0.5 rounded-md flex items-center gap-1 border border-red-100">
-                        <ImageIcon size={10} /> {diary.image_urls.length}
-                      </span>
-                    )}
-                    <ChevronRight size={16} className="text-gray-300" />
-                  </div>
-                </div>
-
-                <div>
-                  <h4 className="text-sm font-black text-gray-800 uppercase leading-snug break-words">
-                    {(diary as any).warehouses?.name || '---'}
-                  </h4>
-                  <p className="text-xs text-gray-500 line-clamp-2 mt-1 leading-relaxed">
-                    {diary.work_progress}
-                  </p>
-                </div>
-
-                <div className="flex flex-wrap gap-1">
-                  {diary.labor_info
-                    ?.split(', ')
-                    .slice(0, 3)
-                    .map((info, idx) => (
-                      <span
-                        key={idx}
-                        className="text-[9px] font-medium bg-gray-50 text-gray-600 px-1.5 py-0.5 rounded border border-gray-100 truncate max-w-[100px]"
-                      >
-                        {info.trim()}
-                      </span>
-                    ))}
-                  {(diary.labor_info?.split(', ').length || 0) > 3 && (
-                    <span className="text-[9px] font-medium bg-gray-50 text-gray-400 px-1.5 py-0.5 rounded border border-gray-100">
-                      +{(diary.labor_info?.split(', ').length || 0) - 3}
-                    </span>
-                  )}
-                </div>
-              </div>
-            ))
-          )}
         </div>
       </div>
 

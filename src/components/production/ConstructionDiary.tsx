@@ -314,7 +314,7 @@ export const ConstructionDiaryComponent = ({
   }, [showAddNew, showDetail, setHideBottomNav]);
 
   return (
-    <div className="p-4 md:p-6 space-y-6 pb-24 max-w-[100vw] overflow-x-hidden">
+    <div className="p-4 md:p-6 space-y-6 pb-24 max-w-full overflow-x-hidden">
       {/* Header Section */}
       <div className="flex items-center justify-between gap-2 mb-4">
         <PageBreadcrumb title="Nhật ký thi công" onBack={onBack} />
@@ -418,22 +418,22 @@ export const ConstructionDiaryComponent = ({
       {/* Main Content Area - Responsive Table */}
       <div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse whitespace-nowrap">
+          <table className="w-full text-left border-collapse">
             <thead>
               <tr className="bg-primary text-white">
-                <th className="px-1.5 md:px-3 py-2 md:py-3 text-[9px] md:text-[10px] font-black uppercase tracking-wider border-r border-white/10">
+                <th className="px-1.5 md:px-3 py-2 md:py-3 text-[9px] md:text-[10px] font-black uppercase tracking-wider border-r border-white/10 whitespace-nowrap">
                   Ngày
                 </th>
-                <th className="px-1.5 md:px-3 py-2 md:py-3 text-[9px] md:text-[10px] font-black uppercase tracking-wider border-r border-white/10">
+                <th className="px-1.5 md:px-3 py-2 md:py-3 text-[9px] md:text-[10px] font-black uppercase tracking-wider border-r border-white/10 whitespace-nowrap">
                   Địa điểm / Dự án
                 </th>
-                <th className="px-1.5 md:px-3 py-2 md:py-3 text-[9px] md:text-[10px] font-black uppercase tracking-wider border-r border-white/10 w-1/3">
+                <th className="px-1.5 md:px-3 py-2 md:py-3 text-[9px] md:text-[10px] font-black uppercase tracking-wider border-r border-white/10 w-1/3 min-w-[120px]">
                   Diễn biến thi công
                 </th>
-                <th className="px-1.5 md:px-3 py-2 md:py-3 text-[9px] md:text-[10px] font-black uppercase tracking-wider border-r border-white/10">
+                <th className="px-1.5 md:px-3 py-2 md:py-3 text-[9px] md:text-[10px] font-black uppercase tracking-wider border-r border-white/10 min-w-[100px]">
                   Nhân sự chính
                 </th>
-                <th className="px-1.5 md:px-3 py-2 md:py-3 text-[9px] md:text-[10px] font-black uppercase tracking-wider text-center">
+                <th className="px-1.5 md:px-3 py-2 md:py-3 text-[9px] md:text-[10px] font-black uppercase tracking-wider text-center whitespace-nowrap">
                   Ảnh
                 </th>
               </tr>
@@ -908,7 +908,7 @@ export const ConstructionDiaryComponent = ({
                               return (
                                 <label
                                   key={u.id}
-                                  className={`flex items-center gap-3 p-3.5 rounded-2xl border transition-all cursor-pointer active:scale-95 ${
+                                  className={`flex items-center gap-3 p-3.5 rounded-2xl border transition-all cursor-pointer ${
                                     isSelected
                                       ? 'bg-primary border-primary text-white shadow-md shadow-primary/20'
                                       : 'bg-white border-gray-100 text-gray-700 hover:border-primary/30 hover:bg-gray-50'
@@ -1115,7 +1115,7 @@ export const ConstructionDiaryComponent = ({
           {/* Table */}
           <table className="w-full text-left border-collapse rounded-3xl overflow-hidden shadow-sm border border-gray-100">
             <thead>
-              <tr className="bg-indigo-600 text-white text-[10px] font-black uppercase tracking-widest italic">
+              <tr className="bg-indigo-600 text-white text-[10px] font-black uppercase tracking-widest italic whitespace-nowrap">
                 <th className="px-4 py-4 border-r border-white/10">Ngày</th>
                 <th className="px-4 py-4 border-r border-white/10">Địa điểm / Dự án</th>
                 <th className="px-4 py-4 border-r border-white/10 w-1/3">Diễn biến thi công</th>

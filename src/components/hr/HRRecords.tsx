@@ -339,7 +339,7 @@ export const HRRecords = ({
   }, [filteredEmployees, addToast]);
 
   return (
-    <div className="p-4 md:p-6 space-y-6 pb-24 overflow-x-hidden">
+    <div className="p-4 md:p-6 space-y-6 pb-24 max-w-full overflow-x-hidden">
       <div className="flex items-center justify-between gap-2 mb-4">
         <PageBreadcrumb title="Hồ sơ Nhân sự" onBack={onBack} />
         <PageToolbar
@@ -391,7 +391,7 @@ export const HRRecords = ({
         className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 space-y-4"
       >
         <div className="overflow-x-auto custom-scrollbar pb-2">
-          <table className="w-full text-left border-separate border-spacing-0 whitespace-nowrap">
+          <table className="w-full text-left border-separate border-spacing-0">
             <thead>
               <tr className="bg-primary text-white text-[11px] uppercase tracking-wider whitespace-nowrap">
                 <th className="p-3 first:rounded-tl-lg sticky left-0 bg-primary z-10">Mã NV</th>
@@ -428,7 +428,7 @@ export const HRRecords = ({
                   <tr
                     key={emp.id}
                     onClick={() => handleEdit(emp)}
-                    className="border-b border-gray-50 hover:bg-primary/5 transition-colors whitespace-nowrap cursor-pointer"
+                    className="border-b border-gray-50 hover:bg-primary/5 transition-colors cursor-pointer"
                   >
                     <td className="p-3 font-bold text-gray-800 sticky left-0 bg-white group-hover:bg-gray-50 z-10 border-b border-gray-50">
                       {emp.code || emp.id.slice(0, 8)}
@@ -620,7 +620,7 @@ export const HRRecords = ({
               <div className="bg-primary p-4 sm:p-6 flex items-center justify-between text-white rounded-t-[1.5rem] md:rounded-t-[2.5rem] flex-shrink-0 transition-colors">
                 <div className="flex items-center gap-3">
                   <div
-                    className="p-2 bg-white/20 rounded-xl cursor-pointer hover:bg-white/30 transition-all active:scale-95"
+                    className="p-2 bg-white/20 rounded-xl cursor-pointer hover:bg-white/30 transition-all"
                     onClick={() => setShowModal(false)}
                   >
                     <UserPlus size={20} className="sm:w-6 sm:h-6" />

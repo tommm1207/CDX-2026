@@ -417,24 +417,23 @@ export const ConstructionDiaryComponent = ({
 
       {/* Main Content Area - Responsive Container */}
       <div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
-        {/* Desktop Table View */}
         <div className="overflow-x-auto custom-scrollbar">
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="bg-primary text-white">
-                <th className="px-3 py-3 text-[10px] font-black uppercase tracking-wider border-r border-white/10 whitespace-nowrap">
+                <th className="px-2 md:px-3 py-2.5 text-[9px] md:text-[10px] font-black uppercase tracking-wider border-r border-white/10 whitespace-nowrap">
                   Ngày
                 </th>
-                <th className="px-3 py-3 text-[10px] font-black uppercase tracking-wider border-r border-white/10 whitespace-nowrap">
-                  Địa điểm / Dự án
+                <th className="px-2 md:px-3 py-2.5 text-[9px] md:text-[10px] font-black uppercase tracking-wider border-r border-white/10 whitespace-nowrap">
+                  Địa điểm
                 </th>
-                <th className="px-3 py-3 text-[10px] font-black uppercase tracking-wider border-r border-white/10 w-1/3 min-w-[120px]">
+                <th className="px-2 md:px-3 py-2.5 text-[9px] md:text-[10px] font-black uppercase tracking-wider border-r border-white/10">
                   Diễn biến thi công
                 </th>
-                <th className="px-3 py-3 text-[10px] font-black uppercase tracking-wider border-r border-white/10 min-w-[100px]">
-                  Nhân sự chính
+                <th className="px-2 md:px-3 py-2.5 text-[9px] md:text-[10px] font-black uppercase tracking-wider border-r border-white/10 whitespace-nowrap">
+                  Nhân sự
                 </th>
-                <th className="px-3 py-3 text-[10px] font-black uppercase tracking-wider text-center whitespace-nowrap">
+                <th className="px-2 md:px-3 py-2.5 text-[9px] md:text-[10px] font-black uppercase tracking-wider text-center whitespace-nowrap">
                   Ảnh
                 </th>
               </tr>
@@ -448,8 +447,8 @@ export const ConstructionDiaryComponent = ({
                       {Array(5)
                         .fill(0)
                         .map((_, j) => (
-                          <td key={j} className="px-6 py-4">
-                            <div className="h-4 bg-gray-100 rounded-lg" />
+                          <td key={j} className="px-3 py-3">
+                            <div className="h-3.5 bg-gray-100 rounded-lg" />
                           </td>
                         ))}
                     </tr>
@@ -477,6 +476,21 @@ export const ConstructionDiaryComponent = ({
                       lastGroupKey = groupKey;
                     }
 
+                    // Format ngày ngắn gọn: dd/mm
+                    const dateShort = (() => {
+                      const d = new Date(diary.date + 'T00:00:00');
+                      return `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}`;
+                    })();
+
+                    // Format nhân sự dạng A • B • C (Bỏ mã [CDX...])
+                    const laborOneLine = diary.labor_info
+                      ? diary.labor_info
+                          .split(/,\s*/)
+                          .map((s) => s.trim().replace(/^\[.*?\]\s*/, ''))
+                          .filter(Boolean)
+                          .join(' • ')
+                      : '—';
+
                     return (
                       <tr
                         key={diary.id}
@@ -486,44 +500,37 @@ export const ConstructionDiaryComponent = ({
                         }}
                         className={`transition-colors cursor-pointer group ${currentBackgroundColor} hover:brightness-95`}
                       >
-                        <td className="px-3 py-4 text-sm font-bold text-gray-600 border-b border-gray-100/50">
-                          {formatDate(diary.date)}
+                        {/* Ngày: dd/mm */}
+                        <td className="px-2 md:px-3 py-2.5 text-[10px] md:text-xs font-bold text-gray-600 border-b border-gray-100/50 whitespace-nowrap">
+                          {dateShort}
                         </td>
-                        <td
-                          className="px-3 py-4 text-sm font-black text-gray-800 uppercase tracking-tight border-b border-gray-100/50 max-w-[200px] truncate"
-                          title={(diary as any).warehouses?.name}
-                        >
-                          {(diary as any).warehouses?.name}
+                        {/* Địa điểm */}
+                        <td className="px-2 md:px-3 py-2.5 text-[9px] md:text-[11px] font-black text-gray-800 uppercase tracking-tight border-b border-gray-100/50 whitespace-nowrap">
+                          {(diary as any).warehouses?.name || '—'}
                         </td>
-                        <td className="px-3 py-4 border-b border-gray-100/50">
-                          <p className="text-sm text-gray-800 whitespace-normal line-clamp-3">
-                            {diary.work_progress}
-                          </p>
+                        {/* Diễn biến thi công: chiếm phần lớn bảng, nowrap */}
+                        <td className="px-2 md:px-3 py-2.5 border-b border-gray-100/50 whitespace-nowrap">
+                          <span className="text-[9px] md:text-[11px] text-gray-800 font-medium">
+                            {diary.work_progress || '—'}
+                          </span>
                         </td>
-                        <td className="px-3 py-4 text-sm text-gray-600 italic whitespace-normal border-b border-gray-100/50">
-                          {diary.labor_info?.split(', ').map((info) => (
-                            <span
-                              key={info}
-                              className="inline-block bg-gray-100 px-1.5 py-0.5 rounded text-xs mb-1 mr-1 shadow-sm"
-                            >
-                              {info.trim()}
-                            </span>
-                          )) || '-'}
+                        {/* Nhân sự: dạng A • B • C */}
+                        <td className="px-2 md:px-3 py-2.5 text-[9px] md:text-[10px] text-gray-500 border-b border-gray-100/50 whitespace-nowrap">
+                          {laborOneLine}
                         </td>
-                        <td className="px-3 py-4 text-center border-b border-gray-100/50">
+                        {/* Ảnh */}
+                        <td className="px-2 md:px-3 py-2.5 text-center border-b border-gray-100/50">
                           {diary.image_urls && diary.image_urls.length > 0 ? (
                             <div className="relative group/img inline-block">
-                              <div className="p-2 bg-white shadow-sm rounded-lg text-primary border border-gray-200 group-hover/img:bg-primary group-hover/img:text-white transition-all">
-                                <ImageIcon size={16} />
+                              <div className="p-1.5 bg-white shadow-sm rounded-lg text-primary border border-gray-200 group-hover/img:bg-primary group-hover/img:text-white transition-all">
+                                <ImageIcon size={14} />
                               </div>
-                              <span className="absolute -top-1.5 -right-1.5 bg-red-500 text-[9px] font-black text-white px-1 py-0.5 rounded-full ring-2 ring-white">
+                              <span className="absolute -top-1.5 -right-1.5 bg-red-500 text-[8px] font-black text-white px-1 py-0.5 rounded-full ring-2 ring-white">
                                 {diary.image_urls.length}
                               </span>
                             </div>
                           ) : (
-                            <span className="text-[9px] text-gray-300 font-bold uppercase tracking-tight">
-                              ---
-                            </span>
+                            <span className="text-[9px] text-gray-300 font-bold">—</span>
                           )}
                         </td>
                       </tr>

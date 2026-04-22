@@ -42,6 +42,10 @@ import {
 } from '../shared/PageToolbar';
 import { ReportImagePreviewModal } from '../shared/ReportImagePreviewModal';
 
+// Helper: lấy tồn kho hiện tại (tính tới hôm nay) cho cặp (material, warehouse)
+const getCurrentStock = (matId: string, whId: string) =>
+  getAvailableStock(matId, whId, new Date().toISOString().split('T')[0]);
+
 export const StockIn = ({
   user,
   onBack,
@@ -91,6 +95,11 @@ export const StockIn = ({
   const [previewImageUrl, setPreviewImageUrl] = useState<string | null>(null);
   const tableRef = useRef<HTMLDivElement>(null);
 
+  // === Số lượng cần (Warehouse Requirements) ===
+  const [requiredQty, setRequiredQty] = useState<number>(0);
+  const [currentStock, setCurrentStock] = useState<number | null>(null);
+  const [reqLoading, setReqLoading] = useState(false);
+
   const { warehouses, materials, groups, refreshAll, fetchWarehouses } = useInventoryData(
     user.data_view_permission,
   );
@@ -113,6 +122,36 @@ export const StockIn = ({
   useEffect(() => {
     fetchSlips();
   }, []);
+
+  // Load required_qty + current stock khi đổi kho hoặc vật tư
+  useEffect(() => {
+    const matId = isUUID(formData.material_id)
+      ? formData.material_id
+      : materials.find((m) => m.name === formData.material_id)?.id;
+    const whId = isUUID(formData.warehouse_id)
+      ? formData.warehouse_id
+      : warehouses.find((w) => w.name === formData.warehouse_id)?.id;
+
+    if (!matId || !whId) {
+      setRequiredQty(0);
+      setCurrentStock(null);
+      return;
+    }
+    setReqLoading(true);
+    Promise.all([
+      supabase
+        .from('warehouse_requirements')
+        .select('required_quantity')
+        .eq('warehouse_id', whId)
+        .eq('material_id', matId)
+        .maybeSingle(),
+      getCurrentStock(matId, whId),
+    ]).then(([reqRes, stock]) => {
+      setRequiredQty(reqRes.data?.required_quantity ?? 0);
+      setCurrentStock(stock);
+      setReqLoading(false);
+    });
+  }, [formData.material_id, formData.warehouse_id, materials, warehouses]);
 
   const fetchSlips = async () => {
     setLoading(true);
@@ -277,6 +316,21 @@ export const StockIn = ({
       } else {
         const { error } = await supabase.from('stock_in').insert([payload]);
         if (error) throw error;
+      }
+
+      // Lưu lại số lượng cần vào warehouse_requirements nếu requiredQty > 0
+      if (requiredQty > 0) {
+        await supabase
+          .from('warehouse_requirements')
+          .upsert(
+            {
+              warehouse_id: finalWarehouseId,
+              material_id: finalMaterialId,
+              required_quantity: requiredQty,
+              updated_at: new Date().toISOString(),
+            },
+            { onConflict: 'warehouse_id,material_id' },
+          );
       }
 
       setShowModal(false);
@@ -1047,6 +1101,62 @@ export const StockIn = ({
                           placeholder="Nhập SL..."
                         />
                       </div>
+
+                      {/* === Block Số lượng cần === */}
+                      {formData.material_id && formData.warehouse_id && (
+                        <div className="md:col-span-2 p-3 rounded-xl border border-dashed border-blue-200 bg-blue-50/50 space-y-2">
+                          <div className="flex items-center justify-between gap-2">
+                            <label className="text-[10px] font-black text-blue-500 uppercase tracking-widest">
+                              📋 Số lượng cần (Dự toán)
+                            </label>
+                            {reqLoading && (
+                              <span className="text-[9px] text-blue-400 italic">Đang tải...</span>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <NumericInput
+                              value={requiredQty}
+                              onChange={setRequiredQty}
+                              placeholder="Nhập số cần..."
+                            />
+                          </div>
+                          {requiredQty > 0 && currentStock !== null && (
+                            <div className="text-[10px] space-y-1 pt-1">
+                              <div className="flex justify-between text-gray-500">
+                                <span>Đã có trong kho:</span>
+                                <span className="font-bold text-gray-700">
+                                  {formatNumber(currentStock)}
+                                </span>
+                              </div>
+                              <div className="flex justify-between text-gray-500">
+                                <span>Cần tổng:</span>
+                                <span className="font-bold text-blue-600">
+                                  {formatNumber(requiredQty)}
+                                </span>
+                              </div>
+                              <div className="flex justify-between">
+                                <span className="text-gray-500">Còn thiếu:</span>
+                                <span
+                                  className={`font-black ${Math.max(0, requiredQty - currentStock) > 0 ? 'text-red-600' : 'text-green-600'}`}
+                                >
+                                  {Math.max(0, requiredQty - currentStock) > 0
+                                    ? `-${formatNumber(Math.max(0, requiredQty - currentStock))}`
+                                    : '✅ Đủ rồi!'}
+                                </span>
+                              </div>
+                              <div className="w-full bg-gray-200 rounded-full h-1.5 mt-1">
+                                <div
+                                  className="bg-blue-500 h-1.5 rounded-full transition-all"
+                                  style={{
+                                    width: `${Math.min(100, (currentStock / requiredQty) * 100)}%`,
+                                  }}
+                                />
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      )}
+
                       <div className="space-y-1">
                         <label className="text-[10px] font-bold text-gray-400 uppercase">
                           Đơn vị tính

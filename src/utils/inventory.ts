@@ -369,6 +369,30 @@ export const getTonKhoTable = async (
     })();
     const whIds = warehouseId ? (Array.isArray(warehouseId) ? warehouseId : [warehouseId]) : null;
 
+    // Tạo query helper riêng cho transfers với filter status tùy chỉnh
+    const buildTransferQuery = (
+      dateOp: 'lte' | 'gte_lte',
+      statusFilter: string[],
+      start?: string,
+      end?: string,
+    ) => {
+      let q = supabase
+        .from('transfers')
+        .select('material_id, from_warehouse_id, to_warehouse_id, quantity, status')
+        .in('status', statusFilter);
+      if (dateOp === 'lte') {
+        q = q.lte('date', end!);
+      } else {
+        q = q.gte('date', start!).lte('date', end!);
+      }
+      if (whIds) {
+        q = q.or(
+          `from_warehouse_id.in.(${whIds.join(',')}),to_warehouse_id.in.(${whIds.join(',')})`,
+        );
+      }
+      return q;
+    };
+
     const buildQuery = (
       table: string,
       dateCol: string,
@@ -377,42 +401,47 @@ export const getTonKhoTable = async (
       end?: string,
     ) => {
       // stock_out: tính cả Chờ duyệt để giữ chỗ tồn kho (tránh xuất vượt tồn)
-      // stock_in & transfers: chỉ tính Đã duyệt (báo cáo chỉ hiển thị giao dịch chính thức)
+      // stock_in: chỉ tính Đã duyệt
       const statusFilter = table === 'stock_out' ? ['Đã duyệt', 'Chờ duyệt'] : ['Đã duyệt'];
       let q = supabase
         .from(table)
-        .select(
-          table === 'transfers'
-            ? 'material_id, from_warehouse_id, to_warehouse_id, quantity'
-            : 'material_id, warehouse_id, quantity',
-        )
+        .select('material_id, warehouse_id, quantity')
         .in('status', statusFilter);
       if (dateOp === 'lte') {
         q = q.lte(dateCol, end!);
       } else {
         q = q.gte(dateCol, start!).lte(dateCol, end!);
       }
-
       if (whIds) {
-        if (table === 'transfers') {
-          q = q.or(
-            `from_warehouse_id.in.(${whIds.join(',')}),to_warehouse_id.in.(${whIds.join(',')})`,
-          );
-        } else {
-          q = q.in('warehouse_id', whIds);
-        }
+        q = q.in('warehouse_id', whIds);
       }
       return q;
     };
 
-    // Fetch song song 6 queries
-    const [siPrior, siCurr, soPrior, soCurr, trPrior, trCurr] = await Promise.all([
+    // Fetch song song 8 queries
+    // Transfers được tách thành 2 set: Đã duyệt (cho chuyenDen) và Đã duyệt+Chờ (cho chuyenDi)
+    const [
+      siPrior,
+      siCurr,
+      soPrior,
+      soCurr,
+      trPriorApproved,
+      trPriorAll,
+      trCurrApproved,
+      trCurrAll,
+    ] = await Promise.all([
       buildQuery('stock_in', 'date', 'lte', undefined, priorEnd),
       buildQuery('stock_in', 'date', 'gte_lte', startDate, endDate),
       buildQuery('stock_out', 'date', 'lte', undefined, priorEnd),
       buildQuery('stock_out', 'date', 'gte_lte', startDate, endDate),
-      buildQuery('transfers', 'date', 'lte', undefined, priorEnd),
-      buildQuery('transfers', 'date', 'gte_lte', startDate, endDate),
+      // Prior: chỉ Đã duyệt cho chuyenDen tồn đầu
+      buildTransferQuery('lte', ['Đã duyệt'], undefined, priorEnd),
+      // Prior: cả Chờ duyệt cho chuyenDi tồn đầu
+      buildTransferQuery('lte', ['Đã duyệt', 'Chờ duyệt'], undefined, priorEnd),
+      // Curr: chỉ Đã duyệt cho chuyenDen trong kỳ
+      buildTransferQuery('gte_lte', ['Đã duyệt'], startDate, endDate),
+      // Curr: cả Chờ duyệt cho chuyenDi trong kỳ
+      buildTransferQuery('gte_lte', ['Đã duyệt', 'Chờ duyệt'], startDate, endDate),
     ]);
 
     const rows: Record<string, TonKhoRow> = {};
@@ -433,15 +462,21 @@ export const getTonKhoTable = async (
       return rows[key];
     };
 
-    // Tồn đầu kỳ = Nhập trước kỳ - Xuất trước kỳ + ChuyểnĐến trước - ChuyểnĐi trước
+    // Tồn đầu kỳ:
+    // - Kho NGUỒN: trừ cả phiếu Đã duyệt + Chờ duyệt (giữ chỗ, khớp với logic cốt lõi)
+    // - Kho ĐÍCH: chỉ cộng phiếu Đã duyệt (hàng chưa duyệt chưa thực sự về kho)
     ((siPrior.data as any[]) || []).forEach((r) => {
       ensure(r.material_id, r.warehouse_id).tonDau += Number(r.quantity);
     });
     ((soPrior.data as any[]) || []).forEach((r) => {
       ensure(r.material_id, r.warehouse_id).tonDau -= Number(r.quantity);
     });
-    ((trPrior.data as any[]) || []).forEach((r) => {
+    // ChuyenDi trước kỳ: tính cả Chờ duyệt để phản ánh giữ chỗ
+    ((trPriorAll.data as any[]) || []).forEach((r) => {
       ensure(r.material_id, r.from_warehouse_id).tonDau -= Number(r.quantity);
+    });
+    // ChuyenDen trước kỳ: chỉ tính Đã duyệt
+    ((trPriorApproved.data as any[]) || []).forEach((r) => {
       ensure(r.material_id, r.to_warehouse_id).tonDau += Number(r.quantity);
     });
 
@@ -453,9 +488,13 @@ export const getTonKhoTable = async (
       ensure(r.material_id, r.warehouse_id).tongXuat += Number(r.quantity);
     });
 
-    // Chuyển kho trong kỳ
-    ((trCurr.data as any[]) || []).forEach((r) => {
+    // Chuyển kho trong kỳ:
+    // - chuyenDi: tính cả Chờ duyệt (giữ chỗ, khớp với logic cốt lõi)
+    // - chuyenDen: chỉ tính Đã duyệt (hàng chưa duyệt chưa thực sự về kho đích)
+    ((trCurrAll.data as any[]) || []).forEach((r) => {
       ensure(r.material_id, r.from_warehouse_id).chuyenDi += Number(r.quantity);
+    });
+    ((trCurrApproved.data as any[]) || []).forEach((r) => {
       ensure(r.material_id, r.to_warehouse_id).chuyenDen += Number(r.quantity);
     });
 

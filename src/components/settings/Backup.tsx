@@ -341,23 +341,40 @@ export const Backup = ({
         }
       }
 
-      setBackupStatus('Đang hoàn tất file và tải xuống...');
+      setBackupStatus('Đang gửi email...');
       const fileName = `CDX_Backup_Pro_${new Date().toISOString().split('T')[0]}.xlsx`;
       const buffer = await workbook.xlsx.writeBuffer();
 
-      // Tạo link tải xuống trực tiếp trên trình duyệt
-      const blob = new Blob([buffer], {
-        type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      // Convert buffer to base64 for email attachment
+      const uint8Array = new Uint8Array(buffer as ArrayBuffer);
+      let binary = '';
+      for (let i = 0; i < uint8Array.byteLength; i++) {
+        binary += String.fromCharCode(uint8Array[i]);
+      }
+      const fileData = btoa(binary);
+
+      const response = await fetch('/api/send-backup', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': 'cdx-secret-2026',
+        },
+        body: JSON.stringify({
+          email: trimmedEmail,
+          fileName,
+          fileData,
+          tableList: labels,
+          tableStats: {},
+        }),
       });
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = fileName;
-      a.click();
-      window.URL.revokeObjectURL(url);
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to send email');
+      }
 
       setBackupStatus('Hoàn tất!');
-      addToast('Đã xuất file và tải xuống máy thành công!', 'success');
+      addToast(`Đã gửi file sao lưu tới email ${trimmedEmail} thành công!`, 'success');
     } catch (err: any) {
       addToast('Lỗi: ' + err.message, 'error');
     } finally {

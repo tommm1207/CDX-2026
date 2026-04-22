@@ -79,6 +79,11 @@ export const Transfer = ({
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showAddMaterial, setShowAddMaterial] = useState(false);
 
+  // === Số lượng cần (Warehouse Requirements cho Kho Đích) ===
+  const [requiredQty, setRequiredQty] = useState<number>(0);
+  const [currentStockDest, setCurrentStockDest] = useState<number | null>(null);
+  const [reqLoading, setReqLoading] = useState(false);
+
   const { warehouses, materials, groups, refreshAll, fetchWarehouses } = useInventoryData(
     user.data_view_permission,
   );
@@ -112,6 +117,36 @@ export const Transfer = ({
   useEffect(() => {
     fetchSlips();
   }, [statusFilter]);
+
+  // Load required_qty + stock kho đích khi đổi Kho đích hoặc Vật tư
+  useEffect(() => {
+    const matId = isUUID(formData.material_id)
+      ? formData.material_id
+      : materials.find((m) => m.name === formData.material_id)?.id;
+    const toWhId = isUUID(formData.to_warehouse_id)
+      ? formData.to_warehouse_id
+      : warehouses.find((w) => w.name === formData.to_warehouse_id)?.id;
+
+    if (!matId || !toWhId) {
+      setRequiredQty(0);
+      setCurrentStockDest(null);
+      return;
+    }
+    setReqLoading(true);
+    Promise.all([
+      supabase
+        .from('warehouse_requirements')
+        .select('required_quantity')
+        .eq('warehouse_id', toWhId)
+        .eq('material_id', matId)
+        .maybeSingle(),
+      getAvailableStock(matId, toWhId, new Date().toISOString().split('T')[0]),
+    ]).then(([reqRes, stock]) => {
+      setRequiredQty(reqRes.data?.required_quantity ?? 0);
+      setCurrentStockDest(stock);
+      setReqLoading(false);
+    });
+  }, [formData.material_id, formData.to_warehouse_id, materials, warehouses]);
 
   const handleSaveTableImage = () => {
     const reportElem = reportRef.current || tableBillRef.current;
@@ -405,6 +440,24 @@ export const Transfer = ({
       setEditingId(null);
       setAvailableStock(null);
       setSelectedSlip(null);
+
+      // Lưu lại số lượng cần vào warehouse_requirements nếu requiredQty > 0
+      const finalToWhId2 = payload.to_warehouse_id;
+      const finalMatId2 = payload.material_id;
+      if (requiredQty > 0 && finalToWhId2 && finalMatId2) {
+        supabase
+          .from('warehouse_requirements')
+          .upsert(
+            {
+              warehouse_id: finalToWhId2,
+              material_id: finalMatId2,
+              required_quantity: requiredQty,
+              updated_at: new Date().toISOString(),
+            },
+            { onConflict: 'warehouse_id,material_id' },
+          );
+      }
+
       if (addToast)
         addToast(
           isEditing ? 'Cập nhật thành công!' : 'Lập phiếu luân chuyển thành công!',
@@ -1115,6 +1168,59 @@ export const Transfer = ({
                         />
                       </div>
                     </div>
+
+                    {/* === Block Số lượng cần (Kho đích) === */}
+                    {formData.material_id && formData.to_warehouse_id && (
+                      <div className="p-3 rounded-xl border border-dashed border-orange-200 bg-orange-50/40 space-y-2">
+                        <div className="flex items-center justify-between gap-2">
+                          <label className="text-[10px] font-black text-orange-500 uppercase tracking-widest">
+                            📋 Số cần tại kho đích
+                          </label>
+                          {reqLoading && (
+                            <span className="text-[9px] text-orange-400 italic">Đang tải...</span>
+                          )}
+                        </div>
+                        <NumericInput
+                          value={requiredQty}
+                          onChange={setRequiredQty}
+                          placeholder="Nhập số cần..."
+                        />
+                        {requiredQty > 0 && currentStockDest !== null && (
+                          <div className="text-[10px] space-y-1 pt-1">
+                            <div className="flex justify-between text-gray-500">
+                              <span>Đã có tại kho đích:</span>
+                              <span className="font-bold text-gray-700">
+                                {formatNumber(currentStockDest)}
+                              </span>
+                            </div>
+                            <div className="flex justify-between text-gray-500">
+                              <span>Cần tổng:</span>
+                              <span className="font-bold text-orange-600">
+                                {formatNumber(requiredQty)}
+                              </span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="text-gray-500">Còn thiếu:</span>
+                              <span
+                                className={`font-black ${Math.max(0, requiredQty - currentStockDest) > 0 ? 'text-red-600' : 'text-green-600'}`}
+                              >
+                                {Math.max(0, requiredQty - currentStockDest) > 0
+                                  ? `-${formatNumber(Math.max(0, requiredQty - currentStockDest))}`
+                                  : '✅ Đủ rồi!'}
+                              </span>
+                            </div>
+                            <div className="w-full bg-gray-200 rounded-full h-1.5 mt-1">
+                              <div
+                                className="bg-orange-500 h-1.5 rounded-full transition-all"
+                                style={{
+                                  width: `${Math.min(100, (currentStockDest / requiredQty) * 100)}%`,
+                                }}
+                              />
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )}
 
                     {stockLoading && (
                       <div className="p-3 bg-gray-50 rounded-xl border border-gray-100 flex items-center gap-2">

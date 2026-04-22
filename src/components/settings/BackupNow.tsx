@@ -122,38 +122,10 @@ export const BackupNow = ({
       link.remove();
       window.URL.revokeObjectURL(url);
 
-      // Nếu có email thì gửi kèm
-      const email = localStorage.getItem('backup_email');
-      if (email) {
-        setStatus(`Đang gửi email tới ${email}...`);
-        const uint8Array = new Uint8Array(buffer as ArrayBuffer);
-        let binary = '';
-        for (let i = 0; i < uint8Array.byteLength; i++) {
-          binary += String.fromCharCode(uint8Array[i]);
-        }
-        const fileData = btoa(binary);
-
-        const response = await fetch('/api/send-backup', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'x-api-key': 'cdx-secret-2026',
-          },
-          body: JSON.stringify({ email, fileName, fileData, tableList: labels, tableStats: stats }),
-        });
-
-        if (!response.ok) {
-          const errorData = await response.json();
-          throw new Error(errorData.error || 'Failed to send email');
-        }
-      }
+      // Removed email sending logic as requested by user
 
       setStatus('Hoàn tất!');
-      addToast(
-        'Sao lưu toàn bộ dữ liệu thành công! File đã được tải về máy.' +
-          (email ? ` Đồng thời đã gửi tới email ${email}.` : ''),
-        'success',
-      );
+      addToast('Sao lưu toàn bộ dữ liệu thành công! File đã được tải về máy.', 'success');
     } catch (err: any) {
       console.error('Backup error:', err);
       addToast('Lỗi sao lưu: ' + err.message, 'error');
@@ -215,8 +187,7 @@ export const BackupNow = ({
           </button>
 
           <p className="text-[10px] text-gray-400 italic">
-            File sẽ được tải về máy của bạn ngay lập tức. Nếu có cấu hình email trong Sao lưu qua
-            email, file cũng sẽ được gửi kèm.
+            File sẽ được tải về máy của bạn ngay lập tức.
           </p>
         </motion.div>
       </div>

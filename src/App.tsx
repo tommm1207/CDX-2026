@@ -97,40 +97,7 @@ export default function App() {
     }
   }, [user]);
 
-  // Register Service Worker & Subscribe to Web Push when user logs in
-  useEffect(() => {
-    if (!user) return;
-    const initPush = async () => {
-      try {
-        if (!('serviceWorker' in navigator)) {
-          addToast('Trình duyệt không hỗ trợ Service Worker', 'error');
-          return;
-        }
-        if (!('PushManager' in window)) {
-          addToast('Trình duyệt không hỗ trợ Web Push', 'error');
-          return;
-        }
-        const sw = await registerServiceWorker();
-        if (!sw) {
-          addToast('Không thể đăng ký Service Worker', 'error');
-          return;
-        }
-        let perm = Notification.permission;
-        if (perm === 'default') {
-          perm = await Notification.requestPermission();
-        }
-        if (perm === 'granted') {
-          await subscribeToPush(user.id);
-          addToast('✅ Đã đăng ký thông báo đẩy cho thiết bị này', 'success');
-        } else {
-          addToast('⚠️ Chưa cho phép thông báo – Thông báo đẩy sẽ không hoạt động', 'warning');
-        }
-      } catch (err: any) {
-        addToast('Lỗi đăng ký Thông báo đẩy: ' + err.message, 'error');
-      }
-    };
-    initPush();
-  }, [user?.id]);
+  // Notifications disabled as per user request
 
   // Real-time pending count updates
   useEffect(() => {
@@ -166,9 +133,7 @@ export default function App() {
   useEffect(() => {
     if (!user) return;
 
-    if ('Notification' in window && Notification.permission === 'default') {
-      Notification.requestPermission();
-    }
+    // Browser notifications disabled
 
     const checkReminders = setInterval(async () => {
       const now = new Date().toISOString();

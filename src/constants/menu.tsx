@@ -80,9 +80,6 @@ export const getMenuGroups = (pendingCount: number) => [
   },
   {
     title: 'CÔNG CỤ SAO LƯU',
-    items: [
-      { id: 'backup-settings', label: 'Sao lưu qua email', icon: Settings },
-      { id: 'backup-now', label: 'Sao lưu nhanh', icon: Download },
-    ],
+    items: [{ id: 'backup-now', label: 'Sao lưu', icon: Download }],
   },
 ];

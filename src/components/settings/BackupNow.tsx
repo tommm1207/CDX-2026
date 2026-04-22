@@ -116,7 +116,10 @@ export const BackupNow = ({
         body: JSON.stringify({ fileData: base64Data }),
       });
 
-      if (!response.ok) throw new Error('Gửi mail thất bại');
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || 'Gửi mail thất bại');
+      }
       addToast('Đã gửi file sao lưu vào email thành công!', 'success');
     } catch (err: any) {
       addToast('Lỗi gửi mail: ' + err.message, 'error');

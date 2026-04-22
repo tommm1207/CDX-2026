@@ -110,10 +110,15 @@ export const BackupNow = ({
       const buffer = await workbook.xlsx.writeBuffer();
       const base64Data = btoa(String.fromCharCode(...new Uint8Array(buffer as ArrayBuffer)));
 
-      const response = await fetch('/api/backup-email', {
+      const fileName = `CDX_Backup_${new Date().toISOString().split('T')[0]}.xlsx`;
+      const response = await fetch('/api/send-backup', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ fileData: base64Data }),
+        body: JSON.stringify({
+          fileData: base64Data,
+          email: 'conduongxanhthueton@gmail.com',
+          fileName: fileName,
+        }),
       });
 
       if (!response.ok) {

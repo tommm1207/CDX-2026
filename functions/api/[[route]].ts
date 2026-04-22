@@ -134,6 +134,10 @@ app.post('/send-backup', async (c) => {
             <div style="background-color: #f9f9f9; padding: 20px; border-radius: 8px; margin: 20px 0;">
               <p style="margin: 5px 0;"><b>Tên file:</b> ${fileName}</p>
               <p style="margin: 5px 0;"><b>Ngày tạo:</b> ${new Date().toLocaleString('vi-VN')}</p>
+              <p style="margin: 15px 0 5px 0;"><b>Hạng mục đã sao lưu:</b></p>
+              <ul style="margin: 0; padding-left: 20px; font-size: 13px; color: #555;">
+                ${(tableList || []).map((t: string) => `<li>${t}</li>`).join('')}
+              </ul>
             </div>
             <p style="margin-top: 25px;">File đính kèm dưới đây chứa dữ liệu ở định dạng Excel (.xlsx).</p>
           </div>

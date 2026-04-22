@@ -26,6 +26,10 @@ const PARTY_A_DEFAULT = {
   phone: '0931884886 (A Khang đại diện làm việc)',
 };
 
+const INPUT_STYLE =
+  'w-full px-4 py-2.5 bg-gray-50 border border-transparent rounded-xl text-sm font-bold outline-none focus:bg-white focus:border-primary/20 transition-all placeholder:text-gray-300';
+const LABEL_STYLE = 'text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1 block ml-1';
+
 export const LeaseSteelSheetForm = ({
   onBack,
   addToast,
@@ -128,144 +132,182 @@ export const LeaseSteelSheetForm = ({
 
   return (
     <div className="min-h-screen bg-gray-50 pb-20">
-      <div className="bg-white border-b border-gray-100 px-4 py-4 sticky top-0 z-50 flex items-center justify-between">
+      {/* Header */}
+      <div className="bg-white/80 backdrop-blur-md border-b border-gray-100 px-4 py-4 sticky top-0 z-50 flex items-center justify-between">
         <div className="flex items-center gap-3">
           <button onClick={onBack} className="p-2 hover:bg-gray-100 rounded-xl transition-all">
             <ArrowLeft size={20} className="text-gray-500" />
           </button>
           <div>
-            <h1 className="text-sm font-black text-gray-800 uppercase tracking-tight">
-              HĐ Thuê thép tấm
+            <h1 className="text-sm font-black text-gray-800 uppercase tracking-tight flex items-center gap-2">
+              <FileText size={16} className="text-primary" />
+              Thuê thép tấm
             </h1>
             <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">
               {formData.contractCode}
             </p>
           </div>
         </div>
-        <div className="flex gap-2">
-          <Button variant="outline" size="sm" onClick={handleSwap}>
-            <ArrowLeftRight size={16} className="mr-2" /> Hoán đổi A ↔ B
-          </Button>
-          <Button variant="blue" size="sm" onClick={handleExport} isLoading={loading}>
-            <Download size={16} className="mr-2" /> Xuất file Word
-          </Button>
-        </div>
+        <Button variant="blue" size="sm" onClick={handleExport} isLoading={loading}>
+          <Download size={16} className="mr-2" /> Xuất file Word
+        </Button>
       </div>
 
       <div className="p-4 space-y-6 max-w-5xl mx-auto">
-        {/* THÔNG TIN DỰ ÁN */}
+        {/* Thông tin dự án */}
         <section className="bg-white rounded-3xl p-6 shadow-sm border border-gray-100 space-y-4">
           <div className="flex items-center gap-2 text-primary">
             <Building2 size={18} />
             <h2 className="text-sm font-black uppercase tracking-tight">Thông tin dự án</h2>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <input
-              type="text"
-              placeholder="Tên công trình"
-              value={formData.content.projectName}
-              onChange={(e) =>
-                setFormData({
-                  ...formData,
-                  content: { ...formData.content, projectName: e.target.value },
-                })
-              }
-              className="px-4 py-2 bg-gray-50 rounded-xl text-sm"
-            />
-            <input
-              type="text"
-              placeholder="Hạng mục"
-              value={formData.content.category}
-              onChange={(e) =>
-                setFormData({
-                  ...formData,
-                  content: { ...formData.content, category: e.target.value },
-                })
-              }
-              className="px-4 py-2 bg-gray-50 rounded-xl text-sm"
-            />
-            <input
-              type="text"
-              placeholder="Địa điểm"
-              value={formData.content.location}
-              onChange={(e) =>
-                setFormData({
-                  ...formData,
-                  content: { ...formData.content, location: e.target.value },
-                })
-              }
-              className="px-4 py-2 bg-gray-50 rounded-xl text-sm"
-            />
+            <div>
+              <label className={LABEL_STYLE}>Tên công trình</label>
+              <input
+                type="text"
+                value={formData.content.projectName}
+                onChange={(e) =>
+                  setFormData({
+                    ...formData,
+                    content: { ...formData.content, projectName: e.target.value },
+                  })
+                }
+                className={INPUT_STYLE}
+              />
+            </div>
+            <div>
+              <label className={LABEL_STYLE}>Hạng mục</label>
+              <input
+                type="text"
+                value={formData.content.category}
+                onChange={(e) =>
+                  setFormData({
+                    ...formData,
+                    content: { ...formData.content, category: e.target.value },
+                  })
+                }
+                className={INPUT_STYLE}
+              />
+            </div>
+            <div>
+              <label className={LABEL_STYLE}>Địa điểm</label>
+              <input
+                type="text"
+                value={formData.content.location}
+                onChange={(e) =>
+                  setFormData({
+                    ...formData,
+                    content: { ...formData.content, location: e.target.value },
+                  })
+                }
+                className={INPUT_STYLE}
+              />
+            </div>
           </div>
         </section>
 
-        {/* BÊN A & BÊN B (Tương tự form trước nhưng có CSS động) */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {/* Khu vực A & B */}
+        <div className="relative grid grid-cols-1 md:grid-cols-2 gap-6">
+          {/* Nút Swap */}
+          <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-10">
+            <button
+              onClick={handleSwap}
+              className="w-10 h-10 bg-white border border-gray-100 shadow-xl rounded-full flex items-center justify-center text-primary hover:bg-primary hover:text-white transition-all active:scale-90"
+            >
+              <ArrowLeftRight size={18} />
+            </button>
+          </div>
+
+          {/* BÊN A */}
           <section
             className={`bg-white rounded-3xl p-6 shadow-sm border ${isCDX_A ? 'border-blue-100' : 'border-orange-100'} space-y-4`}
           >
-            <h2 className="text-xs font-black uppercase tracking-widest text-gray-400">
-              BÊN A ({isCDX_A ? 'BÊN CHO THUÊ' : 'BÊN THUÊ'})
-            </h2>
-            <input
-              type="text"
-              placeholder="Tên đơn vị"
-              value={formData.partyA.companyName}
-              onChange={(e) =>
-                setFormData({
-                  ...formData,
-                  partyA: { ...formData.partyA, companyName: e.target.value },
-                })
-              }
-              className="w-full px-4 py-2 bg-gray-50 rounded-xl text-sm font-bold"
-            />
-            <input
-              type="text"
-              placeholder="Đại diện"
-              value={formData.partyA.representative}
-              onChange={(e) =>
-                setFormData({
-                  ...formData,
-                  partyA: { ...formData.partyA, representative: e.target.value },
-                })
-              }
-              className="w-full px-4 py-2 bg-gray-50 rounded-xl text-sm"
-            />
+            <div
+              className={`flex items-center gap-2 ${isCDX_A ? 'text-blue-600' : 'text-orange-600'}`}
+            >
+              <Building2 size={18} />
+              <h2 className="text-xs font-black uppercase tracking-widest">
+                BÊN A ({isCDX_A ? 'BÊN CHO THUÊ' : 'BÊN THUÊ'})
+              </h2>
+            </div>
+            <div className="space-y-3">
+              <div>
+                <label className={LABEL_STYLE}>Tên đơn vị</label>
+                <input
+                  type="text"
+                  value={formData.partyA.companyName}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      partyA: { ...formData.partyA, companyName: e.target.value },
+                    })
+                  }
+                  className={INPUT_STYLE}
+                />
+              </div>
+              <div>
+                <label className={LABEL_STYLE}>Đại diện</label>
+                <input
+                  type="text"
+                  value={formData.partyA.representative}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      partyA: { ...formData.partyA, representative: e.target.value },
+                    })
+                  }
+                  className={INPUT_STYLE}
+                />
+              </div>
+            </div>
           </section>
+
+          {/* BÊN B */}
           <section
             className={`bg-white rounded-3xl p-6 shadow-sm border ${!isCDX_A ? 'border-blue-100' : 'border-orange-100'} space-y-4`}
           >
-            <h2 className="text-xs font-black uppercase tracking-widest text-gray-400">
-              BÊN B ({!isCDX_A ? 'BÊN CHO THUÊ' : 'BÊN THUÊ'})
-            </h2>
-            <input
-              type="text"
-              placeholder="Tên đơn vị"
-              value={formData.partyB.companyName}
-              onChange={(e) =>
-                setFormData({
-                  ...formData,
-                  partyB: { ...formData.partyB, companyName: e.target.value },
-                })
-              }
-              className="w-full px-4 py-2 bg-gray-50 rounded-xl text-sm font-bold"
-            />
-            <input
-              type="text"
-              placeholder="Đại diện"
-              value={formData.partyB.representative}
-              onChange={(e) =>
-                setFormData({
-                  ...formData,
-                  partyB: { ...formData.partyB, representative: e.target.value },
-                })
-              }
-              className="w-full px-4 py-2 bg-gray-50 rounded-xl text-sm"
-            />
+            <div
+              className={`flex items-center gap-2 ${!isCDX_A ? 'text-blue-600' : 'text-orange-600'}`}
+            >
+              <User size={18} />
+              <h2 className="text-xs font-black uppercase tracking-widest">
+                BÊN B ({!isCDX_A ? 'BÊN CHO THUÊ' : 'BÊN THUÊ'})
+              </h2>
+            </div>
+            <div className="space-y-3">
+              <div>
+                <label className={LABEL_STYLE}>Tên đơn vị</label>
+                <input
+                  type="text"
+                  value={formData.partyB.companyName}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      partyB: { ...formData.partyB, companyName: e.target.value },
+                    })
+                  }
+                  className={INPUT_STYLE}
+                />
+              </div>
+              <div>
+                <label className={LABEL_STYLE}>Đại diện</label>
+                <input
+                  type="text"
+                  value={formData.partyB.representative}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      partyB: { ...formData.partyB, representative: e.target.value },
+                    })
+                  }
+                  className={INPUT_STYLE}
+                />
+              </div>
+            </div>
           </section>
         </div>
 
-        {/* BẢNG CHI TIẾT VẬT TƯ */}
+        {/* Bảng chi tiết vật tư */}
         <section className="bg-white rounded-3xl p-6 shadow-sm border border-gray-100 space-y-4 overflow-hidden">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2 text-primary">
@@ -274,67 +316,67 @@ export const LeaseSteelSheetForm = ({
             </div>
             <button
               onClick={addItem}
-              className="text-xs font-bold text-primary flex items-center gap-1"
+              className="text-xs font-black text-primary flex items-center gap-1 hover:bg-primary/5 px-3 py-1.5 rounded-xl transition-all"
             >
-              <Plus size={14} /> Thêm dòng
+              <Plus size={14} /> THÊM DÒNG
             </button>
           </div>
 
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
+          <div className="overflow-x-auto -mx-6 px-6">
+            <table className="w-full text-sm min-w-[700px]">
               <thead>
-                <tr className="text-[10px] font-bold text-gray-400 uppercase tracking-widest border-b border-gray-50">
-                  <th className="pb-3 text-left w-12">STT</th>
-                  <th className="pb-3 text-left">Hạng mục</th>
-                  <th className="pb-3 text-left w-24">ĐVT</th>
-                  <th className="pb-3 text-right w-24">SL</th>
-                  <th className="pb-3 text-right w-32">Đơn giá</th>
-                  <th className="pb-3 text-right w-32">Thành tiền</th>
-                  <th className="pb-3 w-10"></th>
+                <tr className="text-[10px] font-black text-gray-400 uppercase tracking-widest border-b border-gray-100">
+                  <th className="pb-4 text-left w-10">STT</th>
+                  <th className="pb-4 text-left pr-4">HẠNG MỤC / CÔNG VIỆC</th>
+                  <th className="pb-4 text-left w-24 pr-4">ĐVT</th>
+                  <th className="pb-4 text-right w-20 pr-4">SL</th>
+                  <th className="pb-4 text-right w-36 pr-4">ĐƠN GIÁ</th>
+                  <th className="pb-4 text-right w-32">THÀNH TIỀN</th>
+                  <th className="pb-4 w-10"></th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-50">
                 {formData.items.map((item, index) => (
-                  <tr key={item.id} className="group">
-                    <td className="py-3 text-gray-400 font-bold">{index + 1}</td>
-                    <td className="py-3 pr-4">
+                  <tr key={item.id} className="group hover:bg-gray-50/50 transition-colors">
+                    <td className="py-4 text-gray-400 font-black">{index + 1}</td>
+                    <td className="py-4 pr-4">
                       <input
                         type="text"
                         value={item.name}
                         onChange={(e) => updateItem(item.id, 'name', e.target.value)}
-                        className="w-full bg-transparent outline-none font-bold text-gray-700"
+                        className="w-full bg-transparent outline-none font-bold text-gray-700 border-none p-0 focus:ring-0"
                       />
                     </td>
-                    <td className="py-3">
+                    <td className="py-4 pr-4">
                       <input
                         type="text"
                         value={item.unit}
                         onChange={(e) => updateItem(item.id, 'unit', e.target.value)}
-                        className="w-full bg-transparent outline-none text-gray-500"
+                        className="w-full bg-transparent outline-none text-gray-500 border-none p-0 focus:ring-0"
                       />
                     </td>
-                    <td className="py-3">
+                    <td className="py-4 pr-4">
                       <input
                         type="number"
                         value={item.quantity}
                         onChange={(e) => updateItem(item.id, 'quantity', Number(e.target.value))}
-                        className="w-full bg-transparent outline-none text-right font-bold"
+                        className="w-full bg-transparent outline-none text-right font-black border-none p-0 focus:ring-0"
                       />
                     </td>
-                    <td className="py-3">
+                    <td className="py-4 pr-4">
                       <NumericInput
                         value={item.price}
                         onChange={(val) => updateItem(item.id, 'price', val)}
-                        className="text-right"
+                        className="text-right font-black text-primary border-none p-0"
                       />
                     </td>
-                    <td className="py-3 text-right font-black text-gray-800">
+                    <td className="py-4 text-right font-black text-gray-800">
                       {(item.quantity * item.price).toLocaleString()}
                     </td>
-                    <td className="py-3 text-right">
+                    <td className="py-4 text-right">
                       <button
                         onClick={() => removeItem(item.id)}
-                        className="text-red-300 hover:text-red-500 transition-colors"
+                        className="p-2 text-red-200 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all"
                       >
                         <Trash2 size={16} />
                       </button>
@@ -345,18 +387,24 @@ export const LeaseSteelSheetForm = ({
             </table>
           </div>
 
-          <div className="pt-4 border-t border-gray-50 space-y-2">
+          <div className="pt-6 border-t border-gray-50 space-y-3">
             <div className="flex justify-between text-sm">
-              <span className="text-gray-500 font-bold">Tổng cộng:</span>
-              <span className="font-black text-gray-800">{subTotal.toLocaleString()} VNĐ</span>
+              <span className="text-gray-400 font-bold uppercase tracking-widest text-[10px]">
+                Tạm tính:
+              </span>
+              <span className="font-black text-gray-600">{subTotal.toLocaleString()} VNĐ</span>
             </div>
             <div className="flex justify-between text-sm">
-              <span className="text-gray-500 font-bold">Thuế VAT (8%):</span>
-              <span className="font-black text-gray-800">{vat.toLocaleString()} VNĐ</span>
+              <span className="text-gray-400 font-bold uppercase tracking-widest text-[10px]">
+                Thuế VAT (8%):
+              </span>
+              <span className="font-black text-gray-600">{vat.toLocaleString()} VNĐ</span>
             </div>
-            <div className="flex justify-between text-lg">
-              <span className="text-primary font-black uppercase italic">TỔNG THANH TOÁN:</span>
-              <span className="font-black text-primary underline underline-offset-4">
+            <div className="flex justify-between items-center bg-primary/5 p-4 rounded-2xl border border-primary/10">
+              <span className="text-primary font-black uppercase italic tracking-tight">
+                Tổng thanh toán:
+              </span>
+              <span className="font-black text-2xl text-primary underline underline-offset-4 tracking-tighter">
                 {total.toLocaleString()} VNĐ
               </span>
             </div>
@@ -365,11 +413,11 @@ export const LeaseSteelSheetForm = ({
 
         <Button
           variant="blue"
-          className="w-full py-4 rounded-2xl shadow-xl"
+          className="w-full py-5 rounded-3xl shadow-xl shadow-primary/20 uppercase font-black tracking-widest text-base"
           onClick={handleExport}
           isLoading={loading}
         >
-          <FileText size={20} className="mr-2" /> XUẤT HỢP ĐỒNG THÉP TẤM (.DOCX)
+          <FileText size={20} className="mr-3" /> XUẤT HỢP ĐỒNG THÉP TẤM (.DOCX)
         </Button>
       </div>
     </div>

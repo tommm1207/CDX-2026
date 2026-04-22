@@ -164,7 +164,7 @@ app.post('/trigger-cron', async (c) => {
   const apiKey = c.req.header('x-api-key');
   const validSecret = c.env.CRON_SECRET || c.env.API_SECRET_KEY || 'cdx-secret-2026';
   
-  if (authHeader !== \`Bearer \${validSecret}\` && apiKey !== validSecret) {
+  if (authHeader !== `Bearer ${validSecret}` && apiKey !== validSecret) {
     return c.json({ error: 'Unauthorized cron trigger' }, 401);
   }
 
@@ -240,9 +240,9 @@ app.post('/trigger-cron', async (c) => {
       await resend.emails.send({
         from: 'CDX System <onboarding@resend.dev>',
         to: config.email,
-        subject: \`[TỰ ĐỘNG] Sao lưu dữ liệu CDX - \${vnTime.toLocaleDateString('vi-VN')}\`,
-        html: \`<p>Tệp sao lưu tự động đính kèm.</p>\`,
-        attachments: [{ filename: \`CDX_Auto_Backup_\${vnTime.toISOString().split('T')[0]}.xlsx\`, content: fileData }]
+        subject: `[TỰ ĐỘNG] Sao lưu dữ liệu CDX - ${vnTime.toLocaleDateString('vi-VN')}`,
+        html: `<p>Tệp sao lưu tự động đính kèm.</p>`,
+        attachments: [{ filename: `CDX_Auto_Backup_${vnTime.toISOString().split('T')[0]}.xlsx`, content: fileData }]
       });
 
       results.push({ email: config.email, status: 'Success' });

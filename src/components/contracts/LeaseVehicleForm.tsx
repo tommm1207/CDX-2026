@@ -6,14 +6,10 @@ import {
   Building2,
   User,
   Phone,
-  MapPin,
-  Mail,
-  CreditCard,
   Calendar,
-  Hash,
   DollarSign,
+  ArrowLeftRight,
 } from 'lucide-react';
-import { motion } from 'motion/react';
 import { supabase } from '@/lib/supabase';
 import { Button } from '../shared/Button';
 import { NumericInput } from '../shared/NumericInput';
@@ -56,6 +52,15 @@ export const LeaseVehicleForm = ({ onBack, addToast }: { onBack: () => void; add
     },
   });
 
+  const handleSwap = () => {
+    const newA = { ...formData.partyB };
+    const newB = { ...formData.partyA };
+    setFormData({ ...formData, partyA: newA, partyB: newB });
+    addToast('Đã hoán đổi vị trí Bên A và Bên B', 'info');
+  };
+
+  const isCDX_A = formData.partyA.companyName.includes('CON ĐƯỜNG XANH');
+
   const handleSave = async () => {
     setLoading(true);
     try {
@@ -70,7 +75,6 @@ export const LeaseVehicleForm = ({ onBack, addToast }: { onBack: () => void; add
         },
         { onConflict: 'contract_code' },
       );
-
       if (error) throw error;
       return true;
     } catch (error: any) {
@@ -84,7 +88,6 @@ export const LeaseVehicleForm = ({ onBack, addToast }: { onBack: () => void; add
   const handleExport = async () => {
     const isSaved = await handleSave();
     if (!isSaved) return;
-
     setLoading(true);
     try {
       await exportLeaseVehicleContract(formData);
@@ -112,65 +115,67 @@ export const LeaseVehicleForm = ({ onBack, addToast }: { onBack: () => void; add
             </p>
           </div>
         </div>
-        <Button variant="blue" size="sm" onClick={handleExport} isLoading={loading}>
-          <Download size={16} className="mr-2" /> Xuất file Word
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" size="sm" onClick={handleSwap}>
+            <ArrowLeftRight size={16} className="mr-2" /> Hoán đổi A ↔ B
+          </Button>
+          <Button variant="blue" size="sm" onClick={handleExport} isLoading={loading}>
+            <Download size={16} className="mr-2" /> Xuất file Word
+          </Button>
+        </div>
       </div>
 
       <div className="p-4 space-y-6 max-w-4xl mx-auto">
-        {/* === THÔNG TIN CHUNG === */}
         <section className="bg-white rounded-3xl p-6 shadow-sm border border-gray-100 space-y-4">
           <div className="flex items-center gap-2 text-primary">
             <Calendar size={18} />
             <h2 className="text-sm font-black uppercase tracking-tight">Thông tin chung</h2>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-1">
-              <label className="text-[10px] font-bold text-gray-400 uppercase">Mã hợp đồng</label>
-              <input
-                type="text"
-                value={formData.contractCode}
-                onChange={(e) => setFormData({ ...formData, contractCode: e.target.value })}
-                className="w-full px-4 py-2.5 bg-gray-50 border border-gray-100 rounded-xl text-sm font-bold outline-none"
-              />
-            </div>
-            <div className="space-y-1">
-              <label className="text-[10px] font-bold text-gray-400 uppercase">Ngày ký</label>
-              <input
-                type="date"
-                value={formData.date}
-                onChange={(e) => setFormData({ ...formData, date: e.target.value })}
-                className="w-full px-4 py-2.5 bg-gray-50 border border-gray-100 rounded-xl text-sm font-bold outline-none"
-              />
-            </div>
+            <input
+              type="text"
+              value={formData.contractCode}
+              onChange={(e) => setFormData({ ...formData, contractCode: e.target.value })}
+              className="px-4 py-2 bg-gray-50 rounded-xl text-sm font-bold"
+            />
+            <input
+              type="date"
+              value={formData.date}
+              onChange={(e) => setFormData({ ...formData, date: e.target.value })}
+              className="px-4 py-2 bg-gray-50 rounded-xl text-sm"
+            />
           </div>
         </section>
 
-        {/* === BÊN A (MẶC ĐỊNH) === */}
-        <section className="bg-white rounded-3xl p-6 shadow-sm border border-gray-100 space-y-4">
-          <div className="flex items-center gap-2 text-blue-600">
+        {/* BÊN A */}
+        <section
+          className={`bg-white rounded-3xl p-6 shadow-sm border ${isCDX_A ? 'border-blue-100' : 'border-orange-100'} space-y-4`}
+        >
+          <div
+            className={`flex items-center gap-2 ${isCDX_A ? 'text-blue-600' : 'text-orange-600'}`}
+          >
             <Building2 size={18} />
-            <h2 className="text-sm font-black uppercase tracking-tight">Bên A (Bên Thuê) - CDX</h2>
+            <h2 className="text-sm font-black uppercase tracking-tight">
+              BÊN A ({isCDX_A ? 'BÊN THUÊ' : 'BÊN CHO THUÊ'})
+            </h2>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="md:col-span-2 space-y-1">
-              <label className="text-[10px] font-bold text-gray-400 uppercase">Tên công ty</label>
+          <div className="grid grid-cols-1 gap-4">
+            <input
+              type="text"
+              placeholder="Tên đơn vị"
+              value={formData.partyA.companyName}
+              onChange={(e) =>
+                setFormData({
+                  ...formData,
+                  partyA: { ...formData.partyA, companyName: e.target.value },
+                })
+              }
+              className="px-4 py-2 bg-gray-50 rounded-xl text-sm font-bold"
+            />
+            <div className="grid grid-cols-2 gap-4">
               <input
                 type="text"
-                value={formData.partyA.companyName}
-                onChange={(e) =>
-                  setFormData({
-                    ...formData,
-                    partyA: { ...formData.partyA, companyName: e.target.value },
-                  })
-                }
-                className="w-full px-4 py-2.5 bg-blue-50/30 border border-blue-100 rounded-xl text-sm font-bold outline-none"
-              />
-            </div>
-            <div className="space-y-1">
-              <label className="text-[10px] font-bold text-gray-400 uppercase">Đại diện</label>
-              <input
-                type="text"
+                placeholder="Đại diện"
                 value={formData.partyA.representative}
                 onChange={(e) =>
                   setFormData({
@@ -178,13 +183,11 @@ export const LeaseVehicleForm = ({ onBack, addToast }: { onBack: () => void; add
                     partyA: { ...formData.partyA, representative: e.target.value },
                   })
                 }
-                className="w-full px-4 py-2.5 bg-gray-50 border border-gray-100 rounded-xl text-sm outline-none"
+                className="px-4 py-2 bg-gray-50 rounded-xl text-sm"
               />
-            </div>
-            <div className="space-y-1">
-              <label className="text-[10px] font-bold text-gray-400 uppercase">Chức vụ</label>
               <input
                 type="text"
+                placeholder="Chức vụ"
                 value={formData.partyA.position}
                 onChange={(e) =>
                   setFormData({
@@ -192,40 +195,53 @@ export const LeaseVehicleForm = ({ onBack, addToast }: { onBack: () => void; add
                     partyA: { ...formData.partyA, position: e.target.value },
                   })
                 }
-                className="w-full px-4 py-2.5 bg-gray-50 border border-gray-100 rounded-xl text-sm outline-none"
+                className="px-4 py-2 bg-gray-50 rounded-xl text-sm"
               />
             </div>
+            <input
+              type="text"
+              placeholder="Địa chỉ"
+              value={formData.partyA.address}
+              onChange={(e) =>
+                setFormData({
+                  ...formData,
+                  partyA: { ...formData.partyA, address: e.target.value },
+                })
+              }
+              className="px-4 py-2 bg-gray-50 rounded-xl text-sm"
+            />
           </div>
         </section>
 
-        {/* === BÊN B (NHẬP MỚI) === */}
-        <section className="bg-white rounded-3xl p-6 shadow-sm border border-orange-100 space-y-4">
-          <div className="flex items-center gap-2 text-orange-600">
+        {/* BÊN B */}
+        <section
+          className={`bg-white rounded-3xl p-6 shadow-sm border ${!isCDX_A ? 'border-blue-100' : 'border-orange-100'} space-y-4`}
+        >
+          <div
+            className={`flex items-center gap-2 ${!isCDX_A ? 'text-blue-600' : 'text-orange-600'}`}
+          >
             <User size={18} />
-            <h2 className="text-sm font-black uppercase tracking-tight">Bên B (Bên Cho Thuê)</h2>
+            <h2 className="text-sm font-black uppercase tracking-tight">
+              BÊN B ({!isCDX_A ? 'BÊN THUÊ' : 'BÊN CHO THUÊ'})
+            </h2>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="md:col-span-2 space-y-1">
-              <label className="text-[10px] font-bold text-gray-400 uppercase">
-                Tên công ty / Chủ xe *
-              </label>
+          <div className="grid grid-cols-1 gap-4">
+            <input
+              type="text"
+              placeholder="Tên đơn vị"
+              value={formData.partyB.companyName}
+              onChange={(e) =>
+                setFormData({
+                  ...formData,
+                  partyB: { ...formData.partyB, companyName: e.target.value },
+                })
+              }
+              className="px-4 py-2 bg-gray-50 rounded-xl text-sm font-bold"
+            />
+            <div className="grid grid-cols-2 gap-4">
               <input
                 type="text"
-                placeholder="Nhập tên bên cho thuê..."
-                value={formData.partyB.companyName}
-                onChange={(e) =>
-                  setFormData({
-                    ...formData,
-                    partyB: { ...formData.partyB, companyName: e.target.value },
-                  })
-                }
-                className="w-full px-4 py-2.5 bg-orange-50/20 border border-orange-100 rounded-xl text-sm font-bold outline-none focus:ring-2 focus:ring-orange-200"
-              />
-            </div>
-            <div className="space-y-1">
-              <label className="text-[10px] font-bold text-gray-400 uppercase">Đại diện</label>
-              <input
-                type="text"
+                placeholder="Đại diện"
                 value={formData.partyB.representative}
                 onChange={(e) =>
                   setFormData({
@@ -233,103 +249,76 @@ export const LeaseVehicleForm = ({ onBack, addToast }: { onBack: () => void; add
                     partyB: { ...formData.partyB, representative: e.target.value },
                   })
                 }
-                className="w-full px-4 py-2.5 bg-gray-50 border border-gray-100 rounded-xl text-sm outline-none"
+                className="px-4 py-2 bg-gray-50 rounded-xl text-sm"
               />
-            </div>
-            <div className="space-y-1">
-              <label className="text-[10px] font-bold text-gray-400 uppercase">Điện thoại</label>
               <input
                 type="text"
-                value={formData.partyB.phone}
+                placeholder="Chức vụ"
+                value={formData.partyB.position}
                 onChange={(e) =>
                   setFormData({
                     ...formData,
-                    partyB: { ...formData.partyB, phone: e.target.value },
+                    partyB: { ...formData.partyB, position: e.target.value },
                   })
                 }
-                className="w-full px-4 py-2.5 bg-gray-50 border border-gray-100 rounded-xl text-sm outline-none"
+                className="px-4 py-2 bg-gray-50 rounded-xl text-sm"
               />
             </div>
-            <div className="md:col-span-2 space-y-1">
-              <label className="text-[10px] font-bold text-gray-400 uppercase">Địa chỉ</label>
-              <input
-                type="text"
-                value={formData.partyB.address}
-                onChange={(e) =>
-                  setFormData({
-                    ...formData,
-                    partyB: { ...formData.partyB, address: e.target.value },
-                  })
-                }
-                className="w-full px-4 py-2.5 bg-gray-50 border border-gray-100 rounded-xl text-sm outline-none"
-              />
-            </div>
+            <input
+              type="text"
+              placeholder="Địa chỉ"
+              value={formData.partyB.address}
+              onChange={(e) =>
+                setFormData({
+                  ...formData,
+                  partyB: { ...formData.partyB, address: e.target.value },
+                })
+              }
+              className="px-4 py-2 bg-gray-50 rounded-xl text-sm"
+            />
           </div>
         </section>
 
-        {/* === NỘI DUNG VÀ ĐƠN GIÁ === */}
         <section className="bg-white rounded-3xl p-6 shadow-sm border border-gray-100 space-y-4">
           <div className="flex items-center gap-2 text-primary">
             <DollarSign size={18} />
             <h2 className="text-sm font-black uppercase tracking-tight">Nội dung & Đơn giá</h2>
           </div>
-          <div className="space-y-4">
-            <div className="space-y-1">
-              <label className="text-[10px] font-bold text-gray-400 uppercase">
-                Nội dung công việc
-              </label>
-              <textarea
-                rows={3}
-                value={formData.content.workContent}
-                onChange={(e) =>
-                  setFormData({
-                    ...formData,
-                    content: { ...formData.content, workContent: e.target.value },
-                  })
-                }
-                className="w-full px-4 py-2.5 bg-gray-50 border border-gray-100 rounded-xl text-sm outline-none resize-none"
-              />
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-1">
-                <label className="text-[10px] font-bold text-gray-400 uppercase">
-                  Giá thuê (VNĐ/tháng)
-                </label>
-                <NumericInput
-                  value={formData.content.totalPrice}
-                  onChange={(val) =>
-                    setFormData({ ...formData, content: { ...formData.content, totalPrice: val } })
-                  }
-                />
-              </div>
-              <div className="space-y-1">
-                <label className="text-[10px] font-bold text-gray-400 uppercase">
-                  Số tiền thanh toán (VNĐ/tháng)
-                </label>
-                <NumericInput
-                  value={formData.content.paymentAmount}
-                  onChange={(val) =>
-                    setFormData({
-                      ...formData,
-                      content: { ...formData.content, paymentAmount: val },
-                    })
-                  }
-                />
-              </div>
-            </div>
+          <textarea
+            rows={3}
+            value={formData.content.workContent}
+            onChange={(e) =>
+              setFormData({
+                ...formData,
+                content: { ...formData.content, workContent: e.target.value },
+              })
+            }
+            className="w-full px-4 py-2 bg-gray-50 rounded-xl text-sm outline-none resize-none"
+          />
+          <div className="grid grid-cols-2 gap-4">
+            <NumericInput
+              value={formData.content.totalPrice}
+              onChange={(val) =>
+                setFormData({ ...formData, content: { ...formData.content, totalPrice: val } })
+              }
+            />
+            <NumericInput
+              value={formData.content.paymentAmount}
+              onChange={(val) =>
+                setFormData({ ...formData, content: { ...formData.content, paymentAmount: val } })
+              }
+            />
           </div>
         </section>
 
-        <div className="pt-6">
-          <Button
-            variant="blue"
-            className="w-full py-4 rounded-2xl shadow-xl"
-            onClick={handleExport}
-            isLoading={loading}
-          >
-            <FileText size={20} className="mr-2" /> TẠO VÀ TẢI FILE WORD (.DOCX)
-          </Button>
-        </div>
+        <Button
+          variant="blue"
+          className="w-full py-4 rounded-2xl"
+          onClick={handleExport}
+          isLoading={loading}
+        >
+          <FileText size={20} className="mr-2" /> TẠO VÀ TẢI FILE WORD (.DOCX)
+        </Button>
       </div>
     </div>
   );

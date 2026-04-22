@@ -21,6 +21,420 @@ const DEFAULT_FONT = 'Times New Roman';
 const DEFAULT_SIZE = 26; // 13pt = 26 half-points
 
 /**
+ * Tạo file Word cho Hợp đồng thuê thép tấm (Mẫu phức tạp hơn có bảng)
+ */
+export const exportSteelSheetContract = async (data: any) => {
+  const { partyA, partyB, content, contractCode, date, items } = data;
+  const signDate = new Date(date || new Date());
+
+  const doc = new Document({
+    sections: [
+      {
+        properties: {},
+        children: [
+          // Tiêu ngữ (Giống mẫu trước)
+          new Paragraph({
+            alignment: AlignmentType.CENTER,
+            children: [
+              new TextRun({
+                text: 'CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM',
+                bold: true,
+                size: DEFAULT_SIZE,
+                font: DEFAULT_FONT,
+              }),
+            ],
+          }),
+          new Paragraph({
+            alignment: AlignmentType.CENTER,
+            children: [
+              new TextRun({
+                text: 'Độc lập - Tự do - Hạnh phúc',
+                bold: true,
+                size: DEFAULT_SIZE,
+                font: DEFAULT_FONT,
+              }),
+            ],
+          }),
+          new Paragraph({ spacing: { before: 400 } }),
+
+          // Tên hợp đồng
+          new Paragraph({
+            alignment: AlignmentType.CENTER,
+            children: [
+              new TextRun({ text: 'HỢP ĐỒNG CHO THUÊ', bold: true, size: 32, font: DEFAULT_FONT }),
+            ],
+          }),
+          new Paragraph({
+            alignment: AlignmentType.CENTER,
+            children: [
+              new TextRun({
+                text: `Số: ${contractCode}`,
+                italic: true,
+                size: DEFAULT_SIZE,
+                font: DEFAULT_FONT,
+              }),
+            ],
+          }),
+
+          new Paragraph({ spacing: { before: 300 } }),
+
+          // Thông tin dự án
+          new Table({
+            width: { size: 100, type: WidthType.PERCENTAGE },
+            borders: {
+              top: { style: BorderStyle.SINGLE, size: 1 },
+              bottom: { style: BorderStyle.SINGLE, size: 1 },
+              left: { style: BorderStyle.SINGLE, size: 1 },
+              right: { style: BorderStyle.SINGLE, size: 1 },
+            },
+            rows: [
+              new TableRow({
+                children: [
+                  new TableCell({
+                    width: { size: 20, type: WidthType.PERCENTAGE },
+                    children: [
+                      new Paragraph({
+                        children: [
+                          new TextRun({
+                            text: '- Công trình',
+                            size: DEFAULT_SIZE,
+                            font: DEFAULT_FONT,
+                          }),
+                        ],
+                      }),
+                    ],
+                  }),
+                  new TableCell({
+                    width: { size: 80, type: WidthType.PERCENTAGE },
+                    children: [
+                      new Paragraph({
+                        children: [
+                          new TextRun({
+                            text: `: ${content.projectName || ''}`,
+                            bold: true,
+                            size: DEFAULT_SIZE,
+                            font: DEFAULT_FONT,
+                          }),
+                        ],
+                      }),
+                    ],
+                  }),
+                ],
+              }),
+              new TableRow({
+                children: [
+                  new TableCell({
+                    children: [
+                      new Paragraph({
+                        children: [
+                          new TextRun({
+                            text: '- Hạng mục',
+                            size: DEFAULT_SIZE,
+                            font: DEFAULT_FONT,
+                          }),
+                        ],
+                      }),
+                    ],
+                  }),
+                  new TableCell({
+                    children: [
+                      new Paragraph({
+                        children: [
+                          new TextRun({
+                            text: `: ${content.category || ''}`,
+                            bold: true,
+                            size: DEFAULT_SIZE,
+                            font: DEFAULT_FONT,
+                          }),
+                        ],
+                      }),
+                    ],
+                  }),
+                ],
+              }),
+              new TableRow({
+                children: [
+                  new TableCell({
+                    children: [
+                      new Paragraph({
+                        children: [
+                          new TextRun({
+                            text: '- Địa điểm',
+                            size: DEFAULT_SIZE,
+                            font: DEFAULT_FONT,
+                          }),
+                        ],
+                      }),
+                    ],
+                  }),
+                  new TableCell({
+                    children: [
+                      new Paragraph({
+                        children: [
+                          new TextRun({
+                            text: `: ${content.location || ''}`,
+                            bold: true,
+                            size: DEFAULT_SIZE,
+                            font: DEFAULT_FONT,
+                          }),
+                        ],
+                      }),
+                    ],
+                  }),
+                ],
+              }),
+            ],
+          }),
+
+          new Paragraph({ spacing: { before: 300 } }),
+
+          // Phần 1 & 2 (Bên A/B) - Logic tương tự mẫu trước nhưng đổi tiêu đề động
+          new Paragraph({
+            children: [
+              new TextRun({
+                text: 'BÊN A (BÊN CHO THUÊ): ',
+                bold: true,
+                size: DEFAULT_SIZE,
+                font: DEFAULT_FONT,
+              }),
+              new TextRun({
+                text: partyA.companyName,
+                bold: true,
+                size: DEFAULT_SIZE,
+                font: DEFAULT_FONT,
+              }),
+            ],
+          }),
+          // ... Các trường thông tin bên A ...
+          new Paragraph({ spacing: { before: 200 } }),
+          new Paragraph({
+            children: [
+              new TextRun({
+                text: 'BÊN B (BÊN THUÊ): ',
+                bold: true,
+                size: DEFAULT_SIZE,
+                font: DEFAULT_FONT,
+              }),
+              new TextRun({
+                text: partyB.companyName,
+                bold: true,
+                size: DEFAULT_SIZE,
+                font: DEFAULT_FONT,
+              }),
+            ],
+          }),
+          // ... Các trường thông tin bên B ...
+
+          new Paragraph({ spacing: { before: 300 } }),
+
+          // Bảng đơn giá chi tiết
+          new Paragraph({
+            children: [
+              new TextRun({
+                text: 'ĐIỀU 1: CHI TIẾT VẬT TƯ VÀ ĐƠN GIÁ',
+                bold: true,
+                size: DEFAULT_SIZE,
+                font: DEFAULT_FONT,
+              }),
+            ],
+          }),
+          new Table({
+            width: { size: 100, type: WidthType.PERCENTAGE },
+            rows: [
+              new TableRow({
+                children: [
+                  new TableCell({
+                    children: [
+                      new Paragraph({
+                        alignment: AlignmentType.CENTER,
+                        children: [
+                          new TextRun({ text: 'STT', bold: true, size: 22, font: DEFAULT_FONT }),
+                        ],
+                      }),
+                    ],
+                  }),
+                  new TableCell({
+                    children: [
+                      new Paragraph({
+                        alignment: AlignmentType.CENTER,
+                        children: [
+                          new TextRun({
+                            text: 'Công việc, hạng mục',
+                            bold: true,
+                            size: 22,
+                            font: DEFAULT_FONT,
+                          }),
+                        ],
+                      }),
+                    ],
+                  }),
+                  new TableCell({
+                    children: [
+                      new Paragraph({
+                        alignment: AlignmentType.CENTER,
+                        children: [
+                          new TextRun({ text: 'ĐVT', bold: true, size: 22, font: DEFAULT_FONT }),
+                        ],
+                      }),
+                    ],
+                  }),
+                  new TableCell({
+                    children: [
+                      new Paragraph({
+                        alignment: AlignmentType.CENTER,
+                        children: [
+                          new TextRun({
+                            text: 'Số lượng',
+                            bold: true,
+                            size: 22,
+                            font: DEFAULT_FONT,
+                          }),
+                        ],
+                      }),
+                    ],
+                  }),
+                  new TableCell({
+                    children: [
+                      new Paragraph({
+                        alignment: AlignmentType.CENTER,
+                        children: [
+                          new TextRun({
+                            text: 'Đơn giá',
+                            bold: true,
+                            size: 22,
+                            font: DEFAULT_FONT,
+                          }),
+                        ],
+                      }),
+                    ],
+                  }),
+                  new TableCell({
+                    children: [
+                      new Paragraph({
+                        alignment: AlignmentType.CENTER,
+                        children: [
+                          new TextRun({
+                            text: 'Thành tiền',
+                            bold: true,
+                            size: 22,
+                            font: DEFAULT_FONT,
+                          }),
+                        ],
+                      }),
+                    ],
+                  }),
+                ],
+              }),
+              ...(items || []).map(
+                (item: any, index: number) =>
+                  new TableRow({
+                    children: [
+                      new TableCell({
+                        children: [
+                          new Paragraph({
+                            alignment: AlignmentType.CENTER,
+                            children: [
+                              new TextRun({
+                                text: (index + 1).toString(),
+                                size: 22,
+                                font: DEFAULT_FONT,
+                              }),
+                            ],
+                          }),
+                        ],
+                      }),
+                      new TableCell({
+                        children: [
+                          new Paragraph({
+                            children: [
+                              new TextRun({ text: item.name, size: 22, font: DEFAULT_FONT }),
+                            ],
+                          }),
+                        ],
+                      }),
+                      new TableCell({
+                        children: [
+                          new Paragraph({
+                            alignment: AlignmentType.CENTER,
+                            children: [
+                              new TextRun({ text: item.unit, size: 22, font: DEFAULT_FONT }),
+                            ],
+                          }),
+                        ],
+                      }),
+                      new TableCell({
+                        children: [
+                          new Paragraph({
+                            alignment: AlignmentType.CENTER,
+                            children: [
+                              new TextRun({
+                                text: item.quantity.toString(),
+                                size: 22,
+                                font: DEFAULT_FONT,
+                              }),
+                            ],
+                          }),
+                        ],
+                      }),
+                      new TableCell({
+                        children: [
+                          new Paragraph({
+                            alignment: AlignmentType.RIGHT,
+                            children: [
+                              new TextRun({
+                                text: item.price.toLocaleString(),
+                                size: 22,
+                                font: DEFAULT_FONT,
+                              }),
+                            ],
+                          }),
+                        ],
+                      }),
+                      new TableCell({
+                        children: [
+                          new Paragraph({
+                            alignment: AlignmentType.RIGHT,
+                            children: [
+                              new TextRun({
+                                text: (item.quantity * item.price).toLocaleString(),
+                                size: 22,
+                                font: DEFAULT_FONT,
+                              }),
+                            ],
+                          }),
+                        ],
+                      }),
+                    ],
+                  }),
+              ),
+            ],
+          }),
+
+          // Phân chân trang (Đại diện A/B ký tên)
+          new Paragraph({ spacing: { before: 800 } }),
+          new Paragraph({
+            children: [
+              new TextRun({
+                text: 'ĐẠI DIỆN BÊN A\t\t\t\t\tĐẠI DIỆN BÊN B',
+                bold: true,
+                size: DEFAULT_SIZE,
+                font: DEFAULT_FONT,
+              }),
+            ],
+          }),
+        ],
+      },
+    ],
+  });
+
+  const buffer = await Packer.toBuffer(doc);
+  const blob = new Blob([buffer], {
+    type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  });
+  saveAs(blob, `Hop_Dong_Thue_Thep_Tam_${contractCode || 'New'}.docx`);
+};
+
+/**
  * Tạo file Word cho Hợp đồng thuê xe cuốc
  */
 export const exportLeaseVehicleContract = async (data: any) => {

@@ -14,9 +14,10 @@ import { motion, AnimatePresence } from 'motion/react';
 import { supabase } from '@/lib/supabase';
 import { Button } from '../shared/Button';
 import { LeaseVehicleForm } from './LeaseVehicleForm';
+import { LeaseSteelSheetForm } from './LeaseSteelSheetForm';
 
 export const ContractModule = ({ user, addToast }: { user: any; addToast: any }) => {
-  const [view, setView] = useState<'list' | 'create_thue_xe'>('list');
+  const [view, setView] = useState<'list' | 'create_thue_xe' | 'create_thue_thep_tam'>('list');
   const [contracts, setContracts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -55,6 +56,18 @@ export const ContractModule = ({ user, addToast }: { user: any; addToast: any })
     );
   }
 
+  if (view === 'create_thue_thep_tam') {
+    return (
+      <LeaseSteelSheetForm
+        onBack={() => {
+          setView('list');
+          fetchContracts();
+        }}
+        addToast={addToast}
+      />
+    );
+  }
+
   return (
     <div className="p-4 md:p-6 space-y-6 pb-24">
       {/* Header */}
@@ -70,7 +83,10 @@ export const ContractModule = ({ user, addToast }: { user: any; addToast: any })
         </div>
         <div className="flex gap-2">
           <Button variant="blue" onClick={() => setView('create_thue_xe')}>
-            <Plus size={20} className="mr-2" /> Tạo HĐ Thuê xe
+            <Plus size={20} className="mr-2" /> Thuê xe
+          </Button>
+          <Button variant="orange" onClick={() => setView('create_thue_thep_tam')}>
+            <Plus size={20} className="mr-2" /> Thuê thép tấm
           </Button>
         </div>
       </div>
@@ -156,7 +172,7 @@ export const ContractModule = ({ user, addToast }: { user: any; addToast: any })
                   <div className="flex flex-col">
                     <span className="text-[9px] font-bold text-gray-400 uppercase">Loại HĐ</span>
                     <span className="text-xs font-black text-gray-600">
-                      {contract.type === 'THUE_XE' ? 'THUÊ XE CUỐC' : contract.type}
+                      {contract.type === 'THUE_XE' ? 'THUÊ XE CUỐC' : 'THUÊ THÉP TẤM'}
                     </span>
                   </div>
                   <div className="flex flex-col items-end">

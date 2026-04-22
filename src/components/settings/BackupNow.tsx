@@ -113,7 +113,10 @@ export const BackupNow = ({
       const fileName = `CDX_Backup_${new Date().toISOString().split('T')[0]}.xlsx`;
       const response = await fetch('/api/send-backup', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': 'cdx-secret-2026',
+        },
         body: JSON.stringify({
           fileData: base64Data,
           email: 'conduongxanhthueton@gmail.com',

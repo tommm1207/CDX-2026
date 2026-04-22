@@ -293,7 +293,7 @@ export default function App() {
         <h1 className="text-xl font-bold text-gray-900 mb-2">Thiếu cấu hình hệ thống</h1>
         <p className="text-sm text-gray-500 max-w-sm mb-6">
           Vui lòng thiết lập <strong>VITE_SUPABASE_URL</strong> và{' '}
-          <strong>VITE_SUPABASE_ANON_KEY</strong> trong Vercel.
+          <strong>VITE_SUPABASE_ANON_KEY</strong> trong bảng điều khiển Cloudflare Pages.
         </p>
         <button
           onClick={() => window.location.reload()}

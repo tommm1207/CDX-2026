@@ -4,46 +4,44 @@ import path from 'path';
 import {defineConfig, loadEnv} from 'vite';
 import { VitePWA } from 'vite-plugin-pwa';
 
+import { cloudflare } from "@cloudflare/vite-plugin";
+
 export default defineConfig(({mode}) => {
   const env = loadEnv(mode, '.', '');
   return {
-    plugins: [
-      react(), 
-      tailwindcss(),
-      VitePWA({
-        registerType: 'prompt',
-        includeAssets: ['logo.png'],
-        workbox: {
-          maximumFileSizeToCacheInBytes: 3 * 1024 * 1024, // 3MB (after splitting, chunks are smaller)
-        },
-        manifest: {
-          name: 'Quản Lý Thi Công CDX',
-          short_name: 'CDX Admin',
-          description: 'Hệ thống Quản lý Kho & Nhân sự CDX',
-          theme_color: '#2D5A27',
-          background_color: '#ffffff',
-          display: 'standalone',
-          icons: [
-            {
-              src: 'logo.png',
-              sizes: '192x192',
-              type: 'image/png'
-            },
-            {
-              src: 'logo.png',
-              sizes: '512x512',
-              type: 'image/png'
-            },
-            {
-              src: 'logo.png',
-              sizes: '512x512',
-              type: 'image/png',
-              purpose: 'any maskable'
-            }
-          ]
-        }
-      })
-    ],
+    plugins: [react(), tailwindcss(), VitePWA({
+      registerType: 'prompt',
+      includeAssets: ['logo.png'],
+      workbox: {
+        maximumFileSizeToCacheInBytes: 3 * 1024 * 1024, // 3MB (after splitting, chunks are smaller)
+      },
+      manifest: {
+        name: 'Quản Lý Thi Công CDX',
+        short_name: 'CDX Admin',
+        description: 'Hệ thống Quản lý Kho & Nhân sự CDX',
+        theme_color: '#2D5A27',
+        background_color: '#ffffff',
+        display: 'standalone',
+        icons: [
+          {
+            src: 'logo.png',
+            sizes: '192x192',
+            type: 'image/png'
+          },
+          {
+            src: 'logo.png',
+            sizes: '512x512',
+            type: 'image/png'
+          },
+          {
+            src: 'logo.png',
+            sizes: '512x512',
+            type: 'image/png',
+            purpose: 'any maskable'
+          }
+        ]
+      }
+    }), cloudflare()],
     define: {
     },
     resolve: {

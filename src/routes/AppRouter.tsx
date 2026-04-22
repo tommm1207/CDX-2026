@@ -39,6 +39,7 @@ import { Notifications } from '@/components/notifications/Notifications';
 import { DatabaseSetup } from '@/components/settings/DatabaseSetup';
 import { Employee } from '@/types';
 import { ErrorBoundary } from '@/components/shared/ErrorBoundary';
+import { ContractModule } from '@/components/contracts/ContractModule';
 
 interface AppRouterProps {
   currentPage: string;
@@ -203,6 +204,8 @@ export const AppRouter = ({
           setHideBottomNav={setHideBottomNav}
         />
       );
+    case 'contracts':
+      return <ContractModule user={user} addToast={addToast} />;
     case 'partners':
       return <PlaceholderPage title="Khách hàng & nhà cung cấp" onBack={goBack} />;
     case 'inventory-report':

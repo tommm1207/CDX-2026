@@ -13,6 +13,7 @@ import { ToastContainer, ToastMessage, ToastType } from '@/components/shared/Toa
 // Layout & Router
 import { MainLayout } from '@/layouts/MainLayout';
 import { AppRouter } from '@/routes/AppRouter';
+import { ContractModule } from '@/components/contracts/ContractModule';
 import { ReloadPrompt } from '@/components/shared/ReloadPrompt';
 import { ErrorBoundary } from '@/components/shared/ErrorBoundary';
 
@@ -265,6 +266,7 @@ export default function App() {
                 'transfer',
                 'costs',
                 'construction-diary',
+                'contracts',
                 'xasa-gop',
                 'bom-lenh-sx',
                 'nhap-thanh-pham',

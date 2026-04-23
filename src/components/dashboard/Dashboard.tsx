@@ -145,7 +145,7 @@ export const Dashboard = ({ user, onNavigate, addToast, pendingApprovals = 0 }: 
     },
     {
       id: 'notes',
-      label: 'Ghi chú',
+      label: 'Note',
       icon: FileText,
       color: 'bg-primary',
       description: 'Ghi chép nhật ký công việc',
@@ -312,7 +312,7 @@ const RadialMenu = ({ onNavigate }: { onNavigate: (page: string, params?: any) =
     },
     {
       id: 'notes',
-      label: 'Ghi chú',
+      label: 'Note',
       icon: FileText,
       color: 'bg-primary',
       action: () => onNavigate('notes', { action: 'add' }),

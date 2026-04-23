@@ -159,8 +159,16 @@ export interface Note {
   id: string;
   employee_id?: string;
   date: string;
+  title?: string;
   content: string;
-  type?: string;
+  weather?: string;
+  related_object?: string;
+  object_code?: string;
+  note_code?: string;
+  location?: string;
+  related_personnel?: string[];
+  image_urls?: string[];
+  status?: string;
   created_at?: string;
 }
 

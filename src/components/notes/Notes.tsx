@@ -16,10 +16,11 @@ import {
 } from 'lucide-react';
 import { useRef } from 'react';
 
+import { ImageCapture } from '../shared/ImageCapture';
 import { SaveImageButton } from '../shared/SaveImageButton';
 import { motion, AnimatePresence } from 'motion/react';
 import { supabase } from '@/lib/supabase';
-import { Employee } from '@/types';
+import { Employee, Note } from '@/types';
 import { PageBreadcrumb } from '../shared/PageBreadcrumb';
 import { isActiveWarehouse } from '@/utils/inventory';
 import { ToastType } from '../shared/Toast';
@@ -55,7 +56,7 @@ export const Notes = ({
   initialAction?: string;
   setHideBottomNav?: (hide: boolean) => void;
 }) => {
-  const [notes, setNotes] = useState<any[]>([]);
+  const [notes, setNotes] = useState<Note[]>([]);
   const [loading, setLoading] = useState(true);
   const [showAddNew, setShowAddNew] = useState(false);
   const [showQuickNote, setShowQuickNote] = useState(initialAction === 'add');
@@ -99,6 +100,7 @@ export const Notes = ({
     note_code: '',
     location: '',
     related_personnel: [] as string[],
+    image_urls: [] as string[],
   });
 
   useEffect(() => {
@@ -147,8 +149,8 @@ export const Notes = ({
   const handleExportExcel = () => {
     import('@/utils/excelExport').then(({ exportToExcel }) => {
       exportToExcel({
-        title: 'Ghi chú & Nhật ký',
-        sheetName: 'Ghi chú',
+        title: 'Note & Nhật ký',
+        sheetName: 'Note',
         columns: ['Tiêu đề', 'Nội dung', 'Phân loại', 'Ngày tạo'],
         rows: filteredNotes.map((it) => [
           it.title,
@@ -164,7 +166,7 @@ export const Notes = ({
 
   const handleSave = async () => {
     if (!formData.content) {
-      if (addToast) addToast('Vui lòng nhập nội dung ghi chú', 'error');
+      if (addToast) addToast('Vui lòng nhập nội dung note', 'error');
       return;
     }
 
@@ -188,17 +190,18 @@ export const Notes = ({
         note_code: formData.note_code,
         location: formData.location,
         related_personnel: formData.related_personnel,
+        image_urls: formData.image_urls,
         created_by: user.id,
       };
 
       if (editingId) {
         const { error } = await supabase.from('notes').update(payload).eq('id', editingId);
         if (error) throw error;
-        if (addToast) addToast('Cập nhật ghi chú thành công!', 'success');
+        if (addToast) addToast('Cập nhật note thành công!', 'success');
       } else {
         const { error } = await supabase.from('notes').insert([payload]);
         if (error) throw error;
-        if (addToast) addToast('Lưu ghi chú thành công!', 'success');
+        if (addToast) addToast('Lưu note thành công!', 'success');
       }
 
       setShowQuickNote(false);
@@ -214,6 +217,14 @@ export const Notes = ({
         note_code: '',
         location: '',
         related_personnel: [],
+        image_urls: [],
+      });
+      setFilters({
+        fromDate: '',
+        toDate: '',
+        employee: '',
+        warehouse: '',
+        search: '',
       });
       fetchData();
     } catch (error: any) {
@@ -234,6 +245,7 @@ export const Notes = ({
       note_code: note.note_code || '',
       location: note.location || '',
       related_personnel: note.related_personnel || [],
+      image_urls: note.image_urls || [],
     });
     setEditingId(note.id);
     setShowAddNew(true);
@@ -259,7 +271,7 @@ export const Notes = ({
         .update({ status: 'Đã xóa' })
         .eq('id', itemToDelete);
       if (error) throw error;
-      if (addToast) addToast('Đã chuyển ghi chú vào thùng rác', 'success');
+      if (addToast) addToast('Đã chuyển note vào thùng rác', 'success');
       setShowDeleteModal(false);
       fetchData();
     } catch (error: any) {
@@ -271,14 +283,14 @@ export const Notes = ({
 
   const handlePermanentDelete = async () => {
     if (!itemToDelete || user.role !== 'Develop') return;
-    if (!window.confirm('CẢNH BÁO: Hành động này sẽ xóa VĨNH VIỄN ghi chú này. Bạn có chắc chắn?'))
+    if (!window.confirm('CẢNH BÁO: Hành động này sẽ xóa VĨNH VIỄN note này. Bạn có chắc chắn?'))
       return;
 
     setSubmitting(true);
     try {
       const { error } = await supabase.from('notes').delete().eq('id', itemToDelete);
       if (error) throw error;
-      if (addToast) addToast('Đã xóa vĩnh viễn ghi chú', 'success');
+      if (addToast) addToast('Đã xóa vĩnh viễn note', 'success');
       fetchData();
       setShowDeleteModal(false);
     } catch (err: any) {
@@ -303,7 +315,7 @@ export const Notes = ({
         .in('id', idsToDelete);
       if (error) throw error;
 
-      if (addToast) addToast(`Đã chuyển ${idsToDelete.length} ghi chú vào thùng rác`, 'success');
+      if (addToast) addToast(`Đã chuyển ${idsToDelete.length} note vào thùng rác`, 'success');
       setShowDeleteAllConfirm(false);
       fetchData();
     } catch (error: any) {
@@ -328,12 +340,12 @@ export const Notes = ({
   return (
     <div className="p-4 md:p-6 space-y-6 pb-24">
       <div className="flex items-center justify-between gap-2 mb-4">
-        <PageBreadcrumb title="Ghi chú" onBack={onBack} />
+        <PageBreadcrumb title="Note" onBack={onBack} />
         <div className="flex items-center gap-1.5 justify-end flex-1 flex-shrink-0">
           <SaveImageButton
             onClick={handleSaveTableImage}
             isCapturing={isCapturingTable}
-            title="Lưu ảnh báo cáo ghi chú"
+            title="Lưu ảnh báo cáo note"
           />
           <ExcelButton onClick={handleExportExcel} size="icon" />
 
@@ -438,8 +450,7 @@ export const Notes = ({
       <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
         <div className="p-4 border-b border-gray-50 flex items-center justify-between bg-primary/5">
           <h3 className="text-sm font-bold text-primary flex items-center gap-2 uppercase tracking-wider">
-            <FileText size={18} /> Ghi chú tháng {new Date().getMonth() + 1}/
-            {new Date().getFullYear()}
+            <FileText size={18} /> Note tháng {new Date().getMonth() + 1}/{new Date().getFullYear()}
           </h3>
         </div>
         <div className="overflow-x-auto">
@@ -476,7 +487,7 @@ export const Notes = ({
               ) : filteredNotes.length === 0 ? (
                 <tr>
                   <td colSpan={6} className="px-4 py-8 text-center text-gray-400 italic">
-                    Không có ghi chú nào
+                    Không có note nào
                   </td>
                 </tr>
               ) : (
@@ -494,6 +505,31 @@ export const Notes = ({
                         <span className="text-xs text-gray-500 truncate max-w-[300px]">
                           {note.content}
                         </span>
+                        {note.image_urls && note.image_urls.length > 0 && (
+                          <div className="flex flex-col gap-1 mt-2">
+                            <div className="flex items-center gap-1">
+                              <LucideImageIcon size={10} className="text-primary" />
+                              <span className="text-[9px] font-bold text-primary uppercase italic">
+                                {note.image_urls.length} ảnh
+                              </span>
+                            </div>
+                            <div className="flex gap-1 overflow-hidden">
+                              {note.image_urls.slice(0, 3).map((url, i) => (
+                                <img
+                                  key={i}
+                                  src={url}
+                                  alt="preview"
+                                  className="w-8 h-8 rounded-lg object-cover border border-gray-100"
+                                />
+                              ))}
+                              {note.image_urls.length > 3 && (
+                                <div className="w-8 h-8 rounded-lg bg-gray-100 flex items-center justify-center text-[8px] font-bold text-gray-400">
+                                  +{note.image_urls.length - 3}
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        )}
                       </div>
                     </td>
                     <td className="px-4 py-3 text-sm text-gray-700">
@@ -561,7 +597,7 @@ export const Notes = ({
               <h3 className="text-xl font-bold text-gray-800 mb-2">Xác nhận xóa?</h3>
               <div className="text-sm text-gray-500 mb-6 text-left bg-gray-50 p-4 rounded-xl border border-gray-100 space-y-2">
                 <p>
-                  Ghi chú:{' '}
+                  Note:{' '}
                   <strong className="text-primary truncate">
                     {notes.find((n) => n.id === itemToDelete)?.title || 'Không tiêu đề'}
                   </strong>
@@ -612,7 +648,7 @@ export const Notes = ({
                   >
                     <FileText size={20} />
                   </div>
-                  <h3 className="text-lg font-bold uppercase tracking-wide">Ghi chú nhanh</h3>
+                  <h3 className="text-lg font-bold uppercase tracking-wide">Note nhanh</h3>
                 </div>
                 <button
                   onClick={() => setShowQuickNote(false)}
@@ -629,7 +665,7 @@ export const Notes = ({
                     value={formData.title}
                     onChange={(e) => setFormData({ ...formData, title: e.target.value })}
                     className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm focus:ring-2 focus:ring-primary/20 outline-none mt-1"
-                    placeholder="VD: Ghi chú công việc sáng..."
+                    placeholder="VD: Note công việc sáng..."
                   />
                 </div>
                 <div>
@@ -640,7 +676,7 @@ export const Notes = ({
                     value={formData.content}
                     onChange={(e) => setFormData({ ...formData, content: e.target.value })}
                     className="w-full px-4 py-3 rounded-xl border border-gray-200 text-sm focus:ring-2 focus:ring-primary/20 outline-none mt-1 min-h-[100px]"
-                    placeholder="Nhập nội dung ghi chú..."
+                    placeholder="Nhập nội dung note..."
                   />
                 </div>
                 <div className="grid grid-cols-2 gap-4">
@@ -707,7 +743,7 @@ export const Notes = ({
                   onClick={handleSave}
                   className="flex-1 py-3 bg-amber-500 text-white rounded-xl font-bold text-sm hover:bg-amber-600 transition-all shadow-lg shadow-amber-500/20 flex items-center justify-center gap-2"
                 >
-                  <Save size={18} /> Lưu ghi chú
+                  <Save size={18} /> Lưu note
                 </button>
                 <button
                   onClick={() => setShowQuickNote(false)}
@@ -746,7 +782,7 @@ export const Notes = ({
                     <FileText size={20} className="sm:w-6 sm:h-6" />
                   </div>
                   <h3 className="font-bold text-base sm:text-lg">
-                    {editingId ? 'Chỉnh sửa ghi chú' : 'Thêm ghi chú mới'}
+                    {editingId ? 'Chỉnh sửa note' : 'Thêm note mới'}
                   </h3>
                 </div>
                 <button
@@ -764,12 +800,12 @@ export const Notes = ({
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="md:col-span-2 space-y-2 mb-2">
                     <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">
-                      Mã tham chiếu (Ghi chú)
+                      Mã tham chiếu (Note)
                     </label>
                     <div className="bg-primary/5 px-5 py-3.5 rounded-2xl border border-primary/10 text-sm font-black text-primary uppercase shadow-inner italic">
                       {editingId
-                        ? `GC-${new Date(notes.find((n) => n.id === editingId)?.date).toISOString().slice(2, 10).replace(/-/g, '')}-${editingId.slice(0, 3).toUpperCase()}`
-                        : `GC-${new Date().toISOString().slice(2, 10).replace(/-/g, '')}-001`}
+                        ? `NT-${new Date(notes.find((n) => n.id === editingId)?.date).toISOString().slice(2, 10).replace(/-/g, '')}-${editingId.slice(0, 3).toUpperCase()}`
+                        : `NT-${new Date().toISOString().slice(2, 10).replace(/-/g, '')}-001`}
                     </div>
                   </div>
                   <div className="space-y-4">
@@ -782,7 +818,7 @@ export const Notes = ({
                         value={formData.title}
                         onChange={(e) => setFormData({ ...formData, title: e.target.value })}
                         className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm focus:ring-2 focus:ring-primary/20 outline-none mt-1"
-                        placeholder="VD: Ghi chú công việc sáng..."
+                        placeholder="VD: Note công việc sáng..."
                       />
                     </div>
                     <div>
@@ -880,6 +916,13 @@ export const Notes = ({
                         className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm bg-gray-50 mt-1"
                       />
                     </div>
+
+                    <ImageCapture
+                      label="Hình ảnh đính kèm"
+                      existingImages={formData.image_urls}
+                      onUpload={(urls) => setFormData({ ...formData, image_urls: urls })}
+                      maxImages={10}
+                    />
                   </div>
                 </div>
               </div>
@@ -906,7 +949,7 @@ export const Notes = ({
       <ConfirmModal
         show={showDeleteAllConfirm}
         title="Xác nhận xóa danh sách"
-        message={`Bạn có chắc chắn muốn chuyển tất cả ${filteredNotes.length} ghi chú hiện tại vào thùng rác không?`}
+        message={`Bạn có chắc chắn muốn chuyển tất cả ${filteredNotes.length} note hiện tại vào thùng rác không?`}
         onConfirm={executeDeleteAll}
         onCancel={() => setShowDeleteAllConfirm(false)}
       />
@@ -923,11 +966,12 @@ export const Notes = ({
             note_code: '',
             location: '',
             related_personnel: [],
+            image_urls: [],
           });
           setEditingId(null);
           setShowAddNew(true);
         }}
-        label="Thêm ghi chú"
+        label="Thêm note"
       />
 
       {/* Hidden Report Template (A4 Landscape) */}
@@ -963,7 +1007,7 @@ export const Notes = ({
             </div>
             <div className="text-right">
               <h2 className="text-3xl font-black text-gray-900 uppercase tracking-tighter mb-1">
-                Báo Cáo Nhật Ký Ghi Chú
+                Báo Cáo Nhật Ký Note
               </h2>
               <p className="text-xs text-gray-500 font-bold italic">
                 Thời gian xuất: {new Date().toLocaleString('vi-VN')}
@@ -988,7 +1032,7 @@ export const Notes = ({
                   Tiêu đề / Đối tượng
                 </th>
                 <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest italic border-r border-white/10">
-                  Nội dung ghi chú
+                  Nội dung note
                 </th>
                 <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest italic border-r border-white/10">
                   Thời tiết
@@ -1016,7 +1060,21 @@ export const Notes = ({
                     </div>
                   </td>
                   <td className="px-6 py-4 text-gray-700 leading-relaxed font-medium break-words whitespace-normal max-w-[400px]">
-                    {note.content}
+                    <div className="flex flex-col gap-2">
+                      <span>{note.content}</span>
+                      {note.image_urls && note.image_urls.length > 0 && (
+                        <div className="flex flex-wrap gap-1 mt-1">
+                          {note.image_urls.map((url, i) => (
+                            <img
+                              key={i}
+                              src={url}
+                              alt="note-img"
+                              className="w-16 h-16 rounded-lg object-cover border border-gray-100"
+                            />
+                          ))}
+                        </div>
+                      )}
+                    </div>
                   </td>
                   <td className="px-6 py-4 font-bold text-gray-500 italic">
                     {WEATHER_OPTIONS.find((w) => w.value === note.weather)?.label || '—'}

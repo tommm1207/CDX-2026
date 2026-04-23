@@ -138,20 +138,18 @@ export const Costs = ({
   }));
 
   useEffect(() => {
+    fetchCosts();
     fetchCostGroups();
+    fetchCostItems();
+    fetchUnits();
     fetchEmployees();
     fetchMaterials();
     fetchWarehouses();
-    fetchUnits();
-  }, []);
+  }, [statusFilter]);
 
   const handleSaveTableImage = () => {
     setShowReportPreview(true);
   };
-
-  useEffect(() => {
-    fetchCosts();
-  }, [statusFilter]);
 
   const fetchUnits = async () => {
     const { data } = await supabase.from('costs').select('unit');
@@ -162,14 +160,6 @@ export const Costs = ({
       setUnits(uniqueUnits);
     }
   };
-
-  useEffect(() => {
-    fetchWarehouses();
-    fetchCostGroups();
-    fetchCostItems();
-    fetchUnits();
-    fetchEmployees();
-  }, []);
 
   const fetchCostGroups = async () => {
     const { data } = await supabase.from('costs').select('cost_type');
@@ -320,15 +310,21 @@ export const Costs = ({
       const cost_code = isEditing ? formData.cost_code : await generateNextCostCode();
 
       const payload = {
+        ...formData,
+        date: formData.date,
         cost_code,
         transaction_type: formData.transaction_type,
         cost_type: formData.cost_type,
         content: formData.content,
-        notes: formData.notes,
         warehouse_id,
+        material_id: formData.material_id,
         quantity: formData.quantity,
         unit: formData.unit,
-        total_amount: formData.total_amount,
+        unit_price: formData.unit_price,
+        total_amount: formData.quantity * formData.unit_price,
+        notes: isEditing
+          ? `[SỬA lúc ${new Date().toLocaleString('vi-VN')}] ${formData.notes.replace(/^\[SỬA lúc .*?\]\s*/, '')}`
+          : formData.notes,
         employee_id: user.id,
         status: ['admin', 'develop'].includes(user.role?.toLowerCase() || '')
           ? isEditing
@@ -336,17 +332,27 @@ export const Costs = ({
             : 'Chờ duyệt'
           : 'Chờ duyệt',
       };
+
       if (isEditing && editingId) {
-        await supabase.from('costs').update(payload).eq('id', editingId);
+        const { error } = await supabase.from('costs').update(payload).eq('id', editingId);
+        if (error) throw error;
       } else {
-        await supabase.from('costs').insert([payload]);
+        const { error } = await supabase.from('costs').insert([payload]);
+        if (error) throw error;
       }
 
       setShowModal(false);
       setFormData(initialFormState);
       setIsEditing(false);
       setEditingId(null);
+      setSearchTerm('');
+      setStatusFilter('Tất cả');
+      setFilterStartDate('');
+      setFilterEndDate('');
+      setFilterWarehouseId('');
       fetchCosts();
+      fetchCostGroups();
+      fetchCostItems();
       if (addToast) addToast(isEditing ? 'Cập nhật thành công!' : 'Lưu thành công!', 'success');
     } catch (err: any) {
       if (addToast) addToast('Lỗi: ' + err.message, 'error');

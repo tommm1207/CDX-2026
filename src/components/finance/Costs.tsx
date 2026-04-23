@@ -310,18 +310,17 @@ export const Costs = ({
       const cost_code = isEditing ? formData.cost_code : await generateNextCostCode();
 
       const payload = {
-        ...formData,
         date: formData.date,
         cost_code,
         transaction_type: formData.transaction_type,
         cost_type: formData.cost_type,
         content: formData.content,
         warehouse_id,
-        material_id: formData.material_id,
+        material_id: isUUID(formData.material_id) ? formData.material_id : null,
         quantity: formData.quantity,
         unit: formData.unit,
-        unit_price: formData.unit_price,
-        total_amount: formData.quantity * formData.unit_price,
+        unit_price: formData.unit_price || 0,
+        total_amount: formData.total_amount,
         notes: isEditing
           ? `[SỬA lúc ${new Date().toLocaleString('vi-VN')}] ${formData.notes.replace(/^\[SỬA lúc .*?\]\s*/, '')}`
           : formData.notes,
@@ -342,7 +341,10 @@ export const Costs = ({
       }
 
       setShowModal(false);
-      setFormData(initialFormState);
+      setFormData({
+        ...initialFormState,
+        date: new Date().toISOString().split('T')[0],
+      });
       setIsEditing(false);
       setEditingId(null);
       setSearchTerm('');

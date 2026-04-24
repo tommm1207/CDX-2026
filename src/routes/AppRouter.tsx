@@ -89,7 +89,14 @@ export const AppRouter = ({
       }
       return <HRRecords user={user} onBack={goBack} addToast={addToast} />;
     case 'attendance':
-      return <Attendance user={user} onBack={goBack} addToast={addToast} />;
+      return (
+        <Attendance
+          user={user}
+          onBack={goBack}
+          addToast={addToast}
+          setHideBottomNav={setHideBottomNav}
+        />
+      );
     case 'costs':
       return (
         <ErrorBoundary onBack={goBack}>
@@ -170,10 +177,18 @@ export const AppRouter = ({
           onBack={goBack}
           addToast={addToast}
           initialAction={pageParams?.action}
+          setHideBottomNav={setHideBottomNav}
         />
       );
     case 'payroll':
-      return <MonthlySalary user={user} onBack={goBack} addToast={addToast} />;
+      return (
+        <MonthlySalary
+          user={user}
+          onBack={goBack}
+          addToast={addToast}
+          setHideBottomNav={setHideBottomNav}
+        />
+      );
     case 'salary-settings':
       if (!isAdmin) {
         return (

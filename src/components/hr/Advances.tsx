@@ -33,11 +33,13 @@ export const Advances = ({
   onBack,
   addToast,
   initialAction,
+  setHideBottomNav,
 }: {
   user: Employee;
   onBack?: () => void;
   addToast?: (msg: string, type?: any) => void;
   initialAction?: string;
+  setHideBottomNav?: (hide: boolean) => void;
 }) => {
   const [advances, setAdvances] = useState<any[]>([]);
   const [allowances, setAllowances] = useState<any[]>([]);
@@ -63,6 +65,7 @@ export const Advances = ({
 
   const [formData, setFormData] = useState(initialFormState);
   const [isEditing, setIsEditing] = useState(false);
+  const [selectedItem, setSelectedItem] = useState<any>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
@@ -75,6 +78,9 @@ export const Advances = ({
   const [sortBy, setSortBy] = useState<'date' | 'amount'>('date');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
 
+  const selectedMonth = new Date(filterStartDate).getMonth() + 1;
+  const selectedYear = new Date(filterStartDate).getFullYear();
+
   // Export States
   const [isCapturingTable, setIsCapturingTable] = useState(false);
   const [showReportPreview, setShowReportPreview] = useState(false);
@@ -82,14 +88,14 @@ export const Advances = ({
 
   useEffect(() => {
     if (setHideBottomNav) {
-      setHideBottomNav(showModal || showDeleteModal || showDetailModal);
+      setHideBottomNav(showModal || showDeleteModal || showReportPreview);
     }
-    if (showModal || showDeleteModal || showDetailModal) {
+    if (showModal || showDeleteModal || showReportPreview) {
       document.body.style.overflow = 'hidden';
     } else {
       document.body.style.overflow = 'auto';
     }
-  }, [showModal, showDeleteModal, showDetailModal, setHideBottomNav]);
+  }, [showModal, showDeleteModal, showReportPreview, setHideBottomNav]);
 
   useEffect(() => {
     fetchData();

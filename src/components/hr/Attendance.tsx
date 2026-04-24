@@ -21,10 +21,12 @@ export const Attendance = ({
   user,
   onBack,
   addToast,
+  setHideBottomNav,
 }: {
   user: Employee;
   onBack?: () => void;
   addToast?: (message: string, type?: ToastType) => void;
+  setHideBottomNav?: (hide: boolean) => void;
 }) => {
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [attendance, setAttendance] = useState<any[]>([]);
@@ -37,9 +39,34 @@ export const Attendance = ({
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1);
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
   const [statusFilter, setStatusFilter] = useState<'all' | 'has_work' | 'no_work'>('all');
-  const [previewImageUrl, setPreviewImageUrl] = useState<string | null>(null);
-  const tableRef = useRef<HTMLDivElement>(null);
   const { captureElement, isCapturing: isCapturingTable } = useTableCapture();
+  const [previewImageUrl, setPreviewImageUrl] = useState<string | null>(null);
+  const [showBulkModal, setShowBulkModal] = useState(false);
+  const [showConfirmBulk, setShowConfirmBulk] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [showOtConfirm, setShowOtConfirm] = useState(false);
+
+  // Bottom Nav Visibility
+  useEffect(() => {
+    const isAnyModalOpen =
+      showEditModal || showBulkModal || showConfirmBulk || !!previewImageUrl || showOtConfirm;
+    if (setHideBottomNav) {
+      setHideBottomNav(isAnyModalOpen);
+    }
+    if (isAnyModalOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = 'auto';
+    }
+  }, [
+    showEditModal,
+    showBulkModal,
+    showConfirmBulk,
+    previewImageUrl,
+    showOtConfirm,
+    setHideBottomNav,
+  ]);
+  const tableRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     fetchData();
@@ -152,7 +179,6 @@ export const Attendance = ({
     fetchData();
   };
 
-  const [showBulkModal, setShowBulkModal] = useState(false);
   const [selectedEmployees, setSelectedEmployees] = useState<string[]>([]);
   const [bulkDateFrom, setBulkDateFrom] = useState(new Date().toISOString().split('T')[0]);
   const [bulkDateTo, setBulkDateTo] = useState(new Date().toISOString().split('T')[0]);
@@ -194,7 +220,6 @@ export const Attendance = ({
 
   const [bulkLoading, setBulkLoading] = useState(false);
   const [bulkProgress, setBulkProgress] = useState({ current: 0, total: 0, label: '' });
-  const [showConfirmBulk, setShowConfirmBulk] = useState(false);
 
   const handleStartSaveBulk = () => {
     if (selectedEmployees.length === 0) {
@@ -285,8 +310,6 @@ export const Attendance = ({
     // no-op for now
   };
 
-  const [showEditModal, setShowEditModal] = useState(false);
-  const [showOtConfirm, setShowOtConfirm] = useState(false);
   const [editingAtt, setEditingAtt] = useState<any>(null);
   const [editFormData, setEditFormData] = useState({ status: 'present', overtime: 0, notes: '' });
 

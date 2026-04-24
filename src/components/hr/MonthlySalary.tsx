@@ -27,10 +27,12 @@ export const MonthlySalary = ({
   user,
   onBack,
   addToast,
+  setHideBottomNav,
 }: {
   user: Employee;
   onBack?: () => void;
   addToast?: (message: string, type?: ToastType) => void;
+  setHideBottomNav?: (hide: boolean) => void;
 }) => {
   const [salaries, setSalaries] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -79,6 +81,18 @@ export const MonthlySalary = ({
   const [searchTerm, setSearchTerm] = useState('');
   const [sortBy, setSortBy] = useState<SortOption>('date');
   const [previewImageUrl, setPreviewImageUrl] = useState<string | null>(null);
+
+  // Bottom Nav Visibility
+  useEffect(() => {
+    if (setHideBottomNav) {
+      setHideBottomNav(showDetailModal || !!previewImageUrl);
+    }
+    if (showDetailModal || previewImageUrl) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = 'auto';
+    }
+  }, [showDetailModal, previewImageUrl, setHideBottomNav]);
 
   const [isMainCustomRange, setIsMainCustomRange] = useState(false);
   const [filterStartDate, setFilterStartDate] = useState('');

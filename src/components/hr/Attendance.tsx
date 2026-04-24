@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 
 import { CalendarCheck, Plus, X, Users, Check, RefreshCw, Search, Camera } from 'lucide-react';
 import { SaveImageButton } from '../shared/SaveImageButton';

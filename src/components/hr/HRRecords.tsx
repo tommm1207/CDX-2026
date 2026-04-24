@@ -1,4 +1,4 @@
-import { useState, useEffect, FormEvent, useRef, useCallback } from 'react';
+import React, { useState, useEffect, FormEvent, useRef, useCallback } from 'react';
 
 import {
   Users,
@@ -300,10 +300,9 @@ export const HRRecords = ({
     .sort((a, b) => {
       if (sortBy === 'newest')
         return new Date(b.created_at || '').getTime() - new Date(a.created_at || '').getTime();
-      if (sortBy === 'code') return (a.code || '').localeCompare(b.code || '');
       if (sortBy === 'date')
         return new Date(b.join_date || '').getTime() - new Date(a.join_date || '').getTime();
-      return 0;
+      return (a.code || '').localeCompare(b.code || '');
     });
 
   const departments = Array.from(new Set(employees.map((e) => e.department).filter(Boolean))).map(
@@ -349,7 +348,7 @@ export const HRRecords = ({
   return (
     <div className="p-4 md:p-6 space-y-6 pb-24 max-w-full overflow-x-hidden">
       <div className="flex items-center justify-between gap-2 mb-4">
-        <PageBreadcrumb title="Hồ sơ Nhân sự" onBack={onBack} />
+        <PageBreadcrumb title="Hồ sơ nhân sự" onBack={onBack} />
         <PageToolbar
           tableRef={tableRef}
           captureOptions={{ reportTitle: 'HỔ SƠ NHÂN SỰ', subtitle: undefined }}
@@ -399,21 +398,25 @@ export const HRRecords = ({
         ref={tableRef}
         className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 space-y-4"
       >
-        <div className="overflow-x-auto custom-scrollbar pb-2">
+        <div className="overflow-x-auto custom-scrollbar pb-2 overflow-y-auto max-h-[70vh]">
           <table className="w-full text-left border-separate border-spacing-0">
             <thead>
-              <tr className="bg-primary text-white text-[11px] uppercase tracking-wider whitespace-nowrap">
-                <th className="p-3 first:rounded-tl-lg sticky left-0 bg-primary z-10">Mã NV</th>
-                <th className="p-3">Họ và tên</th>
-                <th className="p-3">Email</th>
-                <th className="p-3">Số điện thoại</th>
-                <th className="p-3">Ngày vào làm</th>
-                {user.role === 'Develop' && <th className="p-3">Mật khẩu ứng dụng</th>}
-                <th className="p-3">Bộ phận</th>
-                <th className="p-3">Chức vụ</th>
-                <th className="p-3">Phân quyền</th>
-                <th className="p-3">Trạng thái</th>
-                <th className="p-3 last:rounded-tr-lg">Thao tác</th>
+              <tr className="bg-primary text-white text-[11px] uppercase tracking-wider whitespace-nowrap sticky top-0 z-[20]">
+                <th className="p-3 first:rounded-tl-lg sticky top-0 left-0 bg-primary z-[21] shadow-[1px_0_0_0_rgba(255,255,255,0.1)]">
+                  Mã NV
+                </th>
+                <th className="p-3 sticky top-0 bg-primary">Họ và tên</th>
+                <th className="p-3 sticky top-0 bg-primary">Email</th>
+                <th className="p-3 sticky top-0 bg-primary">Số điện thoại</th>
+                <th className="p-3 sticky top-0 bg-primary">Ngày vào làm</th>
+                {user.role === 'Develop' && (
+                  <th className="p-3 sticky top-0 bg-primary">Mật khẩu ứng dụng</th>
+                )}
+                <th className="p-3 sticky top-0 bg-primary">Bộ phận</th>
+                <th className="p-3 sticky top-0 bg-primary">Chức vụ</th>
+                <th className="p-3 sticky top-0 bg-primary">Phân quyền</th>
+                <th className="p-3 sticky top-0 bg-primary">Trạng thái</th>
+                <th className="p-3 last:rounded-tr-lg sticky top-0 bg-primary">Thao tác</th>
               </tr>
             </thead>
             <tbody className="text-xs text-gray-600">
@@ -436,27 +439,30 @@ export const HRRecords = ({
                 (() => {
                   const grouped: Record<string, Employee[]> = {};
                   filteredEmployees.forEach((emp) => {
-                    const dept = emp.department || 'Chưa phân bộ phận';
-                    if (!grouped[dept]) grouped[dept] = [];
-                    grouped[dept].push(emp);
+                    let groupKey = emp.department || 'Chưa phân bộ phận';
+                    if (emp.role === 'Admin' || emp.role === 'Develop') {
+                      groupKey = 'Ban Điều Hành (Admin)';
+                    }
+                    if (!grouped[groupKey]) grouped[groupKey] = [];
+                    grouped[groupKey].push(emp);
                   });
 
                   return Object.entries(grouped)
                     .sort(([a], [b]) => a.localeCompare(b))
                     .map(([dept, deptEmployees]) => (
                       <React.Fragment key={dept}>
-                        <tr className="bg-gray-50/50">
+                        <tr className="bg-gray-50 sticky top-[40px] z-[15]">
                           <td
                             colSpan={user.role === 'Develop' ? 11 : 10}
-                            className="p-2 border-y border-gray-50 sticky left-0"
+                            className="p-2 border-y border-gray-100 sticky top-[40px] left-0 bg-gray-50 z-[16] shadow-[1px_0_0_0_rgba(0,0,0,0.05)]"
                           >
-                            <span className="text-[9px] font-bold text-gray-400 uppercase tracking-widest px-1">
+                            <span className="text-[9px] font-bold text-gray-400 uppercase tracking-widest px-2">
                               {dept}
                             </span>
                           </td>
                         </tr>
                         {deptEmployees
-                          .sort((a, b) => (a.full_name || '').localeCompare(b.full_name || ''))
+                          .sort((a, b) => (a.code || '').localeCompare(b.code || ''))
                           .map((emp) => (
                             <tr
                               key={emp.id}

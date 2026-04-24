@@ -1,5 +1,5 @@
 import { CanvasLogo } from '@/components/shared/ReportExportHeader';
-import { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 
 import { Wallet, X, Image as ImageIcon, Camera, Search } from 'lucide-react';
 import { toPng } from 'html-to-image';

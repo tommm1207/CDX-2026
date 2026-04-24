@@ -1,5 +1,5 @@
 import { CanvasLogo } from '@/components/shared/ReportExportHeader';
-import { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   Plus,
   X,

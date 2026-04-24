@@ -118,12 +118,12 @@ export const AttendanceTable = ({
 
   return (
     <>
-      <div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
-        <div className="overflow-x-auto custom-scrollbar">
-          <table className="w-full text-left border-collapse min-w-[1200px] whitespace-nowrap">
-            <thead>
+      <div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden relative">
+        <div className="overflow-x-auto custom-scrollbar overflow-y-auto max-h-[75vh]">
+          <table className="w-full text-left border-collapse min-w-[1200px] whitespace-nowrap table-fixed">
+            <thead className="sticky top-0 z-[40] bg-primary shadow-sm">
               <tr className="bg-primary text-white">
-                <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider sticky left-0 z-[30] bg-primary border-r border-white/10 w-48">
+                <th className="px-2 py-2.5 text-[10px] font-bold uppercase tracking-wider sticky left-0 z-[50] bg-primary border-r border-white/10 w-36 shadow-[1px_0_0_0_rgba(255,255,255,0.1)]">
                   Nhân viên
                 </th>
                 {days.map((d) => {
@@ -133,12 +133,12 @@ export const AttendanceTable = ({
                   return (
                     <th
                       key={d}
-                      className={`px-1 py-2 text-[9px] font-bold uppercase tracking-wider text-center border-r border-white/10 w-10 ${isWeekend ? 'bg-black/10' : ''}`}
+                      className={`px-0 py-1.5 text-[9px] font-bold uppercase tracking-wider text-center border-r border-white/10 w-[28px] ${isWeekend ? 'bg-black/10' : ''}`}
                     >
                       <div className="flex flex-col items-center justify-center leading-[1.1]">
-                        <span className="text-[12px] font-black">{d}</span>
-                        <span className="text-[8px] font-medium opacity-90">{dow}</span>
-                        <span className="text-[7px] font-medium italic opacity-60 mt-0.5">
+                        <span className="text-[11px] font-black">{d}</span>
+                        <span className="text-[7px] font-medium opacity-90">{dow}</span>
+                        <span className="text-[6px] font-medium italic opacity-60 mt-0.5">
                           {lunar}
                         </span>
                       </div>
@@ -164,63 +164,105 @@ export const AttendanceTable = ({
                   </td>
                 </tr>
               ) : (
-                employees.map((emp) => {
-                  const empAtt = attendance.filter((a) => a.employee_id === emp.id);
-                  const totalDays =
-                    empAtt.reduce((sum, a) => sum + Number(a.hours_worked || 0), 0) / 8;
-                  return (
-                    <tr key={emp.id} className="hover:bg-gray-50 transition-colors group">
-                      <td className="px-4 py-3 sticky left-0 z-[30] bg-white group-hover:bg-gray-50 border-r border-gray-100">
-                        <p className="text-xs font-bold text-gray-800 leading-tight">
-                          {emp.full_name}
-                        </p>
-                        <p className="text-[9px] text-gray-400">{emp.code || emp.id.slice(0, 8)}</p>
-                      </td>
-                      {days.map((d) => {
-                        const att = getStatus(emp.id, d);
-                        return (
-                          <td key={d} className="p-0.5 border-r border-gray-50 relative group/cell">
-                            <button
-                              onClick={(e) => handleCellClick(emp.id, emp.full_name, d, e)}
-                              onContextMenu={(e) => {
-                                e.preventDefault();
-                                onOpenEditModal?.(emp.id, d);
-                              }}
-                              disabled={user.role === 'User'}
-                              className={`w-full aspect-square flex flex-col items-center justify-center rounded-lg text-[10px] font-black transition-all ${getStatusColor(att?.status)} ${user.role === 'User' ? 'cursor-default' : 'cursor-pointer hover:brightness-95 active:scale-95'}`}
-                            >
-                              <span>{getStatusLabel(att?.status)}</span>
-                              {(() => {
-                                if (att?.notes) {
-                                  return (
-                                    <div
-                                      className="absolute top-1 right-1 w-1.5 h-1.5 bg-white/40 rounded-full shadow-sm"
-                                      title={att.notes}
-                                    />
-                                  );
-                                }
-                                return null;
-                              })()}
-                              {(() => {
-                                if (att?.overtime_hours > 0) {
-                                  return (
-                                    <span className="text-[7px] leading-none mt-0.5">
-                                      +{att.overtime_hours}h
-                                    </span>
-                                  );
-                                }
-                                return null;
-                              })()}
-                            </button>
+                (() => {
+                  const groupedEmployees: Record<string, Employee[]> = {};
+                  employees.forEach((emp) => {
+                    const dept = emp.department || 'Khác / Chưa phân bộ phận';
+                    if (!groupedEmployees[dept]) groupedEmployees[dept] = [];
+                    groupedEmployees[dept].push(emp);
+                  });
+
+                  return Object.entries(groupedEmployees)
+                    .sort(([a], [b]) => a.localeCompare(b))
+                    .map(([dept, deptEmployees]) => (
+                      <React.Fragment key={dept}>
+                        {/* Dòng phân cách bộ phận */}
+                        <tr className="bg-gray-50/30 sticky top-[36px] z-[35]">
+                          <td className="px-3 py-1.5 border-y border-gray-100 sticky left-0 bg-gray-50 shadow-[1px_0_0_0_rgba(0,0,0,0.05)]">
+                            <div className="flex items-center gap-2">
+                              <span className="text-[9px] font-bold text-gray-400 uppercase tracking-widest whitespace-nowrap">
+                                {dept}
+                              </span>
+                            </div>
                           </td>
-                        );
-                      })}
-                      <td className="px-2 py-3 text-center text-xs font-black text-primary">
-                        {totalDays.toFixed(1)}
-                      </td>
-                    </tr>
-                  );
-                })
+                          <td
+                            colSpan={days.length + 1}
+                            className="border-y border-gray-50 bg-gray-50/10"
+                          />
+                        </tr>
+
+                        {deptEmployees
+                          .sort((a, b) => (a.full_name || '').localeCompare(b.full_name || ''))
+                          .map((emp) => {
+                            const empAtt = attendance.filter((a) => a.employee_id === emp.id);
+                            const totalDays =
+                              empAtt.reduce((sum, a) => sum + Number(a.hours_worked || 0), 0) / 8;
+                            return (
+                              <tr key={emp.id} className="hover:bg-gray-50 transition-colors group">
+                                <td className="px-3 py-2.5 sticky left-0 z-[30] bg-white group-hover:bg-gray-50 border-r border-gray-100 shadow-[1px_0_0_0_rgba(0,0,0,0.05)]">
+                                  <p
+                                    className="text-[11px] font-bold text-gray-800 leading-tight truncate w-full"
+                                    title={emp.full_name}
+                                  >
+                                    {emp.full_name}
+                                  </p>
+                                  <p className="text-[8px] text-gray-400">
+                                    {emp.code || emp.id.slice(0, 8)}
+                                  </p>
+                                </td>
+                                {days.map((d) => {
+                                  const att = getStatus(emp.id, d);
+                                  return (
+                                    <td
+                                      key={d}
+                                      className="p-0.5 border-r border-gray-50 relative group/cell"
+                                    >
+                                      <button
+                                        onClick={(e) =>
+                                          handleCellClick(emp.id, emp.full_name, d, e)
+                                        }
+                                        onContextMenu={(e) => {
+                                          e.preventDefault();
+                                          onOpenEditModal?.(emp.id, d);
+                                        }}
+                                        disabled={user.role === 'User'}
+                                        className={`w-full aspect-square flex flex-col items-center justify-center rounded-lg text-[10px] font-black transition-all ${getStatusColor(att?.status)} ${user.role === 'User' ? 'cursor-default' : 'cursor-pointer hover:brightness-95 active:scale-95'}`}
+                                      >
+                                        <span>{getStatusLabel(att?.status)}</span>
+                                        {(() => {
+                                          if (att?.notes) {
+                                            return (
+                                              <div
+                                                className="absolute top-1 right-1 w-1.5 h-1.5 bg-white/40 rounded-full shadow-sm"
+                                                title={att.notes}
+                                              />
+                                            );
+                                          }
+                                          return null;
+                                        })()}
+                                        {(() => {
+                                          if (att?.overtime_hours > 0) {
+                                            return (
+                                              <span className="text-[7px] leading-none mt-0.5">
+                                                +{att.overtime_hours}h
+                                              </span>
+                                            );
+                                          }
+                                          return null;
+                                        })()}
+                                      </button>
+                                    </td>
+                                  );
+                                })}
+                                <td className="px-2 py-3 text-center text-xs font-black text-primary">
+                                  {totalDays.toFixed(1)}
+                                </td>
+                              </tr>
+                            );
+                          })}
+                      </React.Fragment>
+                    ));
+                })()
               )}
             </tbody>
           </table>

@@ -23,6 +23,7 @@ import { PageToolbar, FilterPanel, FilterSearchInput } from '../shared/PageToolb
 import { ReportImagePreviewModal } from '../shared/ReportImagePreviewModal';
 import { checkUsage } from '@/utils/dataIntegrity';
 import { generateSmartCode } from '@/utils/codeGenerator';
+import { CreatableSelect } from '../shared/CreatableSelect';
 
 export const HRRecords = ({
   user,
@@ -305,6 +306,13 @@ export const HRRecords = ({
       return 0;
     });
 
+  const departments = Array.from(new Set(employees.map((e) => e.department).filter(Boolean))).map(
+    (d) => ({ id: d!, name: d! }),
+  );
+  const positions = Array.from(new Set(employees.map((e) => e.position).filter(Boolean))).map(
+    (p) => ({ id: p!, name: p! }),
+  );
+
   const handleExportExcel = useCallback(() => {
     import('@/utils/excelExport').then(({ exportToExcel }) => {
       exportToExcel({
@@ -425,84 +433,111 @@ export const HRRecords = ({
                   </td>
                 </tr>
               ) : (
-                filteredEmployees.map((emp) => (
-                  <tr
-                    key={emp.id}
-                    onClick={() => handleEdit(emp)}
-                    className="border-b border-gray-50 hover:bg-primary/5 transition-colors cursor-pointer"
-                  >
-                    <td className="p-3 font-bold text-gray-800 sticky left-0 bg-white group-hover:bg-gray-50 z-10 border-b border-gray-50">
-                      {emp.code || emp.id.slice(0, 8)}
-                    </td>
-                    <td className="p-3">{emp.full_name}</td>
-                    <td className="p-3">{emp.email || '-'}</td>
-                    <td className="p-3">{emp.phone || '-'}</td>
-                    <td className="p-3">{emp.join_date || '-'}</td>
-                    {user.role === 'Develop' && (
-                      <td className="p-3 font-mono text-blue-600">
-                        <div className="flex items-center gap-2 group/pass">
-                          <span className="opacity-0 group-hover/pass:opacity-100 transition-opacity absolute bg-white px-2 py-1 rounded shadow-sm border border-gray-100 z-50 pointer-events-none -mt-8 ml-4">
-                            {emp.app_pass}
-                          </span>
-                          <span>••••••••</span>
-                          <Eye className="w-4 h-4 text-gray-400 group-hover/pass:text-blue-500 cursor-pointer" />
-                        </div>
-                      </td>
-                    )}
-                    <td className="p-3">{emp.department || '-'}</td>
-                    <td className="p-3">{emp.position || '-'}</td>
-                    <td className="p-3">
-                      <span
-                        className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
-                          emp.role === 'Develop'
-                            ? 'bg-purple-100 text-purple-600'
-                            : emp.role === 'Admin'
-                              ? 'bg-blue-100 text-blue-600'
-                              : 'bg-gray-100 text-gray-600'
-                        }`}
-                      >
-                        {emp.role}
-                      </span>
-                    </td>
-                    <td className="p-3">
-                      <span
-                        className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
-                          emp.status === 'Đang làm việc' || emp.status === 'Hoạt động'
-                            ? 'bg-green-100 text-green-600'
-                            : 'bg-red-100 text-red-600'
-                        }`}
-                      >
-                        {emp.status}
-                      </span>
-                    </td>
-                    <td className="p-3" onClick={(e) => e.stopPropagation()}>
-                      <div className="flex gap-2">
-                        <Button
-                          size="icon"
-                          variant="ghost"
-                          className="text-blue-600 hover:bg-blue-50"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleEdit(emp);
-                          }}
-                          icon={Edit}
-                          iconSize={14}
-                        />
-                        <Button
-                          size="icon"
-                          variant="ghost"
-                          className="text-red-600 hover:bg-red-50"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleDeleteClick(emp.id);
-                          }}
-                          icon={Trash2}
-                          iconSize={14}
-                        />
-                      </div>
-                    </td>
-                  </tr>
-                ))
+                (() => {
+                  const grouped: Record<string, Employee[]> = {};
+                  filteredEmployees.forEach((emp) => {
+                    const dept = emp.department || 'Chưa phân bộ phận';
+                    if (!grouped[dept]) grouped[dept] = [];
+                    grouped[dept].push(emp);
+                  });
+
+                  return Object.entries(grouped)
+                    .sort(([a], [b]) => a.localeCompare(b))
+                    .map(([dept, deptEmployees]) => (
+                      <React.Fragment key={dept}>
+                        <tr className="bg-gray-50/50">
+                          <td
+                            colSpan={user.role === 'Develop' ? 11 : 10}
+                            className="p-2 border-y border-gray-50 sticky left-0"
+                          >
+                            <span className="text-[9px] font-bold text-gray-400 uppercase tracking-widest px-1">
+                              {dept}
+                            </span>
+                          </td>
+                        </tr>
+                        {deptEmployees
+                          .sort((a, b) => (a.full_name || '').localeCompare(b.full_name || ''))
+                          .map((emp) => (
+                            <tr
+                              key={emp.id}
+                              onClick={() => handleEdit(emp)}
+                              className="border-b border-gray-50 hover:bg-primary/5 transition-colors cursor-pointer group"
+                            >
+                              <td className="p-3 font-bold text-gray-800 sticky left-0 bg-white group-hover:bg-gray-50 z-10 border-b border-gray-50 shadow-[1px_0_0_0_rgba(0,0,0,0.05)]">
+                                {emp.code || emp.id.slice(0, 8)}
+                              </td>
+                              <td className="p-3">{emp.full_name}</td>
+                              <td className="p-3">{emp.email || '-'}</td>
+                              <td className="p-3">{emp.phone || '-'}</td>
+                              <td className="p-3">{emp.join_date || '-'}</td>
+                              {user.role === 'Develop' && (
+                                <td className="p-3 font-mono text-blue-600">
+                                  <div className="flex items-center gap-2 group/pass relative">
+                                    <span className="opacity-0 group-hover/pass:opacity-100 transition-opacity absolute bg-white px-2 py-1 rounded shadow-sm border border-gray-100 z-[999] pointer-events-none -mt-8 ml-4 whitespace-nowrap">
+                                      {emp.app_pass}
+                                    </span>
+                                    <span>••••••••</span>
+                                    <Eye className="w-4 h-4 text-gray-400 group-hover/pass:text-blue-500 cursor-pointer" />
+                                  </div>
+                                </td>
+                              )}
+                              <td className="p-3">{emp.department || '-'}</td>
+                              <td className="p-3">{emp.position || '-'}</td>
+                              <td className="p-3">
+                                <span
+                                  className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                                    emp.role === 'Develop'
+                                      ? 'bg-purple-100 text-purple-600'
+                                      : emp.role === 'Admin'
+                                        ? 'bg-blue-100 text-blue-600'
+                                        : 'bg-gray-100 text-gray-600'
+                                  }`}
+                                >
+                                  {emp.role}
+                                </span>
+                              </td>
+                              <td className="p-3">
+                                <span
+                                  className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                                    emp.status === 'Đang làm việc' || emp.status === 'Hoạt động'
+                                      ? 'bg-green-100 text-green-600'
+                                      : 'bg-red-100 text-red-600'
+                                  }`}
+                                >
+                                  {emp.status}
+                                </span>
+                              </td>
+                              <td className="p-3" onClick={(e) => e.stopPropagation()}>
+                                <div className="flex gap-2">
+                                  <Button
+                                    size="icon"
+                                    variant="ghost"
+                                    className="text-blue-600 hover:bg-blue-50"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleEdit(emp);
+                                    }}
+                                    icon={Edit}
+                                    iconSize={14}
+                                  />
+                                  <Button
+                                    size="icon"
+                                    variant="ghost"
+                                    className="text-red-600 hover:bg-red-50"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleDeleteClick(emp.id);
+                                    }}
+                                    icon={Trash2}
+                                    iconSize={14}
+                                  />
+                                </div>
+                              </td>
+                            </tr>
+                          ))}
+                      </React.Fragment>
+                    ));
+                })()
               )}
             </tbody>
           </table>
@@ -739,26 +774,24 @@ export const HRRecords = ({
                         />
                       </div>
                     )}
-                    <div className="space-y-1">
-                      <label className="text-[10px] font-bold text-gray-400 uppercase">
-                        Bộ phận
-                      </label>
-                      <input
-                        type="text"
+                    <div className="space-y-1 relative z-[60]">
+                      <CreatableSelect
+                        label="Bộ phận"
                         value={formData.department}
-                        onChange={(e) => setFormData({ ...formData, department: e.target.value })}
-                        className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20"
+                        options={departments}
+                        onChange={(val) => setFormData({ ...formData, department: val })}
+                        onCreate={(val) => setFormData({ ...formData, department: val })}
+                        placeholder="Chọn hoặc nhập bộ phận mới..."
                       />
                     </div>
-                    <div className="space-y-1">
-                      <label className="text-[10px] font-bold text-gray-400 uppercase">
-                        Chức vụ
-                      </label>
-                      <input
-                        type="text"
+                    <div className="space-y-1 relative z-[50]">
+                      <CreatableSelect
+                        label="Chức vụ"
                         value={formData.position}
-                        onChange={(e) => setFormData({ ...formData, position: e.target.value })}
-                        className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary/20"
+                        options={positions}
+                        onChange={(val) => setFormData({ ...formData, position: val })}
+                        onCreate={(val) => setFormData({ ...formData, position: val })}
+                        placeholder="Chọn hoặc nhập chức vụ mới..."
                       />
                     </div>
                     <div className="space-y-1">

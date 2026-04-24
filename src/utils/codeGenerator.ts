@@ -15,8 +15,10 @@ export const generateSmartCode = (
   const indices = existingCodes
     .map((code) => {
       if (!code || !code.startsWith(prefix)) return null;
-      const numPart = code.substring(prefix.length);
-      const num = parseInt(numPart, 10);
+      // Extract numeric part: find the first sequence of digits after prefix
+      const numPartMatch = code.substring(prefix.length).match(/\d+/);
+      if (!numPartMatch) return null;
+      const num = parseInt(numPartMatch[0], 10);
       return isNaN(num) ? null : num;
     })
     .filter((num): num is number => num !== null)

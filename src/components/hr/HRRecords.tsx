@@ -441,7 +441,7 @@ export const HRRecords = ({
                   filteredEmployees.forEach((emp) => {
                     let groupKey = emp.department || 'Chưa phân bộ phận';
                     if (emp.role === 'Admin' || emp.role === 'Develop') {
-                      groupKey = 'Ban Điều Hành (Admin)';
+                      groupKey = 'Ban Điều Hành (Admin/Dev)';
                     }
                     if (!grouped[groupKey]) grouped[groupKey] = [];
                     grouped[groupKey].push(emp);

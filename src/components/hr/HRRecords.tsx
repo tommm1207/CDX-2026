@@ -44,10 +44,15 @@ export const HRRecords = ({
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [itemToDelete, setItemToDelete] = useState('');
   const [sortBy, setSortBy] = useState<SortOption>(
-    (localStorage.getItem(`sort_pref_hr_${user.id}`) as SortOption) || 'newest',
+    (localStorage.getItem(`sort_pref_hr_${user.id}`) as SortOption) || 'date',
   );
   const [previewImageUrl, setPreviewImageUrl] = useState<string | null>(null);
+  const [nextCode, setNextCode] = useState('');
   const tableRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    generateNextEmployeeCode().then(setNextCode);
+  }, [employees]);
 
   useEffect(() => {
     localStorage.setItem(`sort_pref_hr_${user.id}`, sortBy);
@@ -95,13 +100,41 @@ export const HRRecords = ({
 
   const generateNextEmployeeCode = async () => {
     try {
-      const { data } = await supabase.from('users').select('code').like('code', 'CDX%');
+      // 1. Fetch all codes to get a good candidate via smart logic
+      const { data } = await supabase.from('users').select('code');
+      const codes = data?.map((d) => d.code).filter(Boolean) || [];
 
-      const codes = data?.map((d) => d.code) || [];
-      return generateSmartCode(codes, 'CDX', 3);
+      let candidate = generateSmartCode(codes as string[], 'CDX', 3);
+
+      // 2. Double check existence in DB to be 100% sure (handles race conditions or RLS gaps)
+      let isUnique = false;
+      let attempts = 0;
+      while (!isUnique && attempts < 5) {
+        const { data: existing } = await supabase
+          .from('users')
+          .select('id')
+          .eq('code', candidate)
+          .maybeSingle();
+
+        if (!existing) {
+          isUnique = true;
+        } else {
+          // If conflict, add to list and try next
+          codes.push(candidate);
+          candidate = generateSmartCode(codes as string[], 'CDX', 3);
+          attempts++;
+        }
+      }
+
+      // 3. Last resort if still stuck: add random suffix
+      if (!isUnique) {
+        candidate = `CDX${Math.floor(1000 + Math.random() * 9000)}`;
+      }
+
+      return candidate;
     } catch (err) {
       console.error('Error generating code:', err);
-      return 'CDX001';
+      return 'CDX' + Math.floor(1000 + Math.random() * 9000);
     }
   };
 
@@ -265,6 +298,10 @@ export const HRRecords = ({
         const { error } = await supabase.from('users').update(dataToSubmit).eq('id', id);
         if (error) throw error;
       } else {
+        // Double check code for new entries to prevent unique constraint errors
+        if (!dataToSubmit.code) {
+          dataToSubmit.code = await generateNextEmployeeCode();
+        }
         const { error } = await supabase.from('users').insert([dataToSubmit]);
         if (error) throw error;
       }
@@ -371,9 +408,8 @@ export const HRRecords = ({
               <Button
                 size="icon"
                 variant="primary"
-                onClick={async () => {
+                onClick={() => {
                   setIsEditing(false);
-                  const nextCode = await generateNextEmployeeCode();
                   setFormData({ ...initialFormState, code: nextCode });
                   setShowModal(true);
                 }}
@@ -402,10 +438,7 @@ export const HRRecords = ({
           <table className="w-full text-left border-separate border-spacing-0">
             <thead>
               <tr className="bg-primary text-white text-[11px] uppercase tracking-wider whitespace-nowrap sticky top-0 z-[20]">
-                <th className="p-3 first:rounded-tl-lg sticky top-0 left-0 bg-primary z-[21] shadow-[1px_0_0_0_rgba(255,255,255,0.1)]">
-                  Mã NV
-                </th>
-                <th className="p-3 sticky top-0 bg-primary">Họ và tên</th>
+                <th className="p-3 sticky top-0 bg-primary first:rounded-tl-lg">Họ và tên</th>
                 <th className="p-3 sticky top-0 bg-primary">Email</th>
                 <th className="p-3 sticky top-0 bg-primary">Số điện thoại</th>
                 <th className="p-3 sticky top-0 bg-primary">Ngày vào làm</th>
@@ -469,10 +502,12 @@ export const HRRecords = ({
                               onClick={() => handleEdit(emp)}
                               className="border-b border-gray-50 hover:bg-primary/5 transition-colors cursor-pointer group"
                             >
-                              <td className="p-3 font-bold text-gray-800 sticky left-0 bg-white group-hover:bg-gray-50 z-10 border-b border-gray-50 shadow-[1px_0_0_0_rgba(0,0,0,0.05)]">
-                                {emp.code || emp.id.slice(0, 8)}
+                              <td className="p-3 sticky left-0 bg-white group-hover:bg-gray-50 z-10 border-b border-gray-50 shadow-[1px_0_0_0_rgba(0,0,0,0.05)]">
+                                <div className="font-bold text-gray-800">{emp.full_name}</div>
+                                <div className="text-[9px] font-medium text-gray-400 mt-0.5 tracking-wider">
+                                  {emp.code || '-'}
+                                </div>
                               </td>
-                              <td className="p-3">{emp.full_name}</td>
                               <td className="p-3">{emp.email || '-'}</td>
                               <td className="p-3">{emp.phone || '-'}</td>
                               <td className="p-3">{emp.join_date || '-'}</td>
@@ -682,12 +717,14 @@ export const HRRecords = ({
               <div className="flex-1 overflow-y-auto overflow-x-hidden custom-scrollbar">
                 <form id="hr-employee-form" onSubmit={handleSubmit} className="p-4 sm:p-6">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div className="md:col-span-2 space-y-2 mb-2">
-                      <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">
-                        Mã tham chiếu (Nhân viên)
-                      </label>
-                      <div className="bg-primary/5 px-5 py-3.5 rounded-2xl border border-primary/10 text-sm font-black text-primary uppercase shadow-inner italic">
-                        {formData.code || 'CDX...'}
+                    <div className="md:col-span-2">
+                      <div className="flex items-center gap-2 mb-1.5 ml-1">
+                        <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">
+                          Mã nhân viên
+                        </label>
+                        <span className="text-[10px] font-bold text-primary bg-primary/5 px-2 py-0.5 rounded-full border border-primary/10">
+                          {formData.code || nextCode || '...'}
+                        </span>
                       </div>
                     </div>
                     <div className="space-y-1">

@@ -654,7 +654,7 @@ export const MaterialCatalog = ({
                     </div>
 
                     {/* 2. MÃ — hiện sau khi chọn nhóm */}
-                    <div className="md:col-span-2 space-y-2">
+                    <div className="md:col-span-2 hidden">
                       <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">
                         Mã tham chiếu (Vật tư)
                       </label>

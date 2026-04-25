@@ -90,7 +90,7 @@ export const StockIn = ({
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showAddMaterial, setShowAddMaterial] = useState(false);
   const [sortBy, setSortBy] = useState<SortOption>(
-    (localStorage.getItem(`sort_pref_stockin_${user.id}`) as SortOption) || 'newest',
+    (localStorage.getItem(`sort_pref_stockin_${user.id}`) as SortOption) || 'date',
   );
   const [previewImageUrl, setPreviewImageUrl] = useState<string | null>(null);
   const tableRef = useRef<HTMLDivElement>(null);
@@ -320,17 +320,15 @@ export const StockIn = ({
 
       // Lưu lại số lượng cần vào warehouse_requirements nếu requiredQty > 0
       if (requiredQty > 0) {
-        await supabase
-          .from('warehouse_requirements')
-          .upsert(
-            {
-              warehouse_id: finalWarehouseId,
-              material_id: finalMaterialId,
-              required_quantity: requiredQty,
-              updated_at: new Date().toISOString(),
-            },
-            { onConflict: 'warehouse_id,material_id' },
-          );
+        await supabase.from('warehouse_requirements').upsert(
+          {
+            warehouse_id: finalWarehouseId,
+            material_id: finalMaterialId,
+            required_quantity: requiredQty,
+            updated_at: new Date().toISOString(),
+          },
+          { onConflict: 'warehouse_id,material_id' },
+        );
       }
 
       setShowModal(false);
@@ -640,11 +638,10 @@ export const StockIn = ({
             return match;
           })
           .sort((a, b) => {
-            if (sortBy === 'newest')
-              return (b.import_code || '').localeCompare(a.import_code || '');
+            if (sortBy === 'date' || sortBy === 'newest')
+              return new Date(b.date).getTime() - new Date(a.date).getTime();
             if (sortBy === 'code') return (a.import_code || '').localeCompare(b.import_code || '');
             if (sortBy === 'price') return (b.total_amount || 0) - (a.total_amount || 0);
-            if (sortBy === 'date') return new Date(b.date).getTime() - new Date(a.date).getTime();
             return 0;
           });
         return (
@@ -656,9 +653,6 @@ export const StockIn = ({
               <table className="w-full text-left border-collapse whitespace-nowrap">
                 <thead>
                   <tr className="bg-primary text-white">
-                    <th className="px-2 md:px-4 py-2 md:py-3 text-[9px] md:text-[10px] font-bold uppercase tracking-wider border-r border-white/10">
-                      Ngày
-                    </th>
                     <th className="px-2 md:px-4 py-2 md:py-3 text-[9px] md:text-[10px] font-bold uppercase tracking-wider border-r border-white/10">
                       Vật tư
                     </th>
@@ -1012,7 +1006,7 @@ export const StockIn = ({
                   onSubmit={handleSubmit}
                   className="grid grid-cols-1 md:grid-cols-2 gap-6 pb-32"
                 >
-                  <div className="md:col-span-2 space-y-2 mb-2">
+                  <div className="md:col-span-2 hidden">
                     <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">
                       Mã tham chiếu (Phiếu nhập)
                     </label>

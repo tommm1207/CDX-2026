@@ -123,7 +123,7 @@ export const Costs = ({
   const [statusFilter, setStatusFilter] = useState('Tất cả');
   const [showFilter, setShowFilter] = useState(false);
   const [sortBy, setSortBy] = useState<SortOption>(
-    (localStorage.getItem(`sort_pref_costs_${user.id}`) as SortOption) || 'newest',
+    (localStorage.getItem(`sort_pref_costs_${user.id}`) as SortOption) || 'date',
   );
 
   const [employees, setEmployees] = useState<any[]>([]);
@@ -487,10 +487,9 @@ export const Costs = ({
       return match;
     })
     .sort((a, b) => {
-      if (sortBy === 'newest') return (b.cost_code || '').localeCompare(a.cost_code || '');
+      if (sortBy === 'date' || sortBy === 'newest')
+        return new Date(b.date).getTime() - new Date(a.date).getTime();
       if (sortBy === 'price') return (b.total_amount || 0) - (a.total_amount || 0);
-      if (sortBy === 'date') return new Date(b.date).getTime() - new Date(a.date).getTime();
-      if (sortBy === 'date') return new Date(b.date).getTime() - new Date(b.date).getTime();
       return 0;
     });
 
@@ -610,7 +609,6 @@ export const Costs = ({
             <thead>
               <tr className="bg-primary text-white text-[9px] md:text-[10px] font-bold uppercase tracking-wider">
                 <th className="px-2 md:px-4 py-2 md:py-3 border-r border-white/10">Ngày</th>
-                <th className="px-2 md:px-4 py-2 md:py-3 border-r border-white/10">Mã</th>
                 <th className="px-2 md:px-4 py-2 md:py-3 border-r border-white/10 text-center">
                   Loại
                 </th>
@@ -648,9 +646,6 @@ export const Costs = ({
                     >
                       <td className="px-2 md:px-4 py-2.5 md:py-3 border-r border-gray-100/50">
                         {formatDate(item.date)}
-                      </td>
-                      <td className="px-2 md:px-4 py-2.5 md:py-3 font-bold text-primary border-r border-gray-100/50">
-                        {item.cost_code}
                       </td>
                       <td className="px-2 md:px-4 py-2.5 md:py-3 text-center border-r border-gray-100/50">
                         <span
@@ -842,13 +837,13 @@ export const Costs = ({
               </div>
               <div className="flex-1 overflow-y-auto p-4 sm:p-6 scrollbar-hide">
                 <form onSubmit={handleSubmit} className="space-y-6">
-                  <div className="bg-primary/5 p-4 rounded-2xl border border-primary/10">
-                    <p className="text-[10px] font-bold text-primary uppercase mb-1">
-                      Mã tham chiếu
-                    </p>
-                    <p className="font-black text-primary uppercase italic">
-                      {formData.cost_code || 'Tự động tạo khi lưu'}
-                    </p>
+                  <div className="md:col-span-2 hidden">
+                    <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">
+                      Mã phiếu chi (Gợi ý)
+                    </label>
+                    <div className="bg-primary/5 px-5 py-3.5 rounded-2xl border border-primary/10 text-sm font-black text-primary uppercase shadow-inner italic">
+                      {formData.cost_code || 'Hệ thống tự tạo...'}
+                    </div>
                   </div>
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-1">
@@ -1101,11 +1096,8 @@ export const Costs = ({
           <table className="w-full text-left border-collapse rounded-3xl overflow-hidden shadow-sm border border-gray-100">
             <thead>
               <tr className="bg-primary text-white">
-                <th className="px-4 py-4 text-[10px] font-black uppercase tracking-widest border-r border-white/10">
+                <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider border-r border-white/10">
                   Ngày
-                </th>
-                <th className="px-4 py-4 text-[10px] font-black uppercase tracking-widest border-r border-white/10">
-                  Mã phiếu
                 </th>
                 <th className="px-4 py-4 text-[10px] font-black uppercase tracking-widest border-r border-white/10">
                   Loại chi
@@ -1121,11 +1113,8 @@ export const Costs = ({
             <tbody className="divide-y divide-gray-100 text-sm">
               {filteredCosts.map((item, idx) => (
                 <tr key={idx} className={idx % 2 === 0 ? 'bg-white' : 'bg-primary/5'}>
-                  <td className="px-4 py-3 text-xs text-gray-600 font-medium">
+                  <td className="px-4 py-3 text-xs text-gray-500 font-mono">
                     {formatDate(item.date)}
-                  </td>
-                  <td className="px-4 py-3 text-xs font-black text-primary tracking-tight">
-                    {item.cost_code}
                   </td>
                   <td className="px-4 py-3 text-xs font-black text-gray-900 uppercase tracking-tight">
                     {item.cost_type}

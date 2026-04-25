@@ -486,7 +486,7 @@ export const SanXuatCoc = ({
                       {rec.materials?.name || 'N/A'}
                     </p>
                     <p className="text-[10px] text-gray-400">
-                      {rec.import_code} • {new Date(rec.date).toLocaleDateString('vi-VN')} •{' '}
+                      {new Date(rec.date).toLocaleDateString('vi-VN')} •{' '}
                       {formatNumber(rec.quantity)} {rec.unit}
                     </p>
                   </div>
@@ -647,7 +647,7 @@ export const SanXuatCoc = ({
 
       {/* Create Modal */}
       <AnimatePresence>
-        {showModal && selectedOrder && (
+        {showModal && (
           <div
             className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
             onClick={() => setShowModal(false)}
@@ -672,9 +672,7 @@ export const SanXuatCoc = ({
                       {isEditing ? 'Sửa lệnh sản xuất' : 'Tạo lệnh sản xuất mới'}
                     </h3>
                     <p className="text-[10px] text-white/70 mt-1 uppercase tracking-wider font-medium">
-                      {isEditing
-                        ? `Phiếu: ${selectedRecord?.import_code}`
-                        : 'Nhập thông tin sản xuất'}
+                      {isEditing ? 'Cập nhật thông tin lệnh' : 'Nhập thông tin sản xuất'}
                     </p>
                   </div>
                 </div>

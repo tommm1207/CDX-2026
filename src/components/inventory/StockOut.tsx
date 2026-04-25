@@ -85,7 +85,7 @@ export const StockOut = ({
   const [filterWarehouseId, setFilterWarehouseId] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
   const [sortBy, setSortBy] = useState<SortOption>(
-    (localStorage.getItem(`sort_pref_stockout_${user.id}`) as SortOption) || 'newest',
+    (localStorage.getItem(`sort_pref_stockout_${user.id}`) as SortOption) || 'date',
   );
   const [isCapturingTable, setIsCapturingTable] = useState(false);
   const reportRef = useRef<HTMLDivElement>(null);
@@ -662,11 +662,10 @@ export const StockOut = ({
             return match;
           })
           .sort((a, b) => {
-            if (sortBy === 'newest')
-              return (b.export_code || '').localeCompare(a.export_code || '');
+            if (sortBy === 'date' || sortBy === 'newest')
+              return new Date(b.date).getTime() - new Date(a.date).getTime();
             if (sortBy === 'code') return (a.export_code || '').localeCompare(b.export_code || '');
             if (sortBy === 'price') return (b.total_amount || 0) - (a.total_amount || 0);
-            if (sortBy === 'date') return new Date(b.date).getTime() - new Date(a.date).getTime();
             return 0;
           });
         return (
@@ -990,7 +989,7 @@ export const StockOut = ({
                   onSubmit={handleSubmit}
                   className="grid grid-cols-1 md:grid-cols-2 gap-6 pb-32"
                 >
-                  <div className="md:col-span-2 space-y-2 mb-2">
+                  <div className="md:col-span-2 hidden">
                     <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">
                       Mã tham chiếu (Phiếu xuất)
                     </label>

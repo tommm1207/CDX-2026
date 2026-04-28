@@ -187,7 +187,7 @@ export const DeletedMaterials = ({
     setSubmitting(true);
     try {
       const promises = Array.from(selectedIds).map((sid) => {
-        const [table, id] = sid.split('-');
+        const [table, id] = (sid as string).split('-');
         return supabase.from(table).update({ status: null }).eq('id', id);
       });
       await Promise.all(promises);
@@ -208,7 +208,7 @@ export const DeletedMaterials = ({
       let failCount = 0;
 
       for (const sid of selectedIds) {
-        const [table, id] = sid.split('-');
+        const [table, id] = (sid as string).split('-');
         const usage = await checkUsage(table === 'materials' ? 'material' : 'group', id);
 
         if (!usage.inUse || isDevelop) {

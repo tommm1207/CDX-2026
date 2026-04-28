@@ -88,7 +88,7 @@ export const MaterialCatalog = ({
   }, []);
 
   const handleSaveTableImage = () => {
-    const reportElem = reportRef.current || tableBillRef.current;
+    const reportElem = reportRef.current;
     if (reportElem) {
       exportTableImage({
         element: reportElem,
@@ -232,7 +232,7 @@ export const MaterialCatalog = ({
         const { error } = await supabase.from('materials').update(dbPayload).eq('id', formData.id);
         if (error) throw error;
       } else {
-        dbPayload.code = formData.code || (await generateNextMaterialCode(finalGroupId));
+        dbPayload.code = formData.code || (await generateNextMaterialCode());
         const { error } = await supabase.from('materials').insert([dbPayload]);
         if (error) throw error;
       }
@@ -617,7 +617,7 @@ export const MaterialCatalog = ({
                         onChange={async (val) => {
                           let nextCode = formData.code;
                           if (!isEditing && val && isUUID(val)) {
-                            nextCode = await generateNextMaterialCode(val);
+                            nextCode = await generateNextMaterialCode();
                           }
                           setFormData({ ...formData, group_id: val, code: nextCode });
                         }}
@@ -626,7 +626,7 @@ export const MaterialCatalog = ({
                             (g) => g.name.toLowerCase() === val.toLowerCase(),
                           );
                           if (existing) {
-                            const nextCode = await generateNextMaterialCode(existing.id);
+                            const nextCode = await generateNextMaterialCode();
                             setFormData({
                               ...formData,
                               group_id: existing.id,
@@ -644,7 +644,7 @@ export const MaterialCatalog = ({
                           fetchGroups();
                           const nextCode = isEditing
                             ? formData.code
-                            : await generateNextMaterialCode(newGroup.id);
+                            : await generateNextMaterialCode();
                           setFormData({ ...formData, group_id: newGroup.id, code: nextCode });
                         }}
                         placeholder="Chọn nhóm trước để sinh mã tự động..."

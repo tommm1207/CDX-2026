@@ -95,7 +95,7 @@ export const MaterialGroups = ({
   }, []);
 
   const handleSaveTableImage = () => {
-    const reportElem = reportRef.current || tableBillRef.current;
+    const reportElem = reportRef.current;
     if (reportElem) {
       exportTableImage({
         element: reportElem,
@@ -416,7 +416,7 @@ export const MaterialGroups = ({
               localStorage.setItem(`sort_pref_mat_groups_${user.id}`, val);
             }}
             options={[
-              { value: 'name', label: 'Tên nhóm' },
+              { value: 'newest', label: 'Tên nhóm' },
               { value: 'newest', label: 'Mới nhất' },
             ]}
           />

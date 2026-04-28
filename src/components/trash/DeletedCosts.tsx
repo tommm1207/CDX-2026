@@ -205,7 +205,7 @@ export const DeletedCosts = ({
     setSubmitting(true);
     try {
       const promises = Array.from(selectedIds).map((sid) => {
-        const [table, id] = sid.split('-');
+        const [table, id] = (sid as string).split('-');
         return supabase
           .from(table)
           .update({ status: table === 'costs' ? 'Chờ duyệt' : null })
@@ -228,7 +228,7 @@ export const DeletedCosts = ({
       let successCount = 0;
       let failCount = 0;
       for (const sid of selectedIds) {
-        const [table, id] = sid.split('-');
+        const [table, id] = (sid as string).split('-');
         const { error } = await supabase.from(table).delete().eq('id', id);
         if (!error) successCount++;
         else failCount++;
@@ -615,7 +615,9 @@ export const DeletedCosts = ({
                     disabled={usageInfo.inUse && user.role?.toLowerCase() !== 'develop'}
                     isLoading={submitting}
                   >
-                    Xác nhận xóa
+                    {usageInfo.inUse && user.role?.toLowerCase() === 'develop'
+                      ? 'XÓA CƯỞNG BỨC'
+                      : 'Xác nhận xóa'}
                   </Button>
                 </div>
               </div>
@@ -626,7 +628,7 @@ export const DeletedCosts = ({
 
       <ConfirmModal
         show={showRestoreModal}
-        title="Xác nhận khôi phục?"
+        title="Khôi phục dữ liệu?"
         message={`Khôi phục ${selectedItem?.name} về danh sách chính?`}
         onConfirm={confirmRestore}
         onCancel={() => setShowRestoreModal(false)}
@@ -636,7 +638,7 @@ export const DeletedCosts = ({
 
       <ConfirmModal
         show={showBulkDeleteModal}
-        title={`Xóa vĩnh viễn ${selectedIds.size} mục?`}
+        title={`Xóa vĩnh viễn các mục đã chọn?`}
         message={`Hành động này sẽ xóa vĩnh viễn tất cả các mục đã chọn. Hành động này không thể hoàn tác.`}
         onConfirm={bulkDelete}
         onCancel={() => setShowBulkDeleteModal(false)}
@@ -646,7 +648,7 @@ export const DeletedCosts = ({
 
       <ConfirmModal
         show={showEmptyTrashModal}
-        title="Dọn sạch thùng rác?"
+        title="Dọn sạch thùng rác"
         message={`Xác nhận xóa VĨNH VIỄN toàn bộ ${items.length} mục trong thùng rác? Hành động này không thể hoàn tác.`}
         onConfirm={emptyTrash}
         onCancel={() => setShowEmptyTrashModal(false)}

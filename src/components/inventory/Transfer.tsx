@@ -149,7 +149,7 @@ export const Transfer = ({
   }, [formData.material_id, formData.to_warehouse_id, materials, warehouses]);
 
   const handleSaveTableImage = () => {
-    const reportElem = reportRef.current || tableBillRef.current;
+    const reportElem = reportRef.current;
     if (reportElem) {
       exportTableImage({
         element: reportElem,
@@ -445,17 +445,15 @@ export const Transfer = ({
       const finalToWhId2 = payload.to_warehouse_id;
       const finalMatId2 = payload.material_id;
       if (requiredQty > 0 && finalToWhId2 && finalMatId2) {
-        supabase
-          .from('warehouse_requirements')
-          .upsert(
-            {
-              warehouse_id: finalToWhId2,
-              material_id: finalMatId2,
-              required_quantity: requiredQty,
-              updated_at: new Date().toISOString(),
-            },
-            { onConflict: 'warehouse_id,material_id' },
-          );
+        supabase.from('warehouse_requirements').upsert(
+          {
+            warehouse_id: finalToWhId2,
+            material_id: finalMatId2,
+            required_quantity: requiredQty,
+            updated_at: new Date().toISOString(),
+          },
+          { onConflict: 'warehouse_id,material_id' },
+        );
       }
 
       if (addToast)

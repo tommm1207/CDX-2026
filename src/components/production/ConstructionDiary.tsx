@@ -1,4 +1,6 @@
-import { useState, useEffect, useRef } from 'react';
+import { CanvasLogo } from '@/components/shared/ReportExportHeader';
+import { exportTableImage } from '../../utils/reportExport';
+import { useState, useEffect } from 'react';
 import {
   ClipboardList,
   Plus,
@@ -11,21 +13,14 @@ import {
   Users,
   Settings2,
   AlertCircle,
-  Thermometer,
   MessageSquare,
-  AlertTriangle,
-  Clipboard,
-  ChevronDown,
   MapPin,
   ChevronRight,
   Image as ImageIcon,
   CheckCircle,
   Share2,
 } from 'lucide-react';
-import { exportTableImage } from '@/utils/reportExport';
-import { CreatableSelect } from '../shared/CreatableSelect';
-import { WEATHER_OPTIONS } from '../notes/Notes';
-import { CanvasLogo } from '@/components/shared/ReportExportHeader';
+import { useRef } from 'react';
 
 import { SaveImageButton } from '../shared/SaveImageButton';
 import { motion, AnimatePresence } from 'motion/react';
@@ -37,6 +32,7 @@ import { FAB } from '../shared/FAB';
 import { Button } from '../shared/Button';
 import { ConfirmModal } from '../shared/ConfirmModal';
 import { ImageCapture } from '../shared/ImageCapture';
+import { WEATHER_OPTIONS } from '../notes/Notes';
 import { SortButton, SortOption } from '../shared/SortButton';
 import { ExcelButton } from '../shared/ExcelButton';
 import { formatDate, formatNumber } from '@/utils/format';
@@ -64,10 +60,8 @@ export const ConstructionDiaryComponent = ({
   const [editingId, setEditingId] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [warehouses, setWarehouses] = useState<Warehouse[]>([]);
-  const [showDetail, setShowDetail] = useState(false);
   const [selectedDiary, setSelectedDiary] = useState<ConstructionDiary | null>(null);
-  const [users, setUsers] = useState<Employee[]>([]);
-  const [userSearchTerm, setUserSearchTerm] = useState('');
+  const [showDetail, setShowDetail] = useState(false);
 
   // Filters
   const [filterStartDate, setFilterStartDate] = useState('');
@@ -83,7 +77,7 @@ export const ConstructionDiaryComponent = ({
 
   const initialFormState: Partial<ConstructionDiary> = {
     date: new Date().toISOString().split('T')[0],
-    weather: '',
+    weather: 'pleasant',
     temperature: '',
     labor_info: '',
     equipment_info: '',
@@ -102,12 +96,7 @@ export const ConstructionDiaryComponent = ({
   }, []);
 
   const handleAddNew = () => {
-    const code = `NKTC-${new Date().getFullYear()}${(new Date().getMonth() + 1).toString().padStart(2, '0')}${new Date().getDate().toString().padStart(2, '0')}-${Math.floor(
-      Math.random() * 1000,
-    )
-      .toString()
-      .padStart(3, '0')}`;
-    setFormData({ ...initialFormState, diary_code: code });
+    setFormData(initialFormState);
     setEditingId(null);
     setShowAddNew(true);
   };
@@ -130,7 +119,7 @@ export const ConstructionDiaryComponent = ({
     try {
       const { data: diaryData } = await supabase
         .from('construction_diaries')
-        .select('*, warehouses:warehouse_id(id, name, code)')
+        .select('*, warehouses(id, name, code)')
         .or('status.is.null,status.neq.Đã xóa')
         .order('date', { ascending: false });
       if (diaryData) setDiaries(diaryData);
@@ -141,12 +130,6 @@ export const ConstructionDiaryComponent = ({
         .neq('status', 'Đã xóa')
         .order('name');
       if (whData) setWarehouses(whData);
-      const { data: userData } = await supabase
-        .from('users')
-        .select('*')
-        .neq('status', 'Đã xóa')
-        .order('full_name');
-      if (userData) setUsers(userData);
     } catch (err: any) {
       if (addToast) addToast('Lỗi tải dữ liệu: ' + err.message, 'error');
     } finally {
@@ -162,10 +145,8 @@ export const ConstructionDiaryComponent = ({
   };
 
   const handleSave = async () => {
-    // Chỉ bắt buộc Địa điểm và Nhân sự (ít nhất 1 người)
-    if (!formData.labor_info?.trim() || !formData.warehouse_id) {
-      if (addToast)
-        addToast('Vui lòng chọn địa điểm và nhập ít nhất một nhân sự hôm nay', 'warning');
+    if (!formData.work_progress || !formData.warehouse_id) {
+      if (addToast) addToast('Vui lòng nhập nội dung thi công và chọn địa điểm', 'warning');
       return;
     }
 
@@ -314,11 +295,11 @@ export const ConstructionDiaryComponent = ({
   }, [showAddNew, showDetail, setHideBottomNav]);
 
   return (
-    <div className="p-4 md:p-6 space-y-6 pb-24 max-w-full overflow-x-hidden">
+    <div className="p-4 md:p-6 space-y-6 pb-24 max-w-[100vw] overflow-x-hidden">
       {/* Header Section */}
-      <div className="flex items-center justify-between gap-2 mb-4">
+      <div className="flex items-center justify-between gap-2">
         <PageBreadcrumb title="Nhật ký thi công" onBack={onBack} />
-        <div className="flex items-center gap-1.5 justify-end flex-1 flex-shrink-0">
+        <div className="flex items-center gap-1.5 justify-end flex-1">
           <SaveImageButton
             onClick={handleSaveTableImage}
             isCapturing={isCapturingTable}
@@ -415,25 +396,82 @@ export const ConstructionDiaryComponent = ({
         )}
       </AnimatePresence>
 
-      {/* Main Content Area - Responsive Container */}
+      {/* Main Content Area - Table for Desktop, Cards for Mobile */}
       <div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
-        <div className="overflow-x-auto custom-scrollbar">
-          <table className="w-full text-left border-collapse">
+        {/* Mobile View - Cards */}
+        <div className="grid grid-cols-1 md:hidden overflow-y-auto no-scrollbar">
+          {loading ? (
+            Array(5)
+              .fill(0)
+              .map((_, i) => (
+                <div
+                  key={i}
+                  className="h-32 bg-gray-50/50 animate-pulse border-b border-gray-50 last:border-0"
+                />
+              ))
+          ) : filteredDiaries.length === 0 ? (
+            <div className="p-10 text-center text-gray-400 italic text-sm">Chưa có nhật ký nào</div>
+          ) : (
+            filteredDiaries.map((diary) => (
+              <div
+                key={diary.id}
+                onClick={() => {
+                  setSelectedDiary(diary);
+                  setShowDetail(true);
+                }}
+                className="p-4 border-b border-gray-50 last:border-0 flex items-center justify-between group active:bg-gray-50"
+              >
+                <div className="space-y-1 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <p className="text-xs font-black text-gray-900">{formatDate(diary.date)}</p>
+                    <span className="text-[9px] font-bold text-primary bg-primary/10 px-1.5 py-0.5 rounded-md uppercase">
+                      {diary.diary_code}
+                    </span>
+                  </div>
+                  <p className="text-[10px] text-gray-400 font-bold uppercase truncate">
+                    {(diary as any).warehouses?.name}
+                  </p>
+                  <p className="text-[11px] text-gray-600 line-clamp-1 italic">
+                    {diary.work_progress}
+                  </p>
+                </div>
+                <div className="flex items-center gap-3">
+                  {diary.image_urls && diary.image_urls.length > 0 && (
+                    <div className="text-gray-300">
+                      <ImageIcon size={14} />
+                    </div>
+                  )}
+                  <ChevronRight
+                    size={16}
+                    className="text-gray-300 group-hover:text-primary transition-colors"
+                  />
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+
+        {/* Desktop View - Professional Table */}
+        <div className="hidden md:block overflow-x-auto">
+          <table className="w-full text-left border-collapse whitespace-nowrap">
             <thead>
               <tr className="bg-primary text-white">
-                <th className="px-2 md:px-3 py-2.5 text-[9px] md:text-[10px] font-black uppercase tracking-wider border-r border-white/10 whitespace-nowrap">
+                <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest border-r border-white/10">
                   Ngày
                 </th>
-                <th className="px-2 md:px-3 py-2.5 text-[9px] md:text-[10px] font-black uppercase tracking-wider border-r border-white/10 whitespace-nowrap">
-                  Địa điểm
+                <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest border-r border-white/10 text-center">
+                  Mã hiệu
                 </th>
-                <th className="px-2 md:px-3 py-2.5 text-[9px] md:text-[10px] font-black uppercase tracking-wider border-r border-white/10">
+                <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest border-r border-white/10">
+                  Địa điểm / Dự án
+                </th>
+                <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest border-r border-white/10">
+                  Nhân sự chính
+                </th>
+                <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest border-r border-white/10">
                   Diễn biến thi công
                 </th>
-                <th className="px-2 md:px-3 py-2.5 text-[9px] md:text-[10px] font-black uppercase tracking-wider border-r border-white/10 whitespace-nowrap">
-                  Nhân sự
-                </th>
-                <th className="px-2 md:px-3 py-2.5 text-[9px] md:text-[10px] font-black uppercase tracking-wider text-center whitespace-nowrap">
+                <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-center">
                   Ảnh
                 </th>
               </tr>
@@ -444,99 +482,70 @@ export const ConstructionDiaryComponent = ({
                   .fill(0)
                   .map((_, i) => (
                     <tr key={i} className="animate-pulse">
-                      {Array(5)
+                      {Array(6)
                         .fill(0)
                         .map((_, j) => (
-                          <td key={j} className="px-3 py-3">
-                            <div className="h-3.5 bg-gray-100 rounded-lg" />
+                          <td key={j} className="px-6 py-4">
+                            <div className="h-4 bg-gray-100 rounded-lg" />
                           </td>
                         ))}
                     </tr>
                   ))
               ) : filteredDiaries.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="px-6 py-20 text-center text-gray-400 italic">
+                  <td colSpan={6} className="px-6 py-20 text-center text-gray-400 italic">
                     Chưa có nhật ký nào được ghi nhận
                   </td>
                 </tr>
               ) : (
-                (() => {
-                  let currentBackgroundColor = 'bg-white';
-                  let lastGroupKey = '';
-
-                  return filteredDiaries.map((diary) => {
-                    let groupKey = diary.date;
-                    if (sortBy === 'code' || sortBy === 'newest') {
-                      groupKey = diary.diary_code ? diary.diary_code.substring(0, 11) : diary.date;
-                    }
-
-                    if (groupKey !== lastGroupKey) {
-                      currentBackgroundColor =
-                        currentBackgroundColor === 'bg-white' ? 'bg-gray-100' : 'bg-white';
-                      lastGroupKey = groupKey;
-                    }
-
-                    // Format ngày ngắn gọn: dd/mm
-                    const dateShort = (() => {
-                      const d = new Date(diary.date + 'T00:00:00');
-                      return `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}`;
-                    })();
-
-                    // Format nhân sự dạng A • B • C (Bỏ mã [CDX...])
-                    const laborOneLine = diary.labor_info
-                      ? diary.labor_info
-                          .split(/,\s*/)
-                          .map((s) => s.trim().replace(/^\[.*?\]\s*/, ''))
-                          .filter(Boolean)
-                          .join(' • ')
-                      : '—';
-
-                    return (
-                      <tr
-                        key={diary.id}
-                        onClick={() => {
-                          setSelectedDiary(diary);
-                          setShowDetail(true);
-                        }}
-                        className={`transition-colors cursor-pointer group ${currentBackgroundColor} hover:brightness-95`}
-                      >
-                        {/* Ngày: dd/mm */}
-                        <td className="px-2 md:px-3 py-2.5 text-[10px] md:text-xs font-bold text-gray-600 border-b border-gray-100/50 whitespace-nowrap">
-                          {dateShort}
-                        </td>
-                        {/* Địa điểm */}
-                        <td className="px-2 md:px-3 py-2.5 text-[9px] md:text-[11px] font-black text-gray-800 uppercase tracking-tight border-b border-gray-100/50 whitespace-nowrap">
-                          {(diary as any).warehouses?.name || '—'}
-                        </td>
-                        {/* Diễn biến thi công: chiếm phần lớn bảng, nowrap */}
-                        <td className="px-2 md:px-3 py-2.5 border-b border-gray-100/50 whitespace-nowrap">
-                          <span className="text-[9px] md:text-[11px] text-gray-800 font-medium">
-                            {diary.work_progress || '—'}
-                          </span>
-                        </td>
-                        {/* Nhân sự: dạng A • B • C */}
-                        <td className="px-2 md:px-3 py-2.5 text-[9px] md:text-[10px] text-gray-500 border-b border-gray-100/50 whitespace-nowrap">
-                          {laborOneLine}
-                        </td>
-                        {/* Ảnh */}
-                        <td className="px-2 md:px-3 py-2.5 text-center border-b border-gray-100/50">
-                          {diary.image_urls && diary.image_urls.length > 0 ? (
-                            <div className="relative group/img inline-block">
-                              <div className="p-1.5 bg-white shadow-sm rounded-lg text-primary border border-gray-200 group-hover/img:bg-primary group-hover/img:text-white transition-all">
-                                <ImageIcon size={14} />
-                              </div>
-                              <span className="absolute -top-1.5 -right-1.5 bg-red-500 text-[8px] font-black text-white px-1 py-0.5 rounded-full ring-2 ring-white">
-                                {diary.image_urls.length}
-                              </span>
+                filteredDiaries.map((diary) => (
+                  <tr
+                    key={diary.id}
+                    onClick={() => {
+                      setSelectedDiary(diary);
+                      setShowDetail(true);
+                    }}
+                    className="hover:bg-gray-50 transition-colors cursor-pointer group"
+                  >
+                    <td className="px-6 py-4 text-[11px] font-bold text-gray-600">
+                      {formatDate(diary.date)}
+                    </td>
+                    <td className="px-6 py-4 text-center">
+                      <span className="text-[10px] font-black text-primary bg-primary/5 px-2 py-1 rounded-full border border-primary/10">
+                        {diary.diary_code}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 text-xs font-black text-gray-800 uppercase tracking-tight">
+                      {(diary as any).warehouses?.name}
+                    </td>
+                    <td className="px-6 py-4 text-xs text-gray-600 italic truncate max-w-[200px]">
+                      {diary.labor_info || '-'}
+                    </td>
+                    <td className="px-6 py-4">
+                      <p className="text-xs text-gray-600 truncate max-w-[350px]">
+                        {diary.work_progress}
+                      </p>
+                    </td>
+                    <td className="px-6 py-4 text-center">
+                      <div className="flex items-center justify-center gap-1.5">
+                        {diary.image_urls && diary.image_urls.length > 0 ? (
+                          <div className="relative group/img">
+                            <div className="p-1.5 bg-gray-50 rounded-lg text-primary border border-gray-100 group-hover/img:bg-primary group-hover/img:text-white transition-all">
+                              <ImageIcon size={14} />
                             </div>
-                          ) : (
-                            <span className="text-[9px] text-gray-300 font-bold">—</span>
-                          )}
-                        </td>
-                      </tr>
-                    );
-                  });
-                })()
+                            <span className="absolute -top-2 -right-2 bg-red-500 text-[8px] font-black text-white px-1 py-0.5 rounded-full ring-2 ring-white">
+                              {diary.image_urls.length}
+                            </span>
+                          </div>
+                        ) : (
+                          <span className="text-[10px] text-gray-300 font-bold uppercase tracking-tight">
+                            Ko có
+                          </span>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                ))
               )}
             </tbody>
           </table>
@@ -582,6 +591,13 @@ export const ConstructionDiaryComponent = ({
                   </div>
                 </div>
                 <div className="flex gap-2">
+                  <button
+                    onClick={() => handleEdit(selectedDiary)}
+                    className="p-2 bg-white/10 hover:bg-white/20 rounded-xl transition-colors"
+                    title="Sửa nhật ký"
+                  >
+                    <Edit size={20} />
+                  </button>
                   <button
                     onClick={() => setShowDetail(false)}
                     className="p-2 hover:bg-white/20 rounded-xl transition-colors"
@@ -723,14 +739,6 @@ export const ConstructionDiaryComponent = ({
                 >
                   Xóa nhật ký
                 </Button>
-                <Button
-                  variant="outline"
-                  icon={Edit}
-                  onClick={() => handleEdit(selectedDiary)}
-                  className="font-bold border-gray-200 hover:bg-white shadow-sm"
-                >
-                  Sửa
-                </Button>
                 <Button variant="primary" onClick={() => setShowDetail(false)}>
                   Đóng
                 </Button>
@@ -784,20 +792,14 @@ export const ConstructionDiaryComponent = ({
                 </button>
               </div>
 
-              <div
-                className="p-4 sm:p-8 overflow-y-auto overflow-x-hidden custom-scrollbar space-y-8 bg-gray-50/50 flex-1 overscroll-contain"
-                style={{ touchAction: 'pan-y' }}
-              >
+              <div className="p-4 sm:p-8 overflow-y-auto custom-scrollbar space-y-8 bg-gray-50/50 flex-1">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                   <div className="space-y-2">
                     <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">
                       Mã tham chiếu
                     </label>
-                    <div className="bg-primary/5 px-5 py-3.5 rounded-2xl border border-primary/10 text-sm font-black text-primary uppercase shadow-inner italic flex items-center justify-between">
-                      {formData.diary_code || '---'}
-                      <span className="text-[8px] bg-primary/10 px-1.5 py-0.5 rounded italic opacity-50 uppercase tracking-tighter">
-                        Mã được cấp
-                      </span>
+                    <div className="bg-primary/5 px-5 py-3.5 rounded-2xl border border-primary/10 text-sm font-black text-primary uppercase shadow-inner italic">
+                      {formData.diary_code || '(Hệ thống tự tạo)'}
                     </div>
                   </div>
                   <div className="space-y-2">
@@ -836,30 +838,17 @@ export const ConstructionDiaryComponent = ({
                     <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">
                       Thời tiết hiện tại
                     </label>
-                    <CreatableSelect
-                      value={formData.weather || ''}
-                      options={
-                        [
-                          ...WEATHER_OPTIONS.map((o) => ({ id: o.value, name: o.label })),
-                          ...Array.from(
-                            new Set(
-                              diaries
-                                .map((d) => d.weather)
-                                .filter(
-                                  (w): w is string =>
-                                    typeof w === 'string' &&
-                                    w.length > 0 &&
-                                    !WEATHER_OPTIONS.find((o) => o.value === w || o.label === w),
-                                ),
-                            ),
-                          ).map((w) => ({ id: String(w), name: String(w) })),
-                        ] as { id: string; name: string }[]
-                      }
-                      onChange={(id) => setFormData({ ...formData, weather: id })}
-                      onCreate={(name) => setFormData({ ...formData, weather: name })}
-                      placeholder="Chọn hoặc nhập thời tiết..."
-                      selectClassName="w-full px-5 py-3.5 rounded-2xl border border-gray-100 bg-white focus:ring-4 focus:ring-primary/10 focus:border-primary outline-none text-sm font-bold shadow-sm"
-                    />
+                    <select
+                      className="w-full px-5 py-3.5 rounded-2xl border border-gray-100 bg-white focus:ring-4 focus:ring-primary/10 focus:border-primary outline-none text-sm font-bold shadow-sm"
+                      value={formData.weather}
+                      onChange={(e) => setFormData({ ...formData, weather: e.target.value })}
+                    >
+                      {WEATHER_OPTIONS.map((o) => (
+                        <option key={o.value} value={o.value}>
+                          {o.label}
+                        </option>
+                      ))}
+                    </select>
                   </div>
                   <div className="space-y-2">
                     <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">
@@ -880,85 +869,13 @@ export const ConstructionDiaryComponent = ({
                     <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">
                       Nhân sự & Tổ đội công trường
                     </label>
-                    <div className="space-y-3">
-                      <div
-                        className="bg-white rounded-2xl border border-gray-100 p-3 max-h-[200px] overflow-y-auto overflow-x-hidden no-scrollbar space-y-1 overscroll-contain"
-                        style={{ touchAction: 'pan-y' }}
-                      >
-                        <div className="relative mb-2">
-                          <Search
-                            size={14}
-                            className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
-                          />
-                          <input
-                            type="text"
-                            placeholder="Tìm nhân sự..."
-                            className="w-full pl-9 pr-4 py-2 rounded-xl border border-gray-50 bg-gray-50/50 text-[11px] outline-none focus:ring-2 focus:ring-primary/10"
-                            value={userSearchTerm}
-                            onChange={(e) => setUserSearchTerm(e.target.value)}
-                          />
-                        </div>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                          {users
-                            .filter((u) =>
-                              u.full_name.toLowerCase().includes(userSearchTerm.toLowerCase()),
-                            )
-                            .map((u) => {
-                              const label = `[${u.code}] ${u.full_name}`;
-                              const isSelected = formData.labor_info?.split(', ').includes(label);
-                              return (
-                                <label
-                                  key={u.id}
-                                  className={`flex items-center gap-3 p-3.5 rounded-2xl border transition-all cursor-pointer ${
-                                    isSelected
-                                      ? 'bg-primary border-primary text-white shadow-md shadow-primary/20'
-                                      : 'bg-white border-gray-100 text-gray-700 hover:border-primary/30 hover:bg-gray-50'
-                                  }`}
-                                >
-                                  <input
-                                    type="checkbox"
-                                    className="hidden"
-                                    checked={isSelected}
-                                    onChange={(e) => {
-                                      const label = `[${u.code}] ${u.full_name}`;
-                                      const current = formData.labor_info
-                                        ? formData.labor_info.split(', ').filter(Boolean)
-                                        : [];
-                                      let next;
-                                      if (e.target.checked) {
-                                        next = [...current, label];
-                                      } else {
-                                        next = current.filter((n) => n !== label);
-                                      }
-                                      setFormData({ ...formData, labor_info: next.join(', ') });
-                                    }}
-                                  />
-                                  {isSelected ? (
-                                    <CheckCircle size={16} className="flex-shrink-0" />
-                                  ) : (
-                                    <Plus size={16} className="text-gray-300 flex-shrink-0" />
-                                  )}
-                                  <div className="flex flex-col min-w-0">
-                                    <span className="text-[10px] font-black opacity-70 leading-none mb-1">
-                                      {u.code}
-                                    </span>
-                                    <span className="text-xs font-bold truncate">
-                                      {u.full_name}
-                                    </span>
-                                  </div>
-                                </label>
-                              );
-                            })}
-                        </div>
-                      </div>
-                      <textarea
-                        rows={2}
-                        placeholder="Ghi chú thêm về tổ đội công trường..."
-                        className="w-full px-5 py-3 rounded-2xl border border-gray-100 bg-white focus:ring-4 focus:ring-primary/10 focus:border-primary outline-none text-xs font-medium shadow-sm resize-none"
-                        value={formData.labor_info}
-                        onChange={(e) => setFormData({ ...formData, labor_info: e.target.value })}
-                      />
-                    </div>
+                    <textarea
+                      rows={3}
+                      placeholder="Số lượng công nhân, kỹ thuật, các đội thầu phụ..."
+                      className="w-full px-5 py-4 rounded-3xl border border-gray-100 bg-white focus:ring-4 focus:ring-primary/10 focus:border-primary outline-none text-sm font-medium shadow-sm resize-none"
+                      value={formData.labor_info}
+                      onChange={(e) => setFormData({ ...formData, labor_info: e.target.value })}
+                    />
                   </div>
                   <div className="space-y-2">
                     <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">
@@ -975,11 +892,9 @@ export const ConstructionDiaryComponent = ({
                 </div>
 
                 <div className="space-y-2">
-                  <label className="text-[10px] font-black text-primary uppercase tracking-widest ml-1 flex items-center justify-between gap-2 w-full min-w-0">
-                    <span className="truncate flex-1 min-w-0">
-                      Tiến độ & Diễn biến thi công chính *
-                    </span>
-                    <span className="text-[8px] bg-primary/10 px-1.5 py-0.5 rounded italic flex-shrink-0">
+                  <label className="text-[10px] font-black text-primary uppercase tracking-widest ml-1 flex items-center gap-2">
+                    Tiến độ & Diễn biến thi công chính *{' '}
+                    <span className="text-[8px] bg-primary/10 px-1.5 py-0.5 rounded italic">
                       Rất quan trọng
                     </span>
                   </label>
@@ -1080,7 +995,7 @@ export const ConstructionDiaryComponent = ({
                 <CanvasLogo size={96} className="w-24 h-24 rounded-3xl object-contain shadow-sm" />
               </div>
               <div className="space-y-1">
-                <h1 className="text-3xl font-black text-indigo-600 tracking-tighter uppercase">
+                <h1 className="text-3xl font-black text-indigo-600 tracking-tighter uppercase italic">
                   CDX ERP SYSTEM
                 </h1>
                 <p className="text-[10px] text-gray-400 font-bold uppercase tracking-[0.3em]">
@@ -1116,11 +1031,12 @@ export const ConstructionDiaryComponent = ({
           {/* Table */}
           <table className="w-full text-left border-collapse rounded-3xl overflow-hidden shadow-sm border border-gray-100">
             <thead>
-              <tr className="bg-indigo-600 text-white text-[10px] font-black uppercase tracking-widest italic whitespace-nowrap">
+              <tr className="bg-indigo-600 text-white text-[10px] font-black uppercase tracking-widest italic">
                 <th className="px-4 py-4 border-r border-white/10">Ngày</th>
+                <th className="px-4 py-4 border-r border-white/10 text-center">Mã hiệu</th>
                 <th className="px-4 py-4 border-r border-white/10">Địa điểm / Dự án</th>
-                <th className="px-4 py-4 border-r border-white/10 w-1/3">Diễn biến thi công</th>
                 <th className="px-4 py-4 border-r border-white/10">Nhân sự chính</th>
+                <th className="px-4 py-4 border-r border-white/10">Diễn biến thi công</th>
                 <th className="px-4 py-4 text-center">Ảnh</th>
               </tr>
             </thead>
@@ -1128,14 +1044,19 @@ export const ConstructionDiaryComponent = ({
               {filteredDiaries.map((diary, idx) => (
                 <tr key={idx} className={idx % 2 === 0 ? 'bg-white' : 'bg-indigo-50/10'}>
                   <td className="px-4 py-3 font-bold text-gray-600">{formatDate(diary.date)}</td>
+                  <td className="px-4 py-3 text-center">
+                    <span className="font-black text-indigo-600 font-mono tracking-tighter">
+                      #{diary.diary_code}
+                    </span>
+                  </td>
                   <td className="px-4 py-3 font-black text-gray-900 uppercase tracking-tight">
                     {(diary as any).warehouses?.name}
                   </td>
-                  <td className="px-4 py-3 text-gray-800 leading-relaxed break-words">
-                    {diary.work_progress}
-                  </td>
                   <td className="px-4 py-3 text-gray-600 italic font-medium">
                     {diary.labor_info || '—'}
+                  </td>
+                  <td className="px-4 py-3 text-gray-800 leading-relaxed max-w-[400px] break-words">
+                    {diary.work_progress}
                   </td>
                   <td className="px-4 py-3 text-center">
                     {diary.image_urls && diary.image_urls.length > 0 ? (

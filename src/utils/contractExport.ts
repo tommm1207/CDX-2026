@@ -62,7 +62,7 @@ export const exportSteelSheetContract = async (data: any) => {
             children: [
               new TextRun({
                 text: `Số: ${contractCode}`,
-                italic: true,
+                italics: true,
                 size: DEFAULT_SIZE,
                 font: DEFAULT_FONT,
               }),

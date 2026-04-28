@@ -30,12 +30,7 @@ import { Button } from '../shared/Button';
 import { SortButton, SortOption } from '../shared/SortButton';
 import { ExcelButton } from '../shared/ExcelButton';
 import { formatDate, formatNumber, formatCurrency } from '@/utils/format';
-import {
-  isActiveWarehouse,
-  getAvailableStock,
-  validateFutureImpact,
-  getDetailedStock,
-} from '@/utils/inventory';
+import { isActiveWarehouse, getAvailableStock } from '@/utils/inventory';
 import { getAllowedWarehouses } from '@/utils/helpers';
 
 // ============================
@@ -56,10 +51,9 @@ export const ProductionOrders = ({
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState<any>(null);
-  const [materials, setMaterials] = useState<any[]>([]);
-  const [submitting, setSubmitting] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('Tất cả');
+  const [submitting, setSubmitting] = useState(false);
   const [sortBy, setSortBy] = useState<SortOption>(
     (localStorage.getItem(`sort_pref_prodOrders_${user.id}`) as SortOption) || 'newest',
   );
@@ -83,7 +77,6 @@ export const ProductionOrders = ({
     fetchOrders();
     fetchBoms();
     fetchWarehouses();
-    fetchMaterials();
   }, []);
 
   const fetchOrders = async () => {
@@ -134,11 +127,6 @@ export const ProductionOrders = ({
     return `LSX${yyyy}${mm}${dd}-${random}`;
   };
 
-  const fetchMaterials = async () => {
-    const { data } = await supabase.from('materials').select('id, name, unit');
-    if (data) setMaterials(data);
-  };
-
   // Calculate preview when Norms + quantity + warehouse change
   const calculatePreview = async () => {
     if (!formData.bom_id || formData.so_luong_ke_hoach <= 0 || !formData.kho_vat_tu_id) {
@@ -156,7 +144,11 @@ export const ProductionOrders = ({
           const canDung = bomItem.dinh_muc * formData.so_luong_ke_hoach;
           let tonKho = 0;
           try {
-            tonKho = await getAvailableStock(bomItem.material_id, formData.kho_vat_tu_id);
+            tonKho = await getAvailableStock(
+              bomItem.material_id,
+              formData.kho_vat_tu_id,
+              new Date().toISOString().split('T')[0],
+            );
           } catch (e) {
             // ignore
           }
@@ -243,6 +235,7 @@ export const ProductionOrders = ({
       const bom = boms.find((b) => b.id === formData.bom_id);
       if (bom) {
         const stockOutItems = (bom.san_pham_bom_chi_tiet || []).map((bomItem: any) => ({
+          slip_code: `XSX-${ma_lenh}`,
           date: today,
           material_id: bomItem.material_id,
           warehouse_id: formData.kho_vat_tu_id,
@@ -251,7 +244,8 @@ export const ProductionOrders = ({
           employee_id: user.id,
           notes: `Xuất kho tự động - Lệnh SX: ${ma_lenh}`,
           status: 'Chờ duyệt',
-          export_code: `XSX-${ma_lenh}`,
+          approved_by: null,
+          approved_date: null,
         }));
 
         const { error: stockOutError } = await supabase.from('stock_out').insert(stockOutItems);
@@ -283,7 +277,7 @@ export const ProductionOrders = ({
 
     try {
       // 1. Delete associated stock_out
-      await supabase.from('stock_out').delete().eq('export_code', `XSX-${order.ma_lenh}`);
+      await supabase.from('stock_out').delete().eq('slip_code', `XSX-${order.ma_lenh}`);
 
       // 2. Delete the order itself if it's just pending, or soft delete if it's production
       if (order.trang_thai === 'cho_duyet') {
@@ -315,59 +309,16 @@ export const ProductionOrders = ({
     setSubmitting(true);
     try {
       const today = new Date().toISOString().split('T')[0];
-      const slipCode = `XSX-${order.ma_lenh}`;
 
-      // 1. Validate tồn kho cho các phiếu xuất trước khi duyệt
-      const { data: stockOutRecords } = await supabase
-        .from('stock_out')
-        .select('id, material_id, warehouse_id, quantity')
-        .eq('export_code', slipCode)
-        .eq('status', 'Chờ duyệt');
-
-      if (stockOutRecords && stockOutRecords.length > 0) {
-        for (const rec of stockOutRecords) {
-          const impact = await validateFutureImpact(
-            rec.material_id,
-            rec.warehouse_id,
-            today,
-            -Number(rec.quantity),
-            rec.id,
-          );
-
-          if (!impact.valid) {
-            const mat = materials.find((m) => m.id === rec.material_id);
-            const detailStock = await getDetailedStock(
-              rec.material_id,
-              rec.warehouse_id,
-              today,
-              rec.id,
-            );
-
-            if (addToast)
-              addToast(
-                `❌ Từ chối duyệt: Không đủ tồn kho cho "${mat?.name || 'Vật tư'}"
-- Tồn thực tế: ${formatNumber(detailStock.actual)}
-- Đang giữ chỗ (phiếu khác): ${formatNumber(detailStock.pendingOut)}
-- Khả dụng: ${formatNumber(detailStock.available)}
-- Cần xuất thêm: ${formatNumber(Number(rec.quantity))}
-- Sẽ bị âm vào ngày: ${formatDate(impact.failedDate || today)}
-→ Vui lòng kiểm tra lại trước khi duyệt lệnh.`,
-                'error',
-              );
-            setSubmitting(false);
-            return;
-          }
-        }
-      }
-
-      // 2. Approve associated stock_out
+      // 1. Approve associated stock_out
       const { error: stockError } = await supabase
         .from('stock_out')
         .update({
           status: 'Đã duyệt',
+          approved_by: user.id,
+          approved_date: today,
         })
-        .eq('export_code', slipCode)
-        .eq('status', 'Chờ duyệt');
+        .eq('slip_code', `XSX-${order.ma_lenh}`);
       if (stockError) throw stockError;
 
       // 2. Update order status
@@ -396,7 +347,7 @@ export const ProductionOrders = ({
     setSubmitting(true);
     try {
       // Delete associated stock_out
-      await supabase.from('stock_out').delete().eq('export_code', `XSX-${order.ma_lenh}`);
+      await supabase.from('stock_out').delete().eq('slip_code', `XSX-${order.ma_lenh}`);
 
       // Delete the order
       const { error } = await supabase.from('lenh_san_xuat').delete().eq('id', order.id);
@@ -428,8 +379,7 @@ export const ProductionOrders = ({
   };
 
   const filteredOrders = orders.filter((order) => {
-    if (statusFilter === 'Tất cả') return order.trang_thai !== 'da_huy';
-    if (order.trang_thai !== statusFilter) return false;
+    if (statusFilter !== 'Tất cả' && order.trang_thai !== statusFilter) return false;
     if (!searchTerm) return true;
     const s = searchTerm.toLowerCase();
     return (
@@ -464,9 +414,9 @@ export const ProductionOrders = ({
 
   return (
     <div className="p-4 md:p-6 space-y-6 pb-24">
-      <div className="flex items-center justify-between gap-2 mb-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <PageBreadcrumb title="Lệnh sản xuất" onBack={onBack} />
-        <div className="flex items-center gap-1.5 justify-end flex-1 flex-shrink-0">
+        <div className="flex items-center gap-1.5 justify-end flex-1">
           <SaveImageButton
             onClick={() => {
               if (reportRef.current) {
@@ -723,8 +673,17 @@ export const ProductionOrders = ({
       {/* FAB — Thêm lệnh mới */}
       <div className="fixed bottom-6 right-6 flex flex-col gap-3">
         <SaveImageButton
-          onCapture={() => exportTableImage(reportRef, 'Danh_sach_lenh_san_xuat')}
-          label="Xuất báo cáo"
+          onClick={() => {
+            if (reportRef.current) {
+              exportTableImage({
+                element: reportRef.current,
+                fileName: 'Danh_sach_lenh_san_xuat.png',
+                addToast,
+              });
+            }
+          }}
+          isCapturing={isCapturingTable}
+          title="Xuất báo cáo"
         />
         <FAB onClick={() => setShowModal(true)} label="Phát lệnh mới" />
       </div>
@@ -827,14 +786,14 @@ export const ProductionOrders = ({
       <AnimatePresence>
         {showModal && (
           <div
-            className="fixed inset-0 z-[150] flex items-center justify-center p-2 sm:p-4 bg-black/60 backdrop-blur-md overflow-hidden no-print"
+            className="fixed inset-0 z-[150] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
             onClick={() => setShowModal(false)}
           >
             <motion.div
-              initial={{ opacity: 0, scale: 0.95, y: 30 }}
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.95, y: 30 }}
-              className="bg-white rounded-[1.5rem] md:rounded-[2.5rem] shadow-2xl w-full max-w-2xl flex flex-col max-h-[96dvh] md:max-h-[90dvh] overflow-hidden relative z-10"
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              className="bg-white rounded-[2rem] md:rounded-[2.5rem] shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden relative z-10"
               onClick={(e) => e.stopPropagation()}
             >
               {/* Header */}

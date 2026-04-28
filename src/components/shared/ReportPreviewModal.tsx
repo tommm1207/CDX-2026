@@ -1,3 +1,4 @@
+import React from 'react';
 import { X, Download, ImageIcon, ZoomIn, ZoomOut, RotateCcw } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Button } from './Button';

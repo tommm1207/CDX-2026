@@ -289,12 +289,12 @@ export const CostGroups = ({
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
-              <tr className="bg-primary text-white text-[10px] uppercase font-bold tracking-widest">
-                <th className="px-6 py-4">Mã</th>
-                <th className="px-6 py-4">Tên nhóm</th>
-                <th className="px-6 py-4 text-center">Số mục chi tiết</th>
-                <th className="px-6 py-4">Ghi chú</th>
-                <th className="px-6 py-4 text-center">Thao tác</th>
+              <tr className="bg-primary text-white text-[10px] uppercase font-bold tracking-wider whitespace-nowrap">
+                <th className="px-4 py-2.5">Mã</th>
+                <th className="px-4 py-2.5">Tên nhóm</th>
+                <th className="px-4 py-2.5 text-center">Số mục</th>
+                <th className="px-4 py-2.5">Ghi chú</th>
+                <th className="px-4 py-2.5 text-center">Thao tác</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-50">
@@ -317,27 +317,25 @@ export const CostGroups = ({
                     onClick={() => handleRowClick(group)}
                     className="hover:bg-gray-50 transition-colors cursor-pointer group"
                   >
-                    <td className="px-6 py-4 text-sm font-bold text-primary">{group.code}</td>
-                    <td className="px-6 py-4 text-sm font-medium text-gray-700">{group.name}</td>
-                    <td className="px-6 py-4 text-center">
-                      <span className="px-3 py-1 bg-primary/10 text-primary rounded-full text-[10px] font-black uppercase">
-                        {(group as any).items_count || 0} mục
-                      </span>
+                    <td className="px-4 py-2 text-xs font-bold text-primary">{group.code}</td>
+                    <td className="px-4 py-2 text-xs text-gray-700">{group.name}</td>
+                    <td className="px-4 py-2 text-center text-[11px] text-gray-500 font-medium">
+                      {(group as any).items_count || 0}
                     </td>
-                    <td className="px-6 py-4 text-sm text-gray-500">{group.notes || '---'}</td>
-                    <td className="px-6 py-4">
-                      <div className="flex items-center justify-center gap-2">
+                    <td className="px-4 py-2 text-xs text-gray-400">{group.notes || '---'}</td>
+                    <td className="px-4 py-2">
+                      <div className="flex items-center justify-center gap-1">
                         <button
                           onClick={(e) => handleEdit(e, group)}
-                          className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                          className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
                         >
-                          <Edit size={16} />
+                          <Edit size={14} />
                         </button>
                         <button
                           onClick={(e) => handleDeleteClick(e, group.id)}
-                          className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                          className="p-1.5 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
                         >
-                          <Trash2 size={16} />
+                          <Trash2 size={14} />
                         </button>
                       </div>
                     </td>

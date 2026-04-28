@@ -343,10 +343,10 @@ export const HRRecords = ({
     });
 
   const departments = Array.from(new Set(employees.map((e) => e.department).filter(Boolean))).map(
-    (d) => ({ id: d!, name: d! }),
+    (d) => ({ id: String(d!), name: String(d!) }),
   );
   const positions = Array.from(new Set(employees.map((e) => e.position).filter(Boolean))).map(
-    (p) => ({ id: p!, name: p! }),
+    (p) => ({ id: String(p!), name: String(p!) }),
   );
 
   const handleExportExcel = useCallback(() => {

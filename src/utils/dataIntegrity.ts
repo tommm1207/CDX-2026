@@ -170,16 +170,14 @@ export const checkUsage = async (type: UsageType, id: string): Promise<UsageResu
       let pDeleted = Promise.resolve({ count: 0 });
 
       if (hasStatus) {
-        pActive = buildQuery()
-          .or('status.is.null,status.neq.Đã xóa')
+        pActive = Promise.resolve(buildQuery().or('status.is.null,status.neq.Đã xóa'))
           .then((res) => res)
           .catch(() => ({ count: 0 }));
-        pDeleted = buildQuery()
-          .eq('status', 'Đã xóa')
+        pDeleted = Promise.resolve(buildQuery().eq('status', 'Đã xóa'))
           .then((res) => res)
           .catch(() => ({ count: 0 }));
       } else {
-        pActive = buildQuery()
+        pActive = Promise.resolve(buildQuery())
           .then((res) => res)
           .catch(() => ({ count: 0 }));
       }

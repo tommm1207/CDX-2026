@@ -59,9 +59,8 @@ export const CostReport = ({
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
-  const [warehouses, setWarehouses] = useState<any[]>([]);
-  const [materials, setMaterials] = useState<any[]>([]);
-  const [costTypes, setCostTypes] = useState<any[]>([]);
+  const [costGroups, setCostGroups] = useState<any[]>([]);
+  const [costItems, setCostItems] = useState<any[]>([]);
   const [units, setUnits] = useState<any[]>([]);
   const [showFilter, setShowFilter] = useState(false);
   const [filters, setFilters] = useState({
@@ -101,8 +100,7 @@ export const CostReport = ({
   useEffect(() => {
     fetchCosts();
     fetchWarehouses();
-    fetchCostItems();
-    fetchCostTypes();
+    fetchCostGroups();
     fetchUnits();
   }, []);
 
@@ -110,7 +108,9 @@ export const CostReport = ({
     setLoading(true);
     let query = supabase
       .from('costs')
-      .select('*, users(full_name), warehouses(name), materials(name)')
+      .select(
+        '*, users(full_name), warehouses(name), materials(name), cost_groups(name), cost_items(name)',
+      )
       .or('status.is.null,status.neq.Đã xóa');
 
     const allowedWhIds = getAllowedWarehouses(user.data_view_permission);
@@ -138,28 +138,27 @@ export const CostReport = ({
     }
   };
 
-  const fetchCostItems = async (group?: string) => {
-    let query = supabase.from('costs').select('content');
-    if (group) {
-      query = query.eq('cost_type', group);
-    }
-    const { data } = await query;
-    if (data) {
-      const unique = Array.from(new Set(data.map((item) => item.content)))
-        .filter(Boolean)
-        .map((name) => ({ id: name as string, name: name as string }));
-      setMaterials(unique); // Reusing materials state for Item suggestions
-    }
+  const fetchCostGroups = async () => {
+    const { data } = await supabase
+      .from('cost_groups')
+      .select('id, name')
+      .or('status.is.null,status.neq.Đã xóa')
+      .order('name');
+    if (data) setCostGroups(data);
   };
 
-  const fetchCostTypes = async () => {
-    const { data } = await supabase.from('costs').select('cost_type');
-    if (data) {
-      const uniqueTypes = Array.from(new Set(data.map((item) => item.cost_type)))
-        .filter(Boolean)
-        .map((name) => ({ id: name, name }));
-      setCostTypes(uniqueTypes);
+  const fetchCostItems = async (groupId: string) => {
+    if (!groupId) {
+      setCostItems([]);
+      return;
     }
+    const { data } = await supabase
+      .from('cost_items')
+      .select('id, name, unit')
+      .eq('group_id', groupId)
+      .or('status.is.null,status.neq.Đã xóa')
+      .order('name');
+    if (data) setCostItems(data);
   };
 
   const fetchUnits = async () => {
@@ -198,7 +197,8 @@ export const CostReport = ({
       items: group.items.map((item: any) => ({
         ...item,
         warehouse_name: item.warehouses?.name || '',
-        cost_type: item.cost_type || 'Chi phí',
+        cost_group_id: item.cost_group_id || '',
+        cost_item_id: item.cost_item_id || '',
         stock_status: item.stock_status || 'Chưa nhập',
       })),
     });
@@ -215,14 +215,17 @@ export const CostReport = ({
       unit: '',
       warehouse_name: '',
       notes: '',
-      cost_type: 'Chi phí',
+      cost_group_id: '',
+      cost_item_id: '',
       stock_status: 'Chưa nhập',
     });
+    setCostItems([]);
     setShowDetailModal(true);
   };
 
   const handleEditItem = (index: number) => {
     const item = masterForm.items[index];
+    if (item.cost_group_id) fetchCostItems(item.cost_group_id);
     setDetailForm({
       index,
       ...item,
@@ -230,15 +233,58 @@ export const CostReport = ({
     setShowDetailModal(true);
   };
 
+  const handleCreateGroup = async (name: string) => {
+    const code = `CG${(costGroups.length + 1).toString().padStart(3, '0')}`;
+    const { data, error } = await supabase
+      .from('cost_groups')
+      .insert([{ name, code, status: 'Hoạt động' }])
+      .select();
+    if (error) {
+      if (addToast) addToast('Lỗi tạo nhóm: ' + error.message, 'error');
+      return;
+    }
+    if (data && data[0]) {
+      setCostGroups((prev) => [...prev, data[0]]);
+      setDetailForm((prev) => ({ ...prev, cost_group_id: data[0].id, cost_item_id: '' }));
+      fetchCostItems(data[0].id);
+      if (addToast) addToast(`Đã thêm nhóm mới: ${name}`, 'success');
+    }
+  };
+
+  const handleCreateItem = async (name: string) => {
+    if (!detailForm.cost_group_id) {
+      if (addToast) addToast('Vui lòng chọn nhóm trước', 'warning');
+      return;
+    }
+    const code = `CI${(costItems.length + 1).toString().padStart(3, '0')}`;
+    const { data, error } = await supabase
+      .from('cost_items')
+      .insert([{ name, code, group_id: detailForm.cost_group_id, status: 'Hoạt động' }])
+      .select();
+    if (error) {
+      if (addToast) addToast('Lỗi tạo chi tiết: ' + error.message, 'error');
+      return;
+    }
+    if (data && data[0]) {
+      setCostItems((prev) => [...prev, data[0]]);
+      setDetailForm((prev) => ({ ...prev, cost_item_id: data[0].id }));
+      if (addToast) addToast(`Đã thêm chi tiết mới: ${name}`, 'success');
+    }
+  };
+
   const handleSaveDetail = () => {
-    if (!detailForm.content || !detailForm.cost_type) {
-      if (addToast) addToast('Vui lòng điền đầy đủ thông tin bắt buộc', 'error');
-      else alert('Vui lòng điền đầy đủ thông tin bắt buộc');
+    if (!detailForm.cost_group_id || !detailForm.cost_item_id) {
+      if (addToast) addToast('Vui lòng chọn nhóm và chi tiết chi phí', 'error');
       return;
     }
 
+    const groupName = costGroups.find((g) => g.id === detailForm.cost_group_id)?.name;
+    const itemName = costItems.find((i) => i.id === detailForm.cost_item_id)?.name;
+
     const newItem = {
       ...detailForm,
+      cost_type: groupName, // for display compatibility
+      content: itemName, // for display compatibility
       total_amount: detailForm.quantity * detailForm.unit_price,
     };
 
@@ -295,6 +341,8 @@ export const CostReport = ({
             cost_code: costCode,
             employee_id: masterForm.employee_id,
             transaction_type: item.transaction_type || 'Chi',
+            cost_group_id: item.cost_group_id,
+            cost_item_id: item.cost_item_id,
             cost_type: item.cost_type,
             content: item.content,
             warehouse_id,
@@ -448,7 +496,7 @@ export const CostReport = ({
   return (
     <div className="p-4 md:p-6 space-y-6 pb-24 overflow-x-hidden">
       <div className="flex items-center justify-between gap-2 mb-4">
-        <PageBreadcrumb title="Báo cáo chi phí" onBack={onBack} />
+        <PageBreadcrumb title="Lệnh chi phí" onBack={onBack} />
         <div className="flex items-center gap-1.5 justify-end flex-1 flex-shrink-0">
           <SaveImageButton
             onClick={handleExportImage}
@@ -697,8 +745,28 @@ export const CostReport = ({
                           <Search size={14} />
                         </button>
                         <button
-                          onClick={(e) => {
-                            e.stopPropagation(); /* TODO: Delete report logic */
+                          onClick={async (e) => {
+                            e.stopPropagation();
+                            if (
+                              window.confirm(
+                                `Bạn có chắc chắn muốn xóa lệnh chi ${group.cost_code}?`,
+                              )
+                            ) {
+                              setSubmitting(true);
+                              try {
+                                const { error } = await supabase
+                                  .from('costs')
+                                  .update({ status: 'Đã xóa' })
+                                  .eq('cost_code', group.cost_code);
+                                if (error) throw error;
+                                if (addToast) addToast('Đã xóa lệnh chi', 'success');
+                                fetchCosts();
+                              } catch (err: any) {
+                                if (addToast) addToast('Lỗi khi xóa: ' + err.message, 'error');
+                              } finally {
+                                setSubmitting(false);
+                              }
+                            }
                           }}
                           className="p-2 text-red-600 hover:bg-red-50 rounded-xl transition-colors border border-red-100"
                         >
@@ -880,9 +948,9 @@ export const CostReport = ({
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <p className="text-[12px] text-gray-500 font-bold">Tổng lô:</p>
+                  <p className="text-[12px] text-gray-500 font-bold">Tổng phiếu:</p>
                   <p className="text-md font-black text-primary">
-                    {filteredHistory.length} cụm phí
+                    {filteredHistory.length} lệnh chi
                   </p>
                 </div>
                 <div>
@@ -984,6 +1052,279 @@ export const CostReport = ({
           </div>
         </div>
       </ReportPreviewModal>
+
+      {/* FAB */}
+      <FAB onClick={handleAddReport} icon={Plus} label="Thêm chi phí" />
+
+      {/* Master Modal */}
+      <AnimatePresence>
+        {showMasterModal && (
+          <div className="fixed inset-0 z-[150] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="bg-white rounded-[2rem] w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col shadow-2xl"
+            >
+              <div className="p-6 border-b border-gray-100 flex justify-between items-center bg-primary text-white">
+                <div>
+                  <h3 className="text-xl font-black uppercase tracking-tight">
+                    Chi tiết Lệnh chi phí
+                  </h3>
+                  <p className="text-[10px] font-bold opacity-70 uppercase tracking-widest mt-0.5">
+                    Quản lý các hạng mục chi trong lệnh
+                  </p>
+                </div>
+                <button
+                  onClick={() => setShowMasterModal(false)}
+                  className="p-2 hover:bg-white/10 rounded-full transition-colors"
+                >
+                  <X size={24} />
+                </button>
+              </div>
+
+              <div className="flex-1 overflow-y-auto p-6 space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-black text-gray-400 uppercase ml-1">
+                      Ngày chứng từ *
+                    </label>
+                    <input
+                      type="date"
+                      value={masterForm.date}
+                      onChange={(e) => setMasterForm({ ...masterForm, date: e.target.value })}
+                      className="w-full px-4 py-3 rounded-2xl border border-gray-100 text-sm font-bold outline-none focus:ring-4 focus:ring-primary/10 transition-all font-mono"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-black text-gray-400 uppercase ml-1">
+                      Người lập
+                    </label>
+                    <div className="w-full px-4 py-3 rounded-2xl bg-gray-50 border border-gray-100 text-sm font-bold text-gray-500 uppercase">
+                      {masterForm.employee_name}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <label className="text-[10px] font-black text-gray-400 uppercase ml-1">
+                      Danh sách hạng mục chi
+                    </label>
+                    <Button size="sm" onClick={handleAddItem} icon={Plus} className="rounded-xl">
+                      Thêm hạng mục
+                    </Button>
+                  </div>
+
+                  <div className="bg-gray-50/50 rounded-2xl border border-gray-100 overflow-hidden">
+                    <table className="w-full text-left border-collapse">
+                      <thead>
+                        <tr className="bg-gray-100/50 text-[9px] font-black uppercase tracking-widest text-gray-400 border-b border-gray-200">
+                          <th className="px-4 py-3">Nội dung / Nhóm</th>
+                          <th className="px-4 py-3 text-right">SL</th>
+                          <th className="px-4 py-3 text-right">Đơn giá</th>
+                          <th className="px-4 py-3 text-right">Thành tiền</th>
+                          <th className="px-4 py-3 text-center">Xóa</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-gray-100 bg-white">
+                        {masterForm.items.length === 0 ? (
+                          <tr>
+                            <td
+                              colSpan={5}
+                              className="px-4 py-8 text-center text-xs font-bold text-gray-300 italic"
+                            >
+                              Chưa có hạng mục nào được thêm
+                            </td>
+                          </tr>
+                        ) : (
+                          masterForm.items.map((item, idx) => (
+                            <tr
+                              key={idx}
+                              className="hover:bg-primary/5 transition-colors group cursor-pointer"
+                              onClick={() => handleEditItem(idx)}
+                            >
+                              <td className="px-4 py-3">
+                                <p className="text-xs font-bold text-gray-700">{item.content}</p>
+                                <p className="text-[10px] text-gray-400 font-medium uppercase italic">
+                                  {item.cost_type}
+                                </p>
+                              </td>
+                              <td className="px-4 py-3 text-right text-xs font-mono font-bold text-gray-600">
+                                {item.quantity} {item.unit}
+                              </td>
+                              <td className="px-4 py-3 text-right text-xs font-mono font-bold text-gray-600">
+                                {formatCurrency(item.unit_price)}
+                              </td>
+                              <td className="px-4 py-3 text-right text-xs font-mono font-black text-primary">
+                                {formatCurrency(item.total_amount)}
+                              </td>
+                              <td className="px-4 py-3 text-center">
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleRemoveItem(idx);
+                                  }}
+                                  className="p-1.5 text-gray-300 hover:text-red-500 transition-colors"
+                                >
+                                  <Trash2 size={16} />
+                                </button>
+                              </td>
+                            </tr>
+                          ))
+                        )}
+                      </tbody>
+                      <tfoot>
+                        <tr className="bg-primary/5 font-black text-primary border-t border-primary/20">
+                          <td
+                            colSpan={3}
+                            className="px-4 py-4 text-xs uppercase tracking-widest text-right"
+                          >
+                            Tổng lệnh:
+                          </td>
+                          <td className="px-4 py-4 text-sm text-right tabular-nums">
+                            {formatCurrency(
+                              masterForm.items.reduce((s, i) => s + i.total_amount, 0),
+                            )}
+                          </td>
+                          <td></td>
+                        </tr>
+                      </tfoot>
+                    </table>
+                  </div>
+                </div>
+              </div>
+
+              <div className="p-6 border-t border-gray-100 bg-gray-50 flex justify-end gap-3">
+                <Button variant="outline" onClick={() => setShowMasterModal(false)}>
+                  Hủy
+                </Button>
+                <Button
+                  onClick={handleSaveAll}
+                  disabled={submitting || masterForm.items.length === 0}
+                  loading={submitting}
+                >
+                  Lưu báo cáo
+                </Button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Detail Modal */}
+      <AnimatePresence>
+        {showDetailModal && (
+          <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/60 backdrop-blur-md">
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 20 }}
+              className="bg-white rounded-[2.5rem] w-full max-w-lg p-8 shadow-2xl relative"
+            >
+              <div className="flex justify-between items-center mb-8">
+                <div>
+                  <h3 className="text-xl font-black uppercase text-primary tracking-tight">
+                    Chi tiết Hạng mục
+                  </h3>
+                  <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mt-1">
+                    Thông tin chi phí cụ thể
+                  </p>
+                </div>
+                <button
+                  onClick={() => setShowDetailModal(false)}
+                  className="p-2 hover:bg-gray-100 rounded-full transition-colors text-gray-400"
+                >
+                  <X size={24} />
+                </button>
+              </div>
+
+              <div className="space-y-5">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <CreatableSelect
+                    label="Nhóm chi phí"
+                    required
+                    value={detailForm.cost_group_id}
+                    onChange={(val) => {
+                      setDetailForm({ ...detailForm, cost_group_id: val, cost_item_id: '' });
+                      fetchCostItems(val);
+                    }}
+                    onCreate={handleCreateGroup}
+                    options={costGroups}
+                  />
+                  <CreatableSelect
+                    label="Chi tiết chi phí"
+                    required
+                    value={detailForm.cost_item_id}
+                    onChange={(val) => {
+                      const item = costItems.find((i) => i.id === val);
+                      setDetailForm({
+                        ...detailForm,
+                        cost_item_id: val,
+                        unit: item?.unit || detailForm.unit,
+                      });
+                    }}
+                    onCreate={handleCreateItem}
+                    options={costItems}
+                    disabled={!detailForm.cost_group_id}
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <NumericInput
+                    label="Số lượng"
+                    value={detailForm.quantity}
+                    onChange={(val) => setDetailForm({ ...detailForm, quantity: val })}
+                  />
+                  <NumericInput
+                    label="Đơn giá"
+                    value={detailForm.unit_price}
+                    onChange={(val) => setDetailForm({ ...detailForm, unit_price: val })}
+                    suffix="đ"
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-[10px] font-black text-gray-400 uppercase ml-1">
+                    Đơn vị tính
+                  </label>
+                  <CreatableSelect
+                    value={detailForm.unit}
+                    onChange={(val) => setDetailForm({ ...detailForm, unit: val })}
+                    options={units}
+                    onCreate={(val) => {
+                      setUnits((prev) => [...prev, { id: val, name: val }]);
+                      setDetailForm((prev) => ({ ...prev, unit: val }));
+                    }}
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-[10px] font-black text-gray-400 uppercase ml-1">
+                    Ghi chú
+                  </label>
+                  <textarea
+                    value={detailForm.notes}
+                    onChange={(e) => setDetailForm({ ...detailForm, notes: e.target.value })}
+                    rows={2}
+                    className="w-full px-4 py-3 rounded-2xl border border-gray-100 text-sm outline-none focus:ring-4 focus:ring-primary/10 transition-all resize-none"
+                    placeholder="Thông tin thêm nếu có..."
+                  />
+                </div>
+
+                <div className="pt-4 flex gap-3">
+                  <Button variant="outline" fullWidth onClick={() => setShowDetailModal(false)}>
+                    Hủy
+                  </Button>
+                  <Button fullWidth onClick={handleSaveDetail}>
+                    Xác nhận
+                  </Button>
+                </div>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };

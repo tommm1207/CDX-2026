@@ -20,7 +20,7 @@ export const Trash = ({
     },
     {
       id: 'deleted-costs',
-      label: 'Báo cáo chi phí đã xóa',
+      label: 'Dữ liệu chi phí đã xóa',
       icon: Wallet,
       color: 'bg-purple-50 text-purple-600',
     },

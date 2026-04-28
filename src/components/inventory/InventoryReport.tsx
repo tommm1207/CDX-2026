@@ -31,10 +31,12 @@ export const InventoryReport = ({
   user,
   onBack,
   addToast,
+  onNavigate,
 }: {
   user: Employee;
   onBack?: () => void;
   addToast?: (message: string, type?: ToastType) => void;
+  onNavigate?: (page: string, params?: any) => void;
 }) => {
   const [report, setReport] = useState<ReportRow[]>([]);
   const [loading, setLoading] = useState(true);
@@ -371,7 +373,18 @@ export const InventoryReport = ({
                       return (
                         <tr
                           key={idx}
-                          className={`hover:brightness-95 transition-colors group ${currentBg}`}
+                          onClick={() => {
+                            if (onNavigate) {
+                              onNavigate('inventory-detail', {
+                                materialId: row.material_id,
+                                warehouseId: row.warehouse_id,
+                                startDate,
+                                endDate,
+                              });
+                            }
+                          }}
+                          className={`hover:brightness-95 transition-colors group cursor-pointer ${currentBg}`}
+                          title="Click để xem chi tiết nhập xuất"
                         >
                           <td
                             className={`px-1.5 md:px-4 py-1 sticky left-0 z-10 border-b border-r border-gray-200/60 min-w-[170px] w-[170px] max-w-[170px] md:max-w-none shadow-[2px_0_4px_-2px_rgba(0,0,0,0.05)] ${currentBg} group-hover:brightness-95 transition-colors whitespace-normal`}

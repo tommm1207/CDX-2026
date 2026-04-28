@@ -58,8 +58,10 @@ const initialFormState = {
   cost_code: '',
   employee_id: '',
   transaction_type: 'Chi',
-  cost_type: 'Chi phí',
-  content: '',
+  cost_group_id: '',
+  cost_item_id: '',
+  cost_type: '', // for backward compatibility/display
+  content: '', // for backward compatibility/display
   warehouse_id: '',
   material_id: null,
   quantity: 1,
@@ -103,7 +105,8 @@ export const Costs = ({
   const [costs, setCosts] = useState<any[]>([]);
   const [materials, setMaterials] = useState<any[]>([]);
   const [warehouses, setWarehouses] = useState<any[]>([]);
-  const [costTypes, setCostTypes] = useState<any[]>([]);
+  const [costGroups, setCostGroups] = useState<any[]>([]);
+  const [costItems, setCostItems] = useState<any[]>([]);
   const [units, setUnits] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
@@ -127,7 +130,6 @@ export const Costs = ({
   );
 
   const [employees, setEmployees] = useState<any[]>([]);
-  const [costItems, setCostItems] = useState<any[]>([]);
 
   const [itemToDelete, setItemToDelete] = useState<string | null>(null);
   const [usageInfo, setUsageInfo] = useState<any>({ inUse: false, details: [] });
@@ -162,27 +164,26 @@ export const Costs = ({
   };
 
   const fetchCostGroups = async () => {
-    const { data } = await supabase.from('costs').select('cost_type');
-    if (data) {
-      const unique = Array.from(new Set(data.map((item) => item.cost_type)))
-        .filter(Boolean)
-        .map((name) => ({ id: name as string, name: name as string }));
-      setCostTypes(unique);
-    }
+    const { data } = await supabase
+      .from('cost_groups')
+      .select('id, name')
+      .or('status.is.null,status.neq.Đã xóa')
+      .order('name');
+    if (data) setCostGroups(data);
   };
 
-  const fetchCostItems = async (group?: string) => {
-    let query = supabase.from('costs').select('content');
-    if (group) {
-      query = query.eq('cost_type', group);
+  const fetchCostItems = async (groupId?: string) => {
+    if (!groupId) {
+      setCostItems([]);
+      return;
     }
-    const { data } = await query;
-    if (data) {
-      const unique = Array.from(new Set(data.map((item) => item.content)))
-        .filter(Boolean)
-        .map((name) => ({ id: name as string, name: name as string }));
-      setCostItems(unique);
-    }
+    const { data } = await supabase
+      .from('cost_items')
+      .select('id, name, unit')
+      .eq('group_id', groupId)
+      .neq('status', 'Đã xóa')
+      .order('name');
+    if (data) setCostItems(data);
   };
 
   const fetchEmployees = async () => {
@@ -215,10 +216,12 @@ export const Costs = ({
     try {
       let query = supabase
         .from('costs')
-        .select('*, users(full_name), warehouses(name, code), materials(name, code)');
+        .select(
+          '*, users(full_name), warehouses(name, code), materials(name, code), cost_groups(name), cost_items(name)',
+        );
 
       if (statusFilter === 'Tất cả') {
-        query = query.neq('status', 'Đã xóa');
+        query = query.or('status.is.null,status.neq.Đã xóa');
       } else {
         query = query.eq('status', statusFilter);
       }
@@ -264,6 +267,45 @@ export const Costs = ({
     const { data } = await query;
     if (data) {
       setWarehouses(data.filter(isActiveWarehouse));
+    }
+  };
+
+  const handleCreateGroup = async (name: string) => {
+    const code = `CG${(costGroups.length + 1).toString().padStart(3, '0')}`;
+    const { data, error } = await supabase
+      .from('cost_groups')
+      .insert([{ name, code, status: 'Hoạt động' }])
+      .select();
+    if (error) {
+      if (addToast) addToast('Lỗi tạo nhóm: ' + error.message, 'error');
+      return;
+    }
+    if (data && data[0]) {
+      setCostGroups((prev) => [...prev, data[0]]);
+      setFormData((prev: any) => ({ ...prev, cost_group_id: data[0].id, cost_item_id: '' }));
+      fetchCostItems(data[0].id);
+      if (addToast) addToast(`Đã thêm nhóm mới: ${name}`, 'success');
+    }
+  };
+
+  const handleCreateItem = async (name: string) => {
+    if (!formData.cost_group_id) {
+      if (addToast) addToast('Vui lòng chọn nhóm trước khi thêm chi tiết', 'warning');
+      return;
+    }
+    const code = `CI${(costItems.length + 1).toString().padStart(3, '0')}`;
+    const { data, error } = await supabase
+      .from('cost_items')
+      .insert([{ name, code, group_id: formData.cost_group_id, status: 'Hoạt động' }])
+      .select();
+    if (error) {
+      if (addToast) addToast('Lỗi tạo chi tiết: ' + error.message, 'error');
+      return;
+    }
+    if (data && data[0]) {
+      setCostItems((prev) => [...prev, data[0]]);
+      setFormData((prev: any) => ({ ...prev, cost_item_id: data[0].id }));
+      if (addToast) addToast(`Đã thêm chi tiết mới: ${name}`, 'success');
     }
   };
 
@@ -313,8 +355,10 @@ export const Costs = ({
         date: formData.date,
         cost_code,
         transaction_type: formData.transaction_type,
-        cost_type: formData.cost_type,
-        content: formData.content,
+        cost_group_id: isUUID(formData.cost_group_id) ? formData.cost_group_id : null,
+        cost_item_id: isUUID(formData.cost_item_id) ? formData.cost_item_id : null,
+        cost_type: formData.cost_type, // Fallback
+        content: formData.content, // Fallback
         warehouse_id,
         material_id: isUUID(formData.material_id) ? formData.material_id : null,
         quantity: formData.quantity,
@@ -376,12 +420,14 @@ export const Costs = ({
       notes: item.notes || '',
       cost_code: item.cost_code,
       status: item.status,
+      cost_group_id: item.cost_group_id || '',
+      cost_item_id: item.cost_item_id || '',
     });
     setEditingId(item.id);
     setIsEditing(true);
     setShowModal(true);
     setShowDetailModal(false);
-    fetchCostItems(item.cost_type);
+    if (item.cost_group_id) fetchCostItems(item.cost_group_id);
   };
 
   const handleDeleteClick = async (item: any) => {
@@ -659,10 +705,10 @@ export const Costs = ({
                       </td>
                       <td className="px-2 md:px-4 py-2.5 md:py-3 max-w-[150px] md:max-w-[200px] border-r border-gray-100/50">
                         <p className="font-bold text-gray-700 truncate text-[10px] md:text-xs">
-                          {item.cost_type}
+                          {item.cost_groups?.name || item.cost_type || '---'}
                         </p>
                         <p className="text-[9px] md:text-[10px] text-gray-400 truncate italic">
-                          {item.content}
+                          {item.cost_items?.name || item.content || '---'}
                         </p>
                       </td>
                       <td
@@ -712,11 +758,15 @@ export const Costs = ({
                 </div>
                 <div className="flex justify-between border-b border-gray-50 pb-2">
                   <span className="text-gray-400">Nhóm:</span>
-                  <span className="font-bold text-gray-700">{selectedCost.cost_type}</span>
+                  <span className="font-bold text-gray-700">
+                    {selectedCost.cost_groups?.name || selectedCost.cost_type}
+                  </span>
                 </div>
                 <div className="flex justify-between border-b border-gray-50 pb-2">
                   <span className="text-gray-400">Chi tiết:</span>
-                  <span className="font-bold text-primary">{selectedCost.content}</span>
+                  <span className="font-bold text-primary">
+                    {selectedCost.cost_items?.name || selectedCost.content}
+                  </span>
                 </div>
                 <div className="space-y-1 border-b border-gray-50 pb-2">
                   <span className="text-gray-400 text-[10px] uppercase font-bold">
@@ -883,27 +933,35 @@ export const Costs = ({
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <CreatableSelect
-                      label="Nhóm chi phí *"
-                      value={formData.cost_type}
-                      options={costTypes}
-                      onChange={(val) => {
-                        setFormData({ ...formData, cost_type: val, content: '' });
-                        fetchCostItems(val);
-                      }}
-                      onCreate={(val) => {
-                        setFormData({ ...formData, cost_type: val, content: '' });
-                      }}
+                      label="Nhóm chi phí"
                       required
+                      value={formData.cost_group_id}
+                      options={costGroups}
+                      onChange={(id) => {
+                        setFormData({ ...formData, cost_group_id: id, cost_item_id: '' });
+                        fetchCostItems(id);
+                      }}
+                      onCreate={handleCreateGroup}
+                      placeholder="Chọn hoặc nhập mới nhóm..."
                     />
                     <CreatableSelect
-                      label="Chi tiết chi phí *"
-                      value={formData.content}
-                      options={costItems}
-                      onChange={(val) => setFormData({ ...formData, content: val })}
-                      onCreate={(val) => setFormData({ ...formData, content: val })}
+                      label="Chi tiết chi phí"
                       required
+                      value={formData.cost_item_id}
+                      options={costItems}
+                      onChange={(id) => {
+                        const item = costItems.find((i) => i.id === id);
+                        setFormData({
+                          ...formData,
+                          cost_item_id: id,
+                          unit: item?.unit || formData.unit,
+                        });
+                      }}
+                      onCreate={handleCreateItem}
+                      placeholder="Chọn hoặc nhập mới chi tiết..."
+                      disabled={!formData.cost_group_id}
                     />
                   </div>
 

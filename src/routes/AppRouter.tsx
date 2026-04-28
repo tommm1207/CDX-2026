@@ -11,10 +11,12 @@ import { Costs } from '@/components/finance/Costs';
 import { CostReport } from '@/components/finance/CostReport';
 import { CostFilter } from '@/components/finance/CostFilter';
 import { PendingApprovals } from '@/components/finance/PendingApprovals';
+import { CostGroups } from '@/components/finance/CostGroups';
 import { StockIn } from '@/components/inventory/StockIn';
 import { StockOut } from '@/components/inventory/StockOut';
 import { Transfer } from '@/components/inventory/Transfer';
 import { InventoryReport } from '@/components/inventory/InventoryReport';
+import { InventoryDetailReport } from '@/components/inventory/InventoryDetailReport';
 import { Warehouses } from '@/components/warehouses/Warehouses';
 import { MaterialGroups } from '@/components/materials/MaterialGroups';
 import { MaterialCatalog } from '@/components/materials/MaterialCatalog';
@@ -108,6 +110,18 @@ export const AppRouter = ({
           />
         </ErrorBoundary>
       );
+    case 'cost-groups':
+      if (!isAdmin) {
+        return (
+          <Dashboard
+            user={user}
+            onNavigate={navigateTo}
+            addToast={addToast}
+            pendingApprovals={pendingCount}
+          />
+        );
+      }
+      return <CostGroups user={user} onBack={goBack} addToast={addToast} />;
     case 'warehouses':
       return <Warehouses user={user} onBack={goBack} addToast={addToast} />;
     case 'materials':
@@ -234,7 +248,22 @@ export const AppRouter = ({
           />
         );
       }
-      return <InventoryReport user={user} onBack={goBack} addToast={addToast} />;
+      return (
+        <InventoryReport user={user} onBack={goBack} addToast={addToast} onNavigate={navigateTo} />
+      );
+
+    case 'inventory-detail':
+      return (
+        <InventoryDetailReport
+          user={user}
+          materialId={pageParams?.materialId}
+          warehouseId={pageParams?.warehouseId}
+          startDate={pageParams?.startDate}
+          endDate={pageParams?.endDate}
+          onBack={goBack}
+          addToast={addToast}
+        />
+      );
 
     case 'construction-diary':
       return (

@@ -1,6 +1,6 @@
 import { supabase } from '@/lib/supabase';
 
-export type UsageType = 'material' | 'group' | 'warehouse' | 'employee' | 'bom';
+export type UsageType = 'material' | 'group' | 'warehouse' | 'employee' | 'bom' | 'cost_item';
 
 export interface UsageResult {
   inUse: boolean;
@@ -70,7 +70,9 @@ export const checkUsage = async (type: UsageType, id: string): Promise<UsageResu
       'production_orders',
     );
   } else if (type === 'group') {
-    tablesToCheck.push('materials');
+    tablesToCheck.push('materials', 'costs', 'cost_items');
+  } else if (type === 'cost_item') {
+    tablesToCheck.push('costs');
   } else if (type === 'warehouse') {
     tablesToCheck.push(
       'stock_in',
@@ -145,6 +147,14 @@ export const checkUsage = async (type: UsageType, id: string): Promise<UsageResu
         } else if (table === 'inventory') {
           if (type === 'warehouse') queryBase = queryBase.eq('warehouse_id', id);
           if (type === 'material') queryBase = queryBase.eq('material_id', id);
+        } else if (table === 'costs') {
+          if (type === 'group') queryBase = queryBase.eq('cost_group_id', id);
+          if (type === 'cost_item') queryBase = queryBase.eq('cost_item_id', id);
+          if (type === 'material') queryBase = queryBase.eq('material_id', id);
+          if (type === 'employee') queryBase = queryBase.eq('employee_id', id);
+          if (type === 'warehouse') queryBase = queryBase.eq('warehouse_id', id);
+        } else if (table === 'cost_items') {
+          if (type === 'group') queryBase = queryBase.eq('group_id', id);
         } else {
           let field = 'material_id';
           if (type === 'warehouse') field = 'warehouse_id';

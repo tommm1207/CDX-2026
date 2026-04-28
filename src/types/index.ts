@@ -57,6 +57,26 @@ export interface MaterialGroup {
   created_at?: string;
 }
 
+export interface CostGroup {
+  id: string;
+  code?: string;
+  name: string;
+  notes?: string;
+  status?: string;
+  created_at?: string;
+}
+
+export interface CostItem {
+  id: string;
+  group_id?: string;
+  code?: string;
+  name: string;
+  unit?: string;
+  notes?: string;
+  status?: string;
+  created_at?: string;
+}
+
 export interface Cost {
   id: string;
   cost_code: string;
@@ -66,6 +86,8 @@ export interface Cost {
   content?: string;
   material_id?: string;
   warehouse_id?: string;
+  cost_group_id?: string;
+  cost_item_id?: string;
   quantity?: number;
   unit?: string;
   unit_price?: number;

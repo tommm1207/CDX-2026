@@ -88,7 +88,7 @@ export const PendingApprovals = ({
   }, []);
 
   const handleSaveTableImage = () => {
-    const reportElem = reportRef.current || tableBillRef.current;
+    const reportElem = reportRef.current;
     if (reportElem) {
       exportTableImage({
         element: reportElem,

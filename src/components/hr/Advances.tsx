@@ -303,7 +303,7 @@ export const Advances = ({
             onSortChange={(val: any) => setSortBy(val)}
             options={[
               { value: 'date', label: 'Sắp xếp: Ngày chi' },
-              { value: 'amount', label: 'Sắp xếp: Số tiền' },
+              { value: 'price', label: 'Sắp xếp: Số tiền' },
             ]}
           />
           <Button

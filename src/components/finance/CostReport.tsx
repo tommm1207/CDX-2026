@@ -52,6 +52,7 @@ export const CostReport = ({
 }) => {
   const [loading, setLoading] = useState(true);
   const [costs, setCosts] = useState<any[]>([]);
+  const [warehouses, setWarehouses] = useState<any[]>([]);
   const [selectedGroup, setSelectedGroup] = useState<any>(null);
   const [selectedItem, setSelectedItem] = useState<any>(null);
 
@@ -472,8 +473,8 @@ export const CostReport = ({
           'Thành tiền',
           'Ghi chú',
         ],
-        rows: filteredHistory.flatMap((group) =>
-          group.items.map((item) => [
+        rows: (filteredHistory as any[]).flatMap((group: any) =>
+          (group.items as any[]).map((item: any) => [
             item.cost_code ?? '',
             item.date ?? '',
             group.employee_name,
@@ -650,29 +651,29 @@ export const CostReport = ({
         <div className="overflow-x-auto custom-scrollbar">
           <table className="w-full text-left border-collapse min-w-[1000px] whitespace-nowrap">
             <thead>
-              <tr className="bg-primary/5 text-primary border-b border-primary/10">
-                <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest italic border-r border-primary/5 w-16 text-center">
+              <tr className="bg-primary/5 text-primary border-b border-primary/10 whitespace-nowrap">
+                <th className="px-4 py-2.5 text-[10px] font-bold uppercase tracking-wide border-r border-primary/5 w-12 text-center">
                   STT
                 </th>
-                <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest italic border-r border-primary/5">
+                <th className="px-4 py-2.5 text-[10px] font-bold uppercase tracking-wide border-r border-primary/5">
                   Mã phí
                 </th>
-                <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest italic border-r border-primary/5">
+                <th className="px-4 py-2.5 text-[10px] font-bold uppercase tracking-wide border-r border-primary/5">
                   Ngày ghi
                 </th>
-                <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest italic border-r border-primary/5">
+                <th className="px-4 py-2.5 text-[10px] font-bold uppercase tracking-wide border-r border-primary/5">
                   Nhân sự
                 </th>
-                <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest italic border-r border-primary/5">
-                  Nội dung chính
+                <th className="px-4 py-2.5 text-[10px] font-bold uppercase tracking-wide border-r border-primary/5">
+                  Nội dung
                 </th>
-                <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest italic border-r border-primary/5 text-center">
-                  Hạng mục
+                <th className="px-4 py-2.5 text-[10px] font-bold uppercase tracking-wide border-r border-primary/5 text-center">
+                  Số mục
                 </th>
-                <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest italic border-r border-primary/5 text-right">
+                <th className="px-4 py-2.5 text-[10px] font-bold uppercase tracking-wide border-r border-primary/5 text-right">
                   Tổng tiền
                 </th>
-                <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest italic text-center">
+                <th className="px-4 py-2.5 text-[10px] font-bold uppercase tracking-wide text-center">
                   Thao tác
                 </th>
               </tr>
@@ -697,20 +698,20 @@ export const CostReport = ({
                     className="hover:bg-primary/5 transition-all group cursor-pointer"
                     onClick={() => handleEditReport(group)}
                   >
-                    <td className="px-6 py-4 text-center">
+                    <td className="px-4 py-2 text-center">
                       <span className="text-[10px] font-black text-gray-300 group-hover:text-primary/40 transition-colors">
                         {(idx + 1).toString().padStart(2, '0')}
                       </span>
                     </td>
-                    <td className="px-6 py-4">
+                    <td className="px-4 py-2">
                       <span className="px-3 py-1 bg-primary/5 text-primary rounded-lg text-[10px] font-black uppercase tracking-widest border border-primary/10 group-hover:bg-primary group-hover:text-white transition-all">
                         {group.cost_code}
                       </span>
                     </td>
-                    <td className="px-6 py-4 text-xs font-bold text-gray-600 italic">
+                    <td className="px-4 py-2 text-xs font-bold text-gray-600 italic">
                       {formatDate(group.date)}
                     </td>
-                    <td className="px-6 py-4">
+                    <td className="px-4 py-2">
                       <div className="flex items-center gap-2">
                         <div className="w-8 h-8 rounded-full bg-primary/10 text-primary flex items-center justify-center text-[10px] font-black uppercase border border-primary/20">
                           {group.employee_name?.charAt(0) || 'U'}
@@ -720,20 +721,18 @@ export const CostReport = ({
                         </span>
                       </div>
                     </td>
-                    <td className="px-6 py-4 text-xs font-bold text-gray-500 break-words whitespace-normal max-w-xs line-clamp-1">
+                    <td className="px-4 py-2 text-xs font-bold text-gray-500 break-words whitespace-normal max-w-xs line-clamp-1">
                       {group.items[0]?.content || '-'}
                     </td>
-                    <td className="px-6 py-4 text-center">
-                      <span className="px-2 py-0.5 bg-gray-100 text-gray-400 rounded-md text-[10px] font-black">
-                        {group.items.length} mục
-                      </span>
+                    <td className="px-4 py-2 text-center text-[11px] text-gray-400 font-medium">
+                      {group.items.length}
                     </td>
                     <td
-                      className={`px-6 py-4 text-sm font-black text-right ${group.total_amount >= 0 ? 'text-red-600' : 'text-green-600'}`}
+                      className={`px-4 py-2 text-sm font-black text-right ${group.total_amount >= 0 ? 'text-red-600' : 'text-green-600'}`}
                     >
                       {formatCurrency(group.total_amount)}
                     </td>
-                    <td className="px-6 py-4 text-center">
+                    <td className="px-4 py-2 text-center">
                       <div className="flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                         <button
                           onClick={(e) => {
@@ -850,7 +849,12 @@ export const CostReport = ({
                   TỔNG CHI PHÍ THỰC TẾ:
                 </td>
                 <td className="px-4 py-4 text-sm text-red-600 text-right">
-                  {formatCurrency(filteredHistory.reduce((s, g) => s + g.total_amount, 0))}
+                  {formatCurrency(
+                    (filteredHistory as any[]).reduce(
+                      (s: number, g: any) => s + Number(g.total_amount),
+                      0,
+                    ),
+                  )}
                 </td>
               </tr>
             </tbody>
@@ -1031,7 +1035,12 @@ export const CostReport = ({
                   Tổng phát sinh ròng:
                 </td>
                 <td className="px-6 py-4 text-sm text-right tabular-nums text-primary underline decoration-double">
-                  {formatCurrency(filteredHistory.reduce((s, g) => s + g.total_amount, 0))}
+                  {formatCurrency(
+                    (filteredHistory as any[]).reduce(
+                      (s: number, g: any) => s + Number(g.total_amount),
+                      0,
+                    ),
+                  )}
                 </td>
               </tr>
             </tbody>
@@ -1280,7 +1289,6 @@ export const CostReport = ({
                     label="Đơn giá"
                     value={detailForm.unit_price}
                     onChange={(val) => setDetailForm({ ...detailForm, unit_price: val })}
-                    suffix="đ"
                   />
                 </div>
 

@@ -516,14 +516,15 @@ export const SalarySettings = ({
                         </tr>
                       ) : (
                         empHistory.map((rec, idx) => (
-                          <HistoryRow
-                            key={rec.id}
-                            record={rec}
-                            isLatest={idx === 0}
-                            onUpdate={(changes) => handleUpdateRecord(rec, changes)}
-                            onDelete={() => handleDeleteRecord(rec.id)}
-                            canDelete={empHistory.length > 1}
-                          />
+                          <React.Fragment key={rec.id}>
+                            <HistoryRow
+                              record={rec}
+                              isLatest={idx === 0}
+                              onUpdate={(changes) => handleUpdateRecord(rec, changes)}
+                              onDelete={() => handleDeleteRecord(rec.id)}
+                              canDelete={empHistory.length > 1}
+                            />
+                          </React.Fragment>
                         ))
                       )}
                     </tbody>

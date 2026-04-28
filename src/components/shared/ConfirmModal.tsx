@@ -1,5 +1,6 @@
+import React from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { AlertTriangle, X } from 'lucide-react';
+import { AlertTriangle, X, CheckCircle, RefreshCw } from 'lucide-react';
 
 interface ConfirmModalProps {
   show: boolean;
@@ -9,7 +10,8 @@ interface ConfirmModalProps {
   onCancel: () => void;
   confirmText?: string;
   cancelText?: string;
-  type?: 'danger' | 'warning' | 'info';
+  type?: 'danger' | 'warning' | 'info' | 'success';
+  isLoading?: boolean;
 }
 
 export const ConfirmModal = ({
@@ -21,6 +23,7 @@ export const ConfirmModal = ({
   confirmText = 'Xác nhận',
   cancelText = 'Hủy',
   type = 'danger',
+  isLoading = false,
 }: ConfirmModalProps) => {
   const getColors = () => {
     switch (type) {
@@ -30,6 +33,8 @@ export const ConfirmModal = ({
           hover: 'hover:bg-red-700',
           text: 'text-red-600',
           light: 'bg-red-50',
+          border: 'border-red-100',
+          shadow: 'shadow-red-500/20',
         };
       case 'warning':
         return {
@@ -37,6 +42,8 @@ export const ConfirmModal = ({
           hover: 'hover:bg-amber-600',
           text: 'text-amber-600',
           light: 'bg-amber-50',
+          border: 'border-amber-100',
+          shadow: 'shadow-amber-500/20',
         };
       case 'info':
         return {
@@ -44,6 +51,17 @@ export const ConfirmModal = ({
           hover: 'hover:bg-blue-700',
           text: 'text-blue-600',
           light: 'bg-blue-50',
+          border: 'border-blue-100',
+          shadow: 'shadow-blue-500/20',
+        };
+      case 'success':
+        return {
+          bg: 'bg-green-600',
+          hover: 'hover:bg-green-700',
+          text: 'text-green-600',
+          light: 'bg-green-50',
+          border: 'border-green-100',
+          shadow: 'shadow-green-500/20',
         };
       default:
         return {
@@ -51,11 +69,14 @@ export const ConfirmModal = ({
           hover: 'hover:bg-red-700',
           text: 'text-red-600',
           light: 'bg-red-50',
+          border: 'border-red-100',
+          shadow: 'shadow-red-500/20',
         };
     }
   };
 
   const colors = getColors();
+  const IconComponent = type === 'success' ? CheckCircle : AlertTriangle;
 
   return (
     <AnimatePresence>
@@ -79,7 +100,7 @@ export const ConfirmModal = ({
                   className="p-2 bg-white/20 rounded-xl cursor-pointer hover:bg-white/30 transition-all active:scale-95"
                   onClick={onCancel}
                 >
-                  <AlertTriangle size={20} />
+                  <IconComponent size={20} />
                 </div>
                 <h3 className="font-bold text-lg">{title}</h3>
               </div>
@@ -92,22 +113,25 @@ export const ConfirmModal = ({
             </div>
             <div className="p-8 text-center space-y-6">
               <div
-                className={`w-20 h-20 ${colors.light} ${colors.text} rounded-2xl flex items-center justify-center mx-auto border border-${type === 'danger' ? 'red' : type === 'warning' ? 'amber' : 'blue'}-100 shadow-sm`}
+                className={`w-20 h-20 ${colors.light} ${colors.text} rounded-2xl flex items-center justify-center mx-auto border ${colors.border} shadow-sm`}
               >
-                <AlertTriangle size={40} />
+                <IconComponent size={40} />
               </div>
               <p className="text-sm text-gray-500 leading-relaxed font-medium px-2">{message}</p>
               <div className="flex gap-3 pt-2">
                 <button
                   onClick={onCancel}
-                  className="flex-1 py-3 bg-gray-100 text-gray-500 rounded-2xl text-sm font-bold hover:bg-gray-200 transition-all active:scale-95"
+                  disabled={isLoading}
+                  className="flex-1 py-3 bg-gray-100 text-gray-500 rounded-2xl text-sm font-bold hover:bg-gray-200 transition-all active:scale-95 disabled:opacity-50"
                 >
                   {cancelText}
                 </button>
                 <button
                   onClick={onConfirm}
-                  className={`flex-1 py-3 ${colors.bg} text-white rounded-2xl text-sm font-bold ${colors.hover} transition-all shadow-lg shadow-${type === 'danger' ? 'red' : type === 'warning' ? 'amber' : 'blue'}-500/20 active:scale-95`}
+                  disabled={isLoading}
+                  className={`flex-1 py-3 ${colors.bg} text-white rounded-2xl text-sm font-bold ${colors.hover} transition-all shadow-lg ${colors.shadow} active:scale-95 disabled:opacity-70 flex items-center justify-center gap-2`}
                 >
+                  {isLoading ? <RefreshCw size={16} className="animate-spin" /> : null}
                   {confirmText}
                 </button>
               </div>

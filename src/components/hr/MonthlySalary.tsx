@@ -1,6 +1,5 @@
-import { CanvasLogo } from '@/components/shared/ReportExportHeader';
-import React, { useState, useEffect, useRef, useCallback } from 'react';
-
+import { useState, useEffect, useRef, useCallback } from 'react';
+import * as XLSX from 'xlsx';
 import { Wallet, X, Image as ImageIcon, Camera, Search } from 'lucide-react';
 import { toPng } from 'html-to-image';
 import { logoBase64 } from '../../utils/logoBase64';
@@ -9,7 +8,7 @@ import { supabase } from '@/lib/supabase';
 import { Employee } from '@/types';
 import { PageBreadcrumb } from '../shared/PageBreadcrumb';
 import { ToastType } from '../shared/Toast';
-import { formatCurrency, formatNumber } from '@/utils/format';
+import { formatCurrency } from '@/utils/format';
 import { MonthYearPicker } from '../shared/MonthYearPicker';
 import { Button } from '../shared/Button';
 import { SortOption } from '../shared/SortButton';
@@ -39,60 +38,11 @@ export const MonthlySalary = ({
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1);
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
   const [isCapturing, setIsCapturing] = useState(false);
-  const [billScale, setBillScale] = useState(1);
-  const containerRef = useRef<HTMLDivElement>(null);
-
-  const [selectedSalary, setSelectedSalary] = useState<any>(null);
-  const [showDetailModal, setShowDetailModal] = useState(false);
-  const [billNote, setBillNote] = useState('');
-  const [isCustomRange, setIsCustomRange] = useState(false);
-  const [customRange, setCustomRange] = useState({
-    start: '',
-    end: '',
-  });
-
-  // Auto-scale bill to fit container width (mainly for mobile)
-  useEffect(() => {
-    if (!showDetailModal) return;
-
-    const updateScale = () => {
-      if (containerRef.current) {
-        const containerWidth = containerRef.current.offsetWidth;
-        const availableWidth = containerWidth - 32; // Increased padding for safer mobile display
-        if (availableWidth < 380) {
-          setBillScale(availableWidth / 380);
-        } else {
-          setBillScale(1);
-        }
-      }
-    };
-
-    // Small delay to ensure modal is fully rendered
-    const timer = setTimeout(updateScale, 100);
-    window.addEventListener('resize', updateScale);
-    return () => {
-      clearTimeout(timer);
-      window.removeEventListener('resize', updateScale);
-    };
-  }, [showDetailModal]);
-
   const [hideZero, setHideZero] = useState(false);
   const [showFilter, setShowFilter] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [sortBy, setSortBy] = useState<SortOption>('date');
   const [previewImageUrl, setPreviewImageUrl] = useState<string | null>(null);
-
-  // Bottom Nav Visibility
-  useEffect(() => {
-    if (setHideBottomNav) {
-      setHideBottomNav(showDetailModal || !!previewImageUrl);
-    }
-    if (showDetailModal || previewImageUrl) {
-      document.body.style.overflow = 'hidden';
-    } else {
-      document.body.style.overflow = 'auto';
-    }
-  }, [showDetailModal, previewImageUrl, setHideBottomNav]);
 
   const [isMainCustomRange, setIsMainCustomRange] = useState(false);
   const [filterStartDate, setFilterStartDate] = useState('');
@@ -105,21 +55,6 @@ export const MonthlySalary = ({
     if (!dateStr) return '';
     const [y, m, d] = dateStr.split('-');
     return `${parseInt(d)}/${parseInt(m)}/${y}`;
-  };
-
-  /**
-   * Đếm số lượng tháng (kỳ BHXH) nằm trong khoảng ngày a - ngày b
-   * Ví dụ: 25/03 - 05/04 => 2 tháng (Tháng 3 và Tháng 4)
-   */
-  const countMonthsInRange = (startStr: string, endStr: string) => {
-    if (!startStr || !endStr) return 1;
-    const start = new Date(startStr);
-    const end = new Date(endStr);
-    const startYear = start.getFullYear();
-    const startMonth = start.getMonth();
-    const endYear = end.getFullYear();
-    const endMonth = end.getMonth();
-    return (endYear - startYear) * 12 + (endMonth - startMonth) + 1;
   };
 
   useEffect(() => {
@@ -212,9 +147,7 @@ export const MonthlySalary = ({
         const totalAdv = empAdv.reduce((sum, a) => sum + Number(a.amount || 0), 0);
         const totalAll = empAll.reduce((sum, a) => sum + Number(a.amount || 0), 0);
 
-        // BHXH: Nếu quét qua nhiều tháng, nhân hệ số tháng tương ứng (ví dụ quét 2 tháng thì đóng 2 lần)
-        const monthMultiplier = countMonthsInRange(queryStart, queryEnd);
-        const insuranceDeduction = Number(set.insurance_deduction || 0) * monthMultiplier;
+        const insuranceDeduction = Number(set.insurance_deduction || 0);
         const monthlyCoeff = Number(set.monthly_ot_coeff || 1.0);
 
         const dailyRate = Number(set.daily_rate || 0);
@@ -238,7 +171,6 @@ export const MonthlySalary = ({
           totalAdv,
           totalAll,
           insuranceDeduction,
-          monthMultiplier,
           netSalary,
           dailyRate,
           monthlyCoeff,
@@ -258,21 +190,13 @@ export const MonthlySalary = ({
     }
   };
 
-  useEffect(() => {
-    if (showDetailModal && selectedSalary) {
-      if (!billNote) {
-        const firstDay = `01/${String(selectedMonth).padStart(2, '0')}`;
-        const lastDay = `${new Date(selectedYear, selectedMonth, 0).getDate()}/${String(selectedMonth).padStart(2, '0')}`;
-        const defaultNote = isCustomRange
-          ? `Kỳ lương: ${formatDate(customRange.start)} — ${formatDate(customRange.end)}`
-          : `Tháng ${selectedMonth}/${selectedYear} (${firstDay} - ${lastDay})`;
-        setBillNote(defaultNote);
-      }
-    } else {
-      setBillNote('');
-    }
-  }, [showDetailModal, selectedSalary, isCustomRange, customRange]);
-
+  const [selectedSalary, setSelectedSalary] = useState<any>(null);
+  const [showDetailModal, setShowDetailModal] = useState(false);
+  const [isCustomRange, setIsCustomRange] = useState(false);
+  const [customRange, setCustomRange] = useState({
+    start: '',
+    end: '',
+  });
   const billRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -322,9 +246,7 @@ export const MonthlySalary = ({
       const totalAdv = (adv || []).reduce((sum, a) => sum + Number(a.amount || 0), 0);
       const totalAll = (all || []).reduce((sum, a) => sum + Number(a.amount || 0), 0);
 
-      // BHXH: Tương tự cho tính lẻ 1 người
-      const monthMultiplier = countMonthsInRange(customRange.start, customRange.end);
-      const insuranceDeduction = Number(set.insurance_deduction || 0) * monthMultiplier;
+      const insuranceDeduction = Number(set.insurance_deduction || 0);
       const monthlyCoeff = Number(set.monthly_ot_coeff || 1.0);
       const dailyRate = Number(set.daily_rate || 0);
       const hourlyRate = dailyRate / 8;
@@ -345,7 +267,6 @@ export const MonthlySalary = ({
         totalAdv,
         totalAll,
         insuranceDeduction,
-        monthMultiplier,
         netSalary,
         dailyRate,
         monthlyCoeff,
@@ -361,27 +282,14 @@ export const MonthlySalary = ({
 
     try {
       setIsCapturing(true);
-      // Wait for React to finish updating the 'isCapturing' state
-      await new Promise((resolve) => setTimeout(resolve, 500));
-
-      // Force logo decoding (especially on iOS) to prevent blank logo on capture
-      const logoImg = billRef.current?.querySelector('img.logo-img');
-      if (logoImg) {
-        try {
-          await (logoImg as HTMLImageElement).decode();
-        } catch (e) {
-          console.warn('[handleSaveImage] Logo decode failed, proceeding anyway:', e);
-        }
-      }
-
-      // Final short wait to ensure everything is painted
-      await new Promise((resolve) => setTimeout(resolve, 500));
+      // Wait for Safari to stabilize
+      await new Promise((resolve) => setTimeout(resolve, 900));
 
       const fileName = `Phieu_Luong_${selectedSalary.full_name}_T${selectedMonth}_${selectedYear}.png`;
       const scale = 4; // High resolution for premium quality
 
-      // Capture the bill - it might have a blank logo if Safari is being difficult
-      const capturedDataUrl = await toPng(billRef.current, {
+      // Step 1: Capture the bill base
+      const rawDataUrl = await toPng(billRef.current, {
         cacheBust: true,
         backgroundColor: '#FCFCFC',
         quality: 1,
@@ -389,40 +297,80 @@ export const MonthlySalary = ({
         skipFonts: false,
         style: {
           transform: 'scale(1)',
-          WebkitTransform: 'scale(1)',
-          margin: '0',
-          padding: '0',
+          webkitTransform: 'scale(1)',
         },
       });
 
-      // Step 2.5: MANUALLY INJECT THE LOGO (Bullet-proof fix for iOS/Safari)
-      // This ensures the logo is NEVER missing or grayed out, even on the very first try.
-      const { injectLogoToImage } = await import('@/utils/logoCompositor');
-      const finalDataUrl = await injectLogoToImage(capturedDataUrl, {
-        x: 20, // px-5 = 20px
-        y: 20, // pt-5 = 20px
-        size: 44, // size={44}
-        pixelRatio: scale,
+      // Step 2: Manually draw logo on top of the canvas
+      const finalDataUrl = await new Promise<string>((resolve) => {
+        const billImg = new Image();
+        billImg.onload = () => {
+          const canvas = document.createElement('canvas');
+          canvas.width = billImg.width;
+          canvas.height = billImg.height;
+          const ctx = canvas.getContext('2d')!;
+
+          // Draw the captured bill
+          ctx.drawImage(billImg, 0, 0);
+
+          // Draw logo manually with high quality
+          const logoImg = new Image();
+          logoImg.onload = () => {
+            const logoX = Math.round(20 * scale);
+            const logoY = Math.round(20 * scale);
+            const logoSize = Math.round(36 * scale);
+            const radius = Math.round(8 * scale);
+
+            ctx.save();
+            // Enable high quality smoothing
+            ctx.imageSmoothingEnabled = true;
+            ctx.imageSmoothingQuality = 'high';
+
+            ctx.beginPath();
+            if (ctx.roundRect) {
+              ctx.roundRect(logoX, logoY, logoSize, logoSize, radius);
+            } else {
+              ctx.moveTo(logoX + radius, logoY);
+              ctx.arcTo(logoX + logoSize, logoY, logoX + logoSize, logoY + logoSize, radius);
+              ctx.arcTo(logoX + logoSize, logoY + logoSize, logoX, logoY + logoSize, radius);
+              ctx.arcTo(logoX, logoY + logoSize, logoX, logoY, radius);
+              ctx.arcTo(logoX, logoY, logoX + logoSize, logoY, radius);
+            }
+            ctx.closePath();
+            ctx.clip();
+
+            ctx.drawImage(logoImg, logoX, logoY, logoSize, logoSize);
+            ctx.restore();
+            resolve(canvas.toDataURL('image/png', 1.0));
+          };
+          logoImg.onerror = () => resolve(rawDataUrl);
+          logoImg.src = logoBase64;
+        };
+        billImg.src = rawDataUrl;
       });
 
+      setIsCapturing(false);
+
       // Step 3: Share (Mobile) or Download (Desktop)
-      if (navigator.share) {
+      if (navigator.share && navigator.canShare) {
         try {
+          // Convert dataUrl to File for sharing
           const res = await fetch(finalDataUrl);
           const blob = await res.blob();
           const file = new File([blob], fileName, { type: 'image/png' });
 
-          if (navigator.canShare && navigator.canShare({ files: [file] })) {
+          if (navigator.canShare({ files: [file] })) {
             await navigator.share({
               files: [file],
               title: 'Phiếu Lương',
               text: `Phiếu lương tháng ${selectedMonth}/${selectedYear} của ${selectedSalary.full_name}`,
             });
-            addToast?.('Đã mở bảng chia sẻ!', 'success');
+            if (addToast) addToast('Đã mở bảng chia sẻ!', 'success');
             return;
           }
         } catch (shareErr) {
           console.error('Share failed:', shareErr);
+          // Fallback to traditional download if share is cancelled or fails
         }
       }
 
@@ -431,12 +379,11 @@ export const MonthlySalary = ({
       link.download = fileName;
       link.href = finalDataUrl;
       link.click();
-      addToast?.('Đã lưu ảnh phiếu lương thành công!', 'success');
+      if (addToast) addToast('Đã lưu ảnh phiếu lương thành công!', 'success');
     } catch (err) {
-      console.error('Lỗi khi lưu ảnh:', err);
-      addToast?.('Lỗi khi tạo ảnh phiếu lương', 'error');
-    } finally {
       setIsCapturing(false);
+      console.error('Lỗi khi lưu ảnh:', err);
+      if (addToast) addToast('Lỗi khi tạo ảnh phiếu lương', 'error');
     }
   };
 
@@ -473,8 +420,43 @@ export const MonthlySalary = ({
   const netSalaryAll = displaySalaries.reduce((sum, s) => sum + s.netSalary, 0);
 
   // Excel always exports full data (not affected by hideZero)
-  // Excel always exports full data (not affected by hideZero)
   const handleExportExcel = () => {
+    const data = [
+      [
+        'Mã NV',
+        'Họ tên',
+        'Công',
+        'TC Ngày (h)',
+        'Lương/Ngày',
+        'Hệ số',
+        'TC Tháng',
+        'TC Ngày',
+        'Lương Công',
+        'Phụ cấp',
+        'Tạm ứng',
+        'Bảo hiểm',
+        'Thực lĩnh',
+      ],
+    ];
+
+    salaries.forEach((s) => {
+      data.push([
+        s.code || s.id.slice(0, 8),
+        s.full_name,
+        Number(s.totalDays.toFixed(1)),
+        `${s.totalOT.toFixed(1)}h`,
+        s.dailyRate,
+        s.monthlyCoeff,
+        s.monthOTSalary,
+        s.dayOTSalary,
+        s.earnedSalary + s.monthOTSalary + s.dayOTSalary,
+        s.totalAll,
+        s.totalAdv,
+        s.insuranceDeduction,
+        s.netSalary,
+      ]);
+    });
+
     const allTotal = {
       days: salaries.reduce((sum, s) => sum + s.totalDays, 0),
       ot: salaries.reduce((sum, s) => sum + s.totalOT, 0),
@@ -489,61 +471,26 @@ export const MonthlySalary = ({
       ins: salaries.reduce((sum, s) => sum + s.insuranceDeduction, 0),
       net: salaries.reduce((sum, s) => sum + s.netSalary, 0),
     };
-    import('@/utils/excelExport').then(({ exportToExcel }) => {
-      exportToExcel({
-        title: `Bảng Lương Tháng ${selectedMonth}/${selectedYear}`,
-        sheetName: `Lương T${selectedMonth}-${selectedYear}`,
-        columns: [
-          'Mã NV',
-          'Họ tên',
-          'Công',
-          'TC Ngày (h)',
-          'Lương/Ngày',
-          'Hệ số',
-          'TC Tháng',
-          'TC Ngày',
-          'Lương Công',
-          'Phụ cấp',
-          'Tạm ứng',
-          'Bảo hiểm',
-          'Thực lĩnh',
-        ],
-        rows: [
-          ...salaries.map((s) => [
-            s.code || s.id.slice(0, 8),
-            s.full_name,
-            Number(s.totalDays.toFixed(1)),
-            Number(s.totalOT.toFixed(1)),
-            s.dailyRate,
-            s.monthlyCoeff,
-            s.monthOTSalary,
-            s.dayOTSalary,
-            s.earnedSalary + s.monthOTSalary + s.dayOTSalary,
-            s.totalAll,
-            s.totalAdv,
-            s.insuranceDeduction,
-            s.netSalary,
-          ]),
-          [
-            '',
-            'TỔNG CỘNG',
-            Number(allTotal.days.toFixed(1)),
-            Number(allTotal.ot.toFixed(1)),
-            '',
-            '',
-            allTotal.monthOT,
-            allTotal.dayOT,
-            allTotal.earned,
-            allTotal.all,
-            allTotal.adv,
-            allTotal.ins,
-            allTotal.net,
-          ],
-        ],
-        fileName: `CDX_BangLuong_T${selectedMonth}_${selectedYear}.xlsx`,
-        addToast,
-      });
-    });
+    data.push([
+      '',
+      'TỔNG CỘNG',
+      Number(allTotal.days.toFixed(1)),
+      `${allTotal.ot.toFixed(1)}h`,
+      '',
+      '',
+      allTotal.monthOT,
+      allTotal.dayOT,
+      allTotal.earned,
+      allTotal.all,
+      allTotal.adv,
+      allTotal.ins,
+      allTotal.net,
+    ]);
+
+    const ws = XLSX.utils.aoa_to_sheet(data);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, `Luong T${selectedMonth}-${selectedYear}`);
+    XLSX.writeFile(wb, `CDX_BangLuong_T${selectedMonth}_${selectedYear}.xlsx`);
   };
 
   // Note: image capture handled by PageToolbar via captureOptions
@@ -551,7 +498,7 @@ export const MonthlySalary = ({
   return (
     <div className="p-4 md:p-6 space-y-6 pb-24 overflow-x-hidden">
       {/* Header + Toolbar */}
-      <div className="flex items-center justify-between gap-2 mb-4">
+      <div className="flex items-center justify-between gap-2 flex-wrap">
         <PageBreadcrumb title="Bảng lương" onBack={onBack} />
         <PageToolbar
           tableRef={mainTableRef}
@@ -713,8 +660,9 @@ export const MonthlySalary = ({
                   className="hover:bg-gray-50 transition-colors cursor-pointer"
                 >
                   <td className="px-4 py-3">
-                    <div className="bg-primary/5 px-3 py-1.5 rounded-xl border border-primary/10 text-[10px] font-black text-primary uppercase shadow-inner italic whitespace-nowrap">
-                      {`SL-${slugify(s.full_name)}-${selectedMonth.toString().padStart(2, '0')}${selectedYear.toString().slice(-2)}`}
+                    <div className="bg-primary/5 px-3 py-1.5 rounded-xl border border-primary/10 text-[10px] font-black text-primary uppercase shadow-inner italic inline-block">
+                      SL-{slugify(s.full_name)}-{selectedMonth.toString().padStart(2, '0')}
+                      {selectedYear.toString().slice(-2)}
                     </div>
                   </td>
                   <td className="px-4 py-3">
@@ -833,7 +781,7 @@ export const MonthlySalary = ({
                     <Wallet size={24} className="text-white drop-shadow-sm" />
                   </div>
                   <div>
-                    <h3 className="font-extrabold text-[13px] xs:text-sm sm:text-lg leading-tight tracking-tight whitespace-nowrap">
+                    <h3 className="font-extrabold text-lg leading-tight tracking-tight">
                       Phiếu lương — {selectedSalary.full_name}
                     </h3>
                     <p className="text-[10px] text-white/80 font-black uppercase tracking-widest bg-black/10 px-2 py-0.5 rounded-full w-fit mt-1">
@@ -901,35 +849,10 @@ export const MonthlySalary = ({
               </div>
 
               {/* Bill table */}
-              <div className="px-5 pb-3">
-                <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1.5 block">
-                  CÀI ĐẶT GHI CHÚ TRÊN PHIẾU
-                </label>
-                <textarea
-                  value={billNote}
-                  onChange={(e) => setBillNote(e.target.value)}
-                  placeholder="Nhập ghi chú cho phiếu lương..."
-                  rows={2}
-                  className="w-full px-4 py-2.5 rounded-2xl border border-gray-200 text-xs font-bold outline-none focus:ring-2 focus:ring-primary/20 bg-white shadow-sm transition-all resize-none"
-                />
-              </div>
-
-              <div
-                ref={containerRef}
-                className="max-h-[55dvh] overflow-y-auto overflow-x-hidden custom-scrollbar bg-gray-100/30 flex flex-col items-center p-4 sm:p-6"
-              >
-                <div
-                  style={{
-                    width: '380px',
-                    transform: `scale(${isCapturing ? 1 : billScale})`,
-                    transformOrigin: 'top center',
-                    transition: 'transform 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
-                    flexShrink: 0,
-                  }}
-                >
-                  <div ref={billRef} className="bg-white shadow-sm">
-                    {/* Explicit style block for perfect image capture consistency (fixes missing bold/italic/colors) */}
-                    <style>{`
+              <div className="max-h-[55dvh] overflow-y-auto custom-scrollbar">
+                <div ref={billRef} className="bg-white">
+                  {/* Explicit style block for perfect image capture consistency (fixes missing bold/italic/colors) */}
+                  <style>{`
                     .bill-capture { font-family: 'Inter', system-ui, sans-serif !important; width: 380px !important; margin: 0 auto !important; background: #FCFCFC !important; position: relative !important; }
                     .bill-capture.is-capturing { border: none !important; box-shadow: none !important; overflow: visible !important; }
                     .bill-capture .font-bold { font-weight: 700 !important; }
@@ -938,7 +861,7 @@ export const MonthlySalary = ({
                     .bill-capture .italic { font-style: italic !important; }
                     .bill-capture .uppercase { text-transform: uppercase !important; }
                     .bill-capture .text-primary { color: #2D5A27 !important; }
-                    .bill-capture .logo-img { width: 44px !important; height: 44px !important; opacity: 1 !important; display: block !important; background-color: #ffffff !important; transform: translateZ(0) !important; -webkit-transform: translateZ(0) !important; object-fit: contain !important; border-radius: 9px !important; }
+                    .bill-capture .logo-img { width: 36px !important; height: 36px !important; opacity: 1 !important; visibility: hidden !important; display: block !important; background-color: transparent !important; transform: translateZ(0) !important; -webkit-transform: translateZ(0) !important; }
                     .bill-capture .main-title { color: #2D5A27 !important; font-weight: 900 !important; letter-spacing: -0.02em !important; text-shadow: none !important; }
                     .bill-capture .text-gray-400 { color: #9CA3AF !important; }
                     .bill-capture .text-gray-500 { color: #6B7280 !important; }
@@ -952,235 +875,256 @@ export const MonthlySalary = ({
                     .bill-capture .whitespace-nowrap { white-space: nowrap !important; }
                   `}</style>
 
-                    <div className={`bill-capture ${isCapturing ? 'is-capturing' : ''}`}>
-                      {/* Bill header for image */}
-                      <div className="px-5 pt-5 pb-4 border-b border-gray-100">
-                        {/* Logo row */}
-                        <div className="flex items-center gap-2 mb-3">
-                          <CanvasLogo
-                            size={44}
-                            className={`logo-img w-11 h-11 rounded-xl object-contain shadow-sm ${isCapturing ? 'invisible' : ''}`}
-                          />
-                          <div>
-                            <p className="text-[9px] font-black text-gray-700 uppercase tracking-wider">
-                              CON ĐƯỜNG XANH
-                            </p>
-                            <p className="text-[6.5px] text-gray-400 uppercase tracking-widest leading-tight">
-                              CỘNG TÁC ĐỂ VƯƠN XA
-                            </p>
-                            <p className="text-[7.5px] text-gray-500 font-bold uppercase tracking-wider mt-0.5 leading-tight">
-                              Hệ thống quản lý kho & nhân sự CDX
-                            </p>
-                          </div>
+                  <div className={`bill-capture ${isCapturing ? 'is-capturing' : ''}`}>
+                    {/* Bill header for image */}
+                    <div className="px-5 pt-5 pb-4 border-b border-gray-100">
+                      {/* Logo row */}
+                      <div className="flex items-center gap-2 mb-3">
+                        <img
+                          src={logoBase64}
+                          alt="Logo"
+                          className="logo-img rounded-lg flex-shrink-0"
+                          style={{ objectFit: 'contain' }}
+                        />
+                        <div>
+                          <p className="text-[9px] font-black text-gray-700 uppercase tracking-wider">
+                            CDX - CON ĐƯỜNG XANH
+                          </p>
+                          <p className="text-[7px] text-gray-400 uppercase tracking-widest">
+                            Hệ thống quản lý kho và nhân sự
+                          </p>
                         </div>
-                        {/* Title block */}
-                        <h1
-                          className="text-xl uppercase leading-none main-title whitespace-nowrap"
+                      </div>
+                      {/* Title block */}
+                      <h1
+                        className="text-xl uppercase leading-none main-title italic"
+                        style={{
+                          color: '#2D5A27',
+                          fontWeight: 900,
+                        }}
+                      >
+                        BẢNG TÍNH LƯƠNG
+                      </h1>
+                      <p className="text-[11px] font-bold text-gray-500 mt-0.5 whitespace-nowrap">
+                        {isCustomRange
+                          ? `Kỳ lương: ${formatDate(customRange.start)} — ${formatDate(customRange.end)}`
+                          : (() => {
+                              const dates = (selectedSalary.attendanceDetails || [])
+                                .map((a: any) => a.date)
+                                .filter(Boolean)
+                                .sort();
+                              const firstDate = dates[0];
+                              const lastDate = dates[dates.length - 1];
+                              const fmt = (d: string) => {
+                                const [y, m, day] = d.split('-');
+                                return `${parseInt(day)}/${parseInt(m)}`;
+                              };
+                              const range =
+                                firstDate && lastDate
+                                  ? ` (${fmt(firstDate)} - ${fmt(lastDate)})`
+                                  : '';
+                              return `Kỳ lương: Tháng ${selectedMonth}/${selectedYear}${range}`;
+                            })()}
+                      </p>
+                      {/* Employee name row with Autofit logic */}
+                      <div className="flex justify-between items-center mt-3 gap-2">
+                        <span className="text-xs text-gray-500 font-medium whitespace-nowrap">
+                          Tên nhân viên:
+                        </span>
+                        <span
+                          className="font-black text-gray-900 whitespace-nowrap text-right"
                           style={{
-                            color: '#2D5A27',
-                            fontWeight: 900,
+                            fontSize: selectedSalary.full_name?.length > 20 ? '13px' : '16px',
+                            maxWidth: '220px',
+                            overflow: 'hidden',
                           }}
                         >
-                          BẢNG TÍNH LƯƠNG
-                        </h1>
-                        <p className="text-[11px] font-bold text-gray-500 mt-0.5 whitespace-nowrap">
-                          {isCustomRange
-                            ? `Kỳ lương: ${formatDate(customRange.start)} — ${formatDate(customRange.end)}`
-                            : (() => {
-                                const firstDay = `01/${String(selectedMonth).padStart(2, '0')}`;
-                                const lastDay = `${new Date(selectedYear, selectedMonth, 0).getDate()}/${String(selectedMonth).padStart(2, '0')}`;
-                                return `Kỳ lương: Tháng ${selectedMonth}/${selectedYear} (${firstDay} - ${lastDay})`;
-                              })()}
-                        </p>
-                        {/* Employee name row with Autofit logic */}
-                        <div className="flex justify-between items-center mt-3 gap-2">
-                          <span className="text-xs text-gray-500 font-medium whitespace-nowrap">
-                            Tên nhân viên:
+                          {selectedSalary.full_name}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="px-5 pb-6">
+                      {/* Minimalist Bill List */}
+                      <div className="border-t border-gray-100">
+                        {/* Attendance rows */}
+                        <div className="flex justify-between items-center py-2.5 border-b border-gray-100 gap-2">
+                          <span className="text-[11px] font-bold text-gray-500 whitespace-nowrap">
+                            Giờ công:
                           </span>
-                          <span
-                            className="font-black text-red-600 whitespace-nowrap text-right"
-                            style={{
-                              fontSize: selectedSalary.full_name?.length > 20 ? '13px' : '16px',
-                              maxWidth: '220px',
-                              overflow: 'hidden',
-                            }}
-                          >
-                            {selectedSalary.full_name}
+                          <span className="text-[11px] font-bold text-gray-800 whitespace-nowrap">
+                            {(selectedSalary.totalDays * 8).toFixed(0)} giờ (
+                            {selectedSalary.totalDays.toFixed(1)} công)
+                          </span>
+                        </div>
+                        <div className="flex justify-between items-center py-2.5 border-b border-gray-100 gap-2">
+                          <span className="text-[11px] font-bold text-gray-500 whitespace-nowrap">
+                            Tăng ca:
+                          </span>
+                          <span className="text-[11px] font-bold text-gray-800 whitespace-nowrap">
+                            {selectedSalary.totalOT.toFixed(1)} giờ
+                          </span>
+                        </div>
+
+                        {/* Financial rows */}
+                        <div className="flex justify-between items-center py-2.5 border-b border-gray-100 gap-2">
+                          <span className="text-[11px] font-bold text-gray-500 whitespace-nowrap">
+                            Lương cơ bản:
+                          </span>
+                          <span className="text-[11px] font-bold text-gray-800 whitespace-nowrap">
+                            {formatCurrency(selectedSalary.earnedSalary)}
+                          </span>
+                        </div>
+                        <div className="flex justify-between items-center py-2.5 border-b border-gray-100 gap-2">
+                          <span className="text-[11px] font-bold text-gray-500 whitespace-nowrap">
+                            Tiền tăng ca:
+                          </span>
+                          <span className="text-[11px] font-bold text-gray-800 whitespace-nowrap">
+                            {formatCurrency(
+                              selectedSalary.dayOTSalary + selectedSalary.monthOTSalary,
+                            )}
+                          </span>
+                        </div>
+                        <div className="flex justify-between items-center py-2.5 border-b border-gray-100 gap-2">
+                          <span className="text-[11px] font-bold text-gray-500 whitespace-nowrap">
+                            Phụ cấp:
+                          </span>
+                          <span className="text-[11px] font-bold text-gray-800 whitespace-nowrap">
+                            {formatCurrency(selectedSalary.totalAll)}
+                          </span>
+                        </div>
+                        <div className="flex justify-between items-center py-2.5 border-b border-gray-100 gap-2">
+                          <span className="text-[11px] font-bold text-gray-500 whitespace-nowrap">
+                            Thưởng:
+                          </span>
+                          <span className="text-[11px] font-bold text-gray-800 whitespace-nowrap">
+                            0 đ
+                          </span>
+                        </div>
+
+                        {/* Total Earnings */}
+                        <div className="flex justify-between items-center py-3 border-b border-gray-100 gap-2 bg-gray-50/30 px-2 -mx-2">
+                          <span className="text-[11px] font-black text-gray-900 uppercase tracking-wide whitespace-nowrap">
+                            TỔNG THU NHẬP:
+                          </span>
+                          <span className="text-[11px] font-black text-gray-900 whitespace-nowrap">
+                            {formatCurrency(
+                              selectedSalary.earnedSalary +
+                                selectedSalary.dayOTSalary +
+                                selectedSalary.monthOTSalary +
+                                selectedSalary.totalAll,
+                            )}
+                          </span>
+                        </div>
+
+                        {/* Deductions rows */}
+                        <div className="flex justify-between items-center py-2.5 border-b border-gray-100 gap-2">
+                          <span className="text-[11px] font-bold text-gray-500 whitespace-nowrap">
+                            Tạm ứng:
+                          </span>
+                          <span className="text-[11px] font-bold text-gray-800 whitespace-nowrap">
+                            -{formatCurrency(selectedSalary.totalAdv)}
+                          </span>
+                        </div>
+                        <div className="flex justify-between items-center py-2.5 border-b border-gray-100 gap-2">
+                          <span className="text-[11px] font-bold text-gray-500 whitespace-nowrap">
+                            Bảo hiểm:
+                          </span>
+                          <span className="text-[11px] font-bold text-gray-800 whitespace-nowrap">
+                            -{formatCurrency(selectedSalary.insuranceDeduction)}
+                          </span>
+                        </div>
+                        <div className="flex justify-between items-center py-2.5 border-b border-gray-100 gap-2">
+                          <span className="text-[11px] font-bold text-gray-500 whitespace-nowrap">
+                            Giảm trừ:
+                          </span>
+                          <span className="text-[11px] font-bold text-gray-800 whitespace-nowrap">
+                            0 đ
+                          </span>
+                        </div>
+
+                        {/* Total Deductions */}
+                        <div className="flex justify-between items-center py-3 border-b border-gray-100 gap-2 bg-gray-50/30 px-2 -mx-2">
+                          <span className="text-[11px] font-black text-gray-900 uppercase tracking-wide whitespace-nowrap">
+                            TỔNG GIẢM:
+                          </span>
+                          <span className="text-[11px] font-black text-gray-900 whitespace-nowrap">
+                            -
+                            {formatCurrency(
+                              selectedSalary.totalAdv + selectedSalary.insuranceDeduction,
+                            )}
+                          </span>
+                        </div>
+
+                        {/* Net Pay (RENAMED) */}
+                        <div className="flex justify-between items-center pt-4 pb-1 border-primary/20 bg-primary/5 px-2 -mx-2">
+                          <span className="text-xs font-black text-primary uppercase tracking-wider whitespace-nowrap italic">
+                            CÒN ĐƯỢC NHẬN:
+                          </span>
+                          <span className="text-sm font-black text-primary whitespace-nowrap">
+                            {formatCurrency(selectedSalary.netSalary)}
+                          </span>
+                        </div>
+                        <div className="bg-primary/5 px-2 -mx-2 pb-3 border-b-2 border-primary/20">
+                          <p className="text-[8px] font-black text-gray-900/40 uppercase tracking-[0.2em] leading-none">
+                            NET SALARY DETAILS
+                          </p>
+                        </div>
+
+                        <div className="flex justify-between items-start py-4 border-b border-gray-100 gap-2">
+                          <span className="text-[11px] font-bold text-gray-400 uppercase tracking-tighter whitespace-nowrap mt-0.5">
+                            Bằng chữ:
+                          </span>
+                          <span className="text-[11px] font-extrabold italic text-gray-700 leading-normal text-right pl-4">
+                            {numberToVietnamese(selectedSalary.netSalary)}
+                          </span>
+                        </div>
+
+                        <div className="flex justify-between items-center py-2.5 gap-2">
+                          <span className="text-[11px] font-bold text-gray-500 whitespace-nowrap">
+                            Ghi chú:
+                          </span>
+                          <span className="text-[11px] font-bold text-gray-800 whitespace-nowrap">
+                            {isCustomRange
+                              ? `${customRange.start} — ${customRange.end}`
+                              : (() => {
+                                  const dates = (selectedSalary.attendanceDetails || [])
+                                    .map((a: any) => a.date)
+                                    .filter(Boolean)
+                                    .sort();
+                                  const firstDate = dates[0];
+                                  const lastDate = dates[dates.length - 1];
+                                  const fmt = (d: string) => {
+                                    const [y, m, day] = d.split('-');
+                                    return `${parseInt(day)}/${parseInt(m)}`;
+                                  };
+                                  const range =
+                                    firstDate && lastDate
+                                      ? ` (${fmt(firstDate)} - ${fmt(lastDate)})`
+                                      : '';
+                                  return `Tháng ${selectedMonth}/${selectedYear}${range}`;
+                                })()}
                           </span>
                         </div>
                       </div>
 
-                      <div className="px-5 pb-6">
-                        {/* Minimalist Bill List */}
-                        <div className="border-t border-gray-100">
-                          {/* Attendance rows */}
-                          <div className="flex justify-between items-center py-2.5 border-b border-gray-100 gap-2">
-                            <span className="text-[11px] font-bold text-gray-500 whitespace-nowrap">
-                              Tổng ngày công:
-                            </span>
-                            <span className="text-[11px] font-bold text-gray-800 whitespace-nowrap">
-                              {selectedSalary.totalDays.toFixed(1)} công (
-                              {(selectedSalary.totalDays * 8).toFixed(0)} giờ)
-                            </span>
-                          </div>
-                          <div className="flex justify-between items-center py-2.5 border-b border-gray-100 gap-2">
-                            <span className="text-[11px] font-bold text-gray-500 whitespace-nowrap">
-                              Tổng số giờ tăng ca:
-                            </span>
-                            <span className="text-[11px] font-bold text-gray-800 whitespace-nowrap">
-                              {selectedSalary.totalOT.toFixed(1)} giờ
-                            </span>
-                          </div>
-
-                          {/* Financial rows */}
-                          <div className="flex justify-between items-center py-2.5 border-b border-gray-100 gap-2">
-                            <span className="text-[11px] font-bold text-gray-500 whitespace-nowrap">
-                              Tổng tiền Lương ngày công:
-                            </span>
-                            <span className="text-[11px] font-bold text-gray-800 whitespace-nowrap">
-                              {formatNumber(selectedSalary.earnedSalary)}
-                            </span>
-                          </div>
-                          <div className="flex justify-between items-center py-2.5 border-b border-gray-100 gap-2">
-                            <span className="text-[11px] font-bold text-gray-500 whitespace-nowrap">
-                              Tổng tiền tăng ca:
-                            </span>
-                            <span className="text-[11px] font-bold text-gray-800 whitespace-nowrap">
-                              {formatNumber(
-                                selectedSalary.dayOTSalary + selectedSalary.monthOTSalary,
-                              )}
-                            </span>
-                          </div>
-                          <div className="flex justify-between items-center py-2.5 border-b border-gray-100 gap-2">
-                            <span className="text-[11px] font-bold text-gray-500 whitespace-nowrap">
-                              Cộng thêm Phụ cấp:
-                            </span>
-                            <span className="text-[11px] font-bold text-gray-800 whitespace-nowrap">
-                              {formatNumber(selectedSalary.totalAll)}
-                            </span>
-                          </div>
-                          <div className="flex justify-between items-center py-2.5 border-b border-gray-100 gap-2">
-                            <span className="text-[11px] font-bold text-gray-500 whitespace-nowrap">
-                              Cộng thêm tiền Thưởng:
-                            </span>
-                            <span className="text-[11px] font-bold text-gray-800 whitespace-nowrap">
-                              0
-                            </span>
-                          </div>
-
-                          {/* Total Earnings */}
-                          <div className="flex justify-between items-center py-3 border-b border-gray-100 gap-2 bg-gray-50/30 px-2 -mx-2">
-                            <span className="text-[11px] font-black text-gray-900 uppercase tracking-wide whitespace-nowrap">
-                              Tổng cộng tiền Lương :
-                            </span>
-                            <span className="text-[11px] font-black text-gray-900 whitespace-nowrap">
-                              {formatNumber(
-                                selectedSalary.earnedSalary +
-                                  selectedSalary.dayOTSalary +
-                                  selectedSalary.monthOTSalary +
-                                  selectedSalary.totalAll,
-                              )}
-                            </span>
-                          </div>
-
-                          {/* Deductions rows */}
-                          <div className="flex justify-between items-center py-2.5 border-b border-gray-100 gap-2">
-                            <span className="text-[11px] font-bold text-gray-500 whitespace-nowrap">
-                              Trừ số tiền Đã tạm ứng:
-                            </span>
-                            <span className="text-[11px] font-bold text-gray-800 whitespace-nowrap">
-                              -{formatNumber(selectedSalary.totalAdv)}
-                            </span>
-                          </div>
-                          <div className="flex flex-col border-b border-gray-100 py-2.5">
-                            <div className="flex justify-between items-center gap-2">
-                              <span className="text-[11px] font-bold text-gray-500 whitespace-nowrap">
-                                Trừ % số tiền BHXH, BHYT phải nộp:
-                              </span>
-                              <span className="text-[11px] font-bold text-gray-800 whitespace-nowrap">
-                                -{formatNumber(selectedSalary.insuranceDeduction)}
-                              </span>
-                            </div>
-                            {selectedSalary.monthMultiplier > 1 && (
-                              <p className="text-[9px] text-red-500 font-bold italic mt-0.5 text-left">
-                                (*) Bao gồm {selectedSalary.monthMultiplier} tháng đóng BHXH
-                              </p>
-                            )}
-                          </div>
-                          <div className="flex justify-between items-center py-2.5 border-b border-gray-100 gap-2">
-                            <span className="text-[11px] font-bold text-gray-500 whitespace-nowrap">
-                              Giảm trừ lý do khác:
-                            </span>
-                            <span className="text-[11px] font-bold text-gray-800 whitespace-nowrap">
-                              0
-                            </span>
-                          </div>
-
-                          {/* Total Deductions */}
-                          <div className="flex justify-between items-center py-3 border-b border-gray-100 gap-2 bg-gray-50/30 px-2 -mx-2">
-                            <span className="text-[11px] font-black text-gray-900 uppercase tracking-wide whitespace-nowrap">
-                              Tổng số tiền Giảm, trừ:
-                            </span>
-                            <span className="text-[11px] font-black text-gray-900 whitespace-nowrap">
-                              -
-                              {formatNumber(
-                                selectedSalary.totalAdv + selectedSalary.insuranceDeduction,
-                              )}
-                            </span>
-                          </div>
-
-                          {/* Net Pay (RENAMED) */}
-                          <div className="flex justify-between items-center pt-4 pb-1 border-primary/20 bg-primary/5 px-2 -mx-2">
-                            <span className="text-xs font-black text-red-600 uppercase tracking-wider whitespace-nowrap italic">
-                              Số tiền Còn được nhận là:
-                            </span>
-                            <span className="text-sm font-black text-red-600 whitespace-nowrap">
-                              {formatNumber(selectedSalary.netSalary)}
-                            </span>
-                          </div>
-                          <div className="bg-primary/5 px-2 -mx-2 pb-3 border-b-2 border-primary/20">
-                            <p className="text-[8px] font-black text-gray-900/40 uppercase tracking-[0.2em] leading-none">
-                              NET SALARY DETAILS
-                            </p>
-                          </div>
-
-                          <div className="flex justify-between items-start py-4 border-b border-gray-100 gap-2">
-                            <span className="text-[11px] font-bold text-gray-400 uppercase tracking-tighter whitespace-nowrap mt-0.5">
-                              Bằng chữ:
-                            </span>
-                            <span className="text-[11px] font-extrabold italic text-gray-700 leading-normal text-right pl-4">
-                              {numberToVietnamese(selectedSalary.netSalary)}
-                            </span>
-                          </div>
-
-                          <div className="flex justify-between items-start py-2.5 gap-2">
-                            <span className="text-[11px] font-bold text-gray-500 whitespace-nowrap mt-0.5">
-                              Ghi chú:
-                            </span>
-                            <span className="text-[11px] font-bold text-gray-800 text-right break-words max-w-[280px]">
-                              {billNote}
-                            </span>
-                          </div>
-                        </div>
-
-                        {/* Footer */}
-                        <div className="pt-3 flex justify-between items-center whitespace-nowrap">
-                          <div className="flex items-center gap-1.5 opacity-30 flex-shrink-0">
-                            <span className="text-[8px] font-black text-gray-500 uppercase tracking-widest">
-                              CDX ERP System
-                            </span>
-                          </div>
-                          <span className="text-[8px] font-black text-gray-400 uppercase tracking-widest opacity-30 flex-shrink-0">
-                            {new Date().toLocaleString('vi-VN', {
-                              hour: '2-digit',
-                              minute: '2-digit',
-                              second: '2-digit',
-                              day: '2-digit',
-                              month: '2-digit',
-                              year: 'numeric',
-                            })}
+                      {/* Footer */}
+                      <div className="pt-3 flex justify-between items-center whitespace-nowrap">
+                        <div className="flex items-center gap-1.5 opacity-30 flex-shrink-0">
+                          <span className="text-[8px] font-black text-gray-500 uppercase tracking-widest">
+                            CDX ERP System
                           </span>
                         </div>
+                        <span className="text-[8px] font-black text-gray-400 uppercase tracking-widest opacity-30 flex-shrink-0">
+                          {new Date().toLocaleString('vi-VN', {
+                            hour: '2-digit',
+                            minute: '2-digit',
+                            second: '2-digit',
+                            day: '2-digit',
+                            month: '2-digit',
+                            year: 'numeric',
+                          })}
+                        </span>
                       </div>
                     </div>
                   </div>

@@ -59,16 +59,8 @@ export const FinishedGoodsIntake = ({
     fetchWarehouses();
   }, []);
 
-  useEffect(() => {
-    if (showModal) {
-      document.body.style.overflow = 'hidden';
-    } else {
-      document.body.style.overflow = 'auto';
-    }
-  }, [showModal]);
-
   const handleSaveTableImage = () => {
-    const reportElem = reportRef.current || tableBillRef.current;
+    const reportElem = reportRef.current;
     if (reportElem) {
       exportTableImage({
         element: reportElem,
@@ -197,15 +189,17 @@ export const FinishedGoodsIntake = ({
       if (materialId) {
         const { error: stockInError } = await supabase.from('stock_in').insert([
           {
+            slip_code: `NTP-${selectedOrder.ma_lenh}`,
+            date: today,
             material_id: materialId,
             warehouse_id: formData.kho_id,
             quantity: formData.so_luong,
             unit: 'cái',
-            date: today,
             employee_id: user.id,
             notes: `Nhập thành phẩm (Chờ duyệt) - Lệnh SX: ${selectedOrder.ma_lenh}`,
             status: 'Chờ duyệt',
-            import_code: `NTP-${selectedOrder.ma_lenh}`,
+            approved_by: null,
+            approved_date: null,
           },
         ]);
         if (stockInError) throw stockInError;
@@ -242,8 +236,10 @@ export const FinishedGoodsIntake = ({
         .from('stock_in')
         .update({
           status: 'Đã duyệt',
+          approved_by: user.id,
+          approved_date: today,
         })
-        .eq('import_code', `NTP-${selectedOrder.ma_lenh}`)
+        .eq('slip_code', `NTP-${selectedOrder.ma_lenh}`)
         .is('approved_by', null)
         .limit(1); // Careful with slip_code collisions
 
@@ -290,7 +286,7 @@ export const FinishedGoodsIntake = ({
       await supabase
         .from('stock_in')
         .delete()
-        .eq('import_code', `NTP-${selectedOrder.ma_lenh}`)
+        .eq('slip_code', `NTP-${selectedOrder.ma_lenh}`)
         .eq('status', 'Chờ duyệt')
         .limit(1);
 
@@ -360,9 +356,9 @@ export const FinishedGoodsIntake = ({
 
   return (
     <div className="p-4 md:p-6 space-y-6 pb-24 overflow-x-hidden">
-      <div className="flex items-center justify-between gap-2 mb-4">
+      <div className="flex items-center justify-between gap-2">
         <PageBreadcrumb title="Nhập kho thành phẩm" onBack={onBack} />
-        <div className="flex items-center gap-1.5 justify-end flex-1 flex-shrink-0">
+        <div className="flex items-center gap-1.5 justify-end flex-1">
           <SaveImageButton
             onClick={handleSaveTableImage}
             isCapturing={isCapturingTable}
@@ -608,7 +604,7 @@ export const FinishedGoodsIntake = ({
       <AnimatePresence>
         {showModal && selectedOrder && (
           <div
-            className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
+            className="fixed inset-0 z-[150] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
             onClick={() => setShowModal(false)}
           >
             <motion.div
@@ -697,7 +693,7 @@ export const FinishedGoodsIntake = ({
                 <CanvasLogo size={96} className="w-24 h-24 rounded-3xl object-contain shadow-sm" />
               </div>
               <div className="space-y-1">
-                <h1 className="text-3xl font-black text-primary tracking-tighter uppercase">
+                <h1 className="text-3xl font-black text-primary tracking-tighter uppercase italic">
                   CDX ERP SYSTEM
                 </h1>
                 <p className="text-[10px] text-gray-400 font-bold uppercase tracking-[0.3em]">

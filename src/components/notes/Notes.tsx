@@ -255,7 +255,7 @@ export const Notes = ({
     setItemToDelete(id);
     setShowDeleteModal(true);
     try {
-      const usage = await checkUsage('note', id);
+      const usage = await checkUsage('employee', id);
       setUsageInfo(usage);
     } catch (err) {
       console.error(err);

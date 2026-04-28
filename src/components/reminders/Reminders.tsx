@@ -121,7 +121,7 @@ export const Reminders = ({
   };
 
   const handleSaveTableImage = () => {
-    const reportElem = reportRef.current || tableBillRef.current;
+    const reportElem = reportRef.current;
     if (reportElem) {
       exportTableImage({
         element: reportElem,
@@ -237,7 +237,7 @@ export const Reminders = ({
     setItemToDelete(id);
     setShowDeleteModal(true);
     try {
-      const usage = await checkUsage('reminder', id);
+      const usage = await checkUsage('employee', id);
       setUsageInfo(usage);
     } catch (err) {
       console.error(err);

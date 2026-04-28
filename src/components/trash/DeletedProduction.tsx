@@ -9,6 +9,7 @@ import {
   Square,
   CheckSquare,
   AlertCircle,
+  CheckCircle,
   Search,
   ClipboardList,
   Layers,
@@ -26,9 +27,10 @@ import { SortButton } from '../shared/SortButton';
 import { formatCurrency, formatDate } from '@/utils/format';
 import { checkUsage, UsageResult, UsageType } from '@/utils/dataIntegrity';
 import { purgeDependencies } from '@/utils/dataFixer';
+import { ConfirmModal } from '../shared/ConfirmModal';
 
 type TabType = 'production_orders' | 'boms' | 'split_merge_history' | 'construction_diaries';
-type SortOption = 'newest' | 'code' | 'name';
+type LocalSortOption = 'newest' | 'code' | 'name';
 
 export const DeletedProduction = ({
   user,
@@ -45,9 +47,12 @@ export const DeletedProduction = ({
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
   const [searchTerm, setSearchTerm] = useState('');
-  const [sortBy, setSortBy] = useState<SortOption>(
-    (localStorage.getItem(`sort_pref_trashProd_${user.id}`) as SortOption) || 'newest',
+  const [sortBy, setSortBy] = useState<LocalSortOption>(
+    (localStorage.getItem(`sort_pref_trashProd_${user.id}`) as LocalSortOption) || 'newest',
   );
+
+  const [submitting, setSubmitting] = useState(false);
+  const [showActionModal, setShowActionModal] = useState(false);
 
   const [showRestoreModal, setShowRestoreModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -124,7 +129,7 @@ export const DeletedProduction = ({
 
   const toggleSelect = (id: string) => {
     const next = new Set(selectedIds);
-    const key = `${activeTab}-${id}`;
+    const key = `${activeTab}|${id}`;
     if (next.has(key)) next.delete(key);
     else next.add(key);
     setSelectedIds(next);
@@ -134,7 +139,7 @@ export const DeletedProduction = ({
     if (selectedIds.size === filteredItems.length && filteredItems.length > 0) {
       setSelectedIds(new Set());
     } else {
-      setSelectedIds(new Set(filteredItems.map((i) => `${activeTab}-${i.id}`)));
+      setSelectedIds(new Set(filteredItems.map((i) => `${activeTab}|${i.id}`)));
     }
   };
 
@@ -284,7 +289,9 @@ export const DeletedProduction = ({
     setSubmitting(true);
     try {
       const promises = Array.from(selectedIds).map((key) => {
-        const [table, id] = key.split('-');
+        const separatorIdx = (key as string).indexOf('|');
+        const table = (key as string).substring(0, separatorIdx) as TabType;
+        const id = (key as string).substring(separatorIdx + 1);
         const isBom = table === 'boms';
         const actualTable =
           table === 'production_orders'
@@ -317,12 +324,22 @@ export const DeletedProduction = ({
       let failCount = 0;
 
       for (const key of selectedIds) {
-        const [_, id] = key.split('-');
+        const separatorIdx = key.indexOf('|');
+        const table = key.substring(0, separatorIdx) as TabType;
+        const id = key.substring(separatorIdx + 1);
+        const actualTable =
+          table === 'production_orders'
+            ? 'lenh_san_xuat'
+            : table === 'boms'
+              ? 'san_pham_bom'
+              : table === 'split_merge_history'
+                ? 'xasa_gop_phieu'
+                : table;
         try {
-          if (activeTab === 'bom_configs') {
-            await supabase.from('bom_items').delete().eq('bom_id', id);
+          if (table === 'boms') {
+            await supabase.from('san_pham_bom_chi_tiet').delete().eq('san_pham_bom_id', id);
           }
-          const { error } = await supabase.from(activeTab).delete().eq('id', id);
+          const { error } = await supabase.from(actualTable).delete().eq('id', id);
           if (!error) successCount++;
           else failCount++;
         } catch (e) {
@@ -346,12 +363,20 @@ export const DeletedProduction = ({
     setSubmitting(true);
     try {
       let count = 0;
+      const actualTable =
+        activeTab === 'production_orders'
+          ? 'lenh_san_xuat'
+          : activeTab === 'boms'
+            ? 'san_pham_bom'
+            : activeTab === 'split_merge_history'
+              ? 'xasa_gop_phieu'
+              : activeTab;
       for (const item of items) {
         try {
-          if (activeTab === 'bom_configs') {
-            await supabase.from('bom_items').delete().eq('bom_id', item.id);
+          if (activeTab === 'boms') {
+            await supabase.from('san_pham_bom_chi_tiet').delete().eq('san_pham_bom_id', item.id);
           }
-          await supabase.from(activeTab).delete().eq('id', item.id);
+          await supabase.from(actualTable).delete().eq('id', item.id);
           count++;
         } catch (e) {
           // skip if error
@@ -384,6 +409,8 @@ export const DeletedProduction = ({
       return 0;
     });
 
+  const currentSortOption = sortBy === 'name' ? 'code' : sortBy;
+
   return (
     <div className="p-4 md:p-6 space-y-6 pb-24 overflow-x-hidden">
       <div className="flex items-center justify-between gap-2 mb-4">
@@ -392,13 +419,13 @@ export const DeletedProduction = ({
           <SortButton
             currentSort={sortBy}
             onSortChange={(val) => {
-              setSortBy(val);
+              setSortBy(val as LocalSortOption);
               localStorage.setItem(`sort_pref_trashProd_${user.id}`, val);
             }}
             options={[
               { value: 'newest', label: 'Mới nhất' },
               { value: 'code', label: 'Mã' },
-              { value: 'name', label: 'Tên/Mô tả (A-Z)' },
+              { value: 'code', label: 'Tên/Mô tả (A-Z)' },
             ]}
           />
         </div>
@@ -511,7 +538,7 @@ export const DeletedProduction = ({
               </tr>
             ) : (
               filteredItems.map((item) => {
-                const key = `${activeTab}-${item.id}`;
+                const key = `${activeTab}|${item.id}`;
                 const isSelected = selectedIds.has(key);
                 return (
                   <tr

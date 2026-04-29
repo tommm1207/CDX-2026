@@ -1,5 +1,5 @@
 import { ClipboardCheck, AlertCircle } from 'lucide-react';
-import { PageBreadcrumb } from '../shared/PageBreadcrumb';
+import { PageBreadcrumb } from '@/components/shared';
 
 export const DatabaseSetup = ({ onBack }: { onBack: () => void }) => {
   const sqlSchema = `-- SQL Schema for CDX Warehouse Management

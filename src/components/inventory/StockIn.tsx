@@ -20,27 +20,22 @@ import { ChangeEvent } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { supabase } from '@/lib/supabase';
 import { Employee } from '@/types';
-import { PageBreadcrumb } from '../shared/PageBreadcrumb';
-import { NumericInput } from '../shared/NumericInput';
-import { ImageCapture } from '../shared/ImageCapture';
-import { CreatableSelect } from '../shared/CreatableSelect';
-import { ToastType } from '../shared/Toast';
-import { ConfirmModal } from '../shared/ConfirmModal';
-import { QuickAddMaterialModal } from '../shared/QuickAddMaterialModal';
-import { FAB } from '../shared/FAB';
+import { PageBreadcrumb } from '@/components/shared';
+import { NumericInput } from '@/components/shared';
+import { ImageCapture } from '@/components/shared';
+import { CreatableSelect } from '@/components/shared';
+import { ToastType } from '@/components/shared';
+import { ConfirmModal } from '@/components/shared';
+import { QuickAddMaterialModal } from '@/components/shared';
+import { FAB } from '@/components/shared';
 import { useInventoryData } from '@/hooks/useInventoryData';
 import { formatDate, formatCurrency, formatNumber, numberToWords } from '@/utils/format';
 import { isUUID, getAllowedWarehouses } from '@/utils/helpers';
 import { getAvailableStock, validateFutureImpact } from '@/utils/inventory';
-import { Button } from '../shared/Button';
-import { SortButton, SortOption } from '../shared/SortButton';
-import {
-  PageToolbar,
-  FilterPanel,
-  FilterSearchInput,
-  DateRangeFilter,
-} from '../shared/PageToolbar';
-import { ReportImagePreviewModal } from '../shared/ReportImagePreviewModal';
+import { Button } from '@/components/shared';
+import { SortButton, SortOption } from '@/components/shared';
+import { PageToolbar, FilterPanel, FilterSearchInput, DateRangeFilter } from '@/components/shared';
+import { ReportImagePreviewModal } from '@/components/shared';
 
 // Helper: lấy tồn kho hiện tại (tính tới hôm nay) cho cặp (material, warehouse)
 const getCurrentStock = (matId: string, whId: string) =>

@@ -1,4 +1,4 @@
-import { CanvasLogo } from '@/components/shared/ReportExportHeader';
+import { CanvasLogo } from '@/components/shared';
 import { exportTableImage } from '../../utils/reportExport';
 import { useState, useEffect, FormEvent, useRef } from 'react';
 import {
@@ -25,23 +25,23 @@ import { compressImage, uploadToImgBB } from '@/utils/imageUpload';
 import { motion, AnimatePresence } from 'motion/react';
 import { supabase } from '@/lib/supabase';
 import { Employee } from '@/types';
-import { PageBreadcrumb } from '../shared/PageBreadcrumb';
-import { NumericInput } from '../shared/NumericInput';
-import { CreatableSelect } from '../shared/CreatableSelect';
-import { ImageCapture } from '../shared/ImageCapture';
-import { ToastType } from '../shared/Toast';
-import { ConfirmModal } from '../shared/ConfirmModal';
-import { QuickAddMaterialModal } from '../shared/QuickAddMaterialModal';
-import { FAB } from '../shared/FAB';
+import { PageBreadcrumb } from '@/components/shared';
+import { NumericInput } from '@/components/shared';
+import { CreatableSelect } from '@/components/shared';
+import { ImageCapture } from '@/components/shared';
+import { ToastType } from '@/components/shared';
+import { ConfirmModal } from '@/components/shared';
+import { QuickAddMaterialModal } from '@/components/shared';
+import { FAB } from '@/components/shared';
 import { useInventoryData } from '@/hooks/useInventoryData';
 import { formatDate, formatCurrency, formatNumber } from '@/utils/format';
 import { isUUID, generateCode, getAllowedWarehouses } from '@/utils/helpers';
-import { Button } from '../shared/Button';
+import { Button } from '@/components/shared';
 import { getAvailableStock, getDetailedStock, validateFutureImpact } from '@/utils/inventory';
-import { ExcelButton } from '../shared/ExcelButton';
-import { SortButton, SortOption } from '../shared/SortButton';
+import { ExcelButton } from '@/components/shared';
+import { SortButton, SortOption } from '@/components/shared';
 
-import { SaveImageButton } from '../shared/SaveImageButton';
+import { SaveImageButton } from '@/components/shared';
 
 export const StockOut = ({
   user,

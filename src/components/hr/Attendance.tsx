@@ -1,21 +1,21 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 
 import { CalendarCheck, Plus, X, Users, Check, RefreshCw, Search, Camera } from 'lucide-react';
-import { SaveImageButton } from '../shared/SaveImageButton';
-import { ExcelButton } from '../shared/ExcelButton';
+import { SaveImageButton } from '@/components/shared';
+import { ExcelButton } from '@/components/shared';
 import { motion, AnimatePresence } from 'motion/react';
 import { supabase } from '@/lib/supabase';
 import { Employee } from '@/types';
-import { PageBreadcrumb } from '../shared/PageBreadcrumb';
-import { NumericInput } from '../shared/NumericInput';
-import { ToastType } from '../shared/Toast';
-import { MonthYearPicker } from '../shared/MonthYearPicker';
-import { Button } from '../shared/Button';
-import { SortButton, SortOption } from '../shared/SortButton';
+import { PageBreadcrumb } from '@/components/shared';
+import { NumericInput } from '@/components/shared';
+import { ToastType } from '@/components/shared';
+import { MonthYearPicker } from '@/components/shared';
+import { Button } from '@/components/shared';
+import { SortButton, SortOption } from '@/components/shared';
 import { AttendanceTable } from './AttendanceTable';
-import { ReportImagePreviewModal } from '../shared/ReportImagePreviewModal';
-import { useTableCapture } from '../shared/useTableCapture';
-import { ConfirmModal } from '../shared/ConfirmModal';
+import { ReportImagePreviewModal } from '@/components/shared';
+import { useTableCapture } from '@/components/shared';
+import { ConfirmModal } from '@/components/shared';
 
 export const Attendance = ({
   user,

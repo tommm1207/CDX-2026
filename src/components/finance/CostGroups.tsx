@@ -1,4 +1,4 @@
-import { CanvasLogo } from '@/components/shared/ReportExportHeader';
+import { CanvasLogo } from '@/components/shared';
 import { exportTableImage } from '../../utils/reportExport';
 import { useState, useEffect, FormEvent, MouseEvent } from 'react';
 import {
@@ -15,16 +15,16 @@ import {
 } from 'lucide-react';
 import { useRef } from 'react';
 
-import { SaveImageButton } from '../shared/SaveImageButton';
+import { SaveImageButton } from '@/components/shared';
 import { motion, AnimatePresence } from 'motion/react';
 import { supabase } from '@/lib/supabase';
 import { Employee, CostGroup, CostItem } from '@/types';
-import { PageBreadcrumb } from '../shared/PageBreadcrumb';
-import { ToastType } from '../shared/Toast';
+import { PageBreadcrumb } from '@/components/shared';
+import { ToastType } from '@/components/shared';
 import { checkUsage } from '@/utils/dataIntegrity';
-import { SortButton, SortOption } from '../shared/SortButton';
-import { Button } from '../shared/Button';
-import { FAB } from '../shared/FAB';
+import { SortButton, SortOption } from '@/components/shared';
+import { Button } from '@/components/shared';
+import { FAB } from '@/components/shared';
 
 export const CostGroups = ({
   user,

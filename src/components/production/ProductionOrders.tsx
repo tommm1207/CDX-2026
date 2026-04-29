@@ -1,4 +1,4 @@
-import { CanvasLogo } from '@/components/shared/ReportExportHeader';
+import { CanvasLogo } from '@/components/shared';
 import { useState, useEffect } from 'react';
 import {
   Plus,
@@ -17,18 +17,18 @@ import {
 } from 'lucide-react';
 import { useRef } from 'react';
 import { exportTableImage } from '../../utils/reportExport';
-import { SaveImageButton } from '../shared/SaveImageButton';
+import { SaveImageButton } from '@/components/shared';
 import { motion, AnimatePresence } from 'motion/react';
 import { supabase } from '@/lib/supabase';
 import { Employee } from '@/types';
-import { PageBreadcrumb } from '../shared/PageBreadcrumb';
-import { NumericInput } from '../shared/NumericInput';
-import { CreatableSelect } from '../shared/CreatableSelect';
-import { ToastType } from '../shared/Toast';
-import { FAB } from '../shared/FAB';
-import { Button } from '../shared/Button';
-import { SortButton, SortOption } from '../shared/SortButton';
-import { ExcelButton } from '../shared/ExcelButton';
+import { PageBreadcrumb } from '@/components/shared';
+import { NumericInput } from '@/components/shared';
+import { CreatableSelect } from '@/components/shared';
+import { ToastType } from '@/components/shared';
+import { FAB } from '@/components/shared';
+import { Button } from '@/components/shared';
+import { SortButton, SortOption } from '@/components/shared';
+import { ExcelButton } from '@/components/shared';
 import { formatDate, formatNumber, formatCurrency } from '@/utils/format';
 import { isActiveWarehouse, getAvailableStock } from '@/utils/inventory';
 import { getAllowedWarehouses } from '@/utils/helpers';

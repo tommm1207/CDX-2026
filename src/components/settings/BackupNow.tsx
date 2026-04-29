@@ -14,8 +14,8 @@ import ExcelJS from 'exceljs';
 import { supabase } from '@/lib/supabase';
 import { formatDataForExcel } from '@/utils/excelHelper';
 import { applyCDXSheetStyle } from '@/utils/excelExport';
-import { PageBreadcrumb } from '../shared/PageBreadcrumb';
-import { Button } from '../shared/Button';
+import { PageBreadcrumb } from '@/components/shared';
+import { Button } from '@/components/shared';
 import { BACKUP_TABLES } from './Backup';
 
 const ScrollColumn = ({

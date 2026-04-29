@@ -14,7 +14,7 @@ import {
 import ExcelJS from 'exceljs';
 import { formatDataForExcel } from '@/utils/excelHelper';
 import { supabase } from '@/lib/supabase';
-import { PageBreadcrumb } from '../shared/PageBreadcrumb';
+import { PageBreadcrumb } from '@/components/shared';
 
 export const BACKUP_TABLES = [
   // 1. Nhân sự & Lương

@@ -10,8 +10,8 @@ import {
   ArrowLeftRight,
 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
-import { Button } from '../shared/Button';
-import { NumericInput } from '../shared/NumericInput';
+import { Button } from '@/components/shared';
+import { NumericInput } from '@/components/shared';
 import { exportLeaseVehicleContract } from '@/utils/contractExport';
 
 const PARTY_A_DEFAULT = {

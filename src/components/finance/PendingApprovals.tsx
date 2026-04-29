@@ -1,4 +1,4 @@
-import { CanvasLogo } from '@/components/shared/ReportExportHeader';
+import { CanvasLogo } from '@/components/shared';
 import { exportTableImage } from '../../utils/reportExport';
 import { useState, useEffect } from 'react';
 import {
@@ -23,15 +23,15 @@ import {
 } from 'lucide-react';
 import { useRef } from 'react';
 
-import { SaveImageButton } from '../shared/SaveImageButton';
+import { SaveImageButton } from '@/components/shared';
 import { motion, AnimatePresence } from 'motion/react';
 import { supabase } from '@/lib/supabase';
 import { Employee } from '@/types';
-import { PageBreadcrumb } from '../shared/PageBreadcrumb';
-import { ToastType } from '../shared/Toast';
+import { PageBreadcrumb } from '@/components/shared';
+import { ToastType } from '@/components/shared';
 import { formatDate, formatNumber, formatCurrency } from '@/utils/format';
-import { Button } from '../shared/Button';
-import { SortButton, SortOption } from '../shared/SortButton';
+import { Button } from '@/components/shared';
+import { SortButton, SortOption } from '@/components/shared';
 
 interface ConfirmState {
   slip: any;

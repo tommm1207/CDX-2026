@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { FileText, Plus, Search, MoreVertical, Trash2, Edit3, FileOutput, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { supabase } from '@/lib/supabase';
-import { Button } from '../shared/Button';
+import { Button } from '@/components/shared';
 import { LeaseVehicleForm } from './LeaseVehicleForm';
 import { LeaseSteelSheetForm } from './LeaseSteelSheetForm';
 

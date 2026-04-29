@@ -1,6 +1,6 @@
 import { motion } from 'motion/react';
 import { Package, Warehouse, Archive, UserCircle, Wallet, Layers, Factory } from 'lucide-react';
-import { PageBreadcrumb } from '../shared/PageBreadcrumb';
+import { PageBreadcrumb } from '@/components/shared';
 
 export const Trash = ({
   user,

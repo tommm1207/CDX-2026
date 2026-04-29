@@ -3,7 +3,7 @@ import { Plus, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Employee } from '@/types';
 import { getDayOfWeekStr, convertSolarToLunar } from '@/utils/lunar';
-import { ConfirmModal } from '../shared/ConfirmModal';
+import { ConfirmModal } from '@/components/shared';
 
 interface AttendanceTableProps {
   employees: Employee[];

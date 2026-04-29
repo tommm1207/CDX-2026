@@ -1,5 +1,5 @@
 import { Settings } from 'lucide-react';
-import { PageBreadcrumb } from '../shared/PageBreadcrumb';
+import { PageBreadcrumb } from '@/components/shared';
 
 export const PlaceholderPage = ({ title, onBack }: { title: string; onBack?: () => void }) => (
   <div className="p-4 md:p-6 space-y-6 pb-24">

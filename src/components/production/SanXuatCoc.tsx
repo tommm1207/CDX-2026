@@ -3,15 +3,15 @@ import { Plus, X, Hammer, ChevronDown, ChevronUp, Trash2, PackagePlus, Edit } fr
 import { motion, AnimatePresence } from 'motion/react';
 import { supabase } from '@/lib/supabase';
 import { Employee } from '@/types';
-import { ToastType } from '../shared/Toast';
-import { PageBreadcrumb } from '../shared/PageBreadcrumb';
-import { FAB } from '../shared/FAB';
-import { ConfirmModal } from '../shared/ConfirmModal';
-import { NumericInput } from '../shared/NumericInput';
-import { CreatableSelect } from '../shared/CreatableSelect';
-import { QuickAddMaterialModal } from '../shared/QuickAddMaterialModal';
-import { PageToolbar, FilterPanel, FilterSearchInput } from '../shared/PageToolbar';
-import { ReportImagePreviewModal } from '../shared/ReportImagePreviewModal';
+import { ToastType } from '@/components/shared';
+import { PageBreadcrumb } from '@/components/shared';
+import { FAB } from '@/components/shared';
+import { ConfirmModal } from '@/components/shared';
+import { NumericInput } from '@/components/shared';
+import { CreatableSelect } from '@/components/shared';
+import { QuickAddMaterialModal } from '@/components/shared';
+import { PageToolbar, FilterPanel, FilterSearchInput } from '@/components/shared';
+import { ReportImagePreviewModal } from '@/components/shared';
 import { formatNumber } from '@/utils/format';
 import { tonKho } from '@/utils/inventory';
 

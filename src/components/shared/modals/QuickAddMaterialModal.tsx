@@ -4,7 +4,7 @@ import { X, PackagePlus } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { generateNextMaterialCode, generateNextGroupCode } from '@/utils/inventory';
 import { isUUID } from '@/utils/helpers';
-import { CreatableSelect } from './CreatableSelect';
+import { CreatableSelect } from '../forms/CreatableSelect';
 
 interface QuickAddMaterialModalProps {
   show: boolean;

@@ -1,5 +1,5 @@
 import { Package } from 'lucide-react';
-import { PageBreadcrumb } from '@/components/shared/PageBreadcrumb';
+import { PageBreadcrumb } from '@/components/shared';
 import { LoginPage } from '@/components/auth/LoginPage';
 import { Dashboard } from '@/components/dashboard/Dashboard';
 import { HRRecords } from '@/components/hr/HRRecords';
@@ -40,7 +40,7 @@ import { BackupNow } from '@/components/settings/BackupNow';
 import { Notifications } from '@/components/notifications/Notifications';
 import { DatabaseSetup } from '@/components/settings/DatabaseSetup';
 import { Employee } from '@/types';
-import { ErrorBoundary } from '@/components/shared/ErrorBoundary';
+import { ErrorBoundary } from '@/components/shared';
 import { ContractModule } from '@/components/contracts/ContractModule';
 
 interface AppRouterProps {

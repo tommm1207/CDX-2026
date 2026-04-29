@@ -17,11 +17,11 @@ import {
 import { motion, AnimatePresence } from 'motion/react';
 import { supabase } from '@/lib/supabase';
 import { Employee } from '@/types';
-import { PageBreadcrumb } from '../shared/PageBreadcrumb';
-import { ConfirmModal } from '../shared/ConfirmModal';
-import { ToastType } from '../shared/Toast';
-import { Button } from '../shared/Button';
-import { SortButton, SortOption } from '../shared/SortButton';
+import { PageBreadcrumb } from '@/components/shared';
+import { ConfirmModal } from '@/components/shared';
+import { ToastType } from '@/components/shared';
+import { Button } from '@/components/shared';
+import { SortButton, SortOption } from '@/components/shared';
 import { checkUsage, UsageResult } from '@/utils/dataIntegrity';
 import { purgeDependencies } from '@/utils/dataFixer';
 

@@ -8,14 +8,14 @@ import { parseReminderContent } from '@/utils/reminderUtils';
 import { registerServiceWorker, subscribeToPush } from '@/lib/webPush';
 
 // Shared Components
-import { ToastContainer, ToastMessage, ToastType } from '@/components/shared/Toast';
+import { ToastContainer, ToastMessage, ToastType } from '@/components/shared';
 
 // Layout & Router
 import { MainLayout } from '@/layouts/MainLayout';
 import { AppRouter } from '@/routes/AppRouter';
 import { ContractModule } from '@/components/contracts/ContractModule';
-import { ReloadPrompt } from '@/components/shared/ReloadPrompt';
-import { ErrorBoundary } from '@/components/shared/ErrorBoundary';
+import { ReloadPrompt } from '@/components/shared';
+import { ErrorBoundary } from '@/components/shared';
 
 // Auth
 import { LoginPage } from '@/components/auth/LoginPage';

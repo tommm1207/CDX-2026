@@ -12,12 +12,12 @@ import { motion, AnimatePresence } from 'motion/react';
 import { supabase } from '@/lib/supabase';
 
 import { Employee } from '@/types';
-import { PageBreadcrumb } from '../shared/PageBreadcrumb';
-import { ToastType } from '../shared/Toast';
+import { PageBreadcrumb } from '@/components/shared';
+import { ToastType } from '@/components/shared';
 import { formatNumber, formatDate } from '@/utils/format';
-import { PageToolbar } from '../shared/PageToolbar';
-import { ReportImagePreviewModal } from '../shared/ReportImagePreviewModal';
-import { Button } from '../shared/Button';
+import { PageToolbar } from '@/components/shared';
+import { ReportImagePreviewModal } from '@/components/shared';
+import { Button } from '@/components/shared';
 
 interface Transaction {
   date: string;

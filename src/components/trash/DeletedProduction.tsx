@@ -20,14 +20,14 @@ import {
 import { motion, AnimatePresence } from 'motion/react';
 import { supabase } from '@/lib/supabase';
 import { Employee } from '@/types';
-import { PageBreadcrumb } from '../shared/PageBreadcrumb';
-import { ToastType } from '../shared/Toast';
-import { Button } from '../shared/Button';
-import { SortButton } from '../shared/SortButton';
+import { PageBreadcrumb } from '@/components/shared';
+import { ToastType } from '@/components/shared';
+import { Button } from '@/components/shared';
+import { SortButton } from '@/components/shared';
 import { formatCurrency, formatDate } from '@/utils/format';
 import { checkUsage, UsageResult, UsageType } from '@/utils/dataIntegrity';
 import { purgeDependencies } from '@/utils/dataFixer';
-import { ConfirmModal } from '../shared/ConfirmModal';
+import { ConfirmModal } from '@/components/shared';
 
 type TabType = 'production_orders' | 'boms' | 'split_merge_history' | 'construction_diaries';
 type LocalSortOption = 'newest' | 'code' | 'name';

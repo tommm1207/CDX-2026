@@ -15,15 +15,15 @@ import {
 import { motion, AnimatePresence } from 'motion/react';
 import { supabase } from '@/lib/supabase';
 import { Employee } from '@/types';
-import { PageBreadcrumb } from '../shared/PageBreadcrumb';
-import { ToastType } from '../shared/Toast';
-import { Button } from '../shared/Button';
-import { SortButton, SortOption } from '../shared/SortButton';
-import { PageToolbar, FilterPanel, FilterSearchInput } from '../shared/PageToolbar';
-import { ReportImagePreviewModal } from '../shared/ReportImagePreviewModal';
+import { PageBreadcrumb } from '@/components/shared';
+import { ToastType } from '@/components/shared';
+import { Button } from '@/components/shared';
+import { SortButton, SortOption } from '@/components/shared';
+import { PageToolbar, FilterPanel, FilterSearchInput } from '@/components/shared';
+import { ReportImagePreviewModal } from '@/components/shared';
 import { checkUsage } from '@/utils/dataIntegrity';
 import { generateSmartCode } from '@/utils/codeGenerator';
-import { CreatableSelect } from '../shared/CreatableSelect';
+import { CreatableSelect } from '@/components/shared';
 
 export const HRRecords = ({
   user,

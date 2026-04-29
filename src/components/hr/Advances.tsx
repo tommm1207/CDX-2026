@@ -1,4 +1,4 @@
-import { CanvasLogo } from '@/components/shared/ReportExportHeader';
+import { CanvasLogo } from '@/components/shared';
 import React, { useState, useEffect, useRef } from 'react';
 import {
   Plus,
@@ -15,18 +15,18 @@ import {
 import { motion, AnimatePresence } from 'motion/react';
 import { supabase } from '@/lib/supabase';
 import { Employee } from '@/types';
-import { PageBreadcrumb } from '../shared/PageBreadcrumb';
-import { NumericInput } from '../shared/NumericInput';
-import { CreatableSelect } from '../shared/CreatableSelect';
+import { PageBreadcrumb } from '@/components/shared';
+import { NumericInput } from '@/components/shared';
+import { CreatableSelect } from '@/components/shared';
 import { formatDate, formatCurrency } from '@/utils/format';
-import { FAB } from '../shared/FAB';
+import { FAB } from '@/components/shared';
 import { exportTableImage } from '../../utils/reportExport';
-import { SaveImageButton } from '../shared/SaveImageButton';
-import { Button } from '../shared/Button';
-import { SortButton, SortOption } from '../shared/SortButton';
-import { ReportPreviewModal } from '../shared/ReportPreviewModal';
-import { ExcelButton } from '../shared/ExcelButton';
-import { DateRangeFilter, FilterSearchInput } from '../shared/PageToolbar';
+import { SaveImageButton } from '@/components/shared';
+import { Button } from '@/components/shared';
+import { SortButton, SortOption } from '@/components/shared';
+import { ReportPreviewModal } from '@/components/shared';
+import { ExcelButton } from '@/components/shared';
+import { DateRangeFilter, FilterSearchInput } from '@/components/shared';
 
 export const Advances = ({
   user,

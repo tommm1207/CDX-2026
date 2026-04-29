@@ -1,23 +1,23 @@
-import { CanvasLogo } from '@/components/shared/ReportExportHeader';
+import { CanvasLogo } from '@/components/shared';
 import { exportTableImage } from '../../utils/reportExport';
 import { useState, useEffect } from 'react';
 import { X, PackageCheck, Factory, Search, ChevronRight, Package } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { supabase } from '@/lib/supabase';
 import { Employee } from '@/types';
-import { PageBreadcrumb } from '../shared/PageBreadcrumb';
-import { NumericInput } from '../shared/NumericInput';
-import { CreatableSelect } from '../shared/CreatableSelect';
-import { ToastType } from '../shared/Toast';
-import { Button } from '../shared/Button';
-import { ExcelButton } from '../shared/ExcelButton';
-import { SortButton, SortOption } from '../shared/SortButton';
+import { PageBreadcrumb } from '@/components/shared';
+import { NumericInput } from '@/components/shared';
+import { CreatableSelect } from '@/components/shared';
+import { ToastType } from '@/components/shared';
+import { Button } from '@/components/shared';
+import { ExcelButton } from '@/components/shared';
+import { SortButton, SortOption } from '@/components/shared';
 import { formatDate, formatNumber } from '@/utils/format';
 import { isActiveWarehouse } from '@/utils/inventory';
 import { getAllowedWarehouses } from '@/utils/helpers';
 import { useRef } from 'react';
 
-import { SaveImageButton } from '../shared/SaveImageButton';
+import { SaveImageButton } from '@/components/shared';
 import { Share2, Image as LucideImageIcon } from 'lucide-react';
 
 // ============================

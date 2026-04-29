@@ -1,5 +1,5 @@
 import { exportTableImage } from '../../utils/reportExport';
-import { CanvasLogo } from '../shared/ReportExportHeader';
+import { CanvasLogo } from '@/components/shared';
 import { supabase } from '@/lib/supabase';
 import { useState, useEffect, FormEvent, useRef, useMemo } from 'react';
 import {
@@ -34,24 +34,24 @@ import {
   Share2,
 } from 'lucide-react';
 
-import { SaveImageButton } from '../shared/SaveImageButton';
+import { SaveImageButton } from '@/components/shared';
 import { motion, AnimatePresence } from 'motion/react';
 
 import { Employee } from '@/types';
-import { PageBreadcrumb } from '../shared/PageBreadcrumb';
-import { NumericInput } from '../shared/NumericInput';
-import { CreatableSelect } from '../shared/CreatableSelect';
-import { ToastType } from '../shared/Toast';
-import { FAB } from '../shared/FAB';
-import { ExcelButton } from '../shared/ExcelButton';
+import { PageBreadcrumb } from '@/components/shared';
+import { NumericInput } from '@/components/shared';
+import { CreatableSelect } from '@/components/shared';
+import { ToastType } from '@/components/shared';
+import { FAB } from '@/components/shared';
+import { ExcelButton } from '@/components/shared';
 import { formatCurrency, formatNumber, formatDate } from '@/utils/format';
 import { isUUID, getAllowedWarehouses } from '@/utils/helpers';
 import { isActiveWarehouse } from '@/utils/inventory';
-import { Button } from '../shared/Button';
-import { SortButton, SortOption } from '../shared/SortButton';
+import { Button } from '@/components/shared';
+import { SortButton, SortOption } from '@/components/shared';
 import { generateSmartCode } from '@/utils/codeGenerator';
 import { checkUsage } from '@/utils/dataIntegrity';
-import { ReportPreviewModal } from '../shared/ReportPreviewModal';
+import { ReportPreviewModal } from '@/components/shared';
 
 const initialFormState = {
   date: new Date().toISOString().split('T')[0],

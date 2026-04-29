@@ -21,8 +21,8 @@ import {
 import { supabase } from '@/lib/supabase';
 import { Employee } from '@/types';
 import { parseReminderContent } from '@/utils/reminderUtils';
-import { ToastType } from '../shared/Toast';
-import { AppInstructionsModal } from '../shared/AppInstructionsModal';
+import { ToastType } from '@/components/shared';
+import { AppInstructionsModal } from '@/components/shared';
 
 interface DashboardProps {
   user: Employee;

@@ -3,8 +3,8 @@ import { Camera, Search, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Button } from './Button';
 import { SortButton, SortOption } from './SortButton';
-import { ExcelButton } from './ExcelButton';
-import { useTableCapture, CaptureOptions } from './useTableCapture';
+import { ExcelButton } from '../report/ExcelButton';
+import { useTableCapture, CaptureOptions } from '../report/useTableCapture';
 
 interface PageToolbarProps {
   /** Ref pointing to the DOM element (table wrapper) to capture as image */

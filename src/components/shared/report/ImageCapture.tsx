@@ -1,7 +1,7 @@
 import { useState, useRef, ChangeEvent } from 'react';
 import { Camera, Image as ImageIcon, X, Loader2, Plus } from 'lucide-react';
 import { compressImage, uploadToImgBB } from '@/utils/imageUpload';
-import { Button } from './Button';
+import { Button } from '../ui/Button';
 
 interface ImageCaptureProps {
   onUpload: (urls: string[]) => void;

@@ -12,7 +12,7 @@ import {
 import { motion, AnimatePresence } from 'motion/react';
 import { SidebarItem } from '@/components/layout/SidebarItem';
 import { BottomNav } from '@/components/layout/BottomNav';
-import { GlobalSearch } from '@/components/shared/GlobalSearch';
+import { GlobalSearch } from '@/components/shared';
 import { Employee } from '@/types';
 
 interface MainLayoutProps {

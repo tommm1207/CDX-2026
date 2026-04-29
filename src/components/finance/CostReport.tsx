@@ -1,4 +1,4 @@
-import { CanvasLogo } from '@/components/shared/ReportExportHeader';
+import { CanvasLogo } from '@/components/shared';
 import { useState, useEffect } from 'react';
 import {
   Plus,
@@ -26,20 +26,20 @@ import { useRef } from 'react';
 import { exportTableImage } from '../../utils/reportExport';
 
 import { Employee } from '@/types';
-import { PageBreadcrumb } from '../shared/PageBreadcrumb';
+import { PageBreadcrumb } from '@/components/shared';
 import { isActiveWarehouse } from '@/utils/inventory';
-import { DetailItem } from '../shared/DetailItem';
-import { NumericInput } from '../shared/NumericInput';
-import { CreatableSelect } from '../shared/CreatableSelect';
-import { ToastType } from '../shared/Toast';
+import { DetailItem } from '@/components/shared';
+import { NumericInput } from '@/components/shared';
+import { CreatableSelect } from '@/components/shared';
+import { ToastType } from '@/components/shared';
 import { formatCurrency, formatDate, numberToWords } from '@/utils/format';
 import { isUUID, getAllowedWarehouses } from '@/utils/helpers';
-import { Button } from '../shared/Button';
-import { FAB } from '../shared/FAB';
-import { ExcelButton } from '../shared/ExcelButton';
-import { SortButton } from '../shared/SortButton';
-import { SaveImageButton } from '../shared/SaveImageButton';
-import { ReportPreviewModal } from '../shared/ReportPreviewModal';
+import { Button } from '@/components/shared';
+import { FAB } from '@/components/shared';
+import { ExcelButton } from '@/components/shared';
+import { SortButton } from '@/components/shared';
+import { SaveImageButton } from '@/components/shared';
+import { ReportPreviewModal } from '@/components/shared';
 
 export const CostReport = ({
   user,

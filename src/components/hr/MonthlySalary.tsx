@@ -6,21 +6,21 @@ import { logoBase64 } from '../../utils/logoBase64';
 import { motion, AnimatePresence } from 'motion/react';
 import { supabase } from '@/lib/supabase';
 import { Employee } from '@/types';
-import { PageBreadcrumb } from '../shared/PageBreadcrumb';
-import { ToastType } from '../shared/Toast';
+import { PageBreadcrumb } from '@/components/shared';
+import { ToastType } from '@/components/shared';
 import { formatCurrency } from '@/utils/format';
-import { MonthYearPicker } from '../shared/MonthYearPicker';
-import { Button } from '../shared/Button';
-import { SortOption } from '../shared/SortButton';
+import { MonthYearPicker } from '@/components/shared';
+import { Button } from '@/components/shared';
+import { SortOption } from '@/components/shared';
 import { slugify, numberToVietnamese } from '@/utils/helpers';
-import { ReportImagePreviewModal } from '../shared/ReportImagePreviewModal';
+import { ReportImagePreviewModal } from '@/components/shared';
 import {
   PageToolbar,
   FilterPanel,
   HideZeroToggle,
   FilterSearchInput,
   DateRangeFilter,
-} from '../shared/PageToolbar';
+} from '@/components/shared';
 
 export const MonthlySalary = ({
   user,

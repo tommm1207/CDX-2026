@@ -4,9 +4,9 @@ import { motion, AnimatePresence } from 'motion/react';
 import { supabase } from '@/lib/supabase';
 
 import { Employee } from '@/types';
-import { PageBreadcrumb } from '../shared/PageBreadcrumb';
+import { PageBreadcrumb } from '@/components/shared';
 import { isActiveWarehouse } from '@/utils/inventory';
-import { ToastType } from '../shared/Toast';
+import { ToastType } from '@/components/shared';
 import { formatNumber } from '@/utils/format';
 import { getTonKhoTable, TonKhoRow } from '@/utils/inventory';
 import { getAllowedWarehouses } from '@/utils/helpers';
@@ -16,8 +16,8 @@ import {
   HideZeroToggle,
   FilterSearchInput,
   DateRangeFilter,
-} from '../shared/PageToolbar';
-import { ReportImagePreviewModal } from '../shared/ReportImagePreviewModal';
+} from '@/components/shared';
+import { ReportImagePreviewModal } from '@/components/shared';
 
 interface ReportRow extends TonKhoRow {
   materialName: string;

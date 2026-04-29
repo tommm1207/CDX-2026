@@ -13,11 +13,11 @@ import {
 import { motion, AnimatePresence } from 'motion/react';
 import { supabase } from '@/lib/supabase';
 import { Employee } from '@/types';
-import { PageBreadcrumb } from '../shared/PageBreadcrumb';
+import { PageBreadcrumb } from '@/components/shared';
 import { isActiveWarehouse } from '@/utils/inventory';
-import { CustomCombobox } from '../shared/CustomCombobox';
-import { DetailItem } from '../shared/DetailItem';
-import { ToastType } from '../shared/Toast';
+import { CustomCombobox } from '@/components/shared';
+import { DetailItem } from '@/components/shared';
+import { ToastType } from '@/components/shared';
 import { formatCurrency, formatDate, numberToWords } from '@/utils/format';
 import { isUUID, getAllowedWarehouses } from '@/utils/helpers';
 

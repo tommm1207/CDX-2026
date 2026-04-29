@@ -14,7 +14,7 @@ import { supabase } from '@/lib/supabase';
 import { Employee } from '@/types';
 import { isUUID, slugify } from '@/utils/helpers';
 import { LOGO_URL } from '@/constants/options';
-import { AppInstructionsModal } from '../shared/AppInstructionsModal';
+import { AppInstructionsModal } from '@/components/shared';
 
 export const LoginPage = ({ onLogin }: { onLogin: (user: Employee) => void }) => {
   const [employeeId, setEmployeeId] = useState('');

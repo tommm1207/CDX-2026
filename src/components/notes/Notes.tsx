@@ -1,4 +1,4 @@
-import { CanvasLogo } from '@/components/shared/ReportExportHeader';
+import { CanvasLogo } from '@/components/shared';
 import { exportTableImage } from '../../utils/reportExport';
 import { useState, useEffect } from 'react';
 import {
@@ -16,19 +16,19 @@ import {
 } from 'lucide-react';
 import { useRef } from 'react';
 
-import { ImageCapture } from '../shared/ImageCapture';
-import { SaveImageButton } from '../shared/SaveImageButton';
+import { ImageCapture } from '@/components/shared';
+import { SaveImageButton } from '@/components/shared';
 import { motion, AnimatePresence } from 'motion/react';
 import { supabase } from '@/lib/supabase';
 import { Employee, Note } from '@/types';
-import { PageBreadcrumb } from '../shared/PageBreadcrumb';
+import { PageBreadcrumb } from '@/components/shared';
 import { isActiveWarehouse } from '@/utils/inventory';
-import { ToastType } from '../shared/Toast';
-import { FAB } from '../shared/FAB';
-import { Button } from '../shared/Button';
-import { ConfirmModal } from '../shared/ConfirmModal';
+import { ToastType } from '@/components/shared';
+import { FAB } from '@/components/shared';
+import { Button } from '@/components/shared';
+import { ConfirmModal } from '@/components/shared';
 import { checkUsage } from '@/utils/dataIntegrity';
-import { ExcelButton } from '../shared/ExcelButton';
+import { ExcelButton } from '@/components/shared';
 
 export const WEATHER_OPTIONS = [
   { value: 'sunny', label: '☀️ Nắng nóng gay gắt' },

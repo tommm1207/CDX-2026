@@ -1,10 +1,10 @@
-﻿import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Bell, CheckCircle, Trash2, Clock, RefreshCw } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { supabase } from '@/lib/supabase';
 import { Employee } from '@/types';
-import { PageBreadcrumb } from '../shared/PageBreadcrumb';
-import { ToastType } from '../shared/Toast';
+import { PageBreadcrumb } from '@/components/shared';
+import { ToastType } from '@/components/shared';
 import { parseReminderContent } from '@/utils/reminderUtils';
 
 export const Notifications = ({

@@ -47,8 +47,8 @@ export const MainLayout = ({
   const [isSearchOpen, setIsSearchOpen] = useState(false);
 
   return (
-    <div className="h-screen bg-[#F8F9FA] flex flex-col font-sans overflow-hidden">
-      <header className="bg-primary text-white flex items-center justify-between px-4 sticky top-0 z-[100] shadow-md h-[calc(3.5rem+env(safe-area-inset-top))] pt-[env(safe-area-inset-top)] flex-shrink-0">
+    <div className="h-screen bg-slate-50/50 flex flex-col font-sans overflow-hidden selection:bg-primary/20 selection:text-primary-dark">
+      <header className="bg-primary/95 backdrop-blur-md text-white flex items-center justify-between px-4 sticky top-0 z-[100] shadow-sm border-b border-white/10 h-[calc(3.5rem+env(safe-area-inset-top))] pt-[env(safe-area-inset-top)] flex-shrink-0 transition-colors duration-300">
         <div className="flex items-center gap-2">
           <div className="relative group/logo">
             <button
@@ -200,7 +200,7 @@ export const MainLayout = ({
               animate={{ x: 0, opacity: 1 }}
               exit={{ x: -280, opacity: 0 }}
               transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-              className="bg-white border-r border-gray-200 overflow-y-auto flex-shrink-0 z-[90] lg:z-30 fixed lg:relative lg:top-0 h-[calc(100vh-3.5rem-env(safe-area-inset-top))] lg:h-[calc(100vh-3.5rem)] w-[320px] shadow-2xl lg:shadow-none custom-scrollbar"
+              className="bg-white/90 backdrop-blur-xl border-r border-gray-200/60 overflow-y-auto flex-shrink-0 z-[90] lg:z-30 fixed lg:relative lg:top-0 h-[calc(100vh-3.5rem-env(safe-area-inset-top))] lg:h-[calc(100vh-3.5rem)] w-[320px] shadow-[4px_0_24px_rgba(0,0,0,0.02)] lg:shadow-none custom-scrollbar"
               style={{
                 top:
                   window.innerWidth < 1024 ? 'calc(3.5rem + env(safe-area-inset-top))' : undefined,
@@ -252,7 +252,7 @@ export const MainLayout = ({
 
         <main
           key={refreshKey}
-          className="flex-1 overflow-y-auto overflow-x-hidden relative bg-[#F8F9FA] pb-24 lg:pb-0"
+          className="flex-1 overflow-y-auto overflow-x-hidden relative bg-transparent pb-24 lg:pb-0"
         >
           {children}
 

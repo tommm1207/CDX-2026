@@ -164,14 +164,14 @@ export const Dashboard = ({ user, onNavigate, addToast, pendingApprovals = 0 }: 
   const totalNotifs = reminderCount + (isAdmin ? pendingApprovals : 0);
 
   return (
-    <div className="p-3 md:p-8 space-y-4 md:space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
+    <div className="p-2 md:p-8 space-y-3 md:space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
       {/* Welcome Header */}
-      <div className="flex flex-col gap-4">
+      <div className="flex flex-col gap-2 md:gap-4">
         <div className="space-y-0.5">
-          <h1 className="text-2xl md:text-3xl font-black text-gray-900 tracking-tight flex items-center gap-3">
+          <h1 className="text-lg md:text-3xl font-black text-gray-900 tracking-tight flex items-center gap-2 md:gap-3">
             Chào {user.full_name}! 👋
           </h1>
-          <p className="text-gray-500 font-medium text-sm">
+          <p className="text-gray-500 font-medium text-[10px] md:text-sm">
             Chúc bạn một ngày làm việc hiệu quả tại CDX.
           </p>
         </div>
@@ -224,36 +224,39 @@ export const Dashboard = ({ user, onNavigate, addToast, pendingApprovals = 0 }: 
         </div>
       </div>
 
-      {/* Quick Actions — Fluid Flex Grid */}
-      <div className="flex flex-wrap gap-2 md:gap-6">
+      {/* Quick Actions — Compact Bento Grid */}
+      <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-5 gap-2 md:gap-6">
         {visibleActions.map((action) => (
           <motion.div
             key={action.id}
-            whileHover={{ y: -3, scale: 1.03 }}
-            whileTap={{ scale: 0.96 }}
+            whileHover={{ y: -4, scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
             onClick={() => onNavigate(action.id)}
-            className="group flex-1 min-w-[75px] md:min-w-[240px] bg-white md:p-6 rounded-xl md:rounded-[2rem] shadow-sm border border-gray-100 cursor-pointer hover:shadow-xl hover:shadow-gray-200/50 transition-all flex flex-col items-center justify-center py-2.5 px-1 md:items-start md:gap-4 relative overflow-hidden"
+            className="group relative bg-white/80 backdrop-blur-lg md:p-6 rounded-[1rem] md:rounded-[2rem] shadow-sm border border-white/50 cursor-pointer hover:shadow-2xl hover:shadow-gray-200/50 transition-all duration-300 flex flex-col items-center justify-center py-2.5 px-1 md:items-start md:gap-4 overflow-hidden"
           >
-            <div className="absolute top-0 right-0 p-6 bg-gray-50 rounded-bl-full translate-x-4 -translate-y-4 group-hover:bg-primary/5 transition-colors hidden md:block" />
+            {/* Elegant Background Gradient on Hover */}
+            <div className="absolute inset-0 bg-gradient-to-br from-transparent to-gray-50/50 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+
+            <div className="absolute top-0 right-0 p-8 bg-gradient-to-bl from-gray-50 to-transparent rounded-bl-full translate-x-4 -translate-y-4 group-hover:from-primary/5 transition-colors hidden md:block" />
+
             <div
-              className={`w-8 h-8 md:w-12 md:h-12 flex-shrink-0 ${action.color} rounded-lg md:rounded-2xl flex items-center justify-center text-white shadow-sm md:shadow-lg relative z-10 group-hover:rotate-12 transition-transform`}
+              className={`w-9 h-9 md:w-14 md:h-14 flex-shrink-0 ${action.color} rounded-xl md:rounded-2xl flex items-center justify-center text-white shadow-sm md:shadow-lg relative z-10 group-hover:rotate-6 group-hover:scale-110 transition-transform duration-300`}
             >
-              <action.icon size={16} className="md:hidden" />
-              <action.icon size={24} className="hidden md:block" />
+              <action.icon size={18} className="md:hidden" />
+              <action.icon size={26} className="hidden md:block" />
             </div>
-            <p className="text-[10px] md:hidden font-semibold text-gray-600 text-center leading-tight mt-1.5 w-full px-0.5">
-              {action.label}
-            </p>
-            <div className="hidden md:block relative z-10">
-              <h3 className="text-base font-bold text-gray-800 group-hover:text-primary transition-colors">
+
+            <div className="mt-1.5 md:mt-0 relative z-10 flex flex-col items-center md:items-start w-full">
+              <h3 className="text-[9px] sm:text-xs md:text-base font-bold text-gray-800 group-hover:text-primary transition-colors text-center md:text-left leading-tight truncate w-full px-1">
                 {action.label}
               </h3>
-              <p className="text-[10px] text-gray-400 font-medium leading-tight mt-1">
+              <p className="hidden md:block text-[11px] text-gray-500 font-medium leading-relaxed mt-1.5 opacity-80 group-hover:opacity-100 transition-opacity">
                 {action.description}
               </p>
             </div>
+
             <ArrowRight
-              className="hidden md:block absolute bottom-6 right-6 text-gray-200 group-hover:text-primary group-hover:translate-x-1 transition-all"
+              className="hidden md:block absolute bottom-6 right-6 text-gray-300 group-hover:text-primary group-hover:translate-x-1 transition-all duration-300"
               size={20}
             />
           </motion.div>

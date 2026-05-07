@@ -925,21 +925,8 @@ export const MonthlySalary = ({
                         {isCustomRange
                           ? `Kỳ lương: ${formatDate(customRange.start)} — ${formatDate(customRange.end)}`
                           : (() => {
-                              const dates = (selectedSalary.attendanceDetails || [])
-                                .map((a: any) => a.date)
-                                .filter(Boolean)
-                                .sort();
-                              const firstDate = dates[0];
-                              const lastDate = dates[dates.length - 1];
-                              const fmt = (d: string) => {
-                                const [y, m, day] = d.split('-');
-                                return `${parseInt(day)}/${parseInt(m)}`;
-                              };
-                              const range =
-                                firstDate && lastDate
-                                  ? ` (${fmt(firstDate)} - ${fmt(lastDate)})`
-                                  : '';
-                              return `Kỳ lương: Tháng ${selectedMonth}/${selectedYear}${range}`;
+                              const lastDay = new Date(selectedYear, selectedMonth, 0).getDate();
+                              return `Kỳ lương: Tháng ${selectedMonth}/${selectedYear} (1/${selectedMonth} - ${lastDay}/${selectedMonth})`;
                             })()}
                       </p>
                       {/* Employee name row with Autofit logic */}
@@ -1104,21 +1091,12 @@ export const MonthlySalary = ({
                             {isCustomRange
                               ? `${customRange.start} — ${customRange.end}`
                               : (() => {
-                                  const dates = (selectedSalary.attendanceDetails || [])
-                                    .map((a: any) => a.date)
-                                    .filter(Boolean)
-                                    .sort();
-                                  const firstDate = dates[0];
-                                  const lastDate = dates[dates.length - 1];
-                                  const fmt = (d: string) => {
-                                    const [y, m, day] = d.split('-');
-                                    return `${parseInt(day)}/${parseInt(m)}`;
-                                  };
-                                  const range =
-                                    firstDate && lastDate
-                                      ? ` (${fmt(firstDate)} - ${fmt(lastDate)})`
-                                      : '';
-                                  return `Tháng ${selectedMonth}/${selectedYear}${range}`;
+                                  const lastDay = new Date(
+                                    selectedYear,
+                                    selectedMonth,
+                                    0,
+                                  ).getDate();
+                                  return `Tháng ${selectedMonth}/${selectedYear} (1/${selectedMonth} - ${lastDay}/${selectedMonth})`;
                                 })()}
                           </span>
                         </div>

@@ -94,14 +94,6 @@ export const MonthlySalary = ({
         queryEnd = new Date(selectedYear, selectedMonth, 0).toISOString().split('T')[0];
       }
 
-      // Tính số tháng dương lịch nằm trong khoảng [queryStart, queryEnd]
-      const countMonthsInRange = (start: string, end: string): number => {
-        const s = new Date(start);
-        const e = new Date(end);
-        return (e.getFullYear() - s.getFullYear()) * 12 + (e.getMonth() - s.getMonth()) + 1;
-      };
-      const monthsInRange = countMonthsInRange(queryStart, queryEnd);
-
       let attQuery = supabase
         .from('attendance')
         .select('*')
@@ -128,45 +120,93 @@ export const MonthlySalary = ({
       const { data: adv } = await advQuery;
       const { data: all } = await allQuery;
 
-      const calculated = employees.map((emp) => {
-        const set = settings
-          ?.filter((s) => s.employee_id === emp.id)
-          .sort(
-            (a, b) => new Date(b.valid_from || 0).getTime() - new Date(a.valid_from || 0).getTime(),
-          )
-          .find((s) => {
-            const start = s.valid_from || '1900-01-01';
-            const end = s.valid_to || '2099-12-31';
-            const currentMonthDate = `${selectedYear}-${String(selectedMonth).padStart(2, '0')}-15`;
-            return currentMonthDate >= start && currentMonthDate <= end;
-          }) ||
-          settings?.find((s) => s.employee_id === emp.id) || {
+      // Xác định danh sách các tháng dương lịch trong khoảng
+      const allMonthKeys: string[] = [];
+      {
+        const d = new Date(queryStart);
+        const endD = new Date(queryEnd);
+        while (d <= endD) {
+          allMonthKeys.push(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`);
+          d.setMonth(d.getMonth() + 1);
+          d.setDate(1);
+        }
+      }
+
+      // Helper: tìm salary_settings phù hợp cho 1 nhân viên tại 1 tháng cụ thể
+      const findSettingsForMonth = (empId: string, monthKey: string) => {
+        const [y, m] = monthKey.split('-').map(Number);
+        const midDate = `${y}-${String(m).padStart(2, '0')}-15`;
+        return (
+          settings
+            ?.filter((s) => s.employee_id === empId)
+            .sort(
+              (a, b) =>
+                new Date(b.valid_from || 0).getTime() - new Date(a.valid_from || 0).getTime(),
+            )
+            .find((s) => {
+              const start = s.valid_from || '1900-01-01';
+              const end = s.valid_to || '2099-12-31';
+              return midDate >= start && midDate <= end;
+            }) ||
+          settings?.find((s) => s.employee_id === empId) || {
             base_salary: 0,
             daily_rate: 0,
             monthly_ot_coeff: 1.0,
-          };
+            insurance_deduction: 0,
+          }
+        );
+      };
 
+      const calculated = employees.map((emp) => {
         const empAtt = att?.filter((a) => a.employee_id === emp.id) || [];
         const empAdv = adv?.filter((a) => a.employee_id === emp.id) || [];
         const empAll = all?.filter((a) => a.employee_id === emp.id) || [];
 
-        const totalDays = empAtt.reduce((sum, a) => sum + Number(a.hours_worked || 0), 0) / 8;
-        const totalOT = empAtt.reduce((sum, a) => sum + Number(a.overtime_hours || 0), 0);
+        // Tạm ứng và phụ cấp tính tổng cả khoảng (không phụ thuộc settings)
         const totalAdv = empAdv.reduce((sum, a) => sum + Number(a.amount || 0), 0);
         const totalAll = empAll.reduce((sum, a) => sum + Number(a.amount || 0), 0);
 
-        // Bảo hiểm = mức/tháng × số tháng trong khoảng tính lương
-        const insuranceDeduction = Number(set.insurance_deduction || 0) * monthsInRange;
-        const monthlyCoeff = Number(set.monthly_ot_coeff || 1.0);
+        // Nhóm chấm công theo tháng
+        const attByMonth = new Map<string, typeof empAtt>();
+        empAtt.forEach((a) => {
+          const mk = a.date?.substring(0, 7); // "2026-03"
+          if (!mk) return;
+          if (!attByMonth.has(mk)) attByMonth.set(mk, []);
+          attByMonth.get(mk)!.push(a);
+        });
 
-        const dailyRate = Number(set.daily_rate || 0);
-        // OT ngày: tính theo giờ thực tế, đơn giá giờ gốc (không nhân thêm hệ số)
-        const hourlyRate = dailyRate / 8;
+        // Tính lương TỪNG THÁNG rồi cộng lại
+        let earnedSalary = 0;
+        let monthOTSalary = 0;
+        let dayOTSalary = 0;
+        let insuranceDeduction = 0;
+        let totalDays = 0;
+        let totalOT = 0;
+        let lastDailyRate = 0;
+        let lastMonthlyCoeff = 1.0;
+        let lastHourlyRate = 0;
 
-        // Lương công: nhân hệ số OT tháng cho 8 tiếng chuẩn mỗi ngày đi làm
-        const earnedSalary = totalDays * dailyRate; // Lương công gốc
-        const monthOTSalary = totalDays * dailyRate * (monthlyCoeff - 1); // TC tháng (phần thưởng từ hệ số)
-        const dayOTSalary = totalOT * hourlyRate; // TC ngày (giờ thực tế)
+        allMonthKeys.forEach((mk) => {
+          const monthSet = findSettingsForMonth(emp.id, mk);
+          const monthAtt = attByMonth.get(mk) || [];
+
+          const mDays = monthAtt.reduce((sum, a) => sum + Number(a.hours_worked || 0), 0) / 8;
+          const mOT = monthAtt.reduce((sum, a) => sum + Number(a.overtime_hours || 0), 0);
+          const dRate = Number(monthSet.daily_rate || 0);
+          const hRate = dRate / 8;
+          const mCoeff = Number(monthSet.monthly_ot_coeff || 1.0);
+
+          earnedSalary += mDays * dRate;
+          monthOTSalary += mDays * dRate * (mCoeff - 1);
+          dayOTSalary += mOT * hRate;
+          insuranceDeduction += Number(monthSet.insurance_deduction || 0);
+          totalDays += mDays;
+          totalOT += mOT;
+          lastDailyRate = dRate;
+          lastMonthlyCoeff = mCoeff;
+          lastHourlyRate = hRate;
+        });
+
         const netSalary =
           earnedSalary + monthOTSalary + dayOTSalary + totalAll - totalAdv - insuranceDeduction;
 
@@ -181,9 +221,9 @@ export const MonthlySalary = ({
           totalAll,
           insuranceDeduction,
           netSalary,
-          dailyRate,
-          monthlyCoeff,
-          hourlyRate,
+          dailyRate: lastDailyRate,
+          monthlyCoeff: lastMonthlyCoeff,
+          hourlyRate: lastHourlyRate,
           attendanceDetails: empAtt,
           advancesDetails: empAdv,
           allowancesDetails: empAll,
@@ -238,38 +278,88 @@ export const MonthlySalary = ({
         .gte('date', customRange.start)
         .lte('date', customRange.end);
 
-      const set = settings?.find((s) => {
-        if (s.employee_id !== selectedSalary.id) return false;
-        const start = s.valid_from || '1900-01-01';
-        const end = s.valid_to || '2099-12-31';
-        return customRange.start >= start && customRange.start <= end;
-      }) ||
-        settings?.find((s) => s.employee_id === selectedSalary.id) || {
-          base_salary: 0,
-          daily_rate: 0,
-          monthly_ot_coeff: 1.0,
-        };
-
-      const totalDays = (att || []).reduce((sum, a) => sum + Number(a.hours_worked || 0), 0) / 8;
-      const totalOT = (att || []).reduce((sum, a) => sum + Number(a.overtime_hours || 0), 0);
+      const attArr = att || [];
       const totalAdv = (adv || []).reduce((sum, a) => sum + Number(a.amount || 0), 0);
       const totalAll = (all || []).reduce((sum, a) => sum + Number(a.amount || 0), 0);
 
-      // Bảo hiểm = mức/tháng × số tháng dương lịch trong khoảng tính lương
-      const countMonthsInRangeInd = (start: string, end: string): number => {
-        const s = new Date(start);
-        const e = new Date(end);
-        return (e.getFullYear() - s.getFullYear()) * 12 + (e.getMonth() - s.getMonth()) + 1;
-      };
-      const monthsInRangeInd = countMonthsInRangeInd(customRange.start, customRange.end);
-      const insuranceDeduction = Number(set.insurance_deduction || 0) * monthsInRangeInd;
-      const monthlyCoeff = Number(set.monthly_ot_coeff || 1.0);
-      const dailyRate = Number(set.daily_rate || 0);
-      const hourlyRate = dailyRate / 8;
+      // Xác định danh sách tháng trong khoảng
+      const indMonthKeys: string[] = [];
+      {
+        const d = new Date(customRange.start);
+        const endD = new Date(customRange.end);
+        while (d <= endD) {
+          indMonthKeys.push(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`);
+          d.setMonth(d.getMonth() + 1);
+          d.setDate(1);
+        }
+      }
 
-      const earnedSalary = totalDays * dailyRate;
-      const monthOTSalary = totalDays * dailyRate * (monthlyCoeff - 1);
-      const dayOTSalary = totalOT * hourlyRate;
+      // Nhóm chấm công theo tháng
+      const attByMonthInd = new Map<string, typeof attArr>();
+      attArr.forEach((a) => {
+        const mk = a.date?.substring(0, 7);
+        if (!mk) return;
+        if (!attByMonthInd.has(mk)) attByMonthInd.set(mk, []);
+        attByMonthInd.get(mk)!.push(a);
+      });
+
+      // Helper tìm settings cho tháng
+      const findSetForMonth = (monthKey: string) => {
+        const [y, m] = monthKey.split('-').map(Number);
+        const midDate = `${y}-${String(m).padStart(2, '0')}-15`;
+        return (
+          settings
+            ?.filter((s) => s.employee_id === selectedSalary.id)
+            .sort(
+              (a, b) =>
+                new Date(b.valid_from || 0).getTime() - new Date(a.valid_from || 0).getTime(),
+            )
+            .find((s) => {
+              const start = s.valid_from || '1900-01-01';
+              const end = s.valid_to || '2099-12-31';
+              return midDate >= start && midDate <= end;
+            }) ||
+          settings?.find((s) => s.employee_id === selectedSalary.id) || {
+            base_salary: 0,
+            daily_rate: 0,
+            monthly_ot_coeff: 1.0,
+            insurance_deduction: 0,
+          }
+        );
+      };
+
+      // Tính từng tháng rồi cộng lại
+      let earnedSalary = 0;
+      let monthOTSalary = 0;
+      let dayOTSalary = 0;
+      let insuranceDeduction = 0;
+      let totalDays = 0;
+      let totalOT = 0;
+      let lastDailyRate = 0;
+      let lastMonthlyCoeff = 1.0;
+      let lastHourlyRate = 0;
+
+      indMonthKeys.forEach((mk) => {
+        const monthSet = findSetForMonth(mk);
+        const monthAtt = attByMonthInd.get(mk) || [];
+
+        const mDays = monthAtt.reduce((sum, a) => sum + Number(a.hours_worked || 0), 0) / 8;
+        const mOT = monthAtt.reduce((sum, a) => sum + Number(a.overtime_hours || 0), 0);
+        const dRate = Number(monthSet.daily_rate || 0);
+        const hRate = dRate / 8;
+        const mCoeff = Number(monthSet.monthly_ot_coeff || 1.0);
+
+        earnedSalary += mDays * dRate;
+        monthOTSalary += mDays * dRate * (mCoeff - 1);
+        dayOTSalary += mOT * hRate;
+        insuranceDeduction += Number(monthSet.insurance_deduction || 0);
+        totalDays += mDays;
+        totalOT += mOT;
+        lastDailyRate = dRate;
+        lastMonthlyCoeff = mCoeff;
+        lastHourlyRate = hRate;
+      });
+
       const netSalary =
         earnedSalary + monthOTSalary + dayOTSalary + totalAll - totalAdv - insuranceDeduction;
 
@@ -284,9 +374,9 @@ export const MonthlySalary = ({
         totalAll,
         insuranceDeduction,
         netSalary,
-        dailyRate,
-        monthlyCoeff,
-        hourlyRate,
+        dailyRate: lastDailyRate,
+        monthlyCoeff: lastMonthlyCoeff,
+        hourlyRate: lastHourlyRate,
       });
     } catch (err) {
       console.error('Error recalculating:', err);
@@ -665,12 +755,18 @@ export const MonthlySalary = ({
                   key={s.id}
                   onClick={() => {
                     setSelectedSalary(s);
-                    const firstDay = `${selectedYear}-${String(selectedMonth).padStart(2, '0')}-01`;
-                    const lastDay = new Date(selectedYear, selectedMonth, 0)
-                      .toISOString()
-                      .split('T')[0];
-                    setCustomRange({ start: firstDay, end: lastDay });
-                    setIsCustomRange(false);
+                    if (isMainCustomRange && filterStartDate && filterEndDate) {
+                      // Khi dùng custom range từ bảng chính, truyền đúng range đó vào phiếu
+                      setCustomRange({ start: filterStartDate, end: filterEndDate });
+                      setIsCustomRange(true);
+                    } else {
+                      const firstDay = `${selectedYear}-${String(selectedMonth).padStart(2, '0')}-01`;
+                      const lastDay = new Date(selectedYear, selectedMonth, 0)
+                        .toISOString()
+                        .split('T')[0];
+                      setCustomRange({ start: firstDay, end: lastDay });
+                      setIsCustomRange(false);
+                    }
                     setShowDetailModal(true);
                   }}
                   className="hover:bg-gray-50 transition-colors cursor-pointer"

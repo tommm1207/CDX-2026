@@ -57,6 +57,11 @@ export const MonthlySalary = ({
     return `${parseInt(d)}/${parseInt(m)}/${y}`;
   };
 
+  // Helper: lấy ngày theo local timezone (tránh bug toISOString() lùi 1 ngày ở UTC+7)
+  const toLocalISODate = (date: Date): string => {
+    return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+  };
+
   useEffect(() => {
     fetchSalaries();
   }, [selectedMonth, selectedYear, isMainCustomRange, filterStartDate, filterEndDate]);
@@ -91,7 +96,7 @@ export const MonthlySalary = ({
         queryEnd = filterEndDate;
       } else {
         queryStart = `${selectedYear}-${String(selectedMonth).padStart(2, '0')}-01`;
-        queryEnd = new Date(selectedYear, selectedMonth, 0).toISOString().split('T')[0];
+        queryEnd = toLocalISODate(new Date(selectedYear, selectedMonth, 0));
       }
 
       let attQuery = supabase
@@ -766,7 +771,7 @@ export const MonthlySalary = ({
                     const effEnd =
                       isMainCustomRange && filterStartDate && filterEndDate
                         ? filterEndDate
-                        : new Date(selectedYear, selectedMonth, 0).toISOString().split('T')[0];
+                        : toLocalISODate(new Date(selectedYear, selectedMonth, 0));
 
                     setSelectedSalary({
                       ...s,

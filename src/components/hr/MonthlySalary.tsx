@@ -248,11 +248,15 @@ export const MonthlySalary = ({
   });
   const billRef = useRef<HTMLDivElement>(null);
 
+  // Track whether user explicitly changed dates in modal
+  const [userChangedDates, setUserChangedDates] = useState(false);
+
   useEffect(() => {
-    if (showDetailModal && selectedSalary && isCustomRange) {
+    if (showDetailModal && selectedSalary && isCustomRange && userChangedDates) {
       recalculateIndividual();
+      setUserChangedDates(false);
     }
-  }, [customRange, isCustomRange]);
+  }, [customRange.start, customRange.end, userChangedDates]);
 
   const recalculateIndividual = async () => {
     if (!selectedSalary || !customRange.start || !customRange.end) return;
@@ -754,19 +758,24 @@ export const MonthlySalary = ({
                 <tr
                   key={s.id}
                   onClick={() => {
-                    setSelectedSalary(s);
-                    if (isMainCustomRange && filterStartDate && filterEndDate) {
-                      // Khi dùng custom range từ bảng chính, truyền đúng range đó vào phiếu
-                      setCustomRange({ start: filterStartDate, end: filterEndDate });
-                      setIsCustomRange(true);
-                    } else {
-                      const firstDay = `${selectedYear}-${String(selectedMonth).padStart(2, '0')}-01`;
-                      const lastDay = new Date(selectedYear, selectedMonth, 0)
-                        .toISOString()
-                        .split('T')[0];
-                      setCustomRange({ start: firstDay, end: lastDay });
-                      setIsCustomRange(false);
-                    }
+                    // Lưu effective range vào salary data
+                    const effStart =
+                      isMainCustomRange && filterStartDate && filterEndDate
+                        ? filterStartDate
+                        : `${selectedYear}-${String(selectedMonth).padStart(2, '0')}-01`;
+                    const effEnd =
+                      isMainCustomRange && filterStartDate && filterEndDate
+                        ? filterEndDate
+                        : new Date(selectedYear, selectedMonth, 0).toISOString().split('T')[0];
+
+                    setSelectedSalary({
+                      ...s,
+                      _effectiveStart: effStart,
+                      _effectiveEnd: effEnd,
+                    });
+                    setCustomRange({ start: effStart, end: effEnd });
+                    setIsCustomRange(false); // Luôn false khi mở, chỉ true khi user tự bật
+                    setUserChangedDates(false);
                     setShowDetailModal(true);
                   }}
                   className="hover:bg-gray-50 transition-colors cursor-pointer"
@@ -898,8 +907,10 @@ export const MonthlySalary = ({
                     </h3>
                     <p className="text-[10px] text-white/80 font-black uppercase tracking-widest bg-black/10 px-2 py-0.5 rounded-full w-fit mt-1">
                       {isCustomRange
-                        ? `${customRange.start} → ${customRange.end}`
-                        : `THÁNG ${selectedMonth}/${selectedYear}`}
+                        ? `${formatDate(customRange.start)} → ${formatDate(customRange.end)}`
+                        : selectedSalary._effectiveStart && selectedSalary._effectiveEnd
+                          ? `${formatDate(selectedSalary._effectiveStart)} → ${formatDate(selectedSalary._effectiveEnd)}`
+                          : `THÁNG ${selectedMonth}/${selectedYear}`}
                     </p>
                   </div>
                 </div>
@@ -924,7 +935,14 @@ export const MonthlySalary = ({
                     </label>
                   </div>
                   <button
-                    onClick={() => setIsCustomRange(!isCustomRange)}
+                    onClick={() => {
+                      const newVal = !isCustomRange;
+                      setIsCustomRange(newVal);
+                      if (newVal) {
+                        // Khi bật custom range, trigger recalculate với dates hiện tại
+                        setUserChangedDates(true);
+                      }
+                    }}
                     className={`relative inline-flex items-center w-12 h-6 rounded-full transition-all duration-300 shadow-inner ${isCustomRange ? 'bg-primary' : 'bg-gray-200'}`}
                   >
                     <span
@@ -941,7 +959,10 @@ export const MonthlySalary = ({
                       <input
                         type="date"
                         value={customRange.start}
-                        onChange={(e) => setCustomRange({ ...customRange, start: e.target.value })}
+                        onChange={(e) => {
+                          setCustomRange({ ...customRange, start: e.target.value });
+                          setUserChangedDates(true);
+                        }}
                         className="w-full px-3 py-1.5 rounded-xl border border-gray-200 text-xs outline-none focus:ring-1 focus:ring-primary/20"
                       />
                     </div>
@@ -952,7 +973,10 @@ export const MonthlySalary = ({
                       <input
                         type="date"
                         value={customRange.end}
-                        onChange={(e) => setCustomRange({ ...customRange, end: e.target.value })}
+                        onChange={(e) => {
+                          setCustomRange({ ...customRange, end: e.target.value });
+                          setUserChangedDates(true);
+                        }}
                         className="w-full px-3 py-1.5 rounded-xl border border-gray-200 text-xs outline-none focus:ring-1 focus:ring-primary/20"
                       />
                     </div>
@@ -1020,10 +1044,12 @@ export const MonthlySalary = ({
                       <p className="text-[11px] font-bold text-gray-500 mt-0.5 whitespace-nowrap">
                         {isCustomRange
                           ? `Kỳ lương: ${formatDate(customRange.start)} — ${formatDate(customRange.end)}`
-                          : (() => {
-                              const lastDay = new Date(selectedYear, selectedMonth, 0).getDate();
-                              return `Kỳ lương: Tháng ${selectedMonth}/${selectedYear} (1/${selectedMonth} - ${lastDay}/${selectedMonth})`;
-                            })()}
+                          : selectedSalary._effectiveStart && selectedSalary._effectiveEnd
+                            ? `Kỳ lương: ${formatDate(selectedSalary._effectiveStart)} — ${formatDate(selectedSalary._effectiveEnd)}`
+                            : (() => {
+                                const lastDay = new Date(selectedYear, selectedMonth, 0).getDate();
+                                return `Kỳ lương: Tháng ${selectedMonth}/${selectedYear} (1/${selectedMonth} - ${lastDay}/${selectedMonth})`;
+                              })()}
                       </p>
                       {/* Employee name row with Autofit logic */}
                       <div className="flex justify-between items-center mt-3 gap-2">
@@ -1185,15 +1211,17 @@ export const MonthlySalary = ({
                           </span>
                           <span className="text-[11px] font-bold text-gray-800 whitespace-nowrap">
                             {isCustomRange
-                              ? `${customRange.start} — ${customRange.end}`
-                              : (() => {
-                                  const lastDay = new Date(
-                                    selectedYear,
-                                    selectedMonth,
-                                    0,
-                                  ).getDate();
-                                  return `Tháng ${selectedMonth}/${selectedYear} (1/${selectedMonth} - ${lastDay}/${selectedMonth})`;
-                                })()}
+                              ? `${formatDate(customRange.start)} — ${formatDate(customRange.end)}`
+                              : selectedSalary._effectiveStart && selectedSalary._effectiveEnd
+                                ? `${formatDate(selectedSalary._effectiveStart)} — ${formatDate(selectedSalary._effectiveEnd)}`
+                                : (() => {
+                                    const lastDay = new Date(
+                                      selectedYear,
+                                      selectedMonth,
+                                      0,
+                                    ).getDate();
+                                    return `Tháng ${selectedMonth}/${selectedYear} (1/${selectedMonth} - ${lastDay}/${selectedMonth})`;
+                                  })()}
                           </span>
                         </div>
                       </div>

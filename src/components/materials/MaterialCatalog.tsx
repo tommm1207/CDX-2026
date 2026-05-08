@@ -799,14 +799,7 @@ export const MaterialCatalog = ({
                     )}
                   </div>
                   <div className="flex-1 grid grid-cols-2 gap-6">
-                    <div className="space-y-1">
-                      <label className="text-[10px] font-bold text-gray-400 uppercase">
-                        Mã vật tư
-                      </label>
-                      <p className="text-sm font-bold text-gray-800 border-b border-gray-100 pb-2">
-                        {selectedMaterial.code || selectedMaterial.id.slice(0, 8)}
-                      </p>
-                    </div>
+                    <div className="space-y-1 hidden"></div>
                     <div className="space-y-1">
                       <label className="text-[10px] font-bold text-gray-400 uppercase">
                         Tên vật tư
@@ -956,9 +949,6 @@ export const MaterialCatalog = ({
                   STT
                 </th>
                 <th className="px-4 py-4 text-[10px] font-black uppercase tracking-widest italic border-r border-white/10">
-                  Mã vật tư
-                </th>
-                <th className="px-4 py-4 text-[10px] font-black uppercase tracking-widest italic border-r border-white/10">
                   Tên vật tư
                 </th>
                 <th className="px-4 py-4 text-[10px] font-black uppercase tracking-widest italic border-r border-white/10">
@@ -976,9 +966,6 @@ export const MaterialCatalog = ({
               {filteredMaterials.map((item, idx) => (
                 <tr key={idx} className={idx % 2 === 0 ? 'bg-white' : 'bg-gray-50/30'}>
                   <td className="px-4 py-3 text-center text-gray-400 font-bold">{idx + 1}</td>
-                  <td className="px-4 py-3 font-black text-primary font-mono tracking-tighter">
-                    #{item.code || item.id.slice(0, 6)}
-                  </td>
                   <td className="px-4 py-3 font-black text-gray-900 uppercase tracking-tight break-words max-w-[300px] whitespace-normal leading-relaxed">
                     {item.name}
                   </td>

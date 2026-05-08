@@ -915,11 +915,9 @@ export const Transfer = ({
                     <ArrowLeftRight size={20} />
                   </div>
                   <div>
-                    <p className="text-sm font-black text-orange-600">
-                      {selectedSlip.transfer_code}
-                    </p>
+                    <p className="text-sm font-black text-orange-600">Chi tiết luân chuyển</p>
                     <p className="text-[10px] text-gray-400 uppercase font-bold tracking-widest">
-                      Chi tiết luân chuyển
+                      {formatDate(selectedSlip.date)}
                     </p>
                   </div>
                 </div>
@@ -1072,7 +1070,7 @@ export const Transfer = ({
                   onSubmit={handleSubmit}
                   className="grid grid-cols-1 md:grid-cols-2 gap-6 pb-12"
                 >
-                  <div className="md:col-span-2 space-y-2 mb-2">
+                  <div className="md:col-span-2 space-y-2 mb-2 hidden">
                     <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">
                       Mã tham chiếu (Phiếu điều chuyển)
                     </label>
@@ -1427,9 +1425,6 @@ export const Transfer = ({
                   Ngày
                 </th>
                 <th className="px-4 py-4 text-[10px] font-black uppercase tracking-widest italic border-r border-white/10">
-                  Mã phiếu
-                </th>
-                <th className="px-4 py-4 text-[10px] font-black uppercase tracking-widest italic border-r border-white/10">
                   Vật tư
                 </th>
                 <th className="px-4 py-4 text-[10px] font-black uppercase tracking-widest italic border-r border-white/10">
@@ -1466,9 +1461,6 @@ export const Transfer = ({
                   <tr key={idx} className={idx % 2 === 0 ? 'bg-white' : 'bg-primary/5'}>
                     <td className="px-4 py-3 text-xs text-gray-600 font-medium italic">
                       {formatDate(item.date)}
-                    </td>
-                    <td className="px-4 py-3 text-xs font-black text-primary tracking-tight">
-                      {item.transfer_code}
                     </td>
                     <td className="px-4 py-3 text-xs font-black text-gray-900 uppercase tracking-tight">
                       {item.materials?.name}

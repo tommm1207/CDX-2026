@@ -376,9 +376,6 @@ export const Advances = ({
         <table className="w-full text-left border-collapse min-w-[600px] whitespace-nowrap">
           <thead>
             <tr className="bg-primary text-white">
-              <th className="px-2 md:px-4 py-2 md:py-3 text-[9px] md:text-[10px] font-bold uppercase tracking-wider border-r border-white/10 w-24">
-                Mã hiệu
-              </th>
               <th className="px-2 md:px-4 py-2 md:py-3 text-[9px] md:text-[10px] font-bold uppercase tracking-wider border-r border-white/10">
                 Ngày
               </th>
@@ -399,7 +396,7 @@ export const Advances = ({
           <tbody className="divide-y divide-gray-100">
             {filteredItems.length === 0 && !loading ? (
               <tr>
-                <td colSpan={6} className="px-4 py-12 text-center text-gray-400 italic">
+                <td colSpan={5} className="px-4 py-12 text-center text-gray-400 italic">
                   Không tìm thấy dữ liệu phù hợp
                 </td>
               </tr>
@@ -421,9 +418,6 @@ export const Advances = ({
                       key={item.id}
                       className={`transition-colors group border-b border-gray-100/50 last:border-0 hover:brightness-95 ${currentBackgroundColor}`}
                     >
-                      <td className="px-2 md:px-4 py-2.5 md:py-3.5 text-[10px] md:text-xs font-mono font-bold text-gray-400">
-                        {item.id.slice(0, 8).toUpperCase()}
-                      </td>
                       <td className="px-2 md:px-4 py-2.5 md:py-3.5 text-[10px] md:text-xs font-bold text-gray-600">
                         {formatDate(item.date)}
                       </td>
@@ -525,16 +519,6 @@ export const Advances = ({
                 </button>
               </div>
               <div className="p-6 space-y-4">
-                <div className="space-y-2 mb-2">
-                  <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">
-                    Mã tham chiếu ({activeTab === 'advances' ? 'Tạm ứng' : 'Phụ cấp'})
-                  </label>
-                  <div className="bg-primary/5 px-5 py-3.5 rounded-2xl border border-primary/10 text-sm font-black text-primary uppercase shadow-inner">
-                    {activeTab === 'advances' ? 'TU-' : 'PC-'}
-                    {new Date(formData.date).toISOString().slice(2, 10).replace(/-/g, '')}-
-                    {isEditing ? selectedItem?.id?.slice(0, 3).toUpperCase() : '001'}
-                  </div>
-                </div>
                 <form onSubmit={handleSubmit} className="space-y-4">
                   <div className="space-y-1">
                     <label className="text-[10px] font-bold text-gray-400 uppercase">

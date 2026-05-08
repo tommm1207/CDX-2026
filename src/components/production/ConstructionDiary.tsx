@@ -422,18 +422,11 @@ export const ConstructionDiaryComponent = ({
                 className="p-4 border-b border-gray-50 last:border-0 flex items-center justify-between group active:bg-gray-50"
               >
                 <div className="space-y-1 min-w-0">
-                  <div className="flex items-center gap-2">
-                    <p className="text-xs font-black text-gray-900">{formatDate(diary.date)}</p>
-                    <span className="text-[9px] font-bold text-primary bg-primary/10 px-1.5 py-0.5 rounded-md uppercase">
-                      {diary.diary_code}
-                    </span>
-                  </div>
+                  <p className="text-xs font-bold text-gray-600">{formatDate(diary.date)}</p>
                   <p className="text-[10px] text-gray-400 font-bold uppercase truncate">
                     {(diary as any).warehouses?.name}
                   </p>
-                  <p className="text-[11px] text-gray-600 line-clamp-1 italic">
-                    {diary.work_progress}
-                  </p>
+                  <p className="text-[11px] text-gray-600 line-clamp-1">{diary.work_progress}</p>
                 </div>
                 <div className="flex items-center gap-3">
                   {diary.image_urls && diary.image_urls.length > 0 && (
@@ -459,9 +452,6 @@ export const ConstructionDiaryComponent = ({
                 <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest border-r border-white/10">
                   Ngày
                 </th>
-                <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest border-r border-white/10 text-center">
-                  Mã hiệu
-                </th>
                 <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest border-r border-white/10">
                   Địa điểm / Dự án
                 </th>
@@ -482,7 +472,7 @@ export const ConstructionDiaryComponent = ({
                   .fill(0)
                   .map((_, i) => (
                     <tr key={i} className="animate-pulse">
-                      {Array(6)
+                      {Array(5)
                         .fill(0)
                         .map((_, j) => (
                           <td key={j} className="px-6 py-4">
@@ -493,7 +483,7 @@ export const ConstructionDiaryComponent = ({
                   ))
               ) : filteredDiaries.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="px-6 py-20 text-center text-gray-400 italic">
+                  <td colSpan={5} className="px-6 py-20 text-center text-gray-400 italic">
                     Chưa có nhật ký nào được ghi nhận
                   </td>
                 </tr>
@@ -509,11 +499,6 @@ export const ConstructionDiaryComponent = ({
                   >
                     <td className="px-6 py-4 text-[11px] font-bold text-gray-600">
                       {formatDate(diary.date)}
-                    </td>
-                    <td className="px-6 py-4 text-center">
-                      <span className="text-[10px] font-black text-primary bg-primary/5 px-2 py-1 rounded-full border border-primary/10">
-                        {diary.diary_code}
-                      </span>
                     </td>
                     <td className="px-6 py-4 text-xs font-black text-gray-800 uppercase tracking-tight">
                       {(diary as any).warehouses?.name}
@@ -586,7 +571,7 @@ export const ConstructionDiaryComponent = ({
                   <div>
                     <h3 className="font-black text-xl leading-tight">Chi tiết Nhật ký</h3>
                     <p className="text-[10px] font-bold uppercase tracking-widest text-white/70">
-                      {selectedDiary.diary_code} • {formatDate(selectedDiary.date)}
+                      {formatDate(selectedDiary.date)}
                     </p>
                   </div>
                 </div>
@@ -794,14 +779,6 @@ export const ConstructionDiaryComponent = ({
 
               <div className="p-4 sm:p-8 overflow-y-auto custom-scrollbar space-y-8 bg-gray-50/50 flex-1">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">
-                      Mã tham chiếu
-                    </label>
-                    <div className="bg-primary/5 px-5 py-3.5 rounded-2xl border border-primary/10 text-sm font-black text-primary uppercase shadow-inner italic">
-                      {formData.diary_code || '(Hệ thống tự tạo)'}
-                    </div>
-                  </div>
                   <div className="space-y-2">
                     <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">
                       Ngày nhật ký *
@@ -1033,7 +1010,6 @@ export const ConstructionDiaryComponent = ({
             <thead>
               <tr className="bg-indigo-600 text-white text-[10px] font-black uppercase tracking-widest italic">
                 <th className="px-4 py-4 border-r border-white/10">Ngày</th>
-                <th className="px-4 py-4 border-r border-white/10 text-center">Mã hiệu</th>
                 <th className="px-4 py-4 border-r border-white/10">Địa điểm / Dự án</th>
                 <th className="px-4 py-4 border-r border-white/10">Nhân sự chính</th>
                 <th className="px-4 py-4 border-r border-white/10">Diễn biến thi công</th>
@@ -1044,11 +1020,6 @@ export const ConstructionDiaryComponent = ({
               {filteredDiaries.map((diary, idx) => (
                 <tr key={idx} className={idx % 2 === 0 ? 'bg-white' : 'bg-indigo-50/10'}>
                   <td className="px-4 py-3 font-bold text-gray-600">{formatDate(diary.date)}</td>
-                  <td className="px-4 py-3 text-center">
-                    <span className="font-black text-indigo-600 font-mono tracking-tighter">
-                      #{diary.diary_code}
-                    </span>
-                  </td>
                   <td className="px-4 py-3 font-black text-gray-900 uppercase tracking-tight">
                     {(diary as any).warehouses?.name}
                   </td>

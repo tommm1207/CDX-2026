@@ -798,7 +798,7 @@ export const Notes = ({
 
               <div className="flex-1 overflow-y-auto custom-scrollbar p-4 sm:p-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="md:col-span-2 space-y-2 mb-2">
+                  <div className="md:col-span-2 space-y-2 mb-2 hidden">
                     <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">
                       Mã tham chiếu (Note)
                     </label>

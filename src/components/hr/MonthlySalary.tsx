@@ -253,6 +253,8 @@ export const MonthlySalary = ({
   });
   const billRef = useRef<HTMLDivElement>(null);
 
+  const [billNote, setBillNote] = useState('');
+
   // Track whether user explicitly changed dates in modal
   const [userChangedDates, setUserChangedDates] = useState(false);
 
@@ -902,6 +904,7 @@ export const MonthlySalary = ({
                     onClick={() => {
                       setShowDetailModal(false);
                       setIsCustomRange(false);
+                      setBillNote('');
                     }}
                   >
                     <Wallet size={24} className="text-white drop-shadow-sm" />
@@ -923,6 +926,7 @@ export const MonthlySalary = ({
                   onClick={() => {
                     setShowDetailModal(false);
                     setIsCustomRange(false);
+                    setBillNote('');
                   }}
                   className="p-2.5 hover:bg-white/20 rounded-2xl transition-all active:scale-95 text-white/80 hover:text-white"
                 >
@@ -1210,24 +1214,23 @@ export const MonthlySalary = ({
                           </span>
                         </div>
 
-                        <div className="flex justify-between items-center py-2.5 gap-2">
-                          <span className="text-[11px] font-bold text-gray-500 whitespace-nowrap">
+                        <div className="flex justify-between items-start py-2.5 gap-2">
+                          <span className="text-[11px] font-bold text-gray-500 whitespace-nowrap mt-1">
                             Ghi chú:
                           </span>
-                          <span className="text-[11px] font-bold text-gray-800 whitespace-nowrap">
-                            {isCustomRange
-                              ? `${formatDate(customRange.start)} — ${formatDate(customRange.end)}`
-                              : selectedSalary._effectiveStart && selectedSalary._effectiveEnd
-                                ? `${formatDate(selectedSalary._effectiveStart)} — ${formatDate(selectedSalary._effectiveEnd)}`
-                                : (() => {
-                                    const lastDay = new Date(
-                                      selectedYear,
-                                      selectedMonth,
-                                      0,
-                                    ).getDate();
-                                    return `Tháng ${selectedMonth}/${selectedYear} (1/${selectedMonth} - ${lastDay}/${selectedMonth})`;
-                                  })()}
-                          </span>
+                          {isCapturing ? (
+                            <span className="text-[11px] font-bold text-gray-800 text-right pl-4">
+                              {billNote || '—'}
+                            </span>
+                          ) : (
+                            <textarea
+                              rows={2}
+                              value={billNote}
+                              onChange={(e) => setBillNote(e.target.value)}
+                              placeholder="Nhập ghi chú..."
+                              className="flex-1 ml-2 px-2 py-1 text-[11px] font-bold text-gray-800 border border-gray-200 rounded-lg outline-none focus:ring-1 focus:ring-primary/20 resize-none"
+                            />
+                          )}
                         </div>
                       </div>
 
@@ -1266,6 +1269,7 @@ export const MonthlySalary = ({
                   onClick={() => {
                     setShowDetailModal(false);
                     setIsCustomRange(false);
+                    setBillNote('');
                   }}
                   className="px-6 bg-gray-100 text-gray-600 font-black py-3.5 rounded-2xl hover:bg-gray-200 transition-all active:scale-95 text-[11px] uppercase tracking-wider"
                 >

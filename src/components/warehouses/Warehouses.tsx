@@ -437,9 +437,6 @@ export const Warehouses = ({
             <thead>
               <tr className="bg-primary text-white">
                 <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider border-r border-white/10">
-                  Mã
-                </th>
-                <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider border-r border-white/10">
                   Tên kho
                 </th>
                 <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider border-r border-white/10">
@@ -471,7 +468,7 @@ export const Warehouses = ({
                 </tr>
               ) : warehouses.length === 0 ? (
                 <tr>
-                  <td colSpan={9} className="px-4 py-8 text-center text-gray-400 italic">
+                  <td colSpan={8} className="px-4 py-8 text-center text-gray-400 italic">
                     Chưa có dữ liệu kho bãi
                   </td>
                 </tr>
@@ -492,9 +489,6 @@ export const Warehouses = ({
                       className="hover:bg-gray-50 transition-colors group cursor-pointer"
                       onClick={() => handleEdit(item)}
                     >
-                      <td className="px-4 py-3 text-xs font-bold text-primary font-mono">
-                        {item.code || '—'}
-                      </td>
                       <td className="px-4 py-3 text-xs text-gray-600">{item.name}</td>
                       <td className="px-4 py-3 text-xs text-gray-600">{item.address}</td>
                       <td className="px-4 py-3 text-xs text-gray-600">
@@ -676,7 +670,7 @@ export const Warehouses = ({
                 <form onSubmit={handleSubmit} className="p-6">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div className="space-y-4">
-                      <div className="md:col-span-2 space-y-2 mb-2">
+                      <div className="md:col-span-2 space-y-2 mb-2 hidden">
                         <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">
                           Mã tham chiếu (Kho vật tư)
                         </label>
@@ -856,9 +850,6 @@ export const Warehouses = ({
                   STT
                 </th>
                 <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest italic border-r border-white/10">
-                  Mã kho
-                </th>
-                <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest italic border-r border-white/10">
                   Tên kho
                 </th>
                 <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest italic border-r border-white/10">
@@ -876,9 +867,6 @@ export const Warehouses = ({
               {warehouses.map((item, idx) => (
                 <tr key={idx} className={idx % 2 === 0 ? 'bg-white' : 'bg-gray-50/30'}>
                   <td className="px-6 py-4 text-center text-gray-400 font-bold">{idx + 1}</td>
-                  <td className="px-6 py-4 font-black text-emerald-600 font-mono tracking-tighter">
-                    #{item.code || 'KH-NA'}
-                  </td>
                   <td className="px-6 py-4 font-black text-gray-900 uppercase tracking-tight break-words whitespace-normal leading-relaxed">
                     {item.name}
                   </td>

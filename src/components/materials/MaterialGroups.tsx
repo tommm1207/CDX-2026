@@ -463,9 +463,6 @@ export const MaterialGroups = ({
           <table className="w-full text-left border-collapse whitespace-nowrap">
             <thead>
               <tr className="bg-primary text-white">
-                <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider border-r border-white/10 w-32">
-                  Mã nhóm
-                </th>
                 <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider border-r border-white/10">
                   Nhóm vật tư
                 </th>
@@ -480,13 +477,13 @@ export const MaterialGroups = ({
             <tbody className="divide-y divide-gray-100">
               {loading ? (
                 <tr>
-                  <td colSpan={4} className="px-4 py-8 text-center text-gray-400 italic">
+                  <td colSpan={3} className="px-4 py-8 text-center text-gray-400 italic">
                     Đang tải dữ liệu...
                   </td>
                 </tr>
               ) : filteredGroups.length === 0 ? (
                 <tr>
-                  <td colSpan={4} className="px-4 py-8 text-center text-gray-400 italic">
+                  <td colSpan={3} className="px-4 py-8 text-center text-gray-400 italic">
                     Chưa có nhóm vật tư nào
                   </td>
                 </tr>
@@ -497,9 +494,6 @@ export const MaterialGroups = ({
                     onClick={() => handleRowClick(item)}
                     className="hover:bg-gray-50 transition-colors group cursor-pointer"
                   >
-                    <td className="px-4 py-3 text-xs font-bold text-gray-700">
-                      {item.code || item.id.slice(0, 8)}
-                    </td>
                     <td className="px-4 py-3 text-xs text-gray-600 font-medium">{item.name}</td>
                     <td className="px-4 py-3 text-xs text-gray-500 italic">{item.notes || '-'}</td>
                     <td className="px-4 py-3 text-center">
@@ -612,7 +606,7 @@ export const MaterialGroups = ({
               <div className="flex-1 overflow-y-auto custom-scrollbar">
                 <form onSubmit={handleSubmit} className="p-6">
                   <div className="space-y-4">
-                    <div className="space-y-2 mb-2">
+                    <div className="space-y-2 mb-2 hidden">
                       <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">
                         Mã tham chiếu (Nhóm vật tư)
                       </label>
@@ -706,14 +700,7 @@ export const MaterialGroups = ({
 
               <div className="p-8 overflow-y-auto flex-1 space-y-8">
                 <div className="grid grid-cols-2 gap-12">
-                  <div className="space-y-1">
-                    <label className="text-[10px] font-bold text-gray-400 uppercase">
-                      Mã nhóm vật tư
-                    </label>
-                    <p className="text-sm font-bold text-gray-800 border-b border-gray-100 pb-2">
-                      {selectedGroup.code || selectedGroup.id.slice(0, 8)}
-                    </p>
-                  </div>
+                  <div className="space-y-1 hidden"></div>
                   <div className="space-y-1">
                     <label className="text-[10px] font-bold text-gray-400 uppercase">
                       Nhóm vật tư
@@ -755,7 +742,6 @@ export const MaterialGroups = ({
                     <table className="w-full text-left border-collapse whitespace-nowrap">
                       <thead>
                         <tr className="bg-primary text-white text-[10px] uppercase font-bold tracking-wider">
-                          <th className="px-4 py-2 border-r border-white/10">Mã vật tư</th>
                           <th className="px-4 py-2 border-r border-white/10">Tên vật tư</th>
                           <th className="px-4 py-2 border-r border-white/10">Kho</th>
                           <th className="px-4 py-2 border-r border-white/10">Quy cách</th>
@@ -765,13 +751,13 @@ export const MaterialGroups = ({
                       <tbody className="divide-y divide-gray-100">
                         {materialsLoading ? (
                           <tr>
-                            <td colSpan={5} className="px-4 py-8 text-center text-gray-400 italic">
+                            <td colSpan={4} className="px-4 py-8 text-center text-gray-400 italic">
                               Đang tải vật tư...
                             </td>
                           </tr>
                         ) : materials.length === 0 ? (
                           <tr>
-                            <td colSpan={5} className="px-4 py-8 text-center text-gray-400 italic">
+                            <td colSpan={4} className="px-4 py-8 text-center text-gray-400 italic">
                               Nhóm này chưa có vật tư nào
                             </td>
                           </tr>
@@ -785,9 +771,6 @@ export const MaterialGroups = ({
                                 setShowMaterialDetailModal(true);
                               }}
                             >
-                              <td className="px-4 py-2 text-xs font-medium text-gray-700">
-                                {mat.code || mat.id.slice(0, 8)}
-                              </td>
                               <td className="px-4 py-2 text-xs text-gray-600">{mat.name}</td>
                               <td className="px-4 py-2 text-xs text-gray-500">
                                 {warehouses.find((w) => w.id === mat.warehouse_id)?.name || '-'}
@@ -914,9 +897,6 @@ export const MaterialGroups = ({
                   STT
                 </th>
                 <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest italic border-r border-white/10">
-                  Mã nhóm
-                </th>
-                <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest italic border-r border-white/10">
                   Tên nhóm vật tư
                 </th>
                 <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest italic text-left">
@@ -928,9 +908,6 @@ export const MaterialGroups = ({
               {filteredGroups.map((group, idx) => (
                 <tr key={idx} className={idx % 2 === 0 ? 'bg-white' : 'bg-gray-50/30'}>
                   <td className="px-6 py-4 text-center text-gray-400 font-bold">{idx + 1}</td>
-                  <td className="px-6 py-4 font-black text-amber-600 font-mono tracking-tighter">
-                    #{group.code || group.id.slice(0, 6)}
-                  </td>
                   <td className="px-6 py-4 font-black text-gray-900 uppercase tracking-tight break-words max-w-[300px] whitespace-normal leading-relaxed">
                     {group.name}
                   </td>

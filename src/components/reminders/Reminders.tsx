@@ -646,7 +646,7 @@ export const Reminders = ({
                 </button>
               </div>
               <div className="p-6 space-y-4 overflow-y-auto overflow-x-hidden flex-1 custom-scrollbar">
-                <div className="space-y-2 mb-2">
+                <div className="space-y-2 mb-2 hidden">
                   <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">
                     Mã tham chiếu (Thông báo)
                   </label>

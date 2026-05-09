@@ -28,7 +28,7 @@ import { FAB } from '@/components/shared';
 import { Button } from '@/components/shared';
 import { SortButton, SortOption } from '@/components/shared';
 import { ExcelButton } from '@/components/shared';
-import { formatDate, formatNumber } from '@/utils/format';
+import { formatDate, formatNumber, toLocalISODate } from '@/utils/format';
 import { isActiveWarehouse, getAvailableStock } from '@/utils/inventory';
 import { getAllowedWarehouses } from '@/utils/helpers';
 
@@ -149,7 +149,7 @@ export const MaterialSplitMerge = ({
     let tonKho = 0;
     if (kho_id) {
       try {
-        tonKho = await getAvailableStock(matId, kho_id, new Date().toISOString().split('T')[0]);
+        tonKho = await getAvailableStock(matId, kho_id, toLocalISODate());
       } catch (e) {}
     }
     setNguonXa({
@@ -181,7 +181,7 @@ export const MaterialSplitMerge = ({
     setSubmitting(true);
     try {
       const ma_phieu = generateCode(mode);
-      const today = new Date().toISOString().split('T')[0];
+      const today = toLocalISODate();
 
       // 1. Create phieu header
       const { data: phieu, error: phieuErr } = await supabase
@@ -332,7 +332,7 @@ export const MaterialSplitMerge = ({
 
     setSubmitting(true);
     try {
-      const today = new Date().toISOString().split('T')[0];
+      const today = toLocalISODate();
 
       // 1. Approve associated stock_in/out
       const pref = phieu.loai === 'xa' ? 'XA-' : 'GOP-';
@@ -445,7 +445,7 @@ export const MaterialSplitMerge = ({
           s.quantity,
           s.notes ?? '',
         ]),
-        fileName: `CDX_TachGhep_${new Date().toISOString().slice(0, 10)}.xlsx`,
+        fileName: `CDX_TachGhep_${toLocalISODate()}.xlsx`,
         addToast,
       });
     });

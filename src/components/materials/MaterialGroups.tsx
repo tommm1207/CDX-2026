@@ -18,6 +18,7 @@ import {
   Share2,
 } from 'lucide-react';
 import { useRef } from 'react';
+import { toLocalISODate } from '@/utils/format';
 
 import { SaveImageButton } from '@/components/shared';
 import { motion, AnimatePresence } from 'motion/react';
@@ -114,7 +115,7 @@ export const MaterialGroups = ({
         sheetName: 'Nhóm vật tư',
         columns: ['Mã nhóm', 'Tên nhóm', 'Ghi chú'],
         rows: groups.map((it) => [it.code, it.name, it.notes ?? '']),
-        fileName: `CDX_NhomVatTu_${new Date().toISOString().slice(0, 10)}.xlsx`,
+        fileName: `CDX_NhomVatTu_${toLocalISODate()}.xlsx`,
         addToast,
       });
     });
@@ -611,8 +612,7 @@ export const MaterialGroups = ({
                         Mã tham chiếu (Nhóm vật tư)
                       </label>
                       <div className="bg-indigo-50/50 px-5 py-3.5 rounded-2xl border border-indigo-100 text-sm font-black text-indigo-600 uppercase shadow-inner italic">
-                        {formData.code ||
-                          `GR-${new Date().toISOString().slice(2, 10).replace(/-/g, '')}-001`}
+                        {formData.code || `GR-${toLocalISODate().replace(/-/g, '').slice(2)}-001`}
                       </div>
                     </div>
                     <div className="space-y-1">

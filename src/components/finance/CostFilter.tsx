@@ -18,7 +18,7 @@ import { isActiveWarehouse } from '@/utils/inventory';
 import { CustomCombobox } from '@/components/shared';
 import { DetailItem } from '@/components/shared';
 import { ToastType } from '@/components/shared';
-import { formatCurrency, formatDate, numberToWords } from '@/utils/format';
+import { formatCurrency, formatDate, numberToWords, toLocalISODate } from '@/utils/format';
 import { isUUID, getAllowedWarehouses } from '@/utils/helpers';
 
 export const CostFilter = ({
@@ -31,10 +31,8 @@ export const CostFilter = ({
   addToast?: (message: string, type?: ToastType) => void;
 }) => {
   const [filters, setFilters] = useState({
-    fromDate: new Date(new Date().getFullYear(), new Date().getMonth(), 1)
-      .toISOString()
-      .split('T')[0],
-    toDate: new Date().toISOString().split('T')[0],
+    fromDate: toLocalISODate(new Date(new Date().getFullYear(), new Date().getMonth(), 1)),
+    toDate: toLocalISODate(),
     category: '',
     warehouse: '',
     employee: '',
@@ -162,10 +160,8 @@ export const CostFilter = ({
   const resetFilters = () => {
     setIsResetting(true);
     setFilters({
-      fromDate: new Date(new Date().getFullYear(), new Date().getMonth(), 1)
-        .toISOString()
-        .split('T')[0],
-      toDate: new Date().toISOString().split('T')[0],
+      fromDate: toLocalISODate(new Date(new Date().getFullYear(), new Date().getMonth(), 1)),
+      toDate: toLocalISODate(),
       category: '',
       warehouse: '',
       employee: '',

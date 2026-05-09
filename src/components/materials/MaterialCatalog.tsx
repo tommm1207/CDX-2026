@@ -33,6 +33,7 @@ import { ExcelButton } from '@/components/shared';
 import { SortButton, SortOption } from '@/components/shared';
 import { checkUsage } from '@/utils/dataIntegrity';
 import { generateSmartCode } from '@/utils/codeGenerator';
+import { toLocalISODate } from '@/utils/format';
 
 export const MaterialCatalog = ({
   user,
@@ -114,7 +115,7 @@ export const MaterialCatalog = ({
           it.specification ?? '',
           it.notes ?? '',
         ]),
-        fileName: `CDX_DanhMucVatTu_${new Date().toISOString().slice(0, 10)}.xlsx`,
+        fileName: `CDX_DanhMucVatTu_${toLocalISODate()}.xlsx`,
         addToast,
       });
     });

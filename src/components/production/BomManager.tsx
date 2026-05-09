@@ -29,7 +29,7 @@ import { FAB } from '@/components/shared';
 import { Button } from '@/components/shared';
 import { ExcelButton } from '@/components/shared';
 import { SortButton, SortOption } from '@/components/shared';
-import { formatNumber } from '@/utils/format';
+import { formatNumber, toLocalISODate } from '@/utils/format';
 
 // ============================
 // Quản lý Định mức Vật tư
@@ -296,7 +296,7 @@ export const BomManager = ({
           bom.san_pham_bom_chi_tiet?.length || 0,
           new Date(bom.created_at).toLocaleDateString('vi-VN'),
         ]),
-        fileName: `CDX_DinhMuc_BOM_${new Date().toISOString().split('T')[0]}.xlsx`,
+        fileName: `CDX_DinhMuc_BOM_${toLocalISODate()}.xlsx`,
         addToast,
       });
     });

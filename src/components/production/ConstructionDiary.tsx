@@ -35,7 +35,7 @@ import { ImageCapture } from '@/components/shared';
 import { WEATHER_OPTIONS } from '../notes/Notes';
 import { SortButton, SortOption } from '@/components/shared';
 import { ExcelButton } from '@/components/shared';
-import { formatDate, formatNumber } from '@/utils/format';
+import { formatDate, formatNumber, toLocalISODate } from '@/utils/format';
 import ExcelJS from 'exceljs';
 import { formatDataForExcel } from '@/utils/excelHelper';
 
@@ -76,7 +76,7 @@ export const ConstructionDiaryComponent = ({
   const reportRef = useRef<HTMLDivElement>(null);
 
   const initialFormState: Partial<ConstructionDiary> = {
-    date: new Date().toISOString().split('T')[0],
+    date: toLocalISODate(),
     weather: 'pleasant',
     temperature: '',
     labor_info: '',
@@ -138,8 +138,7 @@ export const ConstructionDiaryComponent = ({
   };
 
   const generateCode = () => {
-    const d = new Date();
-    const dateStr = d.toISOString().slice(2, 10).replace(/-/g, '');
+    const dateStr = toLocalISODate().slice(2).replace(/-/g, '');
     const random = Math.floor(1000 + Math.random() * 9000);
     return `${CODE_PREFIX}${dateStr}-${random}`;
   };
@@ -280,7 +279,7 @@ export const ConstructionDiaryComponent = ({
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
-      link.download = `Nhat_ky_thi_cong_${new Date().toISOString().split('T')[0]}.xlsx`;
+      link.download = `Nhat_ky_thi_cong_${toLocalISODate()}.xlsx`;
       link.click();
       addToast?.('Xuất Excel thành công!', 'success');
     } catch (err: any) {

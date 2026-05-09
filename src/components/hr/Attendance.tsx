@@ -16,6 +16,7 @@ import { AttendanceTable } from './AttendanceTable';
 import { ReportImagePreviewModal } from '@/components/shared';
 import { useTableCapture } from '@/components/shared';
 import { ConfirmModal } from '@/components/shared';
+import { toLocalISODate } from '@/utils/format';
 
 export const Attendance = ({
   user,
@@ -180,8 +181,8 @@ export const Attendance = ({
   };
 
   const [selectedEmployees, setSelectedEmployees] = useState<string[]>([]);
-  const [bulkDateFrom, setBulkDateFrom] = useState(new Date().toISOString().split('T')[0]);
-  const [bulkDateTo, setBulkDateTo] = useState(new Date().toISOString().split('T')[0]);
+  const [bulkDateFrom, setBulkDateFrom] = useState(toLocalISODate());
+  const [bulkDateTo, setBulkDateTo] = useState(toLocalISODate());
   const [bulkStatus, setBulkStatus] = useState('present');
   // Per-employee per-day TC: { 'empId': { 'YYYY-MM-DD': number } }
   const [bulkEmpDayTC, setBulkEmpDayTC] = useState<Record<string, Record<string, number>>>({});
@@ -202,7 +203,7 @@ export const Attendance = ({
     const cur = new Date(bulkDateFrom);
     const end = new Date(bulkDateTo);
     while (cur <= end) {
-      result.push(cur.toISOString().split('T')[0]);
+      result.push(toLocalISODate(cur));
       cur.setDate(cur.getDate() + 1);
     }
     return result;
@@ -210,7 +211,7 @@ export const Attendance = ({
 
   const openBulkModal = () => {
     setSelectedEmployees([]);
-    const today = new Date().toISOString().split('T')[0];
+    const today = toLocalISODate();
     setBulkDateFrom(today);
     setBulkDateTo(today);
     setBulkStatus('present');

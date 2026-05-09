@@ -15,6 +15,7 @@ import ExcelJS from 'exceljs';
 import { formatDataForExcel } from '@/utils/excelHelper';
 import { supabase } from '@/lib/supabase';
 import { PageBreadcrumb } from '@/components/shared';
+import { toLocalISODate } from '@/utils/format';
 
 export const BACKUP_TABLES = [
   // 1. Nhân sự & Lương
@@ -342,7 +343,7 @@ export const Backup = ({
       }
 
       setBackupStatus('Đang gửi email...');
-      const fileName = `CDX_Backup_Pro_${new Date().toISOString().split('T')[0]}.xlsx`;
+      const fileName = `CDX_Backup_Pro_${toLocalISODate()}.xlsx`;
       const buffer = await workbook.xlsx.writeBuffer();
 
       // Convert buffer to base64 for email attachment

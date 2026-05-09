@@ -4,6 +4,7 @@ import { X, PackagePlus } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { generateNextMaterialCode, generateNextGroupCode } from '@/utils/inventory';
 import { isUUID } from '@/utils/helpers';
+import { toLocalISODate } from '@/utils/format';
 import { CreatableSelect } from '../forms/CreatableSelect';
 
 interface QuickAddMaterialModalProps {
@@ -132,7 +133,7 @@ export const QuickAddMaterialModal = ({
 
         // Handle Initial Stock if provided
         if (initialStock > 0 && initialWarehouseId) {
-          const today = new Date().toISOString().split('T')[0];
+          const today = toLocalISODate();
           const { error: stockErr } = await supabase.from('stock_in').insert([
             {
               material_id: data[0].id,

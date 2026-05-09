@@ -17,13 +17,13 @@ import { PageBreadcrumb } from '@/components/shared';
 import { Button } from '@/components/shared';
 import { NumericInput } from '@/components/shared';
 import { ToastType } from '@/components/shared';
-import { formatCurrency } from '@/utils/format';
+import { formatCurrency, toLocalISODate } from '@/utils/format';
 
 const emptyForm = {
   daily_rate: 0,
   monthly_ot_coeff: '' as string | number,
   insurance_deduction: 0,
-  valid_from: new Date().toISOString().split('T')[0],
+  valid_from: toLocalISODate(),
   valid_to: '',
 };
 

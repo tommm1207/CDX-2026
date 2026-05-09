@@ -7,7 +7,7 @@ import { Employee } from '@/types';
 import { PageBreadcrumb } from '@/components/shared';
 import { isActiveWarehouse } from '@/utils/inventory';
 import { ToastType } from '@/components/shared';
-import { formatNumber } from '@/utils/format';
+import { formatNumber, toLocalISODate } from '@/utils/format';
 import { getTonKhoTable, TonKhoRow } from '@/utils/inventory';
 import { getAllowedWarehouses } from '@/utils/helpers';
 import {
@@ -45,7 +45,7 @@ export const InventoryReport = ({
   const [selectedWarehouse, setSelectedWarehouse] = useState<string>('');
 
   // Mặc định: đầu kỳ = 01/01 năm nay, cuối kỳ = hôm nay
-  const today = new Date().toISOString().split('T')[0];
+  const today = toLocalISODate();
   const firstOfYear = `${new Date().getFullYear()}-01-01`;
   const [startDate, setStartDate] = useState<string>(firstOfYear);
   const [endDate, setEndDate] = useState<string>(today);
@@ -192,7 +192,7 @@ export const InventoryReport = ({
           'Tồn cuối kỳ',
         ],
         rows: rowsWithTotal,
-        fileName: `CDX_TonKho_${new Date().toISOString().slice(0, 10)}.xlsx`,
+        fileName: `CDX_TonKho_${toLocalISODate()}.xlsx`,
         addToast,
       });
     });

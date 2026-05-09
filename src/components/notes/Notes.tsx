@@ -29,6 +29,7 @@ import { Button } from '@/components/shared';
 import { ConfirmModal } from '@/components/shared';
 import { checkUsage } from '@/utils/dataIntegrity';
 import { ExcelButton } from '@/components/shared';
+import { toLocalISODate } from '@/utils/format';
 
 export const WEATHER_OPTIONS = [
   { value: 'sunny', label: '☀️ Nắng nóng gay gắt' },
@@ -93,7 +94,7 @@ export const Notes = ({
   const [formData, setFormData] = useState({
     title: '',
     content: '',
-    date: new Date().toISOString().split('T')[0],
+    date: toLocalISODate(),
     weather: '',
     related_object: '',
     object_code: '',
@@ -158,7 +159,7 @@ export const Notes = ({
           it.category ?? '',
           it.created_at ?? '',
         ]),
-        fileName: `CDX_GhiChu_${new Date().toISOString().slice(0, 10)}.xlsx`,
+        fileName: `CDX_GhiChu_${toLocalISODate()}.xlsx`,
         addToast,
       });
     });
@@ -210,7 +211,7 @@ export const Notes = ({
       setFormData({
         title: '',
         content: '',
-        date: new Date().toISOString().split('T')[0],
+        date: toLocalISODate(),
         weather: '',
         related_object: '',
         object_code: '',
@@ -238,7 +239,7 @@ export const Notes = ({
     setFormData({
       title: note.title || '',
       content: note.content || '',
-      date: note.date || new Date().toISOString().split('T')[0],
+      date: note.date || toLocalISODate(),
       weather: note.weather || '',
       related_object: note.related_object || '',
       object_code: note.object_code || '',
@@ -804,8 +805,12 @@ export const Notes = ({
                     </label>
                     <div className="bg-primary/5 px-5 py-3.5 rounded-2xl border border-primary/10 text-sm font-black text-primary uppercase shadow-inner italic">
                       {editingId
-                        ? `NT-${new Date(notes.find((n) => n.id === editingId)?.date).toISOString().slice(2, 10).replace(/-/g, '')}-${editingId.slice(0, 3).toUpperCase()}`
-                        : `NT-${new Date().toISOString().slice(2, 10).replace(/-/g, '')}-001`}
+                        ? `NT-${toLocalISODate(
+                            new Date(notes.find((n) => n.id === editingId)?.date),
+                          )
+                            .slice(2)
+                            .replace(/-/g, '')}-${editingId.slice(0, 3).toUpperCase()}`
+                        : `NT-${toLocalISODate().slice(2).replace(/-/g, '')}-001`}
                     </div>
                   </div>
                   <div className="space-y-4">
@@ -959,7 +964,7 @@ export const Notes = ({
           setFormData({
             title: '',
             content: '',
-            date: new Date().toISOString().split('T')[0],
+            date: toLocalISODate(),
             weather: '',
             related_object: '',
             object_code: '',

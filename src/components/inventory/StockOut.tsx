@@ -34,7 +34,7 @@ import { ConfirmModal } from '@/components/shared';
 import { QuickAddMaterialModal } from '@/components/shared';
 import { FAB } from '@/components/shared';
 import { useInventoryData } from '@/hooks/useInventoryData';
-import { formatDate, formatCurrency, formatNumber } from '@/utils/format';
+import { formatDate, formatCurrency, formatNumber, toLocalISODate } from '@/utils/format';
 import { isUUID, generateCode, getAllowedWarehouses } from '@/utils/helpers';
 import { Button } from '@/components/shared';
 import { getAvailableStock, getDetailedStock, validateFutureImpact } from '@/utils/inventory';
@@ -95,7 +95,7 @@ export const StockOut = ({
   );
 
   const initialFormState = {
-    date: new Date().toISOString().split('T')[0],
+    date: toLocalISODate(),
     warehouse_id: '',
     material_id: '',
     quantity: 0,
@@ -151,7 +151,7 @@ export const StockOut = ({
           it.notes ?? '',
           it.status,
         ]),
-        fileName: `CDX_XuatKho_${new Date().toISOString().slice(0, 10)}.xlsx`,
+        fileName: `CDX_XuatKho_${toLocalISODate()}.xlsx`,
         addToast,
       });
     });
@@ -995,7 +995,7 @@ export const StockOut = ({
                     </label>
                     <div className="bg-red-50/50 px-5 py-3.5 rounded-2xl border border-red-100 text-sm font-black text-red-600 uppercase shadow-inner italic">
                       {formData.export_code ||
-                        `XK-${new Date().toISOString().slice(2, 10).replace(/-/g, '')}-001`}
+                        `XK-${toLocalISODate().replace(/-/g, '').slice(2)}-001`}
                     </div>
                   </div>
 

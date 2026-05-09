@@ -29,7 +29,7 @@ import { FAB } from '@/components/shared';
 import { Button } from '@/components/shared';
 import { SortButton, SortOption } from '@/components/shared';
 import { ExcelButton } from '@/components/shared';
-import { formatDate, formatNumber, formatCurrency } from '@/utils/format';
+import { formatDate, formatNumber, formatCurrency, toLocalISODate } from '@/utils/format';
 import { isActiveWarehouse, getAvailableStock } from '@/utils/inventory';
 import { getAllowedWarehouses } from '@/utils/helpers';
 
@@ -147,7 +147,7 @@ export const ProductionOrders = ({
             tonKho = await getAvailableStock(
               bomItem.material_id,
               formData.kho_vat_tu_id,
-              new Date().toISOString().split('T')[0],
+              toLocalISODate(),
             );
           } catch (e) {
             // ignore
@@ -209,7 +209,7 @@ export const ProductionOrders = ({
     setSubmitting(true);
     try {
       const ma_lenh = generateOrderCode();
-      const today = new Date().toISOString().split('T')[0];
+      const today = toLocalISODate();
 
       // 1. Create production order
       const { data: orderData, error: orderError } = await supabase
@@ -308,7 +308,7 @@ export const ProductionOrders = ({
 
     setSubmitting(true);
     try {
-      const today = new Date().toISOString().split('T')[0];
+      const today = toLocalISODate();
 
       // 1. Approve associated stock_out
       const { error: stockError } = await supabase
@@ -403,7 +403,7 @@ export const ProductionOrders = ({
           o.status ?? '',
           o.notes ?? '',
         ]),
-        fileName: `CDX_LenhSanXuat_${new Date().toISOString().slice(0, 10)}.xlsx`,
+        fileName: `CDX_LenhSanXuat_${toLocalISODate()}.xlsx`,
         addToast,
       });
     });

@@ -28,6 +28,10 @@ export const formatDate = (dateStr: string | undefined | null): string => {
   return `${d}/${m}/${y}`;
 };
 
+export const toLocalISODate = (date: Date = new Date()): string => {
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+};
+
 export const numberToWords = (number: number): string => {
   const units = ['', 'một', 'hai', 'ba', 'bốn', 'năm', 'sáu', 'bảy', 'tám', 'chín'];
   const tens = [

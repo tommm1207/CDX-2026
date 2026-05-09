@@ -29,7 +29,13 @@ import { ConfirmModal } from '@/components/shared';
 import { QuickAddMaterialModal } from '@/components/shared';
 import { FAB } from '@/components/shared';
 import { useInventoryData } from '@/hooks/useInventoryData';
-import { formatDate, formatCurrency, formatNumber, numberToWords } from '@/utils/format';
+import {
+  formatDate,
+  formatCurrency,
+  formatNumber,
+  numberToWords,
+  toLocalISODate,
+} from '@/utils/format';
 import { isUUID, getAllowedWarehouses } from '@/utils/helpers';
 import { getAvailableStock, validateFutureImpact } from '@/utils/inventory';
 import { Button } from '@/components/shared';
@@ -39,7 +45,7 @@ import { ReportImagePreviewModal } from '@/components/shared';
 
 // Helper: lấy tồn kho hiện tại (tính tới hôm nay) cho cặp (material, warehouse)
 const getCurrentStock = (matId: string, whId: string) =>
-  getAvailableStock(matId, whId, new Date().toISOString().split('T')[0]);
+  getAvailableStock(matId, whId, toLocalISODate());
 
 export const StockIn = ({
   user,
@@ -100,7 +106,7 @@ export const StockIn = ({
   );
 
   const initialFormState = {
-    date: new Date().toISOString().split('T')[0],
+    date: toLocalISODate(),
     warehouse_id: '',
     material_id: '',
     quantity: 0,
@@ -516,7 +522,7 @@ export const StockIn = ({
           it.total_amount ?? 0,
           it.status,
         ]),
-        fileName: `CDX_NhapKho_${new Date().toISOString().slice(0, 10)}.xlsx`,
+        fileName: `CDX_NhapKho_${toLocalISODate()}.xlsx`,
         addToast,
       });
     });
@@ -1007,7 +1013,7 @@ export const StockIn = ({
                     </label>
                     <div className="bg-blue-50/50 px-5 py-3.5 rounded-2xl border border-blue-100 text-sm font-black text-blue-600 uppercase shadow-inner italic">
                       {formData.import_code ||
-                        `NK-${new Date().toISOString().slice(2, 10).replace(/-/g, '')}-001`}
+                        `NK-${toLocalISODate().replace(/-/g, '').slice(2)}-001`}
                     </div>
                   </div>
 
@@ -1252,7 +1258,7 @@ export const StockIn = ({
       {previewImageUrl && (
         <ReportImagePreviewModal
           imageDataUrl={previewImageUrl}
-          fileName={`CDX_NhapKho_${new Date().toISOString().slice(0, 10)}.png`}
+          fileName={`CDX_NhapKho_${toLocalISODate()}.png`}
           onClose={() => setPreviewImageUrl(null)}
         />
       )}

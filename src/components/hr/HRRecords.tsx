@@ -24,6 +24,7 @@ import { ReportImagePreviewModal } from '@/components/shared';
 import { checkUsage } from '@/utils/dataIntegrity';
 import { generateSmartCode } from '@/utils/codeGenerator';
 import { CreatableSelect } from '@/components/shared';
+import { toLocalISODate } from '@/utils/format';
 
 export const HRRecords = ({
   user,
@@ -66,7 +67,7 @@ export const HRRecords = ({
     phone: '',
     id_card: '',
     dob: '',
-    join_date: new Date().toISOString().split('T')[0],
+    join_date: toLocalISODate(),
     tax_id: '',
     app_pass: '',
     department: '',
@@ -376,7 +377,7 @@ export const HRRecords = ({
           emp.status,
           emp.role,
         ]),
-        fileName: `CDX_HoSoNhanSu_${new Date().toISOString().slice(0, 10)}.xlsx`,
+        fileName: `CDX_HoSoNhanSu_${toLocalISODate()}.xlsx`,
         addToast,
       });
     });
@@ -962,7 +963,7 @@ export const HRRecords = ({
       {previewImageUrl && (
         <ReportImagePreviewModal
           imageDataUrl={previewImageUrl}
-          fileName={`CDX_HoSoNhanSu_${new Date().toISOString().slice(0, 10)}.png`}
+          fileName={`CDX_HoSoNhanSu_${toLocalISODate()}.png`}
           onClose={() => setPreviewImageUrl(null)}
         />
       )}

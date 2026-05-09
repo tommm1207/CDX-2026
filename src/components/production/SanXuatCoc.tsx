@@ -12,7 +12,7 @@ import { CreatableSelect } from '@/components/shared';
 import { QuickAddMaterialModal } from '@/components/shared';
 import { PageToolbar, FilterPanel, FilterSearchInput } from '@/components/shared';
 import { ReportImagePreviewModal } from '@/components/shared';
-import { formatNumber } from '@/utils/format';
+import { formatNumber, toLocalISODate } from '@/utils/format';
 import { tonKho } from '@/utils/inventory';
 
 // ============================
@@ -57,7 +57,7 @@ export const SanXuatCoc = ({
   const [quantity, setQuantity] = useState<number>(0);
   const [cocWarehouseId, setCocWarehouseId] = useState('');
   const [rawWarehouseId, setRawWarehouseId] = useState('');
-  const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
+  const [date, setDate] = useState(toLocalISODate());
   const [notes, setNotes] = useState('');
   const [cocUnitPrice, setCocUnitPrice] = useState<number>(0);
 
@@ -132,7 +132,9 @@ export const SanXuatCoc = ({
     try {
       // Kiểm tra tồn kho cho từng NVL trong định mức (Logic thực tế)
       const startDate = '2020-01-01';
-      const endDate = new Date(Date.now() + 86400000).toISOString().split('T')[0];
+      const tomorrow = new Date();
+      tomorrow.setDate(tomorrow.getDate() + 1);
+      const endDate = toLocalISODate(tomorrow);
       const shortfalls: string[] = [];
 
       // Nếu đang sửa và lệnh hiện tại đã duyệt, ta "hoàn lại" NVL đang dùng vào tồn kho để tính toán
@@ -330,7 +332,7 @@ export const SanXuatCoc = ({
     setQuantity(0);
     setCocWarehouseId('');
     setRawWarehouseId('');
-    setDate(new Date().toISOString().split('T')[0]);
+    setDate(toLocalISODate());
     setNotes('');
     setCocUnitPrice(0);
   };
@@ -394,7 +396,7 @@ export const SanXuatCoc = ({
           r.status,
           r.notes || '',
         ]),
-        fileName: `CDX_LenhSanXuatCoc_${new Date().toISOString().split('T')[0]}.xlsx`,
+        fileName: `CDX_LenhSanXuatCoc_${toLocalISODate()}.xlsx`,
         addToast,
       });
     });
@@ -906,7 +908,7 @@ export const SanXuatCoc = ({
       {previewImageUrl && (
         <ReportImagePreviewModal
           imageDataUrl={previewImageUrl}
-          fileName={`CDX_LenhSanXuatCoc_${new Date().toISOString().slice(0, 10)}.png`}
+          fileName={`CDX_LenhSanXuatCoc_${toLocalISODate()}.png`}
           onClose={() => setPreviewImageUrl(null)}
         />
       )}

@@ -16,6 +16,7 @@ import { formatDataForExcel } from '@/utils/excelHelper';
 import { applyCDXSheetStyle } from '@/utils/excelExport';
 import { PageBreadcrumb } from '@/components/shared';
 import { Button } from '@/components/shared';
+import { toLocalISODate } from '@/utils/format';
 import { BACKUP_TABLES } from './Backup';
 
 const ScrollColumn = ({
@@ -254,7 +255,7 @@ export const BackupNow = ({
         body: JSON.stringify({
           fileData: base64Data,
           email: autoBackup.email,
-          fileName: `CDX_Backup_${new Date().toISOString().split('T')[0]}.xlsx`,
+          fileName: `CDX_Backup_${toLocalISODate()}.xlsx`,
           tableList: labels,
         }),
       });
@@ -452,7 +453,7 @@ export const BackupNow = ({
                     const buffer = await wb.xlsx.writeBuffer();
                     const a = document.createElement('a');
                     a.href = URL.createObjectURL(new Blob([buffer]));
-                    a.download = `CDX_Backup_${new Date().toISOString().split('T')[0]}.xlsx`;
+                    a.download = `CDX_Backup_${toLocalISODate()}.xlsx`;
                     a.click();
                     setLoading(false);
                     addToast('Tải file thành công!', 'success');

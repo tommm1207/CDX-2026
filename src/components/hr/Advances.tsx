@@ -18,7 +18,7 @@ import { Employee } from '@/types';
 import { PageBreadcrumb } from '@/components/shared';
 import { NumericInput } from '@/components/shared';
 import { CreatableSelect } from '@/components/shared';
-import { formatDate, formatCurrency } from '@/utils/format';
+import { formatDate, formatCurrency, toLocalISODate } from '@/utils/format';
 import { FAB } from '@/components/shared';
 import { exportTableImage } from '../../utils/reportExport';
 import { SaveImageButton } from '@/components/shared';
@@ -58,7 +58,7 @@ export const Advances = ({
   const initialFormState = {
     employee_id: '',
     amount: 0,
-    date: new Date().toISOString().split('T')[0],
+    date: toLocalISODate(),
     notes: '',
     type: 'Tiền cơm',
   };
@@ -72,9 +72,9 @@ export const Advances = ({
   const [showFilter, setShowFilter] = useState(false);
   const [filterStartDate, setFilterStartDate] = useState(() => {
     const d = new Date();
-    return new Date(d.getFullYear(), d.getMonth(), 1).toISOString().split('T')[0];
+    return toLocalISODate(new Date(d.getFullYear(), d.getMonth(), 1));
   });
-  const [filterEndDate, setFilterEndDate] = useState(new Date().toISOString().split('T')[0]);
+  const [filterEndDate, setFilterEndDate] = useState(toLocalISODate());
   const [sortBy, setSortBy] = useState<'date' | 'amount'>('date');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
 

@@ -12,7 +12,7 @@ import { ToastType } from '@/components/shared';
 import { Button } from '@/components/shared';
 import { ExcelButton } from '@/components/shared';
 import { SortButton, SortOption } from '@/components/shared';
-import { formatDate, formatNumber } from '@/utils/format';
+import { formatDate, formatNumber, toLocalISODate } from '@/utils/format';
 import { isActiveWarehouse } from '@/utils/inventory';
 import { getAllowedWarehouses } from '@/utils/helpers';
 import { useRef } from 'react';
@@ -142,7 +142,7 @@ export const FinishedGoodsIntake = ({
 
     setSubmitting(true);
     try {
-      const today = new Date().toISOString().split('T')[0];
+      const today = toLocalISODate();
 
       // 1. Create intake record
       const { data: intakeData, error: intakeError } = await supabase
@@ -229,7 +229,7 @@ export const FinishedGoodsIntake = ({
 
     setSubmitting(true);
     try {
-      const today = new Date().toISOString().split('T')[0];
+      const today = toLocalISODate();
 
       // 1. Approve stock_in
       await supabase
@@ -348,7 +348,7 @@ export const FinishedGoodsIntake = ({
             o.trang_thai === 'hoan_thanh' ? 'Hoàn thành' : 'Đang sản xuất',
           ];
         }),
-        fileName: `CDX_TienDoNhapKho_${new Date().toISOString().split('T')[0]}.xlsx`,
+        fileName: `CDX_TienDoNhapKho_${toLocalISODate()}.xlsx`,
         addToast,
       });
     });

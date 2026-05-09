@@ -13,6 +13,7 @@ import { supabase } from '@/lib/supabase';
 import { Button } from '@/components/shared';
 import { NumericInput } from '@/components/shared';
 import { exportLeaseVehicleContract } from '@/utils/contractExport';
+import { toLocalISODate } from '@/utils/format';
 
 const PARTY_A_DEFAULT = {
   companyName: 'CÔNG TY CỔ PHẦN XUẤT NHẬP KHẨU CON ĐƯỜNG XANH',
@@ -33,7 +34,7 @@ export const LeaseVehicleForm = ({ onBack, addToast }: { onBack: () => void; add
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     contractCode: `HĐKT/CDX-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`,
-    date: new Date().toISOString().split('T')[0],
+    date: toLocalISODate(),
     partyA: { ...PARTY_A_DEFAULT },
     partyB: {
       companyName: '',
@@ -49,7 +50,7 @@ export const LeaseVehicleForm = ({ onBack, addToast }: { onBack: () => void; add
       workContent:
         'Bên B đồng ý cho bên A thuê các thiết bị: 01 xe đào bánh xích (từ 05 trở lên); 01 chẹc vận chuyển và gồm cả (hợp đồng tài xế, tài công) điều khiển làm việc để phục vụ thi công công trình điện vị trí VT26, VT27 tại Xã Tân Chánh (thuộc dự án Trạm biến áp 220kV và đường dây đấu nối Gò Công – Cần Đước)',
       duration: '01 tháng',
-      startDate: new Date().toISOString().split('T')[0],
+      startDate: toLocalISODate(),
       totalPrice: 64800000,
       paymentAmount: 34800000,
     },

@@ -29,6 +29,7 @@ import { Button } from '@/components/shared';
 import { ConfirmModal } from '@/components/shared';
 import { checkUsage } from '@/utils/dataIntegrity';
 import { ExcelButton } from '@/components/shared';
+import { toLocalISODate } from '@/utils/format';
 
 export const Reminders = ({
   user,
@@ -145,7 +146,7 @@ export const Reminders = ({
           it.due_date ?? '',
           it.status ?? '',
         ]),
-        fileName: `CDX_NhacViec_${new Date().toISOString().slice(0, 10)}.xlsx`,
+        fileName: `CDX_NhacViec_${toLocalISODate()}.xlsx`,
         addToast,
       });
     });
@@ -652,8 +653,12 @@ export const Reminders = ({
                   </label>
                   <div className="bg-primary/5 px-5 py-3.5 rounded-2xl border border-primary/10 text-sm font-black text-primary uppercase shadow-inner italic">
                     {editingId
-                      ? `TB-${new Date(reminders.find((r) => r.id === editingId)?.created_at).toISOString().slice(2, 10).replace(/-/g, '')}-${editingId.slice(0, 3).toUpperCase()}`
-                      : `TB-${new Date().toISOString().slice(2, 10).replace(/-/g, '')}-001`}
+                      ? `TB-${toLocalISODate(
+                          new Date(reminders.find((r) => r.id === editingId)?.created_at),
+                        )
+                          .replace(/-/g, '')
+                          .slice(2)}-${editingId.slice(0, 3).toUpperCase()}`
+                      : `TB-${toLocalISODate().replace(/-/g, '').slice(2)}-001`}
                   </div>
                 </div>
                 <div>

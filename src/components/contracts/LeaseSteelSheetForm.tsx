@@ -15,6 +15,7 @@ import { supabase } from '@/lib/supabase';
 import { Button } from '@/components/shared';
 import { NumericInput } from '@/components/shared';
 import { exportSteelSheetContract } from '@/utils/contractExport';
+import { toLocalISODate } from '@/utils/format';
 
 const PARTY_A_DEFAULT = {
   companyName: 'CÔNG TY CỔ PHẦN XUẤT NHẬP KHẨU CON ĐƯỜNG XANH',
@@ -40,7 +41,7 @@ export const LeaseSteelSheetForm = ({
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     contractCode: `HĐCT/CDX-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`,
-    date: new Date().toISOString().split('T')[0],
+    date: toLocalISODate(),
     partyA: { ...PARTY_A_DEFAULT },
     partyB: {
       companyName: '',

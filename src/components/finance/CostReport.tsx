@@ -32,7 +32,7 @@ import { DetailItem } from '@/components/shared';
 import { NumericInput } from '@/components/shared';
 import { CreatableSelect } from '@/components/shared';
 import { ToastType } from '@/components/shared';
-import { formatCurrency, formatDate, numberToWords } from '@/utils/format';
+import { formatCurrency, formatDate, numberToWords, toLocalISODate } from '@/utils/format';
 import { isUUID, getAllowedWarehouses } from '@/utils/helpers';
 import { Button } from '@/components/shared';
 import { FAB } from '@/components/shared';
@@ -78,7 +78,7 @@ export const CostReport = ({
   const reportRef = useRef<HTMLDivElement>(null);
 
   const [masterForm, setMasterForm] = useState({
-    date: new Date().toISOString().split('T')[0],
+    date: toLocalISODate(),
     employee_id: user.id,
     employee_name: user.full_name,
     items: [] as any[],
@@ -182,7 +182,7 @@ export const CostReport = ({
 
   const handleAddReport = () => {
     setMasterForm({
-      date: new Date().toISOString().split('T')[0],
+      date: toLocalISODate(),
       employee_id: user.id,
       employee_name: user.full_name,
       items: [],
@@ -488,7 +488,7 @@ export const CostReport = ({
             item.notes ?? '',
           ]),
         ),
-        fileName: `CDX_BaoCaoChiPhi_${new Date().toISOString().slice(0, 10)}.xlsx`,
+        fileName: `CDX_BaoCaoChiPhi_${toLocalISODate()}.xlsx`,
         addToast,
       });
     });

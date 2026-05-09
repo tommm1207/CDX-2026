@@ -1,5 +1,6 @@
 import { supabase } from '@/lib/supabase';
 import { generateSmartCode } from './codeGenerator';
+import { toLocalISODate } from './format';
 
 /**
  * Tổng nhập kho của 1 mặt hàng tại 1 kho trong khoảng [startDate, endDate].
@@ -256,7 +257,7 @@ export const getInventoryData = async (
 ) => {
   try {
     const effectiveStart = startDate || '2000-01-01';
-    const effectiveEnd = endDate || new Date().toISOString().split('T')[0];
+    const effectiveEnd = endDate || toLocalISODate();
 
     let siQuery = supabase
       .from('stock_in')
@@ -365,7 +366,7 @@ export const getTonKhoTable = async (
       const d = new Date(startDate);
       if (isNaN(d.getTime())) return '1999-12-31'; // Safe fallback
       d.setDate(d.getDate() - 1);
-      return d.toISOString().split('T')[0];
+      return toLocalISODate(d);
     })();
     const whIds = warehouseId ? (Array.isArray(warehouseId) ? warehouseId : [warehouseId]) : null;
 

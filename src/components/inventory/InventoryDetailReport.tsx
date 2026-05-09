@@ -14,7 +14,7 @@ import { supabase } from '@/lib/supabase';
 import { Employee } from '@/types';
 import { PageBreadcrumb } from '@/components/shared';
 import { ToastType } from '@/components/shared';
-import { formatNumber, formatDate } from '@/utils/format';
+import { formatNumber, formatDate, toLocalISODate } from '@/utils/format';
 import { PageToolbar } from '@/components/shared';
 import { ReportImagePreviewModal } from '@/components/shared';
 import { Button } from '@/components/shared';
@@ -160,7 +160,7 @@ export const InventoryDetailReport = ({
           t.quantity,
           t.notes || '',
         ]),
-        fileName: `CDX_ChiTiet_${material?.code}_${new Date().toISOString().slice(0, 10)}.xlsx`,
+        fileName: `CDX_ChiTiet_${material?.code}_${toLocalISODate()}.xlsx`,
         addToast,
       });
     });

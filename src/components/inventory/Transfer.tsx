@@ -33,7 +33,7 @@ import { ConfirmModal } from '@/components/shared';
 import { QuickAddMaterialModal } from '@/components/shared';
 import { FAB } from '@/components/shared';
 import { useInventoryData } from '@/hooks/useInventoryData';
-import { formatDate, formatNumber } from '@/utils/format';
+import { formatDate, formatNumber, toLocalISODate } from '@/utils/format';
 import { isUUID, generateCode, getAllowedWarehouses } from '@/utils/helpers';
 import { getAvailableStock, getDetailedStock, validateFutureImpact } from '@/utils/inventory';
 import { Button } from '@/components/shared';
@@ -101,7 +101,7 @@ export const Transfer = ({
   const reportRef = useRef<HTMLDivElement>(null);
 
   const initialFormState = {
-    date: new Date().toISOString().split('T')[0],
+    date: toLocalISODate(),
     from_warehouse_id: '',
     to_warehouse_id: '',
     material_id: '',
@@ -140,7 +140,7 @@ export const Transfer = ({
         .eq('warehouse_id', toWhId)
         .eq('material_id', matId)
         .maybeSingle(),
-      getAvailableStock(matId, toWhId, new Date().toISOString().split('T')[0]),
+      getAvailableStock(matId, toWhId, toLocalISODate()),
     ]).then(([reqRes, stock]) => {
       setRequiredQty(reqRes.data?.required_quantity ?? 0);
       setCurrentStockDest(stock);
@@ -186,7 +186,7 @@ export const Transfer = ({
           it.notes ?? '',
           it.status,
         ]),
-        fileName: `CDX_ChuyenKho_${new Date().toISOString().slice(0, 10)}.xlsx`,
+        fileName: `CDX_ChuyenKho_${toLocalISODate()}.xlsx`,
         addToast,
       });
     });
@@ -1076,7 +1076,7 @@ export const Transfer = ({
                     </label>
                     <div className="bg-orange-50/50 px-5 py-3.5 rounded-2xl border border-orange-100 text-sm font-black text-orange-600 uppercase shadow-inner italic">
                       {formData.transfer_code ||
-                        `LC-${new Date().toISOString().slice(2, 10).replace(/-/g, '')}-001`}
+                        `LC-${toLocalISODate().replace(/-/g, '').slice(2)}-001`}
                     </div>
                   </div>
 

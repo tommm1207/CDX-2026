@@ -44,7 +44,7 @@ import { CreatableSelect } from '@/components/shared';
 import { ToastType } from '@/components/shared';
 import { FAB } from '@/components/shared';
 import { ExcelButton } from '@/components/shared';
-import { formatCurrency, formatNumber, formatDate } from '@/utils/format';
+import { formatCurrency, formatNumber, formatDate, toLocalISODate } from '@/utils/format';
 import { isUUID, getAllowedWarehouses } from '@/utils/helpers';
 import { isActiveWarehouse } from '@/utils/inventory';
 import { Button } from '@/components/shared';
@@ -54,7 +54,7 @@ import { checkUsage } from '@/utils/dataIntegrity';
 import { ReportPreviewModal } from '@/components/shared';
 
 const initialFormState = {
-  date: new Date().toISOString().split('T')[0],
+  date: toLocalISODate(),
   cost_code: '',
   employee_id: '',
   transaction_type: 'Chi',
@@ -136,7 +136,7 @@ export const Costs = ({
 
   const [formData, setFormData] = useState<any>(() => ({
     ...initialFormState,
-    date: new Date().toISOString().split('T')[0],
+    date: toLocalISODate(),
   }));
 
   useEffect(() => {
@@ -387,7 +387,7 @@ export const Costs = ({
       setShowModal(false);
       setFormData({
         ...initialFormState,
-        date: new Date().toISOString().split('T')[0],
+        date: toLocalISODate(),
       });
       setIsEditing(false);
       setEditingId(null);
@@ -511,7 +511,7 @@ export const Costs = ({
           item.unit ?? '',
           item.total_amount,
         ]),
-        fileName: `CDX_ChiPhi_${new Date().toISOString().slice(0, 10)}.xlsx`,
+        fileName: `CDX_ChiPhi_${toLocalISODate()}.xlsx`,
         addToast,
       });
     });
@@ -1053,7 +1053,7 @@ export const Costs = ({
           const nextCode = await generateNextCostCode();
           setFormData({
             ...initialFormState,
-            date: new Date().toISOString().split('T')[0],
+            date: toLocalISODate(),
             cost_code: nextCode,
           });
           setIsEditing(false);
@@ -1070,7 +1070,7 @@ export const Costs = ({
           if (reportRef.current) {
             exportTableImage({
               element: reportRef.current,
-              fileName: `Bao_Cao_Chi_Phi_${new Date().toISOString().slice(0, 10)}.png`,
+              fileName: `Bao_Cao_Chi_Phi_${toLocalISODate()}.png`,
               addToast,
               onStart: () => setIsCapturingTable(true),
               onEnd: () => {

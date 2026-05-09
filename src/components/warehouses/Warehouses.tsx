@@ -29,6 +29,7 @@ import { ExcelButton } from '@/components/shared';
 import { SortButton, SortOption } from '@/components/shared';
 import { checkUsage } from '@/utils/dataIntegrity';
 import { generateSmartCode } from '@/utils/codeGenerator';
+import { toLocalISODate } from '@/utils/format';
 
 export const Warehouses = ({
   user,
@@ -96,7 +97,7 @@ export const Warehouses = ({
         sheetName: 'Kho hàng',
         columns: ['Mã kho', 'Tên kho', 'Địa chỉ', 'Ghi chú'],
         rows: warehouses.map((it) => [it.code, it.name, it.address ?? '', it.notes ?? '']),
-        fileName: `CDX_KhoHang_${new Date().toISOString().slice(0, 10)}.xlsx`,
+        fileName: `CDX_KhoHang_${toLocalISODate()}.xlsx`,
         addToast,
       });
     });

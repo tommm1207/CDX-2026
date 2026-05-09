@@ -137,10 +137,8 @@ export const MonthlySalary = ({
         }
       }
 
-      // Helper: tìm salary_settings phù hợp cho 1 nhân viên tại 1 tháng cụ thể
-      const findSettingsForMonth = (empId: string, monthKey: string) => {
-        const [y, m] = monthKey.split('-').map(Number);
-        const midDate = `${y}-${String(m).padStart(2, '0')}-15`;
+      // Helper: tìm salary_settings phù hợp cho 1 nhân viên tại 1 ngày cụ thể
+      const findSettingsForDate = (empId: string, date: string) => {
         return (
           settings
             ?.filter((s) => s.employee_id === empId)
@@ -151,7 +149,7 @@ export const MonthlySalary = ({
             .find((s) => {
               const start = s.valid_from || '1900-01-01';
               const end = s.valid_to || '2099-12-31';
-              return midDate >= start && midDate <= end;
+              return date >= start && date <= end;
             }) ||
           settings?.find((s) => s.employee_id === empId) || {
             base_salary: 0,
@@ -171,45 +169,41 @@ export const MonthlySalary = ({
         const totalAdv = empAdv.reduce((sum, a) => sum + Number(a.amount || 0), 0);
         const totalAll = empAll.reduce((sum, a) => sum + Number(a.amount || 0), 0);
 
-        // Nhóm chấm công theo tháng
-        const attByMonth = new Map<string, typeof empAtt>();
-        empAtt.forEach((a) => {
-          const mk = a.date?.substring(0, 7); // "2026-03"
-          if (!mk) return;
-          if (!attByMonth.has(mk)) attByMonth.set(mk, []);
-          attByMonth.get(mk)!.push(a);
-        });
-
-        // Tính lương TỪNG THÁNG rồi cộng lại
         let earnedSalary = 0;
-        let monthOTSalary = 0;
+        const monthOTSalary = 0;
         let dayOTSalary = 0;
-        let insuranceDeduction = 0;
         let totalDays = 0;
         let totalOT = 0;
         let lastDailyRate = 0;
         let lastMonthlyCoeff = 1.0;
         let lastHourlyRate = 0;
 
-        allMonthKeys.forEach((mk) => {
-          const monthSet = findSettingsForMonth(emp.id, mk);
-          const monthAtt = attByMonth.get(mk) || [];
-
-          const mDays = monthAtt.reduce((sum, a) => sum + Number(a.hours_worked || 0), 0) / 8;
-          const mOT = monthAtt.reduce((sum, a) => sum + Number(a.overtime_hours || 0), 0);
-          const dRate = Number(monthSet.daily_rate || 0);
+        // Tính lương từng ngày chấm công theo settings áp dụng đúng ngày đó
+        empAtt.forEach((a) => {
+          if (!a.date) return;
+          const daySet = findSettingsForDate(emp.id, a.date);
+          const dRate = Number(daySet.daily_rate || 0);
           const hRate = dRate / 8;
-          const mCoeff = Number(monthSet.monthly_ot_coeff || 1.0);
+          const mCoeff = Number(daySet.monthly_ot_coeff || 1.0);
+          const mDays = Number(a.hours_worked || 0) / 8;
+          const mOT = Number(a.overtime_hours || 0);
 
           earnedSalary += mDays * dRate;
-          monthOTSalary += mDays * dRate * (mCoeff - 1);
-          dayOTSalary += mOT * hRate;
-          insuranceDeduction += Number(monthSet.insurance_deduction || 0);
+          dayOTSalary += mOT * hRate * mCoeff; // giờ TC = (lương ngày ÷ 8) × hệ số
           totalDays += mDays;
           totalOT += mOT;
           lastDailyRate = dRate;
           lastMonthlyCoeff = mCoeff;
           lastHourlyRate = hRate;
+        });
+
+        // Bảo hiểm: tính 1 lần/tháng, theo settings áp dụng ngày đầu tháng
+        let insuranceDeduction = 0;
+        allMonthKeys.forEach((mk) => {
+          const hasAtt = empAtt.some((a) => a.date?.startsWith(mk));
+          if (!hasAtt) return;
+          const monthSet = findSettingsForDate(emp.id, `${mk}-01`);
+          insuranceDeduction += Number(monthSet.insurance_deduction || 0);
         });
 
         const netSalary =
@@ -305,19 +299,8 @@ export const MonthlySalary = ({
         }
       }
 
-      // Nhóm chấm công theo tháng
-      const attByMonthInd = new Map<string, typeof attArr>();
-      attArr.forEach((a) => {
-        const mk = a.date?.substring(0, 7);
-        if (!mk) return;
-        if (!attByMonthInd.has(mk)) attByMonthInd.set(mk, []);
-        attByMonthInd.get(mk)!.push(a);
-      });
-
-      // Helper tìm settings cho tháng
-      const findSetForMonth = (monthKey: string) => {
-        const [y, m] = monthKey.split('-').map(Number);
-        const midDate = `${y}-${String(m).padStart(2, '0')}-15`;
+      // Helper tìm settings cho ngày cụ thể
+      const findSetForDate = (date: string) => {
         return (
           settings
             ?.filter((s) => s.employee_id === selectedSalary.id)
@@ -328,7 +311,7 @@ export const MonthlySalary = ({
             .find((s) => {
               const start = s.valid_from || '1900-01-01';
               const end = s.valid_to || '2099-12-31';
-              return midDate >= start && midDate <= end;
+              return date >= start && date <= end;
             }) ||
           settings?.find((s) => s.employee_id === selectedSalary.id) || {
             base_salary: 0,
@@ -339,36 +322,41 @@ export const MonthlySalary = ({
         );
       };
 
-      // Tính từng tháng rồi cộng lại
       let earnedSalary = 0;
-      let monthOTSalary = 0;
+      const monthOTSalary = 0;
       let dayOTSalary = 0;
-      let insuranceDeduction = 0;
       let totalDays = 0;
       let totalOT = 0;
       let lastDailyRate = 0;
       let lastMonthlyCoeff = 1.0;
       let lastHourlyRate = 0;
 
-      indMonthKeys.forEach((mk) => {
-        const monthSet = findSetForMonth(mk);
-        const monthAtt = attByMonthInd.get(mk) || [];
-
-        const mDays = monthAtt.reduce((sum, a) => sum + Number(a.hours_worked || 0), 0) / 8;
-        const mOT = monthAtt.reduce((sum, a) => sum + Number(a.overtime_hours || 0), 0);
-        const dRate = Number(monthSet.daily_rate || 0);
+      // Tính lương từng ngày chấm công theo settings áp dụng đúng ngày đó
+      attArr.forEach((a) => {
+        if (!a.date) return;
+        const daySet = findSetForDate(a.date);
+        const dRate = Number(daySet.daily_rate || 0);
         const hRate = dRate / 8;
-        const mCoeff = Number(monthSet.monthly_ot_coeff || 1.0);
+        const mCoeff = Number(daySet.monthly_ot_coeff || 1.0);
+        const mDays = Number(a.hours_worked || 0) / 8;
+        const mOT = Number(a.overtime_hours || 0);
 
         earnedSalary += mDays * dRate;
-        monthOTSalary += mDays * dRate * (mCoeff - 1);
-        dayOTSalary += mOT * hRate;
-        insuranceDeduction += Number(monthSet.insurance_deduction || 0);
+        dayOTSalary += mOT * hRate * mCoeff; // giờ TC = (lương ngày ÷ 8) × hệ số
         totalDays += mDays;
         totalOT += mOT;
         lastDailyRate = dRate;
         lastMonthlyCoeff = mCoeff;
         lastHourlyRate = hRate;
+      });
+
+      // Bảo hiểm: tính 1 lần/tháng, theo settings áp dụng ngày đầu tháng
+      let insuranceDeduction = 0;
+      indMonthKeys.forEach((mk) => {
+        const hasAtt = attArr.some((a) => a.date?.startsWith(mk));
+        if (!hasAtt) return;
+        const monthSet = findSetForDate(`${mk}-01`);
+        insuranceDeduction += Number(monthSet.insurance_deduction || 0);
       });
 
       const netSalary =

@@ -139,19 +139,18 @@ export const MonthlySalary = ({
 
       // Helper: tìm salary_settings phù hợp cho 1 nhân viên tại 1 ngày cụ thể
       const findSettingsForDate = (empId: string, date: string) => {
+        const empSettings = settings
+          ?.filter((s) => s.employee_id === empId)
+          .sort(
+            (a, b) => new Date(b.valid_from || 0).getTime() - new Date(a.valid_from || 0).getTime(),
+          );
         return (
-          settings
-            ?.filter((s) => s.employee_id === empId)
-            .sort(
-              (a, b) =>
-                new Date(b.valid_from || 0).getTime() - new Date(a.valid_from || 0).getTime(),
-            )
-            .find((s) => {
-              const start = s.valid_from || '1900-01-01';
-              const end = s.valid_to || '2099-12-31';
-              return date >= start && date <= end;
-            }) ||
-          settings?.find((s) => s.employee_id === empId) || {
+          empSettings?.find((s) => {
+            const start = (s.valid_from || '1900-01-01').slice(0, 10);
+            const end = (s.valid_to || '2099-12-31').slice(0, 10);
+            return date >= start && date <= end;
+          }) ??
+          empSettings?.[0] ?? {
             base_salary: 0,
             daily_rate: 0,
             monthly_ot_coeff: 1.0,
@@ -301,19 +300,18 @@ export const MonthlySalary = ({
 
       // Helper tìm settings cho ngày cụ thể
       const findSetForDate = (date: string) => {
+        const empSettings = settings
+          ?.filter((s) => s.employee_id === selectedSalary.id)
+          .sort(
+            (a, b) => new Date(b.valid_from || 0).getTime() - new Date(a.valid_from || 0).getTime(),
+          );
         return (
-          settings
-            ?.filter((s) => s.employee_id === selectedSalary.id)
-            .sort(
-              (a, b) =>
-                new Date(b.valid_from || 0).getTime() - new Date(a.valid_from || 0).getTime(),
-            )
-            .find((s) => {
-              const start = s.valid_from || '1900-01-01';
-              const end = s.valid_to || '2099-12-31';
-              return date >= start && date <= end;
-            }) ||
-          settings?.find((s) => s.employee_id === selectedSalary.id) || {
+          empSettings?.find((s) => {
+            const start = (s.valid_from || '1900-01-01').slice(0, 10);
+            const end = (s.valid_to || '2099-12-31').slice(0, 10);
+            return date >= start && date <= end;
+          }) ??
+          empSettings?.[0] ?? {
             base_salary: 0,
             daily_rate: 0,
             monthly_ot_coeff: 1.0,

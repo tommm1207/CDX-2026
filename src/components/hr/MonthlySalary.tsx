@@ -1,6 +1,14 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import * as XLSX from 'xlsx';
-import { Wallet, X, Image as ImageIcon, Camera, Search } from 'lucide-react';
+import {
+  Wallet,
+  X,
+  Image as ImageIcon,
+  Camera,
+  Search,
+  TrendingUp,
+  TrendingDown,
+} from 'lucide-react';
 import { toPng } from 'html-to-image';
 import { logoBase64 } from '../../utils/logoBase64';
 import { motion, AnimatePresence } from 'motion/react';
@@ -544,7 +552,7 @@ export const MonthlySalary = ({
 
     salaries.forEach((s) => {
       data.push([
-        s.code || s.id.slice(0, 8),
+        s.code && !s.code.includes('-') && s.code.length < 20 ? s.code : '-',
         s.full_name,
         Number(s.totalDays.toFixed(1)),
         `${s.totalOT.toFixed(1)}h`,
@@ -775,13 +783,21 @@ export const MonthlySalary = ({
                 >
                   <td className="px-4 py-3">
                     <div className="bg-primary/5 px-3 py-1.5 rounded-xl border border-primary/10 text-[10px] font-black text-primary uppercase shadow-inner italic inline-block">
-                      SL-{slugify(s.full_name)}-{selectedMonth.toString().padStart(2, '0')}
+                      SL-
+                      {s.code && !s.code.includes('-') && s.code.length < 20
+                        ? s.code
+                        : s.id.includes('-')
+                          ? '-'
+                          : s.id}
+                      -{selectedMonth.toString().padStart(2, '0')}
                       {selectedYear.toString().slice(-2)}
                     </div>
                   </td>
                   <td className="px-4 py-3">
                     <p className="text-xs font-bold text-gray-800">{s.full_name}</p>
-                    <p className="text-[9px] text-gray-400">{s.code || s.id.slice(0, 8)}</p>
+                    <p className="text-[9px] text-gray-400">
+                      {s.code && !s.code.includes('-') && s.code.length < 20 ? s.code : '-'}
+                    </p>
                   </td>
                   <td className="px-4 py-3 text-center text-xs font-bold text-gray-600">
                     {s.totalDays.toFixed(1)}
@@ -897,7 +913,13 @@ export const MonthlySalary = ({
                   </div>
                   <div>
                     <h3 className="font-extrabold text-lg leading-tight tracking-tight">
-                      Phiếu lương — {selectedSalary.full_name}
+                      Phiếu lương — {selectedSalary.full_name} (
+                      {selectedSalary.code &&
+                      !selectedSalary.code.includes('-') &&
+                      selectedSalary.code.length < 20
+                        ? selectedSalary.code
+                        : '-'}
+                      )
                     </h3>
                     <p className="text-[10px] text-white/80 font-black uppercase tracking-widest bg-black/10 px-2 py-0.5 rounded-full w-fit mt-1">
                       {isCustomRange
@@ -1019,10 +1041,10 @@ export const MonthlySalary = ({
                         />
                         <div>
                           <p className="text-[9px] font-black text-gray-700 uppercase tracking-wider">
-                            CDX - CON ĐƯỜNG XANH
+                            CÔNG TY CON ĐƯỜNG XANH
                           </p>
                           <p className="text-[7px] text-gray-400 uppercase tracking-widest">
-                            Hệ thống quản lý kho và nhân sự
+                            Hệ thống Quản trị Nguồn lực thi công
                           </p>
                         </div>
                       </div>
@@ -1060,6 +1082,18 @@ export const MonthlySalary = ({
                           }}
                         >
                           {selectedSalary.full_name}
+                        </span>
+                      </div>
+                      <div className="flex justify-between items-center mt-1 gap-2">
+                        <span className="text-[10px] text-gray-400 font-medium whitespace-nowrap">
+                          Mã nhân viên:
+                        </span>
+                        <span className="font-bold text-gray-500 text-[11px] whitespace-nowrap text-right">
+                          {selectedSalary.code &&
+                          !selectedSalary.code.includes('-') &&
+                          selectedSalary.code.length < 20
+                            ? selectedSalary.code
+                            : '-'}
                         </span>
                       </div>
                     </div>
@@ -1177,11 +1211,16 @@ export const MonthlySalary = ({
                         </div>
 
                         {/* Net Pay (RENAMED) */}
-                        <div className="flex justify-between items-center pt-4 pb-1 border-primary/20 bg-primary/5 px-2 -mx-2">
-                          <span className="text-xs font-black text-primary uppercase tracking-wider whitespace-nowrap italic">
+                        <div className="flex justify-between items-center pt-4 pb-1 border-red-600/20 bg-red-600/5 px-2 -mx-2">
+                          <span className="text-xs font-black text-red-600 uppercase tracking-wider whitespace-nowrap italic flex items-center gap-1">
                             CÒN ĐƯỢC NHẬN:
                           </span>
-                          <span className="text-sm font-black text-primary whitespace-nowrap">
+                          <span className="text-sm font-black text-red-600 whitespace-nowrap flex items-center gap-1">
+                            {selectedSalary.netSalary >= 0 ? (
+                              <TrendingUp size={16} strokeWidth={3} className="text-red-600" />
+                            ) : (
+                              <TrendingDown size={16} strokeWidth={3} className="text-red-600" />
+                            )}
                             {formatCurrency(selectedSalary.netSalary)}
                           </span>
                         </div>

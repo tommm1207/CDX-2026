@@ -47,7 +47,7 @@ export const MainLayout = ({
   const [isSearchOpen, setIsSearchOpen] = useState(false);
 
   return (
-    <div className="h-screen bg-slate-50/50 flex flex-col font-sans overflow-hidden selection:bg-primary/20 selection:text-primary-dark">
+    <div className="h-screen print:h-auto print:overflow-visible bg-slate-50/50 flex flex-col font-sans overflow-hidden selection:bg-primary/20 selection:text-primary-dark">
       <header className="bg-primary/95 backdrop-blur-md text-white flex items-center justify-between px-4 sticky top-0 z-[100] shadow-sm border-b border-white/10 h-[calc(3.5rem+env(safe-area-inset-top))] pt-[env(safe-area-inset-top)] flex-shrink-0 transition-colors duration-300">
         <div className="flex items-center gap-2">
           <div className="relative group/logo">
@@ -179,7 +179,7 @@ export const MainLayout = ({
         </div>
       </header>
 
-      <div className="flex flex-1 overflow-hidden relative">
+      <div className="flex flex-1 overflow-hidden print:overflow-visible relative">
         <AnimatePresence>
           {isSidebarOpen && (
             <motion.div
@@ -252,7 +252,7 @@ export const MainLayout = ({
 
         <main
           key={refreshKey}
-          className="flex-1 overflow-y-auto overflow-x-hidden relative bg-transparent pb-24 lg:pb-0"
+          className="flex-1 overflow-y-auto overflow-x-hidden print:overflow-visible relative bg-transparent pb-24 lg:pb-0"
         >
           {children}
 

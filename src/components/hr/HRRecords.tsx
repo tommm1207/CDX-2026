@@ -295,14 +295,15 @@ export const HRRecords = ({
         data_view_permission: formData.data_view_permission || null,
       };
 
+      // Auto-generate code if missing, even for existing employees (retroactive fix)
+      if (!dataToSubmit.code) {
+        dataToSubmit.code = await generateNextEmployeeCode();
+      }
+
       if (isEditing) {
         const { error } = await supabase.from('users').update(dataToSubmit).eq('id', id);
         if (error) throw error;
       } else {
-        // Double check code for new entries to prevent unique constraint errors
-        if (!dataToSubmit.code) {
-          dataToSubmit.code = await generateNextEmployeeCode();
-        }
         const { error } = await supabase.from('users').insert([dataToSubmit]);
         if (error) throw error;
       }

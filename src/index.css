@@ -50,3 +50,35 @@ body {
 .animate-slow-fade {
   animation: slow-fade 3s infinite ease-in-out;
 }
+
+/* ===== PRINT STYLES ===== */
+@media print {
+  /* Ẩn toàn bộ UI chrome và root */
+  .no-print,
+  #root {
+    display: none !important;
+  }
+
+  /* Reset body/html constraints khi in */
+  html,
+  body {
+    overflow: visible !important;
+    height: auto !important;
+    max-width: none !important;
+    background: white !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  /* Hiện print-container (nếu nó nằm ngoài root hoặc được chuyển ra ngoài) */
+  .print-container {
+    display: block !important;
+    position: absolute !important;
+    top: 0 !important;
+    left: 0 !important;
+    width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    background: white !important;
+  }
+}

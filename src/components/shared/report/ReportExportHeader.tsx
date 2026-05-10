@@ -64,7 +64,7 @@ export const ReportExportHeader = ({ reportTitle, subtitle }: ReportExportHeader
               lineHeight: 1.3,
             }}
           >
-            CON ĐƯỜNG XANH
+            CÔNG TY CON ĐƯỜNG XANH
           </p>
           <p
             style={{
@@ -90,7 +90,7 @@ export const ReportExportHeader = ({ reportTitle, subtitle }: ReportExportHeader
               whiteSpace: 'nowrap',
             }}
           >
-            HỆ THỐNG QUẢN LÝ KHO & NHÂN SỰ CDX
+            HỆ THỐNG QUẢN TRỊ NGUỒN LỰC THI CÔNG
           </p>
         </div>
       </div>

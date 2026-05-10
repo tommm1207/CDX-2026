@@ -655,10 +655,10 @@ export const Advances = ({
             <CanvasLogo size={96} className="w-24 h-24 rounded-3xl object-contain shadow-sm" />
             <div className="space-y-1">
               <h2 className="text-3xl font-black text-gray-800 tracking-tighter uppercase leading-none">
-                CDX - CON ĐƯỜNG XANH
+                CÔNG TY CON ĐƯỜNG XANH
               </h2>
               <p className="text-sm font-bold text-gray-400 uppercase tracking-[0.3em] mt-2">
-                Hệ thống quản lý kho và nhân sự
+                Hệ thống Quản trị Nguồn lực thi công
               </p>
             </div>
           </div>
@@ -781,10 +781,10 @@ export const Advances = ({
             <CanvasLogo size={96} className="w-24 h-24 rounded-3xl object-contain shadow-sm" />
             <div className="space-y-1">
               <h2 className="text-3xl font-black text-gray-800 tracking-tighter uppercase leading-none">
-                CDX - CON ĐƯỜNG XANH
+                CÔNG TY CON ĐƯỜNG XANH
               </h2>
               <p className="text-sm font-bold text-gray-400 uppercase tracking-[0.3em] mt-2">
-                Hệ thống quản lý kho và nhân sự
+                Hệ thống Quản trị Nguồn lực thi công
               </p>
             </div>
           </div>

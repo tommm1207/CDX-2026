@@ -18,6 +18,7 @@ import {
   ChevronRight,
   Share2,
   Filter,
+  Printer,
 } from 'lucide-react';
 import { ChangeEvent } from 'react';
 import { compressImage, uploadToImgBB } from '@/utils/imageUpload';
@@ -39,8 +40,8 @@ import { getAvailableStock, getDetailedStock, validateFutureImpact } from '@/uti
 import { Button } from '@/components/shared';
 import { ExcelButton } from '@/components/shared';
 import { SortButton, SortOption } from '@/components/shared';
-
 import { SaveImageButton } from '@/components/shared';
+import { PrintTransferModal } from './PrintTransferModal';
 
 export const Transfer = ({
   user,
@@ -59,6 +60,9 @@ export const Transfer = ({
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(initialAction === 'add');
   const [showDetailModal, setShowDetailModal] = useState(false);
+  const [isPrintMode, setIsPrintMode] = useState(false);
+  const [selectedPrintIds, setSelectedPrintIds] = useState<string[]>([]);
+  const [showPrintModal, setShowPrintModal] = useState(false);
 
   useEffect(() => {
     if (setHideBottomNav) {
@@ -742,6 +746,19 @@ export const Transfer = ({
                       {status === 'Đã xóa' ? 'Thùng rác' : status}
                     </Button>
                   ))}
+                  <div className="w-px h-6 bg-gray-200 mx-1 flex-shrink-0"></div>
+                  <Button
+                    size="sm"
+                    variant={isPrintMode ? 'orange' : 'outline'}
+                    onClick={() => {
+                      setIsPrintMode(!isPrintMode);
+                      if (!isPrintMode) setSelectedPrintIds([]);
+                    }}
+                    icon={Printer}
+                    className="flex-shrink-0"
+                  >
+                    In Biên Bản
+                  </Button>
                 </div>
               </div>
             </div>
@@ -784,6 +801,25 @@ export const Transfer = ({
               <table className="w-full text-left border-collapse min-w-[700px] whitespace-nowrap">
                 <thead>
                   <tr className="bg-orange-500 text-white">
+                    {isPrintMode && (
+                      <th className="px-2 md:px-4 py-2 md:py-3 w-10 text-center border-r border-white/10">
+                        <input
+                          type="checkbox"
+                          className="w-4 h-4 rounded text-orange-600 focus:ring-orange-500 border-white/50 cursor-pointer"
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              setSelectedPrintIds(filteredSlips.map((s) => s.id));
+                            } else {
+                              setSelectedPrintIds([]);
+                            }
+                          }}
+                          checked={
+                            selectedPrintIds.length > 0 &&
+                            selectedPrintIds.length === filteredSlips.length
+                          }
+                        />
+                      </th>
+                    )}
                     <th className="px-2 md:px-4 py-2 md:py-3 text-[9px] md:text-[10px] font-bold uppercase tracking-wider border-r border-white/10">
                       Ngày
                     </th>
@@ -807,13 +843,19 @@ export const Transfer = ({
                 <tbody className="divide-y divide-gray-100">
                   {loading ? (
                     <tr>
-                      <td colSpan={6} className="px-4 py-8 text-center text-gray-400 italic">
+                      <td
+                        colSpan={isPrintMode ? 7 : 6}
+                        className="px-4 py-8 text-center text-gray-400 italic"
+                      >
                         Đang tải...
                       </td>
                     </tr>
                   ) : filteredSlips.length === 0 ? (
                     <tr>
-                      <td colSpan={6} className="px-4 py-8 text-center text-gray-400 italic">
+                      <td
+                        colSpan={isPrintMode ? 7 : 6}
+                        className="px-4 py-8 text-center text-gray-400 italic"
+                      >
                         Chưa có phiếu chuyển nào
                       </td>
                     </tr>
@@ -838,9 +880,35 @@ export const Transfer = ({
                         return (
                           <tr
                             key={item.id}
-                            onClick={() => handleRowClick(item)}
+                            onClick={() => {
+                              if (isPrintMode) {
+                                setSelectedPrintIds((prev) =>
+                                  prev.includes(item.id)
+                                    ? prev.filter((id) => id !== item.id)
+                                    : [...prev, item.id],
+                                );
+                              } else {
+                                handleRowClick(item);
+                              }
+                            }}
                             className={`transition-colors cursor-pointer group hover:brightness-95 ${currentBackgroundColor}`}
                           >
+                            {isPrintMode && (
+                              <td className="px-2 md:px-4 py-2.5 md:py-3 text-center border-b border-gray-100/50">
+                                <input
+                                  type="checkbox"
+                                  className="w-4 h-4 rounded text-orange-600 focus:ring-orange-500 border-gray-300 cursor-pointer"
+                                  checked={selectedPrintIds.includes(item.id)}
+                                  onChange={() => {
+                                    setSelectedPrintIds((prev) =>
+                                      prev.includes(item.id)
+                                        ? prev.filter((id) => id !== item.id)
+                                        : [...prev, item.id],
+                                    );
+                                  }}
+                                />
+                              </td>
+                            )}
                             <td className="px-2 md:px-4 py-2.5 md:py-3 text-[10px] md:text-xs text-gray-600 border-b border-gray-100/50">
                               {formatDate(item.date)}
                             </td>
@@ -1531,6 +1599,33 @@ export const Transfer = ({
           </div>
         </div>
       </div>
+
+      {/* Print Mode Action Bar */}
+      <AnimatePresence>
+        {isPrintMode && selectedPrintIds.length > 0 && (
+          <motion.div
+            initial={{ opacity: 0, y: 50 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 50 }}
+            className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[100] bg-gray-900 text-white px-6 py-3 rounded-full shadow-2xl flex items-center gap-4 border border-gray-800 print:hidden"
+          >
+            <span className="text-sm font-bold">Đã chọn {selectedPrintIds.length} mặt hàng</span>
+            <div className="w-px h-5 bg-gray-700" />
+            <button
+              onClick={() => setShowPrintModal(true)}
+              className="text-sm font-black text-orange-500 hover:text-orange-400 uppercase tracking-wide flex items-center gap-2"
+            >
+              <Printer size={16} /> Xuất in biên bản
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      <PrintTransferModal
+        show={showPrintModal}
+        onClose={() => setShowPrintModal(false)}
+        selectedItems={slips.filter((s) => selectedPrintIds.includes(s.id))}
+      />
     </div>
   );
 };
